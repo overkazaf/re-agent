@@ -1,0 +1,449 @@
+package ui
+
+// A live, in-place terminal HUD: one box carrying the routing chain, task list,
+// streamed reasoning, and token telemetry. Lines printed while the pane is
+// active are "committed" above it, so tool activity and thinking stay readable
+// without the dashboard scrolling away.
+//
+// This file owns the redraw and the state; hud.go owns the pixels. The redraw is
+// a cursor walk back over exactly the number of lines last written, so the one
+// invariant that matters is that the walk length always matches what was drawn.
+// RenderHud guarantees both halves of that: every line fits the terminal width
+// (no soft wrap inflating the real line count) and the body never exceeds the
+// height budget (no scroll shifting the rows out from under the cursor).
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/overkazaf/re-agent/internal/types"
+	"golang.org/x/term"
+)
+
+var spinFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+const (
+	thinkSummaryGlyph = "✻"
+	thinkWindow       = 3
+	frameInterval     = 90 * time.Millisecond
+	// heightMargin is the rows kept clear below the pane so the terminal never
+	// scrolls under it.
+	heightMargin = 2
+
+	// sparkSamples/sampleMs define a ~6s window of output-token deltas.
+	sparkSamples = 16
+	sampleMs     = 400
+)
+
+// hudFloorRows is the smallest HUD that still shows the *in-progress* task.
+// Measured, not guessed: RenderHud collapses to a one-liner below 4 rows, shows
+// only a completed step at 4, adds a "… N more" marker at 5, and first reveals
+// the active step at 6. The task list is the point of the box, so 6 is the floor
+// the diagram has to leave behind.
+const hudFloorRows = 6
+
+type LivePaneOptions struct {
+	// Route is the dual-model chain shown in the header. Active names the side
+	// currently answering; leave empty to show the chain without highlighting.
+	Route *HudRoute
+	// Flow is the live dataflow diagram drawn above the HUD. The pane reads this
+	// model every frame, so the caller mutates it through the model rather than
+	// pushing updates here.
+	Flow *FlowModel
+	// OnFrame is called once per animation frame, before the redraw.
+	OnFrame func()
+}
+
+type LivePane struct {
+	label       string
+	interactive bool
+	start       time.Time
+
+	mu         sync.Mutex
+	stats      types.TokenUsage
+	route      *HudRoute
+	flow       *FlowModel
+	onFrame    func()
+	phase      string
+	thinking   string
+	thinkChars int
+	plan       *types.PlanSnapshot
+	drawn      int
+	tick       int
+	stopped    bool
+	paused     bool
+
+	spark         []float64
+	sawStats      bool
+	sampledOutput float64
+	sampledAt     int64
+
+	// timer is the current frame generation, replaced on every Resume. Both its
+	// fields belong to the goroutine that generation started, which is why it is
+	// a value the goroutine closes over rather than state on the pane.
+	timer *paneTimer
+}
+
+// paneTimer owns one animation generation: a stop channel and the goroutine
+// waiting on it.
+type paneTimer struct {
+	done chan struct{}
+	wg   sync.WaitGroup
+}
+
+// ComposePane composes one frame: the dataflow diagram on top, the HUD box
+// below, inside a single height budget.
+//
+// The budget is the invariant this whole file rests on — clear() walks back
+// exactly as many lines as were drawn, so drawing more than the terminal can
+// hold desynchronises the erase. The diagram is therefore clipped to whatever is
+// left after the HUD's floor, rather than being allowed to push the box out.
+func ComposePane(now int64, width, budget int, flow *FlowState, hud HudModel) []string {
+	var raw []string
+	if flow != nil {
+		raw = RenderFlow(*flow, width, now)
+	}
+	affordable := len(raw)
+	if budget > 0 {
+		affordable = budget - hudFloorRows
+		if affordable < 0 {
+			affordable = 0
+		}
+	}
+	// All of the diagram or none of it: half a diagram is worse than no diagram.
+	var flowLines []string
+	if len(raw) <= affordable {
+		flowLines = raw
+	}
+	// The floor is spent above, on deciding whether the diagram fits at all — it
+	// is not imposed here, because a terminal with 3 usable rows must still get
+	// RenderHud's one-line fallback rather than a 4-row box it cannot hold.
+	if budget > 0 {
+		rows := budget - len(flowLines)
+		if rows < 1 {
+			rows = 1
+		}
+		hud.MaxRows = rows
+	}
+	return append(flowLines, RenderHud(hud)...)
+}
+
+func NewLivePane(label string, options LivePaneOptions) *LivePane {
+	pane := &LivePane{
+		label:       label,
+		interactive: term.IsTerminal(int(os.Stdout.Fd())),
+		start:       time.Now(),
+		phase:       "working",
+		route:       options.Route,
+		flow:        options.Flow,
+		onFrame:     options.OnFrame,
+	}
+	if !pane.interactive {
+		// Non-TTY (pipes, --print, CI): emit one static line, no animation.
+		fmt.Printf("%s\n", C.Faint(fmt.Sprintf("[..] %s %s", label, pane.phase)))
+		return pane
+	}
+	fmt.Print("\x1b[?25l") // hide cursor
+	pane.render()
+	pane.startTimer()
+	return pane
+}
+
+// startTimer begins a new frame generation. The goroutine closes over its own
+// timer, so a Stop racing a Resume can never signal the wrong generation.
+func (p *LivePane) startTimer() {
+	timer := &paneTimer{done: make(chan struct{})}
+	p.mu.Lock()
+	p.timer = timer
+	p.mu.Unlock()
+
+	timer.wg.Add(1)
+	go func() {
+		defer timer.wg.Done()
+		ticker := time.NewTicker(frameInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-timer.done:
+				return
+			case <-ticker.C:
+				p.mu.Lock()
+				p.tick++
+				p.mu.Unlock()
+				if p.onFrame != nil {
+					p.onFrame()
+				}
+				p.sampleThroughput(types.NowMs())
+				p.render()
+			}
+		}
+	}()
+}
+
+func (p *LivePane) SetPhase(phase string) {
+	p.mu.Lock()
+	p.phase = phase
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) SetStats(usage types.TokenUsage) {
+	p.mu.Lock()
+	p.stats = p.stats.Merge(usage)
+	p.sawStats = true
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) PushThinking(delta string) {
+	p.mu.Lock()
+	p.thinkChars += len(delta)
+	p.thinking += delta
+	if len(p.thinking) > 4000 {
+		p.thinking = p.thinking[len(p.thinking)-2000:]
+	}
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) SetPlan(snapshot *types.PlanSnapshot) {
+	p.mu.Lock()
+	p.plan = snapshot
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) ThinkingChars() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.thinkChars
+}
+
+func (p *LivePane) Plan() *types.PlanSnapshot {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.plan
+}
+
+// Commit prints a line permanently above the pane.
+func (p *LivePane) Commit(line string) {
+	if !p.interactive {
+		fmt.Println(line)
+		return
+	}
+	p.mu.Lock()
+	p.clearLocked()
+	fmt.Println(line)
+	p.mu.Unlock()
+	p.render()
+}
+
+// Pause stops drawing and gives the terminal back (cursor visible, no repaint),
+// so something else can own the screen — an approval prompt, for instance.
+func (p *LivePane) Pause() {
+	if !p.interactive {
+		return
+	}
+	p.mu.Lock()
+	if p.stopped || p.paused {
+		p.mu.Unlock()
+		return
+	}
+	p.paused = true
+	p.clearLocked()
+	p.mu.Unlock()
+	p.stopTimer()
+	fmt.Print("\x1b[?25h") // the prompt needs a visible cursor
+}
+
+func (p *LivePane) Resume() {
+	if !p.interactive {
+		return
+	}
+	p.mu.Lock()
+	if p.stopped || !p.paused {
+		p.mu.Unlock()
+		return
+	}
+	p.paused = false
+	p.mu.Unlock()
+	fmt.Print("\x1b[?25l")
+	p.render()
+	p.startTimer()
+}
+
+// Stop tears the pane down and returns the total elapsed milliseconds.
+func (p *LivePane) Stop() int64 {
+	elapsed := time.Since(p.start).Milliseconds()
+	p.mu.Lock()
+	if p.stopped {
+		p.mu.Unlock()
+		return elapsed
+	}
+	p.stopped = true
+	paused := p.paused
+	p.mu.Unlock()
+	if !paused {
+		p.stopTimer()
+	}
+	if !p.interactive {
+		return elapsed
+	}
+	p.mu.Lock()
+	p.clearLocked()
+	p.mu.Unlock()
+	fmt.Print("\x1b[?25h") // show cursor
+	return elapsed
+}
+
+// stopTimer ends the current generation and waits for its goroutine, so a
+// caller that has stopped the pane can be sure nothing will draw over it.
+func (p *LivePane) stopTimer() {
+	p.mu.Lock()
+	timer := p.timer
+	p.timer = nil
+	p.mu.Unlock()
+	if timer == nil {
+		return
+	}
+	close(timer.done)
+	timer.wg.Wait()
+}
+
+// width leaves the last column empty: writing into it makes some terminals wrap
+// eagerly, which would desynchronise the erase walk. There is no lower clamp for
+// the same reason — a terminal narrower than the HUD's box gets a status line
+// from RenderHud, never a box that wraps.
+func paneWidth() int {
+	width := TerminalColumns(80) - 1
+	if width > HudMaxWidth {
+		width = HudMaxWidth
+	}
+	if width < 1 {
+		width = 1
+	}
+	return width
+}
+
+// heightBudget is the lines the pane may occupy. A terminal that reports no
+// size gets a conservative floor rather than free rein: an unbounded body is
+// exactly the case where the erase walk desynchronises, and 24 rows is the
+// oldest safe answer to "how tall is a terminal".
+func heightBudget() int {
+	rows := TerminalRows()
+	if rows <= 0 {
+		rows = 24
+	}
+	budget := rows - heightMargin
+	if budget < 1 {
+		return 1
+	}
+	return budget
+}
+
+// sampleThroughput drives the sparkline on a fixed cadence. SetStats arrives in
+// bursts (several updates inside one streaming chunk, then nothing for a
+// second), so sampling per call would draw the shape of the transport rather
+// than of the model.
+func (p *LivePane) sampleThroughput(now int64) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.sawStats {
+		return
+	}
+	if p.sampledAt == 0 {
+		p.sampledAt = now
+		p.sampledOutput = p.stats.Output
+		return
+	}
+	// Bounded: a long stall (a suspended process, a slow tool) must not push a
+	// thousand zero bars through the ring buffer.
+	for guard := 0; guard < sparkSamples && now-p.sampledAt >= sampleMs; guard++ {
+		current := p.stats.Output
+		delta := current - p.sampledOutput
+		if delta < 0 {
+			delta = 0
+		}
+		p.spark = append(p.spark, delta)
+		p.sampledOutput = current
+		p.sampledAt += sampleMs
+		if len(p.spark) > sparkSamples {
+			p.spark = p.spark[1:]
+		}
+	}
+	if now-p.sampledAt >= sampleMs {
+		p.sampledAt = now
+	}
+}
+
+func (p *LivePane) clearLocked() {
+	if p.drawn == 0 {
+		return
+	}
+	var seq strings.Builder
+	seq.WriteString("\r")
+	for i := 0; i < p.drawn; i++ {
+		if i == 0 {
+			seq.WriteString("\x1b[2K")
+		} else {
+			seq.WriteString("\x1b[1A\x1b[2K")
+		}
+	}
+	fmt.Print(seq.String())
+	p.drawn = 0
+}
+
+func (p *LivePane) render() {
+	if !p.interactive {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.stopped || p.paused {
+		return
+	}
+	p.clearLocked()
+	// clearLocked erases exactly the line count it last drew, so the body is
+	// free to grow and shrink between frames.
+	body := p.bodyLocked()
+	fmt.Print(strings.Join(body, "\n"))
+	p.drawn = len(body)
+}
+
+func (p *LivePane) bodyLocked() []string {
+	now := types.NowMs()
+	width := paneWidth()
+	var flowState *FlowState
+	if p.flow != nil {
+		snapshot := p.flow.Snapshot()
+		flowState = &snapshot
+	}
+	return ComposePane(now, width, heightBudget(), flowState, HudModel{
+		Label:          p.label,
+		Phase:          p.phase,
+		Frame:          spinFrames[p.tick%len(spinFrames)],
+		ElapsedMs:      time.Since(p.start).Milliseconds(),
+		Now:            now,
+		Width:          width,
+		Stats:          p.stats,
+		Spark:          p.spark,
+		Route:          p.route,
+		Plan:           p.plan,
+		Thinking:       p.thinking,
+		ThinkingWindow: thinkWindow,
+	})
+}
+
+// ThinkingSummary is the one-line summary printed after a reasoning phase.
+func ThinkingSummary(ms int64, tokens float64, chars int) string {
+	parts := []string{C.Violet(thinkSummaryGlyph), C.Faint("thought for"), C.Violet(FormatDuration(ms))}
+	if tokens > 0 {
+		parts = append(parts, C.Faint("·"), C.Violet(fmt.Sprintf("%d tokens", int(tokens))))
+	} else if chars > 0 {
+		parts = append(parts, C.Faint("·"), C.Violet(fmt.Sprintf("%d chars", chars)))
+	}
+	return strings.Join(parts, " ")
+}

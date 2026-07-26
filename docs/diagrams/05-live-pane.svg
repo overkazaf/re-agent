@@ -1,0 +1,236 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1440" width="1500" height="1440" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="ah-ok" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+    </marker>
+    <marker id="ah-warn" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="1440" fill="#020617"/>
+  <rect width="1500" height="1440" fill="url(#grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">The live pane</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">One frame every 90ms, redrawn in place. Everything below the budget is negotiable — the pane sheds detail rather than wrap or overflow.</text>
+
+  <!-- ===== EDGES ===== -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#ah)">
+    <path d="M 470 134 L 470 162"/>
+    <path d="M 470 204 L 470 236"/>
+    <path d="M 470 286 L 470 314"/>
+    <path d="M 470 374 L 470 406"/>
+    <path d="M 470 452 L 470 484"/>
+    <path d="M 470 544 L 470 578"/>
+    <path d="M 470 896 L 470 922"/>
+    <path d="M 470 968 L 470 992"/>
+  </g>
+
+  <!-- G yes → kept (right) -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#ah-ok)">
+    <path d="M 680 622 L 690 622 L 690 696"/>
+  </g>
+  <!-- G no → dropped (left) -->
+  <g stroke="#fb923c" stroke-width="1.4" fill="none" marker-end="url(#ah-warn)">
+    <path d="M 260 622 L 240 622 L 240 696"/>
+  </g>
+  <!-- both → J -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#ah)">
+    <path d="M 690 810 L 690 830 L 470 830 L 470 846"/>
+    <path d="M 240 770 L 240 830 L 470 830"/>
+  </g>
+
+  <!-- L yes → M (left), no → N (right) -->
+  <g stroke="#fb923c" stroke-width="1.4" fill="none" marker-end="url(#ah-warn)">
+    <path d="M 240 1040 L 240 1112"/>
+  </g>
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#ah)">
+    <path d="M 700 1040 L 700 1112"/>
+  </g>
+  <g stroke="#64748b" stroke-width="1.4" fill="none">
+    <path d="M 470 1084 L 470 1096 L 240 1096 L 240 1040"/>
+    <path d="M 470 1096 L 700 1096 L 700 1040"/>
+  </g>
+
+  <!-- M, N → Z -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#ah)">
+    <path d="M 240 1180 L 240 1216 L 470 1216 L 470 1236"/>
+    <path d="M 700 1196 L 700 1216 L 470 1216"/>
+    <path d="M 470 1296 L 470 1326"/>
+  </g>
+
+  <!-- ===== NODES ===== -->
+  <rect x="270" y="88" width="400" height="46" rx="6" fill="#0f172a"/>
+  <rect x="270" y="88" width="400" height="46" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="108" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">frame timer</text>
+  <text x="470" y="125" fill="#94a3b8" font-size="9" text-anchor="middle">every 90 ms</text>
+
+  <rect x="270" y="162" width="400" height="42" rx="6" fill="#0f172a"/>
+  <rect x="270" y="162" width="400" height="42" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="188" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">LivePane.render</text>
+
+  <rect x="150" y="236" width="640" height="50" rx="6" fill="#0f172a"/>
+  <rect x="150" y="236" width="640" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="258" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">clearLocked walks back exactly p.drawn lines</text>
+  <text x="470" y="276" fill="#94a3b8" font-size="9" text-anchor="middle">no guessing, no clear-screen — only what was written is erased</text>
+
+  <rect x="150" y="314" width="640" height="60" rx="6" fill="#0f172a"/>
+  <rect x="150" y="314" width="640" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="338" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">bodyLocked</text>
+  <text x="470" y="357" fill="#94a3b8" font-size="9" text-anchor="middle">width = paneWidth · budget = TerminalRows − heightMargin 2</text>
+
+  <rect x="150" y="406" width="640" height="46" rx="6" fill="#0f172a"/>
+  <rect x="150" y="406" width="640" height="46" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="434" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">ComposePane(now, width, budget, flow, hud)</text>
+
+  <rect x="110" y="484" width="720" height="60" rx="6" fill="#0f172a"/>
+  <rect x="110" y="484" width="720" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="508" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">RenderFlow yields the raw diagram rows</text>
+  <text x="470" y="527" fill="#94a3b8" font-size="9" text-anchor="middle">5 rows — or none below 46 columns, or when idle</text>
+
+  <polygon points="470,578 680,622 470,666 260,622" fill="#0f172a"/>
+  <polygon points="470,578 680,622 470,666 260,622" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="617" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">raw rows fit in</text>
+  <text x="470" y="632" fill="#cbd5e1" font-size="9" text-anchor="middle">budget − hudFloorRows 6?</text>
+
+  <rect x="480" y="696" width="420" height="114" rx="6" fill="#0f172a"/>
+  <rect x="480" y="696" width="420" height="114" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="690" y="718" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">DIAGRAM KEPT</text>
+  <text x="690" y="738" fill="#e2e8f0" font-size="8" text-anchor="middle">row 0 — you, then ctx, then the provider</text>
+  <text x="690" y="754" fill="#e2e8f0" font-size="8" text-anchor="middle">row 1 — carried payloads</text>
+  <text x="690" y="770" fill="#e2e8f0" font-size="8" text-anchor="middle">rows 2–4 — plan badge in the left gutter</text>
+  <text x="690" y="786" fill="#e2e8f0" font-size="8" text-anchor="middle">rows 3–4 — tool return path</text>
+  <text x="690" y="802" fill="#64748b" font-size="8" text-anchor="middle">packet animation rides these rows</text>
+
+  <rect x="40" y="696" width="400" height="74" rx="6" fill="#0f172a"/>
+  <rect x="40" y="696" width="400" height="74" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="240" y="718" fill="#fb923c" font-size="10" font-weight="700" text-anchor="middle">DIAGRAM DROPPED WHOLE</text>
+  <text x="240" y="738" fill="#e2e8f0" font-size="9" text-anchor="middle">all of it or none of it</text>
+  <text x="240" y="756" fill="#94a3b8" font-size="8" text-anchor="middle">a half-drawn diagram is worse than no diagram</text>
+
+  <rect x="180" y="846" width="580" height="50" rx="6" fill="#0f172a"/>
+  <rect x="180" y="846" width="580" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="868" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">hud.MaxRows = budget − the diagram rows kept</text>
+  <text x="470" y="886" fill="#94a3b8" font-size="9" text-anchor="middle">the HUD gets whatever is left over</text>
+
+  <rect x="180" y="922" width="580" height="46" rx="6" fill="#0f172a"/>
+  <rect x="180" y="922" width="580" height="46" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="950" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">RenderHud sheds until it fits</text>
+
+  <polygon points="470,992 700,1040 470,1088 240,1040" fill="#0f172a"/>
+  <polygon points="470,992 700,1040 470,1088 240,1040" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="1035" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">width under MinBoxWidth 20</text>
+  <text x="470" y="1050" fill="#cbd5e1" font-size="9" text-anchor="middle">OR MaxRows under 4?</text>
+
+  <rect x="40" y="1112" width="400" height="68" rx="6" fill="#0f172a"/>
+  <rect x="40" y="1112" width="400" height="68" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="240" y="1136" fill="#fb923c" font-size="10" font-weight="700" text-anchor="middle">ONE UNBOXED STATUS LINE</text>
+  <text x="240" y="1156" fill="#e2e8f0" font-size="9" text-anchor="middle">spinner · route · phase · elapsed</text>
+  <text x="240" y="1172" fill="#94a3b8" font-size="8" text-anchor="middle">the irreducible minimum</text>
+
+  <rect x="480" y="1112" width="420" height="84" rx="6" fill="#0f172a"/>
+  <rect x="480" y="1112" width="420" height="84" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="690" y="1134" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">THE FULL BOX</text>
+  <text x="690" y="1152" fill="#e2e8f0" font-size="8" text-anchor="middle">top chips · status row with route · progress and cost</text>
+  <text x="690" y="1168" fill="#e2e8f0" font-size="8" text-anchor="middle">optional plan note · plan rows beside telemetry cells</text>
+  <text x="690" y="1184" fill="#e2e8f0" font-size="8" text-anchor="middle">reasoning tail · bottom edge</text>
+
+  <rect x="180" y="1236" width="580" height="60" rx="6" fill="#0f172a"/>
+  <rect x="180" y="1236" width="580" height="60" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="470" y="1260" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">diagram rows + HUD rows</text>
+  <text x="470" y="1279" fill="#94a3b8" font-size="9" text-anchor="middle">total within budget · every line within width</text>
+
+  <rect x="250" y="1326" width="440" height="50" rx="6" fill="#0f172a"/>
+  <rect x="250" y="1326" width="440" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="1348" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">print · p.drawn = the line count just written</text>
+  <text x="470" y="1366" fill="#94a3b8" font-size="9" text-anchor="middle">which is what the next frame will walk back</text>
+
+  <!-- edge labels -->
+  <g font-size="9" font-weight="700">
+    <text x="700" y="614" fill="#34d399">yes</text>
+    <text x="240" y="614" fill="#fb923c" text-anchor="middle">no</text>
+    <text x="212" y="1076" fill="#fb923c" text-anchor="end">yes</text>
+    <text x="726" y="1076" fill="#94a3b8">no</text>
+  </g>
+
+  <!-- ===== SHEDDING ORDER PANEL ===== -->
+  <rect x="940" y="88" width="520" height="1080" rx="12" fill="rgba(2,6,23,0.6)" stroke="#fbbf24" stroke-width="1.4" stroke-dasharray="8,4"/>
+  <text x="968" y="120" fill="#fbbf24" font-size="12" font-weight="700" letter-spacing="1.2">SHEDDING ORDER</text>
+  <text x="968" y="140" fill="#94a3b8" font-size="9">each step re-renders the box and re-measures</text>
+  <text x="968" y="156" fill="#64748b" font-size="8">applied in order, stopping as soon as it fits</text>
+
+  <g>
+    <rect x="968" y="182" width="464" height="128" rx="6" fill="#0f172a"/>
+    <rect x="968" y="182" width="464" height="128" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="208" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="212" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">1</text>
+    <text x="1018" y="212" fill="#f1f5f9" font-size="10" font-weight="700">reasoning tail</text>
+    <text x="996" y="240" fill="#e2e8f0" font-size="9">thinkWindow shrinks 3 → 0</text>
+    <text x="996" y="262" fill="#94a3b8" font-size="8">the model's visible thinking is the first thing to go —</text>
+    <text x="996" y="277" fill="#94a3b8" font-size="8">it is the most interesting and the least load-bearing</text>
+    <text x="996" y="298" fill="#64748b" font-size="8">nothing structural is lost</text>
+
+    <rect x="968" y="326" width="464" height="86" rx="6" fill="#0f172a"/>
+    <rect x="968" y="326" width="464" height="86" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="352" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="356" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">2</text>
+    <text x="1018" y="356" fill="#f1f5f9" font-size="10" font-weight="700">plan note</text>
+    <text x="996" y="384" fill="#e2e8f0" font-size="9">dropped entirely</text>
+    <text x="996" y="402" fill="#94a3b8" font-size="8">the note is commentary; the list itself survives longer</text>
+
+    <rect x="968" y="428" width="464" height="120" rx="6" fill="#0f172a"/>
+    <rect x="968" y="428" width="464" height="120" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="454" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="458" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">3</text>
+    <text x="1018" y="458" fill="#f1f5f9" font-size="10" font-weight="700">task list collapses</text>
+    <text x="996" y="486" fill="#e2e8f0" font-size="9">collapseAfter 8 → 1</text>
+    <text x="996" y="508" fill="#94a3b8" font-size="8">the finished head folds into "N done"</text>
+    <text x="996" y="524" fill="#94a3b8" font-size="8">the tail folds into "N more"</text>
+    <text x="996" y="540" fill="#64748b" font-size="8">the in-flight item is always the one kept</text>
+
+    <rect x="968" y="564" width="464" height="152" rx="6" fill="#0f172a"/>
+    <rect x="968" y="564" width="464" height="152" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="590" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="594" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">4</text>
+    <text x="1018" y="594" fill="#f1f5f9" font-size="10" font-weight="700">telemetry cells shed by priority</text>
+    <text x="996" y="622" fill="#e2e8f0" font-size="9">limit 8 → telemetryFloor 2</text>
+    <text x="996" y="644" fill="#94a3b8" font-size="8">token counters go first</text>
+    <text x="996" y="660" fill="#94a3b8" font-size="8">then the output sparkline</text>
+    <text x="996" y="682" fill="#34d399" font-size="8">the floor of 2 preserves the clock and the phase label —</text>
+    <text x="996" y="697" fill="#34d399" font-size="8">"is it alive, and what is it doing" outranks every number</text>
+
+    <rect x="968" y="732" width="464" height="92" rx="6" fill="#0f172a"/>
+    <rect x="968" y="732" width="464" height="92" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.3"/>
+    <circle cx="996" cy="758" r="11" fill="rgba(251,113,133,0.25)" stroke="#fb7185" stroke-width="1.2"/>
+    <text x="996" y="762" fill="#fb7185" font-size="10" font-weight="700" text-anchor="middle">5</text>
+    <text x="1018" y="762" fill="#f1f5f9" font-size="10" font-weight="700">last resort</text>
+    <text x="996" y="790" fill="#e2e8f0" font-size="9">keep the head rows, re-append the closing edge</text>
+    <text x="996" y="810" fill="#94a3b8" font-size="8">the box always closes — a torn frame is never printed</text>
+  </g>
+
+  <rect x="968" y="856" width="464" height="126" rx="6" fill="rgba(2,6,23,0.7)" stroke="#334155" stroke-width="1.2"/>
+  <text x="990" y="882" fill="#e2e8f0" font-size="10" font-weight="700">Two invariants hold at every step</text>
+  <circle cx="998" cy="906" r="3" fill="#34d399"/>
+  <text x="1010" y="910" fill="#cbd5e1" font-size="9">total rows ≤ budget</text>
+  <circle cx="998" cy="930" r="3" fill="#34d399"/>
+  <text x="1010" y="934" fill="#cbd5e1" font-size="9">every line ≤ width, measured CJK-aware</text>
+  <text x="990" y="960" fill="#64748b" font-size="8">so a 40-column terminal and a 200-column one both get a frame that fits</text>
+
+  <rect x="968" y="1002" width="464" height="142" rx="6" fill="rgba(2,6,23,0.7)" stroke="#334155" stroke-width="1.2"/>
+  <text x="990" y="1028" fill="#e2e8f0" font-size="10" font-weight="700">Why shedding, not scrolling</text>
+  <text x="990" y="1052" fill="#94a3b8" font-size="9">The pane is redrawn in place, so it cannot be</text>
+  <text x="990" y="1068" fill="#94a3b8" font-size="9">allowed to grow: one extra line and clearLocked</text>
+  <text x="990" y="1084" fill="#94a3b8" font-size="9">walks back the wrong distance, leaving debris</text>
+  <text x="990" y="1100" fill="#94a3b8" font-size="9">on screen for the rest of the session.</text>
+  <text x="990" y="1126" fill="#fb7185" font-size="8">Decorative layers must never fail a run — the pane is allowed</text>
+  <text x="990" y="1140" fill="#fb7185" font-size="8">to lose detail, never to corrupt the terminal.</text>
+
+  <text x="40" y="1416" fill="#475569" font-size="8">The diagram is all-or-nothing; the HUD degrades gracefully. That asymmetry is deliberate — a partial flow diagram misleads about what the agent is doing, while a</text>
+  <text x="40" y="1432" fill="#475569" font-size="8">HUD with fewer cells still tells the truth about the cells it kept.</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="872" height="478" viewBox="0 0 872 478" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">auto/auto ❯ /scan artifact.txt   (no model in the loop)</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">CTF TRIAGE</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">path: artifact.txt</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">type: ASCII text</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">size: 295 bytes</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="604.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">sha256: 3b926e1a779e76bbbe658c5e5d79f5a091b3657570d99b9f4a39db0c8ec99ba1</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">magic.hex: 4354462064656d6f2061727469666163</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="243.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">magic.ascii: CTF demo artifac</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="176.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">sample: 295/295 bytes</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="16.0" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">entropy: 5.083 bits/byte</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="142.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">printable: 100.0%</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="16.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">signals:</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="16.0" textLength="604.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- crypto-codec: - base64 candidate: ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="16.0" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- url: https://ctf.example.invalid/api/sign</tspan></text>
+<text y="326.4" xml:space="preserve"><tspan x="16.0" textLength="554.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- secret-keyword: - crypto words: AES CBC HMAC SHA256 token secret</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="16.0" textLength="537.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- crypto-codec: - crypto words: AES CBC HMAC SHA256 token secret</tspan></text>
+<text y="364.4" xml:space="preserve"><tspan x="16.0" textLength="428.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- pwn-re: - pwn words: system /bin/sh printf strcpy</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="16.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">next:</tspan></text>
+<text y="421.4" xml:space="preserve"><tspan x="16.0" textLength="739.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- Mostly printable: grep for flags, endpoints, scripts, encodings, and protocol grammar.</tspan></text>
+<text y="440.4" xml:space="preserve"><tspan x="16.0" textLength="554.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- Codec keyword found: try ctf_decode on nearby candidate strings.</tspan></text>
+<text y="459.4" xml:space="preserve"><tspan x="16.0" textLength="646.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- Exploit primitive hint: check mitigations and xrefs around dangerous calls.</tspan></text>
+</svg>

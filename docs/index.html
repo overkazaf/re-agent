@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0xAF-Re — a reverse engineering agent for the terminal</title>
+<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent: a planner model, an executor model, 24 local tools, and a live picture of the turn — as one static Go binary.">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar__inner">
+    <a class="brand" href="#top"><b>0xAF</b> RE</a>
+    <nav aria-label="Sections">
+      <a href="#turn">the turn</a>
+      <a href="#routing">routing</a>
+      <a href="#arsenal">arsenal</a>
+      <a href="#safety">safety</a>
+      <a href="#install">install</a>
+      <a href="https://github.com/overkazaf/re-agent/blob/main/README.zh-CN.md">中文</a>
+      <a href="https://github.com/overkazaf/re-agent">github</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<div class="wrap hero">
+  <p class="hero__eyebrow">reverse ops deck · v0.1.0 · go 1.22</p>
+  <h1>A reverse engineering agent<br>that shows its <span>work</span>.</h1>
+  <p class="hero__lede">
+    0xAF-Re drives a <strong>planner model</strong> and an <strong>executor model</strong> over
+    24 local tools — triage, entropy, carving, symbols, APK inspection, Frida scaffolds, external RE tool wrappers — and
+    draws the turn while it runs, so you can see where the time went and stop it when it goes
+    somewhere useless. One static binary. No runtime to install.
+  </p>
+
+  <div class="cmd">
+    <span class="cmd__prompt" aria-hidden="true">$</span>
+    <code id="install-cmd">go install github.com/overkazaf/re-agent/cmd/0xaf@latest</code>
+    <span class="caret" aria-hidden="true"></span>
+    <button class="copy" type="button" data-copy="#install-cmd">copy</button>
+  </div>
+
+  <div class="hero__cta">
+    <span class="pill"><b>6.7 ms</b> start</span>
+    <span class="pill"><b>6.7 MB</b> binary</span>
+    <span class="pill"><b>24</b> tools</span>
+    <span class="pill"><b>8</b> providers</span>
+    <span class="pill"><b>1</b> dependency</span>
+  </div>
+
+  <figure class="capture">
+    <div class="capture__bar"><span class="dot" aria-hidden="true"></span>a real mid-turn frame · 100×40 pty</div>
+    <div class="capture__scroll">
+      <svg role="img" style="width:100%;height:auto;display:block" aria-label="A live mid-turn frame. Top: a dataflow diagram with packets moving along wires from [you] through [ctx] to ((mock)) and back through [tools] from [calls×1], a plan badge reading 1 of 4 with a progress bar, and a spinner beside run_command at 2.1 seconds. Below: a boxed HUD with the task list — one step completed, one in progress in Chinese with a 2.2 second elapsed time, two pending — beside a telemetry column showing elapsed time and the active tool." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 307" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>A live mid-turn frame. Top: a dataflow diagram with packets moving along wires from [you] through [ctx] to ((mock)) and back through [tools] from [calls×1], a plan badge reading 1 of 4 with a progress bar, and a spinner beside run_command at 2.1 seconds. Below: a boxed HUD with the task list — one step completed, one in progress in Chinese with a 2.2 second elapsed time, two pending — beside a telemetry column showing elapsed time and the active tool.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">mid-turn frame · 100×40 pty · captured while run_command was running</text>
+<text y="60.4" xml:space="preserve"><tspan x="24.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">[you]</tspan><tspan x="66.4" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#334155">═══════════════▶</tspan><tspan x="200.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">[ctx]</tspan><tspan x="242.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#334155">═══════════════▶</tspan><tspan x="377.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">((mock))</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="32.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">3msg</tspan><tspan x="200.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">147tok</tspan><tspan x="385.6" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">⋯ awaiting tools</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="41.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">║</tspan><tspan x="217.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#4ade80">▲</tspan><tspan x="394.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#a78bfa">▼</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="24.4" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">[plan 1/4]</tspan><tspan x="200.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#4ade80">[tools]</tspan><tspan x="259.6" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#334155">◀═══</tspan><tspan x="293.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#a78bfa">•</tspan><tspan x="301.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#334155">══════</tspan><tspan x="352.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#a78bfa">•</tspan><tspan x="360.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155">═══</tspan><tspan x="385.6" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[calls×1]</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="24.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▰▰</tspan><tspan x="41.2" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">▱▱▱▱▱</tspan><tspan x="200.8" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">⣾ run_command</tspan><tspan x="318.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">2.1s</tspan><tspan x="368.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">✓1</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">╭─</tspan><tspan x="41.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⠴</tspan><tspan x="58.0" textLength="58.8" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">0xAF·RE</tspan><tspan x="125.2" textLength="722.4" lengthAdjust="spacingAndGlyphs" fill="#334155">─────────────────────────────────────────────────────────────────────────────────────╮</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">mock</tspan><tspan x="730.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">▰▰</tspan><tspan x="746.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▱▱▱▱▱▱</tspan><tspan x="805.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">25%</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="277.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">the checker looks like sub_401a20</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✔</tspan><tspan x="49.6" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">triage: file/arch/packer</tspan><tspan x="545.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="562.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">◷</tspan><tspan x="578.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">2.3s</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⠴</tspan><tspan x="49.6" textLength="151.2" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#e5e7eb">定位校验函数并复现</tspan><tspan x="503.2" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">2.2s</tspan><tspan x="545.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="562.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#5b479c">▸</tspan><tspan x="578.8" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">run_command</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">○</tspan><tspan x="49.6" textLength="193.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">reproduce the flag path</tspan><tspan x="545.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">○</tspan><tspan x="49.6" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">write reproducible notes</tspan><tspan x="545.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="16.0" textLength="831.6" lengthAdjust="spacingAndGlyphs" fill="#334155">╰─────────────────────────────────────────────────────────────────────────────────────────────────╯</tspan></text>
+</svg>
+    </div>
+    <figcaption>
+      Nothing here is a mock-up: this frame was lifted out of a captured session while a
+      <code class="inline">run_command</code> call was still running.
+    </figcaption>
+  </figure>
+</div>
+
+<section id="why">
+  <div class="wrap">
+    <p class="label">why it is built this way</p>
+    <h2>Local tools, and visibility.</h2>
+    <p>
+      Reverse engineering is a long conversation with a binary. Two things make an agent useful
+      for it: tools that run on your machine against the real artifact, and enough visibility
+      that you trust what came back. Everything else in this project follows from those two.
+    </p>
+
+    <div class="cols">
+      <article class="card">
+        <h4>One binary</h4>
+        <p>
+          Prompts and skills are embedded. <code class="inline">make cross</code> builds
+          linux/darwin × amd64/arm64. The boxes where lab work actually happens rarely have a
+          JS runtime, and you should not have to install one to triage a binary.
+        </p>
+      </article>
+      <article class="card">
+        <h4>Two seats, one loop</h4>
+        <p>
+          A planner reasons about the target; an executor drives the tools. Neither seat is
+          bound to a vendor — any of the eight providers can take either one. The default is
+          your local <code class="inline">codex</code> and <code class="inline">claude</code>
+          CLIs in tmux because it reuses logins you already have, but
+          <code class="inline">grok-build</code> is a first-class CLI provider too, and the
+          seats mix freely: a local CLI planning while a direct API executes, or the reverse.
+          Swap either one mid-run with <code class="inline">/planner</code> or
+          <code class="inline">/executor</code> — no restart, no config edit.
+        </p>
+      </article>
+      <article class="card">
+        <h4>Cancellation that lands</h4>
+        <p>
+          <kbd>^C</kbd> cancels the HTTP request, kills the tmux session, and signals tool
+          subprocesses in their own process group. No orphaned
+          <code class="inline">objdump</code> chewing a core after you walked away.
+        </p>
+      </article>
+      <article class="card">
+        <h4>Contained by default</h4>
+        <p>
+          Reads stay inside the workspace. Writes are off until you pass
+          <code class="inline">--write</code>. Network and credential-shaped commands stop and
+          ask. Destructive shell forms are refused.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="turn">
+  <div class="wrap">
+    <p class="label">the turn, drawn</p>
+    <h2>Two layers: one animates, one stays.</h2>
+    <p>
+      The <strong>diagram</strong> animates above the HUD while the turn runs — packets move
+      along the wires, nodes light up as they take part, and the loop closes back into the
+      context that feeds the next request. The task list hangs off
+      <code class="inline">[you]</code>, because the plan is the operator's view of the work.
+    </p>
+    <p>
+      The <strong>trace</strong> lands in the scrollback and stays there, stamped from the start
+      of the turn, so a finished run reads like a packet capture. Duration bars share one scale
+      per turn — the slowest request fills the bar — which makes the shape of a turn readable at
+      a glance: where the time went, how many round trips it took, which tool was slow.
+    </p>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>auto/auto ❯ triage artifact.txt and decode whatever payload it carries</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="Trace lines for a five-turn run. Each request shows a POST line with the model, input tokens, message count and tool count; each response shows 200 with output, thinking and cache token counts, a tool-call count, and a duration bar. A run_command call takes 4.0 seconds, a ctf_decode call takes 3 milliseconds, and plan transition lines mark steps completed as they land." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 1219" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>Trace lines for a five-turn run. Each request shows a POST line with the model, input tokens, message count and tool count; each response shows 200 with output, thinking and cache token counts, a tool-call count, and a duration bar. A run_command call takes 4.0 seconds, a ctf_decode call takes 3 milliseconds, and plan transition lines mark steps completed as they land.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">auto/auto ❯ triage artifact.txt and decode whatever payload it carries</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="487.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">triage artifact.txt and decode whatever payload it carries</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">/exit</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee"> ██████ ██   ██  █████  ███████</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#1dbbd7">██  ██████ ██   ██   ██ ██     </tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#18a4bf">██ ██ ██  ███   ███████ █████  </tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#138ca8">████  ██ ██ ██  ██   ██ ██     </tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490"> ██████ ██   ██ ██   ██ ██     </tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="32.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">reverse ops deck</tspan><tspan x="184.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="209.2" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">v0.1.0</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">┌─</tspan><tspan x="58.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">SYSTEM</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">runtime   </tspan><tspan x="133.6" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">go 1.22.5</tspan><tspan x="217.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="234.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">linux amd64</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">tmux      </tspan><tspan x="133.6" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">3.2a</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">├─</tspan><tspan x="58.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">WORKSPACE</tspan></text>
+<text y="326.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">path      </tspan><tspan x="133.6" textLength="327.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">…search/0xaf-re-agent/demos/reverse-lab</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">contents  </tspan><tspan x="133.6" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3 files</tspan><tspan x="200.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="217.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0 dirs</tspan><tspan x="276.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="293.2" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">no binaries detected</tspan></text>
+<text y="364.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">├─</tspan><tspan x="58.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">ROUTE</tspan></text>
+<text y="383.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">plan      </tspan><tspan x="133.6" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">mock        </tspan><tspan x="234.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#4ade80">● ready</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">exec      </tspan><tspan x="133.6" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">mock        </tspan><tspan x="234.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#4ade80">● ready</tspan></text>
+<text y="421.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">├─</tspan><tspan x="58.0" textLength="58.8" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">ARSENAL</tspan></text>
+<text y="440.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">tools     </tspan><tspan x="133.6" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">23</tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="175.6" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">execute</tspan><tspan x="242.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1</tspan><tspan x="251.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="276.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">read</tspan><tspan x="318.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">21</tspan><tspan x="335.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="360.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">write</tspan><tspan x="410.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1</tspan></text>
+<text y="459.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">└─</tspan><tspan x="58.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">policy</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">write</tspan><tspan x="167.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">off</tspan><tspan x="192.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="217.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">net</tspan><tspan x="251.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">off</tspan><tspan x="276.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="301.6" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">sensitive</tspan><tspan x="385.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">off</tspan><tspan x="419.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="436.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">log</tspan><tspan x="469.6" textLength="193.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">…-42-52-705Z-0xaf.jsonl</tspan></text>
+<text y="497.4" xml:space="preserve"><tspan x="16.0" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">────────────────</tspan><tspan x="150.4" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">────────────────</tspan><tspan x="284.8" textLength="268.8" lengthAdjust="spacingAndGlyphs" fill="#334155">────────────────────────────────</tspan></text>
+<text y="516.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/welcome</tspan><tspan x="108.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">demos</tspan><tspan x="150.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="192.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/help</tspan><tspan x="242.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">commands</tspan><tspan x="310.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="352.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">!cmd</tspan><tspan x="394.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">shell</tspan><tspan x="436.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="478.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/flow</tspan><tspan x="528.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">dataflow</tspan><tspan x="595.6" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="637.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">TAB</tspan><tspan x="671.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">complete</tspan><tspan x="738.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="780.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">↑↓</tspan><tspan x="805.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">histor</tspan></text>
+<text y="535.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">y</tspan><tspan x="24.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="66.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/theme</tspan><tspan x="125.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">palette</tspan><tspan x="184.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="226.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">^C</tspan><tspan x="251.2" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">cancel</tspan></text>
+<text y="573.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">auto</tspan><tspan x="49.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">/</tspan><tspan x="58.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">auto</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">❯</tspan><tspan x="108.4" textLength="495.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> triage artifact.txt and decode whatever payload it carries</tspan></text>
+<text y="592.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.001 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⇢</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">POST</tspan><tspan x="158.8" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">mock://mock-reasoner</tspan></text>
+<text y="611.4" xml:space="preserve"><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="116.8" textLength="344.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">model=mock-reasoner in=19 msgs=1 tools=23</tspan></text>
+<text y="630.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.002 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">⇠</tspan><tspan x="116.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">200</tspan><tspan x="150.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">out=</tspan><tspan x="184.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">380</tspan><tspan x="217.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">think=</tspan><tspan x="268.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">105</tspan><tspan x="301.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">cache=</tspan><tspan x="352.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">416k</tspan><tspan x="394.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">calls=</tspan><tspan x="444.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">1</tspan><tspan x="461.2" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#0e7490">██████████</tspan><tspan x="553.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">1ms</tspan></text>
+<text y="649.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.002 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">◆</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">reply</tspan><tspan x="167.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0 chars</tspan><tspan x="234.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">·</tspan><tspan x="251.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">380 tok</tspan></text>
+<text y="668.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.006 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">◇</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">plan</tspan><tspan x="158.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1/4</tspan><tspan x="192.4" textLength="184.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">opened via update_plan</tspan></text>
+<text y="687.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.007 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">↻</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">turn</tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">2</tspan></text>
+<text y="706.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.008 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⇢</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">POST</tspan><tspan x="158.8" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">mock://mock-reasoner</tspan></text>
+<text y="725.4" xml:space="preserve"><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="116.8" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">model=mock-reasoner in=147 msgs=3 tools=23</tspan></text>
+<text y="744.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.009 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">⇠</tspan><tspan x="116.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">200</tspan><tspan x="150.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">out=</tspan><tspan x="184.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1.9k</tspan><tspan x="226.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">think=</tspan><tspan x="276.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">105</tspan><tspan x="310.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">cache=</tspan><tspan x="360.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">416k</tspan><tspan x="402.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">calls=</tspan><tspan x="452.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">1</tspan><tspan x="469.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#0e7490">██████████</tspan><tspan x="562.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">1ms</tspan></text>
+<text y="763.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.009 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">◆</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">reply</tspan><tspan x="167.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0 chars</tspan><tspan x="234.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">·</tspan><tspan x="251.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1.9k tok</tspan></text>
+<text y="782.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.009 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa"> ⚙</tspan><tspan x="125.2" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">run_command</tspan><tspan x="226.0" textLength="495.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">command=sleep 4; file artifact.txt; head -c 64 artifact.txt</tspan></text>
+<text y="801.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.025 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#4ade80"> ✓</tspan><tspan x="125.2" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">4.0s</tspan><tspan x="167.2" textLength="445.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">$ sleep 4; file artifact.txt; head -c 64 artifact.txt</tspan></text>
+<text y="820.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.026 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">↻</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">turn</tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3</tspan></text>
+<text y="839.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.027 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⇢</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">POST</tspan><tspan x="158.8" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">mock://mock-reasoner</tspan></text>
+<text y="858.4" xml:space="preserve"><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="116.8" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">model=mock-reasoner in=225 msgs=5 tools=23</tspan></text>
+<text y="877.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.029 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">⇠</tspan><tspan x="116.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">200</tspan><tspan x="150.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">out=</tspan><tspan x="184.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3.3k</tspan><tspan x="226.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">think=</tspan><tspan x="276.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">210</tspan><tspan x="310.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">cache=</tspan><tspan x="360.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">416k</tspan><tspan x="402.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">calls=</tspan><tspan x="452.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">1</tspan><tspan x="469.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#0e7490">██████████</tspan><tspan x="562.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">2ms</tspan></text>
+<text y="896.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.029 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">◆</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">reply</tspan><tspan x="167.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0 chars</tspan><tspan x="234.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">·</tspan><tspan x="251.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3.3k tok</tspan></text>
+<text y="915.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.030 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa"> ⚙</tspan><tspan x="125.2" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">ctf_decode</tspan><tspan x="217.6" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">input=ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9</tspan></text>
+<text y="934.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.033 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#4ade80"> ✓</tspan><tspan x="125.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">3ms</tspan><tspan x="158.8" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">CTF DECODE</tspan></text>
+<text y="953.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.033 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">↻</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">turn</tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">4</tspan></text>
+<text y="972.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.034 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⇢</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">POST</tspan><tspan x="158.8" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">mock://mock-reasoner</tspan></text>
+<text y="991.4" xml:space="preserve"><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="116.8" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">model=mock-reasoner in=297 msgs=7 tools=23</tspan></text>
+<text y="1010.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.035 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">⇠</tspan><tspan x="116.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">200</tspan><tspan x="150.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">calls=</tspan><tspan x="200.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">1</tspan><tspan x="217.6" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#0e7490">█████</tspan><tspan x="259.6" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">░░░░░</tspan><tspan x="310.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">1ms</tspan></text>
+<text y="1029.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.035 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">◆</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">reply</tspan><tspan x="167.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0 chars</tspan></text>
+<text y="1048.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.036 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">◇</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">plan</tspan><tspan x="158.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3/4</tspan><tspan x="192.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✔</tspan><tspan x="209.2" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">定位校验函数并复现</tspan><tspan x="368.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">4.0s</tspan></text>
+<text y="1067.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.036 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">◇</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">plan</tspan><tspan x="158.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3/4</tspan><tspan x="192.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✔</tspan><tspan x="209.2" textLength="193.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">reproduce the flag path</tspan></text>
+<text y="1086.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.036 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">◇</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">plan</tspan><tspan x="158.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3/4</tspan><tspan x="192.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">▸</tspan><tspan x="209.2" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">write reproducible notes</tspan></text>
+<text y="1105.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.037 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">↻</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">turn</tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">5</tspan></text>
+<text y="1124.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.038 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⇢</tspan><tspan x="116.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">POST</tspan><tspan x="158.8" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">mock://mock-reasoner</tspan></text>
+<text y="1143.4" xml:space="preserve"><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="116.8" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">model=mock-reasoner in=413 msgs=9 tools=23</tspan></text>
+<text y="1162.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.039 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">⇠</tspan><tspan x="116.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">200</tspan><tspan x="150.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">out=</tspan><tspan x="184.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">4.1k</tspan><tspan x="226.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">think=</tspan><tspan x="276.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">210</tspan><tspan x="310.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">cache=</tspan><tspan x="360.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">416k</tspan><tspan x="402.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#0e7490">█████</tspan><tspan x="444.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">░░░░░</tspan><tspan x="494.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">1ms</tspan></text>
+<text y="1181.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.039 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">◆</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">reply</tspan><tspan x="167.2" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">431 chars</tspan><tspan x="251.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">·</tspan><tspan x="268.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">4.1k tok</tspan></text>
+<text y="1200.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 4.072 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">■</tspan><tspan x="116.8" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">turn complete</tspan><tspan x="234.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">via</tspan><tspan x="268.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">mock</tspan><tspan x="310.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">4.1s</tspan></text>
+</svg>
+      </div>
+      <figcaption>
+        Plan updates appear as <em>transitions</em>, never as dumps. A list still being written
+        stays silent until something actually moves.
+      </figcaption>
+    </figure>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>the same turn, ending</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="The end of a turn: an archived PLAN box showing three of four steps done with a progress bar and per-step elapsed times, then a markdown-rendered reply inside an accent gutter with a heading, bullet list, numbered next steps and a blockquote, then a footer line with provider, role, turn count, elapsed time and token counts." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 497" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>The end of a turn: an archived PLAN box showing three of four steps done with a progress bar and per-step elapsed times, then a markdown-rendered reply inside an accent gutter with a heading, bullet list, numbered next steps and a blockquote, then a footer line with provider, role, turn count, elapsed time and token counts.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">the same turn: archived plan, markdown reply, usage footer</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">╭─</tspan><tspan x="41.2" textLength="33.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">PLAN</tspan><tspan x="83.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">3</tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">/</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">4</tspan><tspan x="116.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">▰▰▰▰▰▰</tspan><tspan x="167.2" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">▱▱</tspan><tspan x="192.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">75%</tspan><tspan x="226.0" textLength="621.6" lengthAdjust="spacingAndGlyphs" fill="#334155">─────────────────────────────────────────────────────────────────────────╮</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✔</tspan><tspan x="49.6" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">triage: file/arch/packer</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✔</tspan><tspan x="49.6" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">定位校验函数并复现</tspan><tspan x="797.2" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">4.0s</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✔</tspan><tspan x="49.6" textLength="193.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">reproduce the flag path</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">⠿</tspan><tspan x="49.6" textLength="201.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#e5e7eb">write reproducible notes</tspan><tspan x="839.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="831.6" lengthAdjust="spacingAndGlyphs" fill="#334155">╰─────────────────────────────────────────────────────────────────────────────────────────────────╯</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">◆</tspan><tspan x="32.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">mock</tspan><tspan x="74.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="91.6" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">mock-reasoner</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">Result</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">───</tspan><tspan x="58.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#0e7490">───</tspan><tspan x="83.2" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#334155">──────</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="24.4" textLength="512.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> The artifact is plain ASCII with an embedded base64 payload.</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">▸</tspan><tspan x="49.6" textLength="100.8" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#e5e7eb">decoded flag</tspan><tspan x="150.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> — </tspan><tspan x="175.6" textLength="226.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">flag{demo_reverse_lab_flag}</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">▸</tspan><tspan x="41.2" textLength="226.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> the base64 sits at offset </tspan><tspan x="268.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">0x2f</tspan><tspan x="301.6" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">, right after the </tspan><tspan x="452.8" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">candidate:</tspan><tspan x="536.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> label</tspan></text>
+<text y="326.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">▸</tspan><tspan x="41.2" textLength="579.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> no packing: entropy is 5.08 bits/byte and the file is 100% printable</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan></text>
+<text y="364.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▍</tspan><tspan x="49.6" textLength="33.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#e5e7eb">Next</tspan></text>
+<text y="383.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">1.</tspan><tspan x="49.6" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> carve </tspan><tspan x="108.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">carrier.bin</tspan><tspan x="200.8" textLength="117.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> — it holds a </tspan><tspan x="318.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">%PDF-</tspan><tspan x="360.4" textLength="193.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> and a ZIP local header</tspan></text>
+<text y="421.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">2.</tspan><tspan x="49.6" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> run </tspan><tspan x="91.6" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">entropy_scan</tspan><tspan x="192.4" textLength="226.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> if you want the window map</tspan></text>
+<text y="440.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan></text>
+<text y="459.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">▏</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#5b479c">▌</tspan><tspan x="49.6" textLength="252.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Nothing here needs a debugger.</tspan></text>
+<text y="478.4" xml:space="preserve"><tspan x="16.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155">╰─ </tspan><tspan x="41.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">via</tspan><tspan x="74.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">mock</tspan><tspan x="108.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="150.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">role</tspan><tspan x="192.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">auto</tspan><tspan x="226.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="268.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">turns</tspan><tspan x="318.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">5</tspan><tspan x="326.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="368.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">took</tspan><tspan x="410.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">4.1s</tspan><tspan x="444.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="486.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">in</tspan><tspan x="511.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">52k</tspan><tspan x="545.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">out</tspan><tspan x="578.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">9.7k</tspan><tspan x="620.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">think</tspan><tspan x="671.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">630</tspan><tspan x="704.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">cache</tspan><tspan x="755.2" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">1.7M</tspan><tspan x="797.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">$</tspan><tspan x="805.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#fbbf24">3.1600</tspan></text>
+</svg>
+      </div>
+      <figcaption>
+        The task list is archived into the scrollback once, at the end of a turn that touched
+        it — then the markdown reply, then what the turn cost.
+      </figcaption>
+    </figure>
+
+    <pre class="block"><span class="c"># pick your layers; the choice is saved</span>
+/flow full     <span class="c">diagram + trace (default)</span>
+/flow flow     <span class="c">diagram only</span>
+/flow trace    <span class="c">trace lines only</span>
+/flow off      <span class="c">neither — the plain tool tree comes back</span></pre>
+    <p class="muted">
+      The diagram hides itself below 46 columns and in non-TTY output; the trace degrades to
+      plain text without escape sequences, which is what you want when piping a run into a log.
+    </p>
+  </div>
+</section>
+
+<section id="boot">
+  <div class="wrap">
+    <p class="label">boot screen</p>
+    <h2>Every line is a real probe.</h2>
+    <p>
+      Runtime, tmux, a shallow magic-byte triage of the workspace, provider auth, tool
+      inventory, active policy. The boot screen doubles as the answer to "is this thing
+      actually wired up right now?"
+    </p>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>$ 0xaf --workspace ./demos/reverse-lab</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="The boot screen: a block-letter 0xAF logo fading from cyan to dim cyan, then a self-check panel listing runtime, tmux, workspace state, planner and executor status, tools broken down by risk tier, and the active policy." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 421" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>The boot screen: a block-letter 0xAF logo fading from cyan to dim cyan, then a self-check panel listing runtime, tmux, workspace state, planner and executor status, tools broken down by risk tier, and the active policy.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">$ 0xaf --workspace ./demos/reverse-lab</text>
+<text y="60.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee"> ██████ ██   ██  █████  ███████</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#1dbbd7">██  ██████ ██   ██   ██ ██     </tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#18a4bf">██ ██ ██  ███   ███████ █████  </tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#138ca8">████  ██ ██ ██  ██   ██ ██     </tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="32.8" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490"> ██████ ██   ██ ██   ██ ██     </tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="32.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">reverse ops deck</tspan><tspan x="184.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="209.2" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">v0.1.0</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">┌─</tspan><tspan x="58.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">SYSTEM</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">runtime   </tspan><tspan x="133.6" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">go 1.22.5</tspan><tspan x="217.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="234.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">linux amd64</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">tmux      </tspan><tspan x="133.6" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#4ade80">3.2a</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">├─</tspan><tspan x="58.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">WORKSPACE</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">path      </tspan><tspan x="133.6" textLength="327.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">…search/0xaf-re-agent/demos/reverse-lab</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">contents  </tspan><tspan x="133.6" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">3 files</tspan><tspan x="200.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="217.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0 dirs</tspan><tspan x="276.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="293.2" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">no binaries detected</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">├─</tspan><tspan x="58.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">ROUTE</tspan></text>
+<text y="326.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">plan      </tspan><tspan x="133.6" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">codex       </tspan><tspan x="234.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#4ade80">● ready</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">exec      </tspan><tspan x="133.6" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">claude      </tspan><tspan x="234.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#4ade80">● ready</tspan></text>
+<text y="364.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">├─</tspan><tspan x="58.0" textLength="58.8" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">ARSENAL</tspan></text>
+<text y="383.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="49.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">tools     </tspan><tspan x="133.6" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">23</tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="175.6" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">execute</tspan><tspan x="242.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1</tspan><tspan x="251.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="276.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">read</tspan><tspan x="318.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">21</tspan><tspan x="335.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="360.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">write</tspan><tspan x="410.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">1</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="32.8" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">└─</tspan><tspan x="58.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">policy</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">write</tspan><tspan x="167.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">off</tspan><tspan x="192.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="217.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">net</tspan><tspan x="251.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">off</tspan><tspan x="276.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#334155"> · </tspan><tspan x="301.6" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">sensitive</tspan><tspan x="385.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">off</tspan><tspan x="419.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="436.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">log</tspan><tspan x="469.6" textLength="193.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">…-42-48-817Z-0xaf.jsonl</tspan></text>
+</svg>
+      </div>
+      <figcaption>A missing tmux is reported, not fatal — the CLI providers fall back to running directly.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="routing">
+  <div class="wrap">
+    <p class="label">routing</p>
+    <h2>Planner thinks. Executor does.</h2>
+    <p>
+      Under <code class="inline">--role auto</code> each prompt is routed by shape:
+      execution-flavoured prompts ("run", "inspect ./", "读取") go to the executor, everything
+      else to the planner. You can override per session or per prompt.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>control</th><th>effect</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">--role planner</code></td><td>analysis, exploitability reasoning, solve plans</td></tr>
+          <tr><td><code class="inline">--role executor</code></td><td>tools, file inspection, summarizing</td></tr>
+          <tr><td><code class="inline">/agent &lt;name&gt;</code></td><td>pin one provider for the next prompts</td></tr>
+          <tr><td><code class="inline">/planner</code> · <code class="inline">/executor</code></td><td>change either side mid-session</td></tr>
+          <tr><td><code class="inline">/effort codex high</code></td><td>reasoning effort, for backends that take one</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>auto/auto ❯ /providers</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="The providers table: claude marked executor and codex marked planner, both cli-tmux; claude-api on anthropic; codex-api and grok on openai-responses with high reasoning effort; deepseek and glm on openai-chat; grok-cli on cli-tmux; and mock. Each row shows name, role, kind, model and effort." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 307" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>The providers table: claude marked executor and codex marked planner, both cli-tmux; claude-api on anthropic; codex-api and grok on openai-responses with high reasoning effort; deepseek and glm on openai-chat; grok-cli on cli-tmux; and mock. Each row shows name, role, kind, model and effort.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">auto/auto ❯ /providers</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">PROVIDERS</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="142.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">─────────────────</tspan><tspan x="158.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#0e7490">────────────────</tspan><tspan x="293.2" textLength="268.8" lengthAdjust="spacingAndGlyphs" fill="#334155">────────────────────────────────</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">NAME      </tspan><tspan x="116.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">ROLE    </tspan><tspan x="200.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">KIND            </tspan><tspan x="352.0" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">MODEL          </tspan><tspan x="494.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">EFFORT</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">claude</tspan><tspan x="116.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">executor</tspan><tspan x="200.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">cli-tmux</tspan><tspan x="352.0" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">claude-code-cli</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">claude-api</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">anthropic</tspan><tspan x="352.0" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">claude-opus-4-8</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">codex</tspan><tspan x="116.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">planner</tspan><tspan x="200.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">cli-tmux</tspan><tspan x="352.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">codex-cli</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">codex-api</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">openai-responses</tspan><tspan x="352.0" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">gpt-5.3-codex</tspan><tspan x="494.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#fbbf24">high</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">deepseek</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">openai-chat</tspan><tspan x="352.0" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">deepseek-chat</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="16.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">glm</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">openai-chat</tspan><tspan x="352.0" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">glm-4.6</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">grok</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">openai-responses</tspan><tspan x="352.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">grok-4.5</tspan><tspan x="494.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#fbbf24">high</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="16.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">grok-cli</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#4ade80">cli-tmux</tspan><tspan x="352.0" textLength="117.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">grok-build-cli</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">mock</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan><tspan x="200.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">mock</tspan><tspan x="352.0" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">mock-reasoner</tspan><tspan x="494.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">–</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">auto</tspan><tspan x="49.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">/</tspan><tspan x="58.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">auto</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">❯</tspan><tspan x="108.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> /tools</tspan></text>
+</svg>
+      </div>
+      <figcaption>
+        Eight providers ship: three local CLIs through tmux, Anthropic Messages, OpenAI
+        Responses, any OpenAI-compatible chat endpoint, and an offline mock the tests and
+        <code class="inline">--smoke</code> use.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="arsenal">
+  <div class="wrap">
+    <p class="label">the arsenal</p>
+    <h2>24 tools, all local.</h2>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>group</th><th>tools</th></tr></thead>
+        <tbody>
+          <tr><td>files</td><td class="mono">list_files · read_file · write_file · grep</td></tr>
+          <tr><td>shell</td><td class="mono">run_command</td></tr>
+          <tr><td>binaries</td><td class="mono">file_info · strings · hexdump · hash_file · extract_symbols · binary_mitigations</td></tr>
+          <tr><td>CTF</td><td class="mono">ctf_triage · ctf_decode · entropy_scan · find_bytes · carve_artifacts</td></tr>
+          <tr><td>external</td><td class="mono">reverse_toolkit</td></tr>
+          <tr><td>mobile</td><td class="mono">apk_inspect · frida_hook_template</td></tr>
+          <tr><td>knowledge</td><td class="mono">list_skills · read_skill · knowledge_search · knowledge_read</td></tr>
+          <tr><td>plan</td><td class="mono">update_plan</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Triage without a model in the loop</h3>
+    <p>
+      Every analysis tool is also a slash command, so the fast path costs no tokens at all.
+      This is usually how a session starts.
+    </p>
+    <pre class="block">/scan ./chall                  <span class="c">type, magic, hash, entropy, string signals, next steps</span>
+/mitigations ./chall           <span class="c">PIE / NX / canary / RELRO / stripped / dangerous imports</span>
+/entropy ./chall               <span class="c">sliding-window entropy — finds packed or encrypted regions</span>
+/carve ./blob                  <span class="c">embedded ELF/PE/ZIP/DEX/PNG/PDF/SQLite/Mach-O</span>
+/findbytes ./chall flag{       <span class="c">offsets with hex+ascii context; hex needles too</span>
+/decode base64 ZmxhZ3s...      <span class="c">base64/hex/url/rot13/xor, or auto to try them all</span>
+/apk ./app.apk                 <span class="c">dex, native libs, packer and framework fingerprints</span>
+/retool inventory              <span class="c">check radare2, JADX, Ghidra, Unicorn, unidbg and friends</span>
+/retool radare2 info ./chall   <span class="c">fixed-action wrapper around deeper local RE tools</span>
+/hook java com.a.Crypto sign   <span class="c">a Frida hook scaffold for the method you name</span></pre>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>auto/auto ❯ /scan artifact.txt</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="CTF TRIAGE output: path, ASCII text type, 295 bytes, a sha256 digest, magic bytes in hex and ascii, sample size, entropy 5.083 bits per byte, 100 percent printable, a signals list flagging a base64 candidate, a URL, secret keywords, crypto keywords and pwn-related strings, then three suggested next steps." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 478" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>CTF TRIAGE output: path, ASCII text type, 295 bytes, a sha256 digest, magic bytes in hex and ascii, sample size, entropy 5.083 bits per byte, 100 percent printable, a signals list flagging a base64 candidate, a URL, secret keywords, crypto keywords and pwn-related strings, then three suggested next steps.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">auto/auto ❯ /scan artifact.txt   (no model in the loop)</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">CTF TRIAGE</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">path: artifact.txt</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">type: ASCII text</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">size: 295 bytes</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="604.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">sha256: 3b926e1a779e76bbbe658c5e5d79f5a091b3657570d99b9f4a39db0c8ec99ba1</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">magic.hex: 4354462064656d6f2061727469666163</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="243.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">magic.ascii: CTF demo artifac</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="176.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">sample: 295/295 bytes</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="16.0" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">entropy: 5.083 bits/byte</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="142.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">printable: 100.0%</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="16.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">signals:</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="16.0" textLength="604.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- crypto-codec: - base64 candidate: ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="16.0" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- url: https://ctf.example.invalid/api/sign</tspan></text>
+<text y="326.4" xml:space="preserve"><tspan x="16.0" textLength="554.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- secret-keyword: - crypto words: AES CBC HMAC SHA256 token secret</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="16.0" textLength="537.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- crypto-codec: - crypto words: AES CBC HMAC SHA256 token secret</tspan></text>
+<text y="364.4" xml:space="preserve"><tspan x="16.0" textLength="428.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- pwn-re: - pwn words: system /bin/sh printf strcpy</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="16.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">next:</tspan></text>
+<text y="421.4" xml:space="preserve"><tspan x="16.0" textLength="739.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- Mostly printable: grep for flags, endpoints, scripts, encodings, and protocol grammar.</tspan></text>
+<text y="440.4" xml:space="preserve"><tspan x="16.0" textLength="554.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- Codec keyword found: try ctf_decode on nearby candidate strings.</tspan></text>
+<text y="459.4" xml:space="preserve"><tspan x="16.0" textLength="646.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">- Exploit primitive hint: check mitigations and xrefs around dangerous calls.</tspan></text>
+</svg>
+      </div>
+      <figcaption>
+        Oversized output never lands in context whole: anything past
+        <code class="inline">--max-output</code> keeps head and tail, and the full text is
+        written to an artifact file the model can read deliberately.
+      </figcaption>
+    </figure>
+
+    <h3>Borrowed tools</h3>
+    <p>
+      Any stdio MCP server's tools join the same registry, with the same approval gate and the
+      same output budget. For reverse engineering the obvious one is
+      <a href="https://github.com/mrexodia/ida-pro-mcp">ida-pro-mcp</a>, which puts
+      decompilation, xrefs and renaming in reach of the agent.
+    </p>
+    <pre class="block">{ <span class="k">"mcpServers"</span>: { <span class="k">"ida"</span>: {
+    <span class="k">"command"</span>: <span class="v">"python3"</span>,
+    <span class="k">"args"</span>: [<span class="v">"-m"</span>, <span class="v">"ida_pro_mcp.server"</span>],
+    <span class="k">"timeoutMs"</span>: <span class="v">120000</span>
+} } }</pre>
+    <p class="muted">
+      They appear as <code class="inline">mcp__ida__&lt;tool&gt;</code>. A server that fails to
+      start is reported at boot and skipped, never fatal. <code class="inline">/mcp</code> shows
+      the state of each one.
+    </p>
+  </div>
+</section>
+
+<section id="safety">
+  <div class="wrap">
+    <p class="label">safety</p>
+    <h2>Tier × mode, and patterns that outrank both.</h2>
+    <p>
+      Two inputs decide whether a call runs: the tool's tier and the session's mode. On top of
+      that, a command tripping a safety pattern always asks — that is the one case an
+      "always allow" does not silence, because allowing
+      <code class="inline">run_command</code> is not the same as allowing
+      <code class="inline">rm -rf /</code>.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>mode</th><th>auto-approves</th><th>asks</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tier tier--exec">yolo</span></td><td>everything</td><td>nothing</td></tr>
+          <tr><td><span class="tier tier--read">safe</span> <span class="muted">default</span></td><td>every tier</td><td>commands tripping a safety pattern</td></tr>
+          <tr><td><span class="tier tier--write">write</span></td><td>read, write</td><td>exec tools, and safety patterns</td></tr>
+          <tr><td><span class="tier tier--ask">always-ask</span></td><td>read</td><td>everything else</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>safe mode, meeting a network command</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="An approval prompt: a reverse-video REVIEW badge beside run_command at exec tier, the curl command about to run, a concern line naming the network command and suggesting the --allow-network flag, and a single line of choices — y run once, a always this tool, n skip, d never this tool. The operator answered n and the trace records the denial as a tool result." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 174" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>An approval prompt: a reverse-video REVIEW badge beside run_command at exec tier, the curl command about to run, a concern line naming the network command and suggesting the --allow-network flag, and a single line of choices — y run once, a always this tool, n skip, d never this tool. The operator answered n and the trace records the denial as a tool result.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">safe mode stopping for a network command</text>
+<rect x="16.0" y="46.3" width="67.2" height="19.0" fill="#f87171"/>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#0b0f14"> REVIEW </tspan><tspan x="91.6" textLength="92.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#e5e7eb">run_command</tspan><tspan x="192.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">(exec)</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="369.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">curl -s https://ctf.example.invalid/api/sign</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#f87171">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#f87171">!</tspan><tspan x="49.6" textLength="462.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">network command &#x27;curl&#x27; (--allow-network to stop asking)</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">y</tspan><tspan x="49.6" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">run once</tspan><tspan x="116.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="158.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">a</tspan><tspan x="175.6" textLength="134.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">always this tool</tspan><tspan x="310.0" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="352.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">n</tspan><tspan x="368.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">skip</tspan><tspan x="402.4" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#334155">  ·  </tspan><tspan x="444.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">d</tspan><tspan x="461.2" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#64748b">never this tool</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">❯</tspan><tspan x="24.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> n</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">t+ 0.253 </tspan><tspan x="91.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">▏</tspan><tspan x="100.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#f87171"> ✗</tspan><tspan x="125.2" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">0ms</tspan><tspan x="158.8" textLength="613.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Operator denied run_command: curl -s https://ctf.example.invalid/api/sign</tspan></text>
+</svg>
+      </div>
+      <figcaption>
+        A denial is a normal outcome, not a crash: it becomes a tool result the model reads, and
+        the turn continues. With nobody to ask — <code class="inline">--print</code>, a pipe,
+        CI — the prompt becomes a refusal that states the reason.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="context">
+  <div class="wrap">
+    <p class="label">context, sessions, interrupts</p>
+    <h2>The transcript on disk is complete. What gets sent is not.</h2>
+    <p>
+      Sending everything is how an RE session dies: one <code class="inline">objdump -d</code>
+      can outweigh the rest of the conversation. What goes upstream is trimmed to the provider's
+      budget in two mechanical passes — old tool-result bodies are elided first, their first
+      line surviving as a pointer, then whole oldest exchanges are dropped behind a
+      <code class="inline">[context compacted]</code> marker.
+    </p>
+    <p>
+      A tool call is never separated from its results, because strict chat APIs reject that
+      shape. The same invariant is why an interrupted turn still records a result for every call
+      it issued: the transcript has to stay resumable.
+    </p>
+    <pre class="block">/context   <span class="c">≈12400 tokens of 48000 budget (25%) · 42 messages</span>
+/compact   <span class="c">ask the model for a briefing and restart the working history from it</span>
+
+0xaf --sessions          <span class="c">list recent sessions</span>
+0xaf --continue          <span class="c">resume the most recent</span>
+0xaf --resume 2026-07-28 <span class="c">an id, an id prefix, or a path</span></pre>
+    <p class="muted">
+      Sessions are append-only JSONL. A truncated final line — killed mid-write — and tool calls
+      whose results never landed are both repaired on load.
+    </p>
+  </div>
+</section>
+
+<section id="skills">
+  <div class="wrap">
+    <p class="label">skills &amp; knowledge</p>
+    <h2>Your workflows and your notes, in reach.</h2>
+    <p>
+      Project-local workflows live in <code class="inline">skills/&lt;name&gt;/SKILL.md</code>.
+      They are loaded at startup, summarized into the system prompt, exposed as tools, and can
+      be forced for a single turn. Four ship: a CTF first pass, an Android APK + Frida
+      workflow, native pwn/RE, and web/WASM crypto.
+    </p>
+    <pre class="block">/skills
+/skill android-apk-frida inspect this APK and propose hooks</pre>
+    <p>
+      A local markdown corpus can be indexed and queried without leaving the REPL. Answers come
+      only from the retrieved entries, cite the entry ids they used, and if the model cites an
+      id that does not exist the page says so instead of quietly dropping it — a knowledge tool
+      that invents sources is worse than one that cites none.
+    </p>
+    <pre class="block">go run ./cmd/import-knowledge ~/notes/re
+
+/know frida ssl pinning   <span class="c">answer from local knowledge, with sources</span>
+/know raw frida ssl       <span class="c">raw index hits, no model call</span>
+/know read &lt;entry-id&gt;     <span class="c">read one entry in full</span></pre>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <p class="label">install &amp; quickstart</p>
+    <h2>Four commands to a working deck.</h2>
+
+    <pre class="block"><span class="c"># 1 — install</span>
+go install github.com/overkazaf/re-agent/cmd/0xaf@latest
+<span class="c">#     or: git clone https://github.com/overkazaf/re-agent &amp;&amp; cd re-agent &amp;&amp; make build</span>
+
+<span class="c"># 2 — check the wiring, offline: no key, no network, no CLI login</span>
+0xaf --smoke
+
+<span class="c"># 3 — check what it can actually authenticate as</span>
+0xaf auth status
+
+<span class="c"># 4 — open a workspace</span>
+0xaf --workspace ./ctf</pre>
+
+    <p>
+      The default route uses your local <code class="inline">codex</code> and
+      <code class="inline">claude</code> logins through tmux. Prefer a direct API? Export a key
+      and name the provider:
+    </p>
+    <pre class="block">export DEEPSEEK_API_KEY=...
+0xaf --planner deepseek --executor deepseek --workspace ./ctf
+
+<span class="c"># or store one locally, in ~/.0xaf-re-agent/secrets.json</span>
+0xaf auth login claude-api</pre>
+
+    <h3>A shell escape, when it is faster to just look</h3>
+    <p>
+      A REPL line starting with <code class="inline">!</code> runs in the workspace under the
+      same policy. Output streams live and lands in the transcript, so the next prompt can
+      refer to what you both just saw.
+    </p>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>auto/auto ❯ !ls -la  ·  /read nope.txt</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="A shell escape: the command !ls -la drawn inside a bracketed box with a per-line gutter listing the workspace files, closed by a footer showing a green check, exit 0 and 6 milliseconds. Below it, /read nope.txt reports the missing file as a single red-gutter error line." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 269" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>A shell escape: the command !ls -la drawn inside a bracketed box with a per-line gutter listing the workspace files, closed by a footer showing a green check, exit 0 and 6 milliseconds. Below it, /read nope.txt reports the missing file as a single red-gutter error line.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">auto/auto ❯ !ls -la   ·   /read nope.txt</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">╭─</tspan><tspan x="41.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">!</tspan><tspan x="58.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#e5e7eb">ls -la</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="24.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> 总计 20</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="24.4" textLength="369.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> drwxr-xr-x 2 dell dell 4096  7月 27 00:44 .</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="24.4" textLength="378.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> drwxr-xr-x 4 dell dell 4096  7月 27 00:44 ..</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="24.4" textLength="462.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> -rw-r--r-- 1 dell dell  295  7月 27 00:44 artifact.txt</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="24.4" textLength="453.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> -rw-r--r-- 1 dell dell  121  7月 27 00:44 carrier.bin</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">│</tspan><tspan x="24.4" textLength="436.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> -rw-r--r-- 1 dell dell  352  7月 27 00:44 README.md</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="16.8" lengthAdjust="spacingAndGlyphs" fill="#334155">╰─</tspan><tspan x="41.2" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#4ade80">✓</tspan><tspan x="58.0" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#64748b">exit 0</tspan><tspan x="116.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">·</tspan><tspan x="133.6" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">8ms</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">auto</tspan><tspan x="49.6" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#334155">/</tspan><tspan x="58.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">auto</tspan><tspan x="100.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">❯</tspan><tspan x="108.4" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb"> /read nope.txt</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="16.0" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#f87171">▏</tspan><tspan x="32.8" textLength="764.4" lengthAdjust="spacingAndGlyphs" fill="#f87171">stat /mnt/data/research/0xaf-re-agent/demos/reverse-lab/nope.txt: no such file or directory</tspan></text>
+</svg>
+      </div>
+      <figcaption>Same policy as <code class="inline">run_command</code> · <kbd>^C</kbd> kills the child, not the REPL.</figcaption>
+    </figure>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>auto/auto ❯ /help</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="The command deck from /help, grouping slash commands into session, routing, auth, and direct tools sections, each command listed with its arguments and a one-line description." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 1105" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>The command deck from /help, grouping slash commands into session, routing, auth, and direct tools sections, each command listed with its arguments and a one-line description.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">auto/auto ❯ /help</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#22d3ee">0xAF</tspan><tspan x="58.0" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">command deck</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">─────────────</tspan><tspan x="125.2" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#0e7490">─────────────</tspan><tspan x="234.4" textLength="218.4" lengthAdjust="spacingAndGlyphs" fill="#334155">──────────────────────────</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">SESSION</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="32.8" textLength="8.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/</tspan><tspan x="352.0" textLength="252.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show executable slash commands</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/welcome</tspan><tspan x="352.0" textLength="226.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show guided first-run demos</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/help</tspan><tspan x="352.0" textLength="117.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show this deck</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/clear</tspan><tspan x="352.0" textLength="319.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Clear the screen and redraw the banner</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/theme</tspan><tspan x="91.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[name]</tspan><tspan x="352.0" textLength="327.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Switch palette (deck/amber/matrix/mono)</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/flow</tspan><tspan x="83.2" textLength="176.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[full|flow|trace|off]</tspan><tspan x="352.0" textLength="310.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Live dataflow diagram and trace lines</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/context</tspan><tspan x="352.0" textLength="369.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show the context estimate against the budget</tspan></text>
+<text y="269.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/compact</tspan><tspan x="108.4" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[provider]</tspan><tspan x="352.0" textLength="403.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Fold the session into a summary and free context</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/session</tspan><tspan x="352.0" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Print the JSONL transcript path</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="32.8" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/sessions</tspan><tspan x="352.0" textLength="168.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">List recent sessions</tspan></text>
+<text y="326.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/resume</tspan><tspan x="100.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[id]</tspan><tspan x="352.0" textLength="277.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Load a previous session&#x27;s history</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/policy</tspan><tspan x="352.0" textLength="243.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show the active safety policy</tspan></text>
+<text y="364.4" xml:space="preserve"><tspan x="32.8" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/approval</tspan><tspan x="116.8" textLength="218.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[mode|tool &lt;n&gt; allow|deny]</tspan><tspan x="352.0" textLength="436.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show or change tool approval (yolo/write/always-ask)</tspan></text>
+<text y="383.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/exit</tspan><tspan x="352.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Quit</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/quit</tspan><tspan x="352.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Quit</tspan></text>
+<text y="440.4" xml:space="preserve"><tspan x="16.0" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">ROUTING</tspan></text>
+<text y="459.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/role</tspan><tspan x="83.2" textLength="176.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">planner|executor|auto</tspan><tspan x="352.0" textLength="294.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Pick which side of the deck answers</tspan></text>
+<text y="478.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/agent</tspan><tspan x="91.6" textLength="92.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;name&gt;|auto</tspan><tspan x="352.0" textLength="310.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Pin one provider for the next prompts</tspan></text>
+<text y="497.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/planner</tspan><tspan x="108.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;name&gt;</tspan><tspan x="352.0" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Set the planner provider</tspan></text>
+<text y="516.4" xml:space="preserve"><tspan x="32.8" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/executor</tspan><tspan x="116.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;name&gt;</tspan><tspan x="352.0" textLength="210.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Set the executor provider</tspan></text>
+<text y="535.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/effort</tspan><tspan x="100.0" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;provider&gt; &lt;level&gt;</tspan><tspan x="352.0" textLength="285.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Set reasoning effort (minimal…max)</tspan></text>
+<text y="554.4" xml:space="preserve"><tspan x="32.8" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/providers</tspan><tspan x="352.0" textLength="210.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">List configured providers</tspan></text>
+<text y="592.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#64748b">AUTH</tspan></text>
+<text y="611.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/auth</tspan><tspan x="352.0" textLength="184.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show credential status</tspan></text>
+<text y="630.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/status</tspan><tspan x="352.0" textLength="184.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show credential status</tspan></text>
+<text y="649.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/login</tspan><tspan x="91.6" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;provider&gt;</tspan><tspan x="352.0" textLength="201.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Store an API key locally</tspan></text>
+<text y="668.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/logout</tspan><tspan x="100.0" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;provider&gt;</tspan><tspan x="352.0" textLength="218.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Remove a stored credential</tspan></text>
+<text y="706.4" xml:space="preserve"><tspan x="16.0" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#64748b">DIRECT TOOLS</tspan></text>
+<text y="725.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/tools</tspan><tspan x="352.0" textLength="184.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">List reverse/CTF tools</tspan></text>
+<text y="744.4" xml:space="preserve"><tspan x="32.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/mcp</tspan><tspan x="352.0" textLength="386.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show MCP servers and the tools they contribute</tspan></text>
+<text y="763.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/scan</tspan><tspan x="83.2" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;path&gt;</tspan><tspan x="352.0" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Fast CTF triage on an artifact or directory</tspan></text>
+<text y="782.4" xml:space="preserve"><tspan x="32.8" textLength="100.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/mitigations</tspan><tspan x="142.0" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;binary&gt;</tspan><tspan x="352.0" textLength="294.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Summarize native binary protections</tspan></text>
+<text y="801.4" xml:space="preserve"><tspan x="32.8" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/entropy</tspan><tspan x="108.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;file&gt;</tspan><tspan x="352.0" textLength="226.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Sliding-window entropy scan</tspan></text>
+<text y="820.4" xml:space="preserve"><tspan x="32.8" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/findbytes</tspan><tspan x="125.2" textLength="126.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;file&gt; &lt;needle&gt;</tspan><tspan x="352.0" textLength="285.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Find text/hex offsets with context</tspan></text>
+<text y="839.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/carve</tspan><tspan x="91.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;file&gt;</tspan><tspan x="352.0" textLength="260.4" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Locate embedded file signatures</tspan></text>
+<text y="858.4" xml:space="preserve"><tspan x="32.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/apk</tspan><tspan x="74.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;apk&gt;</tspan><tspan x="352.0" textLength="403.2" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Inspect APK structure and packer/framework hints</tspan></text>
+<text y="877.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/decode</tspan><tspan x="100.0" textLength="117.6" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[mode] &lt;input&gt;</tspan><tspan x="352.0" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Decode base64/hex/url/rot13/xor candidates</tspan></text>
+<text y="896.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/hook</tspan><tspan x="83.2" textLength="226.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">[java|native|objc] &lt;target&gt;</tspan><tspan x="352.0" textLength="252.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Generate a Frida hook scaffold</tspan></text>
+<text y="915.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/plan</tspan><tspan x="352.0" textLength="243.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Reprint the current task list</tspan></text>
+<text y="934.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/read</tspan><tspan x="83.2" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;path&gt;</tspan><tspan x="352.0" textLength="243.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Read a file without the model</tspan></text>
+<text y="953.4" xml:space="preserve"><tspan x="32.8" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/run</tspan><tspan x="74.8" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;command&gt;</tspan><tspan x="352.0" textLength="310.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Run a local command without the model</tspan></text>
+<text y="991.4" xml:space="preserve"><tspan x="16.0" textLength="151.2" lengthAdjust="spacingAndGlyphs" fill="#64748b">SKILLS &amp; KNOWLEDGE</tspan></text>
+<text y="1010.4" xml:space="preserve"><tspan x="32.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/skills</tspan><tspan x="352.0" textLength="336.0" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">List built-in reverse engineering skills</tspan></text>
+<text y="1029.4" xml:space="preserve"><tspan x="32.8" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/skill</tspan><tspan x="91.6" textLength="109.2" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;name&gt; [task]</tspan><tspan x="352.0" textLength="327.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Show or force a built-in skill workflow</tspan></text>
+<text y="1048.4" xml:space="preserve"><tspan x="32.8" textLength="42.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/know</tspan><tspan x="83.2" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;query&gt;</tspan><tspan x="352.0" textLength="436.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Answer from imported reverse knowledge, with sources</tspan></text>
+<text y="1067.4" xml:space="preserve"><tspan x="32.8" textLength="75.6" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/know raw</tspan><tspan x="116.8" textLength="58.8" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;query&gt;</tspan><tspan x="352.0" textLength="243.6" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Raw index hits, no model call</tspan></text>
+<text y="1086.4" xml:space="preserve"><tspan x="32.8" textLength="84.0" lengthAdjust="spacingAndGlyphs" fill="#22d3ee">/know read</tspan><tspan x="125.2" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#a78bfa">&lt;id&gt;</tspan><tspan x="352.0" textLength="268.8" lengthAdjust="spacingAndGlyphs" fill="#94a3b8">Read one knowledge entry in full</tspan></text>
+</svg>
+      </div>
+      <figcaption>
+        <code class="inline">TAB</code> completes commands and their arguments; a live palette
+        appears under the prompt as you type; <code class="inline">↑↓</code> walks history that
+        persists across sessions.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="verify">
+  <div class="wrap">
+    <p class="label">verification</p>
+    <h2>Nine test packages, and a startup you can measure.</h2>
+    <p>
+      The tests pin the parts that are easy to break silently: the context-budget invariant, the
+      plan tracker's no-op suppression, the CLI task-table binding rules, the approval matrix,
+      and the HUD's width and height contract — a single over-wide line would desynchronise the
+      in-place redraw for the rest of the session.
+    </p>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>go vet · go test · build · startup</div>
+      <div class="capture__scroll">
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="Terminal output: go vet followed by go test across nine packages, all reporting ok with timings; the 6.7 megabyte 0xaf binary listed; and fifty consecutive runs of 0xaf --welcome completing in 0.335 seconds of real time." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 440" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>Terminal output: go vet followed by go test across nine packages, all reporting ok with timings; the 6.7 megabyte 0xaf binary listed; and fifty consecutive runs of 0xaf --welcome completing in 0.335 seconds of real time.</title>
+<rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
+<rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
+<text x="16" y="30.1" fill="#64748b" font-size="12">go vet · go test · build · startup</text>
+<text y="60.4" xml:space="preserve"><tspan x="16.0" textLength="336.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">$ go vet ./... &amp;&amp; go test -count=1 ./...</tspan></text>
+<text y="79.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="352.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/app</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.009s</tspan></text>
+<text y="98.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/auth</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.004s</tspan></text>
+<text y="117.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="378.0" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/config</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.007s</tspan></text>
+<text y="136.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/core</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.234s</tspan></text>
+<text y="155.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="403.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/knowledge</tspan><tspan x="553.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.007s</tspan></text>
+<text y="174.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="361.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/plan</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.006s</tspan></text>
+<text y="193.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="403.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/providers</tspan><tspan x="553.6" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.008s</tspan></text>
+<text y="212.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="394.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/security</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.006s</tspan></text>
+<text y="231.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="369.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/tools</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.029s</tspan></text>
+<text y="250.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">ok  </tspan><tspan x="83.2" textLength="344.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">github.com/overkazaf/re-agent/internal/ui</tspan><tspan x="486.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0.031s</tspan></text>
+<text y="288.4" xml:space="preserve"><tspan x="16.0" textLength="487.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">$ ls -la bin/0xaf     # one static binary, assets embedded</tspan></text>
+<text y="307.4" xml:space="preserve"><tspan x="16.0" textLength="445.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">-rwxrwxr-x 1 dell dell 6684932  7月 28 09:42 bin/0xaf</tspan></text>
+<text y="345.4" xml:space="preserve"><tspan x="16.0" textLength="772.8" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">$ time (for i in $(seq 50); do ./bin/0xaf --welcome &gt;/dev/null; done)   # cold-ish start x50</tspan></text>
+<text y="383.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">real</tspan><tspan x="83.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0m0.375s</tspan></text>
+<text y="402.4" xml:space="preserve"><tspan x="16.0" textLength="33.6" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">user</tspan><tspan x="83.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0m0.185s</tspan></text>
+<text y="421.4" xml:space="preserve"><tspan x="16.0" textLength="25.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">sys</tspan><tspan x="83.2" textLength="67.2" lengthAdjust="spacingAndGlyphs" fill="#e5e7eb">0m0.238s</tspan></text>
+</svg>
+      </div>
+      <figcaption>Fifty process starts in 0.335 s — about 6.7 ms each, including reading the embedded prompt and skills.</figcaption>
+    </figure>
+    <p class="wide">
+      <a href="diagrams/">Architecture diagrams</a>
+      · <a href="https://github.com/overkazaf/re-agent/blob/main/docs/ARCHITECTURE.md">Architecture deep-dive</a>
+      · <a href="https://github.com/overkazaf/re-agent">source</a>
+      · <a href="https://github.com/overkazaf/re-agent#common-usage">more usage</a>
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="scope">
+      Scoped for authorized CTF, lab, and local reverse engineering work: binary triage, static
+      inspection, local dynamic experiments, solve planning, and reproducible notes.
+    </p>
+    <p>
+      <a href="https://github.com/overkazaf/re-agent">github.com/overkazaf/re-agent</a>
+      <span class="muted"> · built in Go, with one dependency</span>
+    </p>
+  </div>
+</footer>
+
+<script>
+// The one interaction the page earns: copying the install line.
+document.querySelectorAll(".copy").forEach(function (button) {
+  button.addEventListener("click", function () {
+    var target = document.querySelector(button.dataset.copy);
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent.trim()).then(function () {
+      var previous = button.textContent;
+      button.textContent = "copied";
+      setTimeout(function () { button.textContent = previous; }, 1400);
+    }, function () {
+      button.textContent = "select it";
+    });
+  });
+});
+</script>
+
+</body>
+</html>

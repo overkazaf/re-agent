@@ -1,0 +1,199 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1040" width="1120" height="1040" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="ah-dim" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="1120" height="1040" fill="#020617"/>
+  <rect width="1120" height="1040" fill="url(#grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">Module dependency graph</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">0xAF-Re · internal/ package layering · arrows point from dependant to dependency · no cycles</text>
+
+  <!-- ================= EDGES (drawn first, painted behind boxes) ================= -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#ah)">
+    <!-- main -> app -->
+    <path d="M 560 128 L 560 222"/>
+    <!-- app -> runtime row A -->
+    <path d="M 470 282 L 240 357"/>
+    <path d="M 560 282 L 560 357"/>
+    <path d="M 650 282 L 880 357"/>
+    <!-- app -> runtime row B (down the outside) -->
+    <path d="M 400 252 L 60 252 L 60 450 L 67 450"/>
+    <path d="M 720 252 L 1060 252 L 1060 450 L 1053 450"/>
+  </g>
+
+  <!-- app -> support (long left/right rails) -->
+  <g stroke="#475569" stroke-width="1.1" fill="none" marker-end="url(#ah-dim)" stroke-dasharray="5,4">
+    <path d="M 420 282 L 30 282 L 30 722 L 67 722"/>
+    <path d="M 700 282 L 1090 282 L 1090 722 L 1053 722"/>
+  </g>
+
+  <!-- core -> tools / security / plan -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#ah)">
+    <path d="M 370 392 L 747 392"/>
+    <path d="M 220 424 L 220 447"/>
+    <path d="M 300 424 L 520 447"/>
+    <!-- tools -> security & plan -->
+    <path d="M 880 424 L 640 447"/>
+    <path d="M 900 424 L 900 447"/>
+    <!-- providers -> auth/config handled by support rail note -->
+  </g>
+
+  <!-- ui -> core, plan, auth  (ui reads loop state, the task list, and login status) -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#ah)">
+    <path d="M 450 597 L 302 428"/>
+    <path d="M 700 597 L 898 518"/>
+    <path d="M 500 657 L 366 721"/>
+  </g>
+
+  <!-- ================= GROUP BOUNDARIES ================= -->
+  <g fill="none" stroke-dasharray="8,4" stroke-width="1.2">
+    <rect x="40" y="200" width="1040" height="92" rx="12" stroke="#334155"/>
+    <rect x="40" y="330" width="1040" height="208" rx="12" stroke="#334155"/>
+    <rect x="40" y="572" width="1040" height="96" rx="12" stroke="#334155"/>
+    <rect x="40" y="700" width="1040" height="104" rx="12" stroke="#334155"/>
+    <rect x="40" y="838" width="1040" height="98" rx="12" stroke="#334155"/>
+  </g>
+  <g fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">
+    <text x="52" y="216">CLI</text>
+    <text x="52" y="346">RUNTIME</text>
+    <text x="52" y="588">PRESENTATION</text>
+    <text x="52" y="716">SUPPORT</text>
+    <text x="52" y="854">LEAVES</text>
+  </g>
+
+  <!-- ================= NODES ================= -->
+  <!-- main -->
+  <rect x="480" y="74" width="160" height="54" rx="6" fill="#0f172a"/>
+  <rect x="480" y="74" width="160" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="560" y="98" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">cmd/0xaf</text>
+  <text x="560" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">entrypoint</text>
+
+  <!-- app -->
+  <rect x="400" y="222" width="320" height="60" rx="6" fill="#0f172a"/>
+  <rect x="400" y="222" width="320" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="560" y="246" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">app</text>
+  <text x="560" y="264" fill="#94a3b8" font-size="9" text-anchor="middle">args · REPL · commands · editor</text>
+
+  <!-- runtime row A -->
+  <rect x="70" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="70" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="220" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">core</text>
+  <text x="220" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">loop · session · compaction</text>
+  <text x="220" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">shell escape</text>
+
+  <rect x="410" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="410" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="560" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">providers</text>
+  <text x="560" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">5 adapters</text>
+  <text x="560" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">+ stream normalizer</text>
+
+  <rect x="750" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="750" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="900" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">tools</text>
+  <text x="900" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">registry · runner · spill</text>
+  <text x="900" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">24 local tools</text>
+
+  <!-- runtime row B -->
+  <rect x="70" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="70" y="450" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="220" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">mcp</text>
+  <text x="220" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">stdio JSON-RPC client</text>
+  <text x="220" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">borrowed tools</text>
+
+  <rect x="410" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="410" y="450" width="300" height="64" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="560" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">security</text>
+  <text x="560" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">danger patterns</text>
+  <text x="560" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">+ approval gate</text>
+
+  <rect x="750" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="750" y="450" width="300" height="64" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="900" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">plan</text>
+  <text x="900" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">task-list tracker</text>
+  <text x="900" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">model-reported progress</text>
+
+  <!-- presentation -->
+  <rect x="400" y="597" width="320" height="60" rx="6" fill="#0f172a"/>
+  <rect x="400" y="597" width="320" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="560" y="621" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">ui</text>
+  <text x="560" y="639" fill="#94a3b8" font-size="9" text-anchor="middle">theme · pane · HUD · flow · trace</text>
+
+  <!-- support -->
+  <g>
+    <rect x="70" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="70" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="158" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">config</text>
+    <text x="158" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">routes · providers</text>
+
+    <rect x="271" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="271" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="359" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">auth</text>
+    <text x="359" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">CLI login probe</text>
+
+    <rect x="472" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="472" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="560" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">assets</text>
+    <text x="560" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">go:embed prompt/skills</text>
+
+    <rect x="673" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="673" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="761" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">skills</text>
+    <text x="761" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">SKILL.md workflows</text>
+
+    <rect x="874" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="874" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="962" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">knowledge</text>
+    <text x="962" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">local corpus index</text>
+  </g>
+
+  <!-- leaves -->
+  <rect x="310" y="862" width="220" height="54" rx="6" fill="#0f172a"/>
+  <rect x="310" y="862" width="220" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="420" y="886" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">types</text>
+  <text x="420" y="902" fill="#94a3b8" font-size="9" text-anchor="middle">shared contracts, no imports</text>
+
+  <rect x="590" y="862" width="220" height="54" rx="6" fill="#0f172a"/>
+  <rect x="590" y="862" width="220" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="700" y="886" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">util</text>
+  <text x="700" y="902" fill="#94a3b8" font-size="9" text-anchor="middle">width math, no imports</text>
+
+  <!-- aggregate edges into leaves -->
+  <g stroke="#475569" stroke-width="1.1" fill="none" marker-end="url(#ah-dim)" stroke-dasharray="5,4">
+    <path d="M 420 806 L 420 858"/>
+    <path d="M 700 806 L 700 858"/>
+  </g>
+  <text x="420" y="828" fill="#64748b" font-size="8" text-anchor="middle">every runtime + support pkg</text>
+  <text x="700" y="828" fill="#64748b" font-size="8" text-anchor="middle">core · tools · plan</text>
+
+  <!-- legend -->
+  <g font-size="9">
+    <rect x="40" y="958" width="14" height="12" rx="3" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="62" y="968" fill="#94a3b8">interface</text>
+    <rect x="150" y="958" width="14" height="12" rx="3" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.2"/>
+    <text x="172" y="968" fill="#94a3b8">runtime</text>
+    <rect x="252" y="958" width="14" height="12" rx="3" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.2"/>
+    <text x="274" y="968" fill="#94a3b8">security</text>
+    <rect x="358" y="958" width="14" height="12" rx="3" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.2"/>
+    <text x="380" y="968" fill="#94a3b8">plan</text>
+    <rect x="440" y="958" width="14" height="12" rx="3" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="462" y="968" fill="#94a3b8">support</text>
+    <rect x="548" y="958" width="14" height="12" rx="3" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="570" y="968" fill="#94a3b8">leaf / entrypoint</text>
+
+    <line x1="720" y1="964" x2="758" y2="964" stroke="#64748b" stroke-width="1.3" marker-end="url(#ah)"/>
+    <text x="766" y="968" fill="#94a3b8">direct import</text>
+    <line x1="880" y1="964" x2="918" y2="964" stroke="#475569" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#ah-dim)"/>
+    <text x="926" y="968" fill="#94a3b8">aggregated edges</text>
+  </g>
+
+  <text x="40" y="1004" fill="#475569" font-size="8">Dependencies flow downward only. types and util import nothing, which is what keeps the graph acyclic and the packages independently testable.</text>
+</svg>

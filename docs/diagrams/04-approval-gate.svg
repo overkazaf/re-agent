@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1380" width="1180" height="1380" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="ah-ok" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+    </marker>
+    <marker id="ah-no" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185"/>
+    </marker>
+  </defs>
+
+  <rect width="1180" height="1380" fill="#020617"/>
+  <rect width="1180" height="1380" fill="url(#grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">Security: the approval gate</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">tier × mode, with per-tool overrides that outrank both. Every denial becomes a tool result the model reads — the turn never dies on a refusal.</text>
+
+  <!-- ===== EDGES ===== -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#ah)">
+    <path d="M 580 140 L 580 168"/>
+    <path d="M 580 240 L 580 262"/>
+    <path d="M 580 346 L 580 382"/>
+    <path d="M 580 474 L 580 508"/>
+    <path d="M 580 604 L 580 644"/>
+    <path d="M 580 728 L 580 766"/>
+    <path d="M 580 838 L 580 880"/>
+  </g>
+
+  <!-- D yes → ASK (bypasses the auto-approve test) -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#ah-no)">
+    <path d="M 380 430 L 300 430 L 300 630 L 580 630 L 580 644"/>
+  </g>
+
+  <!-- E yes → RUN -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#ah-ok)">
+    <path d="M 795 558 L 944 558"/>
+  </g>
+
+  <!-- C yes → denial sink (far-left rail) -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#ah-no)">
+    <path d="M 405 306 L 25 306 L 25 1118 L 54 1118"/>
+  </g>
+
+  <!-- ASK yes → non-interactive denial -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#ah-no)">
+    <path d="M 405 688 L 190 688 L 190 750"/>
+  </g>
+  <!-- non-interactive denial → sink -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#ah-no)">
+    <path d="M 190 846 L 190 1084"/>
+  </g>
+
+  <!-- Q allow → RUN -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#ah-ok)">
+    <path d="M 730 922 L 880 922 L 880 608 L 1044 608 L 1044 588"/>
+  </g>
+  <!-- Q deny → sink -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#ah-no)">
+    <path d="M 430 922 L 388 922 L 388 1064 L 290 1064 L 290 1084"/>
+  </g>
+
+  <!-- RUN → Execute -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#ah-ok)">
+    <path d="M 1044 582 L 1044 1084"/>
+  </g>
+
+  <!-- sink → recorded -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#ah-no)">
+    <path d="M 210 1146 L 210 1204"/>
+  </g>
+
+  <!-- ===== NODES ===== -->
+  <rect x="360" y="88" width="440" height="52" rx="6" fill="#0f172a"/>
+  <rect x="360" y="88" width="440" height="52" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="580" y="110" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">RequestApproval</text>
+  <text x="580" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">tool · tier · summary · concerns</text>
+
+  <rect x="300" y="168" width="560" height="72" rx="6" fill="#0f172a"/>
+  <rect x="300" y="168" width="560" height="72" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="580" y="192" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">mode = policy.ApprovalMode, default safe</text>
+  <text x="580" y="212" fill="#94a3b8" font-size="9" text-anchor="middle">override = the per-tool entry in policy.Approvals</text>
+  <text x="580" y="229" fill="#a78bfa" font-size="8" text-anchor="middle">the override is consulted first and wins over the mode</text>
+
+  <polygon points="580,266 755,306 580,346 405,306" fill="#0f172a"/>
+  <polygon points="580,266 755,306 580,346 405,306" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="303" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">override</text>
+  <text x="580" y="318" fill="#cbd5e1" font-size="9" text-anchor="middle">is deny?</text>
+
+  <polygon points="580,386 780,430 580,474 380,430" fill="#0f172a"/>
+  <polygon points="580,386 780,430 580,474 380,430" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="425" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">concerns non-empty</text>
+  <text x="580" y="440" fill="#cbd5e1" font-size="9" text-anchor="middle">AND mode is not yolo?</text>
+
+  <polygon points="580,512 795,558 580,604 365,558" fill="#0f172a"/>
+  <polygon points="580,512 795,558 580,604 365,558" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="552" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">override is allow, OR</text>
+  <text x="580" y="567" fill="#cbd5e1" font-size="9" text-anchor="middle">AutoApproves for this</text>
+  <text x="580" y="581" fill="#cbd5e1" font-size="9" text-anchor="middle">mode and tier?</text>
+
+  <rect x="944" y="534" width="200" height="48" rx="6" fill="#0f172a"/>
+  <rect x="944" y="534" width="200" height="48" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="1044" y="556" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">run</text>
+  <text x="1044" y="572" fill="#94a3b8" font-size="9" text-anchor="middle">no prompt</text>
+
+  <polygon points="580,648 755,688 580,728 405,688" fill="#0f172a"/>
+  <polygon points="580,648 755,688 580,728 405,688" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="580" y="684" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">tc.Confirm is nil?</text>
+  <text x="580" y="699" fill="#fda4af" font-size="8" text-anchor="middle">nobody attached</text>
+
+  <rect x="40" y="750" width="300" height="96" rx="6" fill="#0f172a"/>
+  <rect x="40" y="750" width="300" height="96" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="190" y="772" fill="#fb7185" font-size="10" font-weight="700" text-anchor="middle">DeniedError — non-interactive</text>
+  <text x="190" y="792" fill="#e2e8f0" font-size="8" text-anchor="middle">with concerns:</text>
+  <text x="190" y="806" fill="#94a3b8" font-size="8" text-anchor="middle">"blocked by policy …"</text>
+  <text x="190" y="823" fill="#e2e8f0" font-size="8" text-anchor="middle">without:</text>
+  <text x="190" y="837" fill="#94a3b8" font-size="8" text-anchor="middle">"needs approval, mode=X, not interactive"</text>
+
+  <rect x="350" y="766" width="460" height="72" rx="6" fill="#0f172a"/>
+  <rect x="350" y="766" width="460" height="72" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="790" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pause the pane, draw the request block</text>
+  <text x="580" y="810" fill="#94a3b8" font-size="9" text-anchor="middle">read exactly one key</text>
+  <text x="580" y="828" fill="#64748b" font-size="8" text-anchor="middle">the live frame timer stops so the prompt cannot be overdrawn</text>
+
+  <polygon points="580,884 730,922 580,960 430,922" fill="#0f172a"/>
+  <polygon points="580,884 730,922 580,960 430,922" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="926" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">decision</text>
+
+  <!-- decision key legend -->
+  <rect x="330" y="1000" width="500" height="72" rx="6" fill="rgba(2,6,23,0.85)" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="345" y="1020" fill="#34d399" font-size="9" font-weight="700">y</text>
+  <text x="360" y="1020" fill="#cbd5e1" font-size="9">allow once</text>
+  <text x="470" y="1020" fill="#34d399" font-size="9" font-weight="700">a</text>
+  <text x="485" y="1020" fill="#cbd5e1" font-size="9">allow-always — remembered for this tool</text>
+  <text x="345" y="1042" fill="#fb7185" font-size="9" font-weight="700">n</text>
+  <text x="360" y="1042" fill="#cbd5e1" font-size="9">deny once · Enter and EOF mean the same</text>
+  <text x="345" y="1062" fill="#fb7185" font-size="9" font-weight="700">d</text>
+  <text x="360" y="1062" fill="#cbd5e1" font-size="9">deny-always — remembered for this tool</text>
+
+  <!-- denial sink -->
+  <rect x="54" y="1084" width="312" height="62" rx="6" fill="#0f172a"/>
+  <rect x="54" y="1084" width="312" height="62" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="210" y="1110" fill="#fb7185" font-size="11" font-weight="700" text-anchor="middle">DeniedError</text>
+  <text x="210" y="1130" fill="#94a3b8" font-size="9" text-anchor="middle">every refusal path lands here</text>
+
+  <!-- execute -->
+  <rect x="908" y="1084" width="272" height="62" rx="6" fill="#0f172a" transform="translate(-30,0)"/>
+  <rect x="908" y="1084" width="272" height="62" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5" transform="translate(-30,0)"/>
+  <text x="1044" y="1110" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">tool.Execute</text>
+  <text x="1044" y="1130" fill="#94a3b8" font-size="9" text-anchor="middle">ToolResult back to the loop</text>
+
+  <!-- recorded -->
+  <rect x="54" y="1204" width="560" height="76" rx="6" fill="#0f172a"/>
+  <rect x="54" y="1204" width="560" height="76" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="334" y="1230" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">recorded as an error tool result</text>
+  <text x="334" y="1250" fill="#e2e8f0" font-size="9" text-anchor="middle">the loop continues — the model reads the refusal and re-plans</text>
+  <text x="334" y="1268" fill="#94a3b8" font-size="8" text-anchor="middle">a blocked command is an answer, not a crash</text>
+
+  <!-- edge labels -->
+  <g font-size="9" font-weight="700">
+    <text x="392" y="298" fill="#fb7185" text-anchor="end">yes</text>
+    <text x="592" y="366" fill="#94a3b8">no</text>
+    <text x="368" y="422" fill="#fb7185" text-anchor="end">yes</text>
+    <text x="592" y="494" fill="#94a3b8">no</text>
+    <text x="812" y="552" fill="#34d399">yes</text>
+    <text x="592" y="626" fill="#94a3b8">no</text>
+    <text x="392" y="680" fill="#fb7185" text-anchor="end">yes</text>
+    <text x="592" y="750" fill="#94a3b8">no</text>
+    <text x="752" y="916" fill="#34d399">y · a</text>
+    <text x="418" y="916" fill="#fb7185" text-anchor="end">n · d</text>
+  </g>
+
+  <text x="40" y="1330" fill="#475569" font-size="8">Two things make this safe to run unattended: with no confirm callback attached the gate denies rather than assumes, and a denial is never fatal — it is written</text>
+  <text x="40" y="1346" fill="#475569" font-size="8">into the transcript as a tool result so the model can choose a different approach on the next turn.</text>
+</svg>

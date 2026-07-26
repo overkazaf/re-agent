@@ -1,0 +1,1560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0xAF-Re · Architecture diagrams</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #020617;
+    color: #cbd5e1;
+    font-family: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    line-height: 1.6;
+    background-image:
+      linear-gradient(#0b1220 1px, transparent 1px),
+      linear-gradient(90deg, #0b1220 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { border-bottom: 1px solid #1e293b; padding-bottom: 28px; margin-bottom: 12px; }
+  h1 { margin: 0 0 8px; font-size: 24px; color: #f1f5f9; letter-spacing: -0.3px; }
+  .sub { margin: 0; color: #64748b; font-size: 12.5px; }
+  .back { display: inline-block; margin-bottom: 20px; color: #22d3ee; text-decoration: none; font-size: 12px; }
+  .back:hover { text-decoration: underline; }
+
+  nav { margin: 28px 0 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav a {
+    font-size: 11.5px; color: #94a3b8; text-decoration: none;
+    border: 1px solid #1e293b; border-radius: 999px; padding: 5px 13px;
+    background: rgba(15,23,42,0.7); transition: border-color .15s, color .15s;
+  }
+  nav a:hover { border-color: #22d3ee; color: #22d3ee; }
+
+  figure { margin: 56px 0 0; }
+  .fig-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .num {
+    font-size: 10px; font-weight: 700; color: #fbbf24;
+    border: 1px solid rgba(251,191,36,0.4); border-radius: 4px;
+    padding: 2px 7px; background: rgba(120,53,15,0.3);
+  }
+  h2 { margin: 0; font-size: 17px; color: #f1f5f9; font-weight: 700; }
+  figcaption { color: #64748b; font-size: 12px; margin: 0 0 16px; max-width: 78ch; }
+  .frame {
+    border: 1px solid #1e293b; border-radius: 10px; overflow-x: auto;
+    background: #020617; padding: 10px;
+  }
+  .frame img { display: block; width: 100%; height: auto; min-width: 720px; }
+  .src { margin-top: 10px; font-size: 11.5px; }
+  .src a { color: #64748b; text-decoration: none; }
+  .src a:hover { color: #22d3ee; text-decoration: underline; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid #1e293b; color: #475569; font-size: 11px; }
+  @media (max-width: 640px) { .wrap { padding: 32px 14px 64px; } h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../">&larr; back to 0xAF-Re</a>
+  <header>
+    <h1>Architecture diagrams</h1>
+    <p class="sub">Five views of how 0xAF-Re actually runs — module layering, one full turn, the context budget, the approval gate, the live pane — then the harness it borrowed from, and where the two diverge.</p>
+  </header>
+
+  <nav>
+    <a href="#module-graph">1 · Module graph</a>
+    <a href="#one-turn">2 · One turn</a>
+    <a href="#context-budget">3 · Context budget</a>
+    <a href="#approval-gate">4 · Approval gate</a>
+    <a href="#live-pane">5 · Live pane</a>
+    <a href="#oh-my-pi">6 · oh-my-pi</a>
+    <a href="#comparison">7 · Comparison</a>
+  </nav>
+
+  <figure id="module-graph">
+    <div class="fig-head"><span class="num">01</span><h2>Module dependency graph</h2></div>
+    <figcaption>Which package may import which. Dependencies flow downward only; <code>types</code> and <code>util</code> import nothing, which is what keeps the graph acyclic and every package independently testable.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Module dependency graph: cmd/0xaf into app, then the runtime, presentation, support and leaf layers" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1040" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Module dependency graph: cmd/0xaf into app, then the runtime, presentation, support and leaf layers</title>
+  <defs>
+    <pattern id="01-module-graph--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="01-module-graph--ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="01-module-graph--ah-dim" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="1120" height="1040" fill="#020617"/>
+  <rect width="1120" height="1040" fill="url(#01-module-graph--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">Module dependency graph</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">0xAF-Re · internal/ package layering · arrows point from dependant to dependency · no cycles</text>
+
+  <!-- ================= EDGES (drawn first, painted behind boxes) ================= -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#01-module-graph--ah)">
+    <!-- main -> app -->
+    <path d="M 560 128 L 560 222"/>
+    <!-- app -> runtime row A -->
+    <path d="M 470 282 L 240 357"/>
+    <path d="M 560 282 L 560 357"/>
+    <path d="M 650 282 L 880 357"/>
+    <!-- app -> runtime row B (down the outside) -->
+    <path d="M 400 252 L 60 252 L 60 450 L 67 450"/>
+    <path d="M 720 252 L 1060 252 L 1060 450 L 1053 450"/>
+  </g>
+
+  <!-- app -> support (long left/right rails) -->
+  <g stroke="#475569" stroke-width="1.1" fill="none" marker-end="url(#01-module-graph--ah-dim)" stroke-dasharray="5,4">
+    <path d="M 420 282 L 30 282 L 30 722 L 67 722"/>
+    <path d="M 700 282 L 1090 282 L 1090 722 L 1053 722"/>
+  </g>
+
+  <!-- core -> tools / security / plan -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#01-module-graph--ah)">
+    <path d="M 370 392 L 747 392"/>
+    <path d="M 220 424 L 220 447"/>
+    <path d="M 300 424 L 520 447"/>
+    <!-- tools -> security & plan -->
+    <path d="M 880 424 L 640 447"/>
+    <path d="M 900 424 L 900 447"/>
+    <!-- providers -> auth/config handled by support rail note -->
+  </g>
+
+  <!-- ui -> core, plan, auth  (ui reads loop state, the task list, and login status) -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#01-module-graph--ah)">
+    <path d="M 450 597 L 302 428"/>
+    <path d="M 700 597 L 898 518"/>
+    <path d="M 500 657 L 366 721"/>
+  </g>
+
+  <!-- ================= GROUP BOUNDARIES ================= -->
+  <g fill="none" stroke-dasharray="8,4" stroke-width="1.2">
+    <rect x="40" y="200" width="1040" height="92" rx="12" stroke="#334155"/>
+    <rect x="40" y="330" width="1040" height="208" rx="12" stroke="#334155"/>
+    <rect x="40" y="572" width="1040" height="96" rx="12" stroke="#334155"/>
+    <rect x="40" y="700" width="1040" height="104" rx="12" stroke="#334155"/>
+    <rect x="40" y="838" width="1040" height="98" rx="12" stroke="#334155"/>
+  </g>
+  <g fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">
+    <text x="52" y="216">CLI</text>
+    <text x="52" y="346">RUNTIME</text>
+    <text x="52" y="588">PRESENTATION</text>
+    <text x="52" y="716">SUPPORT</text>
+    <text x="52" y="854">LEAVES</text>
+  </g>
+
+  <!-- ================= NODES ================= -->
+  <!-- main -->
+  <rect x="480" y="74" width="160" height="54" rx="6" fill="#0f172a"/>
+  <rect x="480" y="74" width="160" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="560" y="98" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">cmd/0xaf</text>
+  <text x="560" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">entrypoint</text>
+
+  <!-- app -->
+  <rect x="400" y="222" width="320" height="60" rx="6" fill="#0f172a"/>
+  <rect x="400" y="222" width="320" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="560" y="246" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">app</text>
+  <text x="560" y="264" fill="#94a3b8" font-size="9" text-anchor="middle">args · REPL · commands · editor</text>
+
+  <!-- runtime row A -->
+  <rect x="70" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="70" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="220" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">core</text>
+  <text x="220" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">loop · session · compaction</text>
+  <text x="220" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">shell escape</text>
+
+  <rect x="410" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="410" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="560" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">providers</text>
+  <text x="560" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">5 adapters</text>
+  <text x="560" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">+ stream normalizer</text>
+
+  <rect x="750" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="750" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="900" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">tools</text>
+  <text x="900" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">registry · runner · spill</text>
+  <text x="900" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">24 local tools</text>
+
+  <!-- runtime row B -->
+  <rect x="70" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="70" y="450" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="220" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">mcp</text>
+  <text x="220" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">stdio JSON-RPC client</text>
+  <text x="220" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">borrowed tools</text>
+
+  <rect x="410" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="410" y="450" width="300" height="64" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="560" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">security</text>
+  <text x="560" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">danger patterns</text>
+  <text x="560" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">+ approval gate</text>
+
+  <rect x="750" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
+  <rect x="750" y="450" width="300" height="64" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="900" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">plan</text>
+  <text x="900" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">task-list tracker</text>
+  <text x="900" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">model-reported progress</text>
+
+  <!-- presentation -->
+  <rect x="400" y="597" width="320" height="60" rx="6" fill="#0f172a"/>
+  <rect x="400" y="597" width="320" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="560" y="621" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">ui</text>
+  <text x="560" y="639" fill="#94a3b8" font-size="9" text-anchor="middle">theme · pane · HUD · flow · trace</text>
+
+  <!-- support -->
+  <g>
+    <rect x="70" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="70" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="158" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">config</text>
+    <text x="158" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">routes · providers</text>
+
+    <rect x="271" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="271" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="359" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">auth</text>
+    <text x="359" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">CLI login probe</text>
+
+    <rect x="472" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="472" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="560" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">assets</text>
+    <text x="560" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">go:embed prompt/skills</text>
+
+    <rect x="673" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="673" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="761" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">skills</text>
+    <text x="761" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">SKILL.md workflows</text>
+
+    <rect x="874" y="725" width="176" height="58" rx="6" fill="#0f172a"/>
+    <rect x="874" y="725" width="176" height="58" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="962" y="750" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">knowledge</text>
+    <text x="962" y="766" fill="#94a3b8" font-size="8" text-anchor="middle">local corpus index</text>
+  </g>
+
+  <!-- leaves -->
+  <rect x="310" y="862" width="220" height="54" rx="6" fill="#0f172a"/>
+  <rect x="310" y="862" width="220" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="420" y="886" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">types</text>
+  <text x="420" y="902" fill="#94a3b8" font-size="9" text-anchor="middle">shared contracts, no imports</text>
+
+  <rect x="590" y="862" width="220" height="54" rx="6" fill="#0f172a"/>
+  <rect x="590" y="862" width="220" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="700" y="886" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">util</text>
+  <text x="700" y="902" fill="#94a3b8" font-size="9" text-anchor="middle">width math, no imports</text>
+
+  <!-- aggregate edges into leaves -->
+  <g stroke="#475569" stroke-width="1.1" fill="none" marker-end="url(#01-module-graph--ah-dim)" stroke-dasharray="5,4">
+    <path d="M 420 806 L 420 858"/>
+    <path d="M 700 806 L 700 858"/>
+  </g>
+  <text x="420" y="828" fill="#64748b" font-size="8" text-anchor="middle">every runtime + support pkg</text>
+  <text x="700" y="828" fill="#64748b" font-size="8" text-anchor="middle">core · tools · plan</text>
+
+  <!-- legend -->
+  <g font-size="9">
+    <rect x="40" y="958" width="14" height="12" rx="3" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="62" y="968" fill="#94a3b8">interface</text>
+    <rect x="150" y="958" width="14" height="12" rx="3" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.2"/>
+    <text x="172" y="968" fill="#94a3b8">runtime</text>
+    <rect x="252" y="958" width="14" height="12" rx="3" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.2"/>
+    <text x="274" y="968" fill="#94a3b8">security</text>
+    <rect x="358" y="958" width="14" height="12" rx="3" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.2"/>
+    <text x="380" y="968" fill="#94a3b8">plan</text>
+    <rect x="440" y="958" width="14" height="12" rx="3" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="462" y="968" fill="#94a3b8">support</text>
+    <rect x="548" y="958" width="14" height="12" rx="3" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="570" y="968" fill="#94a3b8">leaf / entrypoint</text>
+
+    <line x1="720" y1="964" x2="758" y2="964" stroke="#64748b" stroke-width="1.3" marker-end="url(#01-module-graph--ah)"/>
+    <text x="766" y="968" fill="#94a3b8">direct import</text>
+    <line x1="880" y1="964" x2="918" y2="964" stroke="#475569" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#01-module-graph--ah-dim)"/>
+    <text x="926" y="968" fill="#94a3b8">aggregated edges</text>
+  </g>
+
+  <text x="40" y="1004" fill="#475569" font-size="8">Dependencies flow downward only. types and util import nothing, which is what keeps the graph acyclic and the packages independently testable.</text>
+</svg>
+</div>
+    <p class="src"><a href="01-module-graph.svg">open the SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="one-turn">
+    <div class="fig-head"><span class="num">02</span><h2>One turn, end to end</h2></div>
+    <figcaption>Prompt to reply: compaction, the provider call, every tool call passing the approval gate, and the three ways a turn can end. Every path writes to the session before it writes to the screen.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Sequence diagram of a single agent turn across nine participants" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1330" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Sequence diagram of a single agent turn across nine participants</title>
+  <defs>
+    <pattern id="02-one-turn--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="02-one-turn--ah" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#94a3b8"/>
+    </marker>
+    <marker id="02-one-turn--ah-r" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#64748b"/>
+    </marker>
+    <marker id="02-one-turn--ah-sec" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#fb7185"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="1330" fill="#020617"/>
+  <rect width="1500" height="1330" fill="url(#02-one-turn--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">One turn, end to end</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">prompt → compaction → provider → tool calls behind the approval gate → session append → reply. Solid = call, dashed = return.</text>
+
+  <!-- lifelines -->
+  <g stroke="#1e293b" stroke-width="1" stroke-dasharray="3,5">
+    <line x1="118"  y1="130" x2="118"  y2="1230"/>
+    <line x1="275"  y1="130" x2="275"  y2="1230"/>
+    <line x1="432"  y1="130" x2="432"  y2="1230"/>
+    <line x1="589"  y1="130" x2="589"  y2="1230"/>
+    <line x1="746"  y1="130" x2="746"  y2="1230"/>
+    <line x1="903"  y1="130" x2="903"  y2="1230"/>
+    <line x1="1060" y1="130" x2="1060" y2="1230"/>
+    <line x1="1217" y1="130" x2="1217" y2="1230"/>
+    <line x1="1374" y1="130" x2="1374" y2="1230"/>
+  </g>
+
+  <!-- participant heads -->
+  <g font-size="10" font-weight="700" text-anchor="middle">
+    <rect x="48"   y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="48"   y="88" width="140" height="42" rx="6" fill="rgba(30,41,59,0.5)"  stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="118"  y="106" fill="#f1f5f9">Operator</text><text x="118" y="121" fill="#94a3b8" font-size="8" font-weight="400">the human</text>
+
+    <rect x="205"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="205"  y="88" width="140" height="42" rx="6" fill="rgba(8,51,68,0.4)"   stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="275"  y="106" fill="#f1f5f9">app.repl</text><text x="275" y="121" fill="#94a3b8" font-size="8" font-weight="400">interface</text>
+
+    <rect x="362"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="362"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="432"  y="106" fill="#f1f5f9">core.AgentLoop</text><text x="432" y="121" fill="#94a3b8" font-size="8" font-weight="400">the loop</text>
+
+    <rect x="519"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="519"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="589"  y="106" fill="#f1f5f9">CompactHistory</text><text x="589" y="121" fill="#94a3b8" font-size="8" font-weight="400">context budget</text>
+
+    <rect x="676"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="676"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="746"  y="106" fill="#f1f5f9">types.Provider</text><text x="746" y="121" fill="#94a3b8" font-size="8" font-weight="400">the model</text>
+
+    <rect x="833"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="833"  y="88" width="140" height="42" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="903"  y="106" fill="#f1f5f9">RequestApproval</text><text x="903" y="121" fill="#94a3b8" font-size="8" font-weight="400">the gate</text>
+
+    <rect x="990"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="990"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="1060" y="106" fill="#f1f5f9">types.Tool</text><text x="1060" y="121" fill="#94a3b8" font-size="8" font-weight="400">24 local + MCP</text>
+
+    <rect x="1147" y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="1147" y="88" width="140" height="42" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1217" y="106" fill="#f1f5f9">core.Session</text><text x="1217" y="121" fill="#94a3b8" font-size="8" font-weight="400">append-only JSONL</text>
+
+    <rect x="1304" y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="1304" y="88" width="140" height="42" rx="6" fill="rgba(8,51,68,0.4)"   stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="1374" y="106" fill="#f1f5f9">ui.LivePane</text><text x="1374" y="121" fill="#94a3b8" font-size="8" font-weight="400">90ms frames</text>
+  </g>
+
+  <!-- ============ messages ============ -->
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 1 -->
+    <line x1="118" y1="168" x2="268" y2="168" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="122" y="163">① prompt line</text>
+    <!-- 2 -->
+    <line x1="282" y1="196" x2="1367" y2="196" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="286" y="191">② NewLivePane + SetPlan</text>
+    <!-- 3 -->
+    <line x1="282" y1="224" x2="425" y2="224" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="286" y="219">③ Run(prompt, ctx, onEvent)</text>
+    <!-- 4 -->
+    <line x1="439" y1="252" x2="1210" y2="252" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="247">④ AppendMessage user</text>
+  </g>
+
+  <!-- turn-1 band -->
+  <rect x="380" y="272" width="1010" height="238" rx="10" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="394" y="290" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.2">TURN 1</text>
+
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 5 -->
+    <line x1="439" y1="316" x2="582" y2="316" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="311">⑤ CompactHistory(history, budget)</text>
+    <!-- 6 return -->
+    <line x1="582" y1="344" x2="439" y2="344" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#02-one-turn--ah-r)"/>
+    <text x="443" y="339" fill="#94a3b8">⑥ view + dropped / elided counts</text>
+    <!-- 7 -->
+    <line x1="439" y1="372" x2="1367" y2="372" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="367">⑦ LoopEvent compaction, wire send</text>
+    <!-- 8 -->
+    <line x1="439" y1="400" x2="739" y2="400" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="395">⑧ Complete(system, view, tools, ctx)</text>
+    <!-- 9 return stream -->
+    <line x1="739" y1="428" x2="439" y2="428" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#02-one-turn--ah-r)"/>
+    <text x="443" y="423" fill="#94a3b8">⑨ OnProgress: thinking / text / tool / usage / plan</text>
+    <!-- 10 -->
+    <line x1="439" y1="456" x2="1367" y2="456" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="451">⑩ progress events — plus a plan event when the list changed</text>
+    <!-- 11 -->
+    <line x1="739" y1="484" x2="439" y2="484" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#02-one-turn--ah-r)"/>
+    <text x="443" y="479" fill="#94a3b8">⑪ text + toolCalls + usage</text>
+  </g>
+
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 12 -->
+    <line x1="439" y1="534" x2="1210" y2="534" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="529">⑫ AppendMessage assistant</text>
+    <!-- 13 -->
+    <line x1="439" y1="562" x2="1367" y2="562" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="557">⑬ wire recv, reply</text>
+  </g>
+
+  <!-- loop band -->
+  <rect x="96" y="584" width="1294" height="392" rx="10" fill="none" stroke="#fb923c" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.6"/>
+  <text x="110" y="602" fill="#fb923c" font-size="9" font-weight="600" letter-spacing="1.2">LOOP — EACH TOOL CALL</text>
+
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 14 -->
+    <line x1="439" y1="628" x2="1367" y2="628" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="623">⑭ tool_start</text>
+    <!-- 15 -->
+    <line x1="439" y1="656" x2="896" y2="656" stroke="#fb7185" stroke-width="1.2" marker-end="url(#02-one-turn--ah-sec)"/>
+    <text x="443" y="651" fill="#fda4af">⑮ tier(Risk) × approvalMode</text>
+  </g>
+
+  <!-- alt: needs a human -->
+  <rect x="112" y="676" width="1262" height="118" rx="8" fill="none" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4" opacity="0.55"/>
+  <text x="126" y="692" fill="#fb7185" font-size="8" font-weight="600" letter-spacing="1">ALT — NEEDS A HUMAN</text>
+  <g font-size="9" fill="#fda4af">
+    <line x1="910" y1="716" x2="1367" y2="716" stroke="#fb7185" stroke-width="1.2" marker-end="url(#02-one-turn--ah-sec)"/>
+    <text x="914" y="711">⑯ Pause</text>
+    <line x1="896" y1="744" x2="125" y2="744" stroke="#fb7185" stroke-width="1.2" marker-end="url(#02-one-turn--ah-sec)"/>
+    <text x="500" y="739">⑰ draw the request block, read one key — y / a / n / d</text>
+    <line x1="125" y1="772" x2="896" y2="772" stroke="#fb7185" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#02-one-turn--ah-sec)"/>
+    <text x="500" y="767">⑱ decision, then Resume the pane</text>
+  </g>
+
+  <!-- alt: allowed / refused -->
+  <rect x="400" y="806" width="990" height="90" rx="8" fill="none" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="414" y="822" fill="#475569" font-size="8" font-weight="600" letter-spacing="1">ALT — ALLOWED / REFUSED</text>
+  <g font-size="9" fill="#cbd5e1">
+    <line x1="439" y1="846" x2="1053" y2="846" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="841">⑲ Execute(args, ToolContext{ctx})  →  ToolResult</text>
+    <line x1="1053" y1="874" x2="439" y2="874" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#02-one-turn--ah-r)"/>
+    <text x="443" y="869" fill="#94a3b8">⑳ refused or failed — the error itself becomes the tool result</text>
+  </g>
+
+  <g font-size="9" fill="#cbd5e1">
+    <line x1="439" y1="920" x2="1210" y2="920" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="915">㉑ AppendMessage toolResult</text>
+    <line x1="439" y1="948" x2="1367" y2="948" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="443" y="943">㉒ tool_end</text>
+  </g>
+
+  <!-- exit alt -->
+  <rect x="380" y="996" width="1010" height="152" rx="10" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="394" y="1014" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.2">HOW THE TURN ENDS — THREE WAYS</text>
+  <g font-size="9">
+    <circle cx="404" cy="1040" r="3" fill="#fb7185"/>
+    <text x="416" y="1044" fill="#fda4af">^C — cancel ctx, synthesise a result for every unrun call, write the interrupt marker, return RunResult{Interrupted:true} with err = nil</text>
+    <circle cx="404" cy="1074" r="3" fill="#fb923c"/>
+    <text x="416" y="1078" fill="#fdba74">more tool calls issued — next turn re-compacts, now with the results included</text>
+    <circle cx="404" cy="1108" r="3" fill="#34d399"/>
+    <text x="416" y="1112" fill="#6ee7b7">reply had no tool calls — RunResult{Turns:n}, the loop is done</text>
+  </g>
+
+  <g font-size="9" fill="#cbd5e1">
+    <line x1="282" y1="1178" x2="1367" y2="1178" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="286" y="1173">㉓ Stop the pane</text>
+    <line x1="268" y1="1206" x2="125" y2="1206" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#02-one-turn--ah)"/>
+    <text x="286" y="1201">㉔ reply header + markdown reply + usage footer</text>
+  </g>
+
+  <text x="40" y="1272" fill="#475569" font-size="8">Every path writes to the session before it writes to the screen. A refused tool and a crashed tool take the same route back into the transcript, which is why an</text>
+  <text x="40" y="1288" fill="#475569" font-size="8">interrupted run stays resumable: the loop never leaves a tool call without a matching result.</text>
+</svg>
+</div>
+    <p class="src"><a href="02-one-turn.svg">open the SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="context-budget">
+    <div class="fig-head"><span class="num">03</span><h2>The context budget</h2></div>
+    <figcaption>Two passes and a floor. Tool bodies are elided before whole exchanges are dropped, because a tool call stripped of its result would leave the transcript unresumable.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Flowchart of CompactHistory: elide tool results, drop exchanges, last-exchange floor, compaction marker" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1500" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Flowchart of CompactHistory: elide tool results, drop exchanges, last-exchange floor, compaction marker</title>
+  <defs>
+    <pattern id="03-context-budget--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="03-context-budget--ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="03-context-budget--ah-ok" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+    </marker>
+    <marker id="03-context-budget--ah-warn" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c"/>
+    </marker>
+  </defs>
+
+  <rect width="1120" height="1500" fill="#020617"/>
+  <rect width="1120" height="1500" fill="url(#03-context-budget--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">The context budget</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">CompactHistory — two passes and a floor. The disk record stays whole; only the view sent upstream is trimmed.</text>
+
+  <!-- ===== EDGES (behind boxes) ===== -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah)">
+    <path d="M 530 138 L 530 154"/>
+    <path d="M 530 234 L 530 262"/>
+    <path d="M 530 322 L 530 348"/>
+    <path d="M 530 424 L 530 450"/>
+    <path d="M 530 526 L 530 552"/>
+    <path d="M 530 616 L 530 642"/>
+    <path d="M 530 734 L 530 774"/>
+    <path d="M 530 854 L 530 892"/>
+    <path d="M 530 972 L 530 1006"/>
+    <path d="M 350 816 L 316 816"/>
+    <path d="M 350 934 L 316 934"/>
+  </g>
+
+  <!-- yes → unchanged -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah-ok)">
+    <path d="M 700 196 L 806 196"/>
+  </g>
+
+  <!-- no → emit -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah-ok)">
+    <path d="M 720 690 L 826 690"/>
+  </g>
+
+  <!-- merged loop-back rail: I and K both re-test the budget -->
+  <g stroke="#fb923c" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah-warn)">
+    <path d="M 70 818 L 32 818 L 32 690 L 336 690"/>
+  </g>
+  <g stroke="#fb923c" stroke-width="1.4" fill="none">
+    <path d="M 70 936 L 32 936 L 32 818"/>
+  </g>
+
+  <!-- L → emit (far right rail) -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah)">
+    <path d="M 750 1044 L 790 1044 L 790 762 L 946 762 L 946 720"/>
+  </g>
+
+  <!-- emit → anything dropped? -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah)">
+    <path d="M 1066 690 L 1090 690 L 1090 1164 L 706 1164"/>
+  </g>
+
+  <!-- M → N / O -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#03-context-budget--ah)">
+    <path d="M 360 1164 L 200 1164 L 200 1232"/>
+    <path d="M 530 1200 L 530 1216 L 740 1216 L 740 1232"/>
+    <path d="M 270 1316 L 270 1340 L 400 1340 L 400 1352"/>
+    <path d="M 740 1292 L 740 1340 L 660 1340 L 660 1352"/>
+  </g>
+
+  <!-- ===== NODES ===== -->
+  <!-- A -->
+  <rect x="330" y="88" width="400" height="50" rx="6" fill="#0f172a"/>
+  <rect x="330" y="88" width="400" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="530" y="112" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">CompactHistory(messages, budget)</text>
+  <text x="530" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">called once per turn, before the provider sees anything</text>
+
+  <!-- B decision -->
+  <polygon points="530,158 700,196 530,234 360,196" fill="#0f172a"/>
+  <polygon points="530,158 700,196 530,234 360,196" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="530" y="194" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">HistoryTokens</text>
+  <text x="530" y="208" fill="#cbd5e1" font-size="9" text-anchor="middle">within budget?</text>
+
+  <!-- Z -->
+  <rect x="806" y="172" width="274" height="48" rx="6" fill="#0f172a"/>
+  <rect x="806" y="172" width="274" height="48" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="943" y="194" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">return the list unchanged</text>
+  <text x="943" y="209" fill="#94a3b8" font-size="9" text-anchor="middle">elided = 0 · dropped = 0</text>
+
+  <!-- C -->
+  <rect x="310" y="262" width="440" height="60" rx="6" fill="#0f172a"/>
+  <rect x="310" y="262" width="440" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="530" y="286" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">protectedFrom = len − keepRecent</text>
+  <text x="530" y="304" fill="#94a3b8" font-size="9" text-anchor="middle">keepRecent defaults to 8 — a preference, not a floor</text>
+
+  <!-- D -->
+  <rect x="270" y="348" width="520" height="76" rx="6" fill="#0f172a"/>
+  <rect x="270" y="348" width="520" height="76" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="530" y="372" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">PASS 1 — ELIDE OLD TOOL RESULTS</text>
+  <text x="530" y="392" fill="#e2e8f0" font-size="9" text-anchor="middle">every message before protectedFrom</text>
+  <text x="530" y="408" fill="#94a3b8" font-size="9" text-anchor="middle">with role toolResult and text over 400 chars</text>
+
+  <!-- E -->
+  <rect x="270" y="450" width="520" height="76" rx="6" fill="#0f172a"/>
+  <rect x="270" y="450" width="520" height="76" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="530" y="474" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">body replaced by a one-line note</text>
+  <text x="530" y="493" fill="#94a3b8" font-size="9" text-anchor="middle">"older TOOL result elided, N chars, first line …"</text>
+  <text x="530" y="510" fill="#34d399" font-size="9" text-anchor="middle">the assistant call and its arguments survive</text>
+
+  <!-- F -->
+  <rect x="270" y="552" width="520" height="64" rx="6" fill="#0f172a"/>
+  <rect x="270" y="552" width="520" height="64" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="530" y="576" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">PASS 2 — DROP WHOLE EXCHANGES</text>
+  <text x="530" y="596" fill="#94a3b8" font-size="9" text-anchor="middle">hardFloor = index of the last user message</text>
+
+  <!-- G decision -->
+  <polygon points="530,642 720,690 530,738 340,690" fill="#0f172a"/>
+  <polygon points="530,642 720,690 530,738 340,690" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="530" y="684" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">still over budget?</text>
+  <text x="530" y="700" fill="#94a3b8" font-size="8" text-anchor="middle">kept tail + the marker</text>
+
+  <!-- Y emit -->
+  <rect x="826" y="666" width="240" height="48" rx="6" fill="#0f172a"/>
+  <rect x="826" y="666" width="240" height="48" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="946" y="695" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">emit</text>
+
+  <!-- H decision -->
+  <polygon points="530,778 710,816 530,854 350,816" fill="#0f172a"/>
+  <polygon points="530,778 710,816 530,854 350,816" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="530" y="812" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">cursor still before</text>
+  <text x="530" y="826" fill="#cbd5e1" font-size="9" text-anchor="middle">protectedFrom?</text>
+
+  <!-- I -->
+  <rect x="70" y="790" width="246" height="56" rx="6" fill="#0f172a"/>
+  <rect x="70" y="790" width="246" height="56" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="193" y="812" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">cursor = nextBoundary</text>
+  <text x="193" y="829" fill="#94a3b8" font-size="8" text-anchor="middle">one message + all of its tool results</text>
+
+  <!-- J decision -->
+  <polygon points="530,896 710,934 530,972 350,934" fill="#0f172a"/>
+  <polygon points="530,896 710,934 530,972 350,934" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="530" y="930" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">cursor still before</text>
+  <text x="530" y="944" fill="#cbd5e1" font-size="9" text-anchor="middle">hardFloor?</text>
+
+  <!-- K -->
+  <rect x="70" y="908" width="246" height="56" rx="6" fill="#0f172a"/>
+  <rect x="70" y="908" width="246" height="56" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="193" y="930" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">eat into keep-recent</text>
+  <text x="193" y="947" fill="#94a3b8" font-size="8" text-anchor="middle">a preference, not a floor</text>
+
+  <!-- L -->
+  <rect x="310" y="1006" width="440" height="76" rx="6" fill="#0f172a"/>
+  <rect x="310" y="1006" width="440" height="76" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="530" y="1030" fill="#fb7185" font-size="10" font-weight="700" text-anchor="middle">LAST-EXCHANGE FLOOR</text>
+  <text x="530" y="1050" fill="#e2e8f0" font-size="9" text-anchor="middle">stop over budget rather than</text>
+  <text x="530" y="1066" fill="#e2e8f0" font-size="9" text-anchor="middle">delete the turn being answered</text>
+
+  <!-- M decision -->
+  <polygon points="530,1128 700,1164 530,1200 360,1164" fill="#0f172a"/>
+  <polygon points="530,1128 700,1164 530,1200 360,1164" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="530" y="1168" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">anything dropped?</text>
+
+  <!-- N -->
+  <rect x="30" y="1232" width="480" height="84" rx="6" fill="#0f172a"/>
+  <rect x="30" y="1232" width="480" height="84" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="270" y="1256" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">prepend one CompactionMarker user message</text>
+  <text x="270" y="1275" fill="#94a3b8" font-size="9" text-anchor="middle">count dropped · last 6 prompts · tool names used</text>
+  <text x="270" y="1292" fill="#a78bfa" font-size="9" text-anchor="middle">plus "full transcript is on disk"</text>
+  <text x="270" y="1308" fill="#64748b" font-size="8" text-anchor="middle">the model is told what it can no longer see</text>
+
+  <!-- O -->
+  <rect x="590" y="1232" width="300" height="60" rx="6" fill="#0f172a"/>
+  <rect x="590" y="1232" width="300" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="740" y="1258" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">kept messages only</text>
+  <text x="740" y="1275" fill="#94a3b8" font-size="9" text-anchor="middle">no marker needed</text>
+
+  <!-- P -->
+  <rect x="250" y="1352" width="560" height="76" rx="6" fill="#0f172a"/>
+  <rect x="250" y="1352" width="560" height="76" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="530" y="1378" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">CompactionResult</text>
+  <text x="530" y="1398" fill="#94a3b8" font-size="9" text-anchor="middle">Messages · TokensBefore · TokensAfter</text>
+  <text x="530" y="1415" fill="#94a3b8" font-size="9" text-anchor="middle">ElidedToolResults · DroppedMessages</text>
+
+  <!-- edge labels -->
+  <g font-size="9" font-weight="700">
+    <text x="712" y="190" fill="#34d399">yes</text>
+    <text x="542" y="252" fill="#94a3b8">no</text>
+    <text x="732" y="684" fill="#34d399">no</text>
+    <text x="542" y="762" fill="#94a3b8">yes</text>
+    <text x="333" y="808" fill="#fb923c" font-size="8" text-anchor="middle">yes</text>
+    <text x="542" y="880" fill="#94a3b8">no</text>
+    <text x="333" y="926" fill="#fb923c" font-size="8" text-anchor="middle">yes</text>
+    <text x="542" y="996" fill="#94a3b8">no</text>
+    <text x="210" y="1158" fill="#94a3b8" text-anchor="end">yes</text>
+    <text x="560" y="1212" fill="#94a3b8">no</text>
+  </g>
+
+  <text x="40" y="1464" fill="#475569" font-size="8">Order matters: eliding tool bodies is tried before dropping exchanges, because a tool call stripped of its result would leave the transcript unresumable. The</text>
+  <text x="40" y="1480" fill="#475569" font-size="8">last-exchange floor is the one place the budget is allowed to lose — deleting the turn currently being answered is worse than going over.</text>
+</svg>
+</div>
+    <p class="src"><a href="03-context-budget.svg">open the SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="approval-gate">
+    <div class="fig-head"><span class="num">04</span><h2>Security: the approval gate</h2></div>
+    <figcaption>Tier &times; mode, with per-tool overrides that outrank both. With no confirm callback attached the gate denies rather than assumes — and a denial is recorded as a tool result, so the turn continues.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Flowchart of RequestApproval: overrides, concerns, auto-approval, the interactive prompt, and the denial sink" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1380" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Flowchart of RequestApproval: overrides, concerns, auto-approval, the interactive prompt, and the denial sink</title>
+  <defs>
+    <pattern id="04-approval-gate--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="04-approval-gate--ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="04-approval-gate--ah-ok" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+    </marker>
+    <marker id="04-approval-gate--ah-no" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185"/>
+    </marker>
+  </defs>
+
+  <rect width="1180" height="1380" fill="#020617"/>
+  <rect width="1180" height="1380" fill="url(#04-approval-gate--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">Security: the approval gate</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">tier × mode, with per-tool overrides that outrank both. Every denial becomes a tool result the model reads — the turn never dies on a refusal.</text>
+
+  <!-- ===== EDGES ===== -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah)">
+    <path d="M 580 140 L 580 168"/>
+    <path d="M 580 240 L 580 262"/>
+    <path d="M 580 346 L 580 382"/>
+    <path d="M 580 474 L 580 508"/>
+    <path d="M 580 604 L 580 644"/>
+    <path d="M 580 728 L 580 766"/>
+    <path d="M 580 838 L 580 880"/>
+  </g>
+
+  <!-- D yes → ASK (bypasses the auto-approve test) -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-no)">
+    <path d="M 380 430 L 300 430 L 300 630 L 580 630 L 580 644"/>
+  </g>
+
+  <!-- E yes → RUN -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-ok)">
+    <path d="M 795 558 L 944 558"/>
+  </g>
+
+  <!-- C yes → denial sink (far-left rail) -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-no)">
+    <path d="M 405 306 L 25 306 L 25 1118 L 54 1118"/>
+  </g>
+
+  <!-- ASK yes → non-interactive denial -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-no)">
+    <path d="M 405 688 L 190 688 L 190 750"/>
+  </g>
+  <!-- non-interactive denial → sink -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-no)">
+    <path d="M 190 846 L 190 1084"/>
+  </g>
+
+  <!-- Q allow → RUN -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-ok)">
+    <path d="M 730 922 L 880 922 L 880 608 L 1044 608 L 1044 588"/>
+  </g>
+  <!-- Q deny → sink -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-no)">
+    <path d="M 430 922 L 388 922 L 388 1064 L 290 1064 L 290 1084"/>
+  </g>
+
+  <!-- RUN → Execute -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-ok)">
+    <path d="M 1044 582 L 1044 1084"/>
+  </g>
+
+  <!-- sink → recorded -->
+  <g stroke="#fb7185" stroke-width="1.4" fill="none" marker-end="url(#04-approval-gate--ah-no)">
+    <path d="M 210 1146 L 210 1204"/>
+  </g>
+
+  <!-- ===== NODES ===== -->
+  <rect x="360" y="88" width="440" height="52" rx="6" fill="#0f172a"/>
+  <rect x="360" y="88" width="440" height="52" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="580" y="110" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">RequestApproval</text>
+  <text x="580" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">tool · tier · summary · concerns</text>
+
+  <rect x="300" y="168" width="560" height="72" rx="6" fill="#0f172a"/>
+  <rect x="300" y="168" width="560" height="72" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="580" y="192" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">mode = policy.ApprovalMode, default safe</text>
+  <text x="580" y="212" fill="#94a3b8" font-size="9" text-anchor="middle">override = the per-tool entry in policy.Approvals</text>
+  <text x="580" y="229" fill="#a78bfa" font-size="8" text-anchor="middle">the override is consulted first and wins over the mode</text>
+
+  <polygon points="580,266 755,306 580,346 405,306" fill="#0f172a"/>
+  <polygon points="580,266 755,306 580,346 405,306" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="303" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">override</text>
+  <text x="580" y="318" fill="#cbd5e1" font-size="9" text-anchor="middle">is deny?</text>
+
+  <polygon points="580,386 780,430 580,474 380,430" fill="#0f172a"/>
+  <polygon points="580,386 780,430 580,474 380,430" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="425" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">concerns non-empty</text>
+  <text x="580" y="440" fill="#cbd5e1" font-size="9" text-anchor="middle">AND mode is not yolo?</text>
+
+  <polygon points="580,512 795,558 580,604 365,558" fill="#0f172a"/>
+  <polygon points="580,512 795,558 580,604 365,558" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="552" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">override is allow, OR</text>
+  <text x="580" y="567" fill="#cbd5e1" font-size="9" text-anchor="middle">AutoApproves for this</text>
+  <text x="580" y="581" fill="#cbd5e1" font-size="9" text-anchor="middle">mode and tier?</text>
+
+  <rect x="944" y="534" width="200" height="48" rx="6" fill="#0f172a"/>
+  <rect x="944" y="534" width="200" height="48" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="1044" y="556" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">run</text>
+  <text x="1044" y="572" fill="#94a3b8" font-size="9" text-anchor="middle">no prompt</text>
+
+  <polygon points="580,648 755,688 580,728 405,688" fill="#0f172a"/>
+  <polygon points="580,648 755,688 580,728 405,688" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="580" y="684" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">tc.Confirm is nil?</text>
+  <text x="580" y="699" fill="#fda4af" font-size="8" text-anchor="middle">nobody attached</text>
+
+  <rect x="40" y="750" width="300" height="96" rx="6" fill="#0f172a"/>
+  <rect x="40" y="750" width="300" height="96" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="190" y="772" fill="#fb7185" font-size="10" font-weight="700" text-anchor="middle">DeniedError — non-interactive</text>
+  <text x="190" y="792" fill="#e2e8f0" font-size="8" text-anchor="middle">with concerns:</text>
+  <text x="190" y="806" fill="#94a3b8" font-size="8" text-anchor="middle">"blocked by policy …"</text>
+  <text x="190" y="823" fill="#e2e8f0" font-size="8" text-anchor="middle">without:</text>
+  <text x="190" y="837" fill="#94a3b8" font-size="8" text-anchor="middle">"needs approval, mode=X, not interactive"</text>
+
+  <rect x="350" y="766" width="460" height="72" rx="6" fill="#0f172a"/>
+  <rect x="350" y="766" width="460" height="72" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="790" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pause the pane, draw the request block</text>
+  <text x="580" y="810" fill="#94a3b8" font-size="9" text-anchor="middle">read exactly one key</text>
+  <text x="580" y="828" fill="#64748b" font-size="8" text-anchor="middle">the live frame timer stops so the prompt cannot be overdrawn</text>
+
+  <polygon points="580,884 730,922 580,960 430,922" fill="#0f172a"/>
+  <polygon points="580,884 730,922 580,960 430,922" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="926" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">decision</text>
+
+  <!-- decision key legend -->
+  <rect x="330" y="1000" width="500" height="72" rx="6" fill="rgba(2,6,23,0.85)" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="345" y="1020" fill="#34d399" font-size="9" font-weight="700">y</text>
+  <text x="360" y="1020" fill="#cbd5e1" font-size="9">allow once</text>
+  <text x="470" y="1020" fill="#34d399" font-size="9" font-weight="700">a</text>
+  <text x="485" y="1020" fill="#cbd5e1" font-size="9">allow-always — remembered for this tool</text>
+  <text x="345" y="1042" fill="#fb7185" font-size="9" font-weight="700">n</text>
+  <text x="360" y="1042" fill="#cbd5e1" font-size="9">deny once · Enter and EOF mean the same</text>
+  <text x="345" y="1062" fill="#fb7185" font-size="9" font-weight="700">d</text>
+  <text x="360" y="1062" fill="#cbd5e1" font-size="9">deny-always — remembered for this tool</text>
+
+  <!-- denial sink -->
+  <rect x="54" y="1084" width="312" height="62" rx="6" fill="#0f172a"/>
+  <rect x="54" y="1084" width="312" height="62" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="210" y="1110" fill="#fb7185" font-size="11" font-weight="700" text-anchor="middle">DeniedError</text>
+  <text x="210" y="1130" fill="#94a3b8" font-size="9" text-anchor="middle">every refusal path lands here</text>
+
+  <!-- execute -->
+  <rect x="908" y="1084" width="272" height="62" rx="6" fill="#0f172a" transform="translate(-30,0)"/>
+  <rect x="908" y="1084" width="272" height="62" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5" transform="translate(-30,0)"/>
+  <text x="1044" y="1110" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">tool.Execute</text>
+  <text x="1044" y="1130" fill="#94a3b8" font-size="9" text-anchor="middle">ToolResult back to the loop</text>
+
+  <!-- recorded -->
+  <rect x="54" y="1204" width="560" height="76" rx="6" fill="#0f172a"/>
+  <rect x="54" y="1204" width="560" height="76" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="334" y="1230" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">recorded as an error tool result</text>
+  <text x="334" y="1250" fill="#e2e8f0" font-size="9" text-anchor="middle">the loop continues — the model reads the refusal and re-plans</text>
+  <text x="334" y="1268" fill="#94a3b8" font-size="8" text-anchor="middle">a blocked command is an answer, not a crash</text>
+
+  <!-- edge labels -->
+  <g font-size="9" font-weight="700">
+    <text x="392" y="298" fill="#fb7185" text-anchor="end">yes</text>
+    <text x="592" y="366" fill="#94a3b8">no</text>
+    <text x="368" y="422" fill="#fb7185" text-anchor="end">yes</text>
+    <text x="592" y="494" fill="#94a3b8">no</text>
+    <text x="812" y="552" fill="#34d399">yes</text>
+    <text x="592" y="626" fill="#94a3b8">no</text>
+    <text x="392" y="680" fill="#fb7185" text-anchor="end">yes</text>
+    <text x="592" y="750" fill="#94a3b8">no</text>
+    <text x="752" y="916" fill="#34d399">y · a</text>
+    <text x="418" y="916" fill="#fb7185" text-anchor="end">n · d</text>
+  </g>
+
+  <text x="40" y="1330" fill="#475569" font-size="8">Two things make this safe to run unattended: with no confirm callback attached the gate denies rather than assumes, and a denial is never fatal — it is written</text>
+  <text x="40" y="1346" fill="#475569" font-size="8">into the transcript as a tool result so the model can choose a different approach on the next turn.</text>
+</svg>
+</div>
+    <p class="src"><a href="04-approval-gate.svg">open the SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="live-pane">
+    <div class="fig-head"><span class="num">05</span><h2>The live pane</h2></div>
+    <figcaption>One frame every 90ms, redrawn in place. The flow diagram is all-or-nothing; the HUD sheds detail in a fixed priority order down to a floor of two cells — the clock and the phase label.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Flowchart of the live pane render path with the five-step HUD shedding order" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1440" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Flowchart of the live pane render path with the five-step HUD shedding order</title>
+  <defs>
+    <pattern id="05-live-pane--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="05-live-pane--ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="05-live-pane--ah-ok" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+    </marker>
+    <marker id="05-live-pane--ah-warn" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="1440" fill="#020617"/>
+  <rect width="1500" height="1440" fill="url(#05-live-pane--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">The live pane</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">One frame every 90ms, redrawn in place. Everything below the budget is negotiable — the pane sheds detail rather than wrap or overflow.</text>
+
+  <!-- ===== EDGES ===== -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah)">
+    <path d="M 470 134 L 470 162"/>
+    <path d="M 470 204 L 470 236"/>
+    <path d="M 470 286 L 470 314"/>
+    <path d="M 470 374 L 470 406"/>
+    <path d="M 470 452 L 470 484"/>
+    <path d="M 470 544 L 470 578"/>
+    <path d="M 470 896 L 470 922"/>
+    <path d="M 470 968 L 470 992"/>
+  </g>
+
+  <!-- G yes → kept (right) -->
+  <g stroke="#34d399" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah-ok)">
+    <path d="M 680 622 L 690 622 L 690 696"/>
+  </g>
+  <!-- G no → dropped (left) -->
+  <g stroke="#fb923c" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah-warn)">
+    <path d="M 260 622 L 240 622 L 240 696"/>
+  </g>
+  <!-- both → J -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah)">
+    <path d="M 690 810 L 690 830 L 470 830 L 470 846"/>
+    <path d="M 240 770 L 240 830 L 470 830"/>
+  </g>
+
+  <!-- L yes → M (left), no → N (right) -->
+  <g stroke="#fb923c" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah-warn)">
+    <path d="M 240 1040 L 240 1112"/>
+  </g>
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah)">
+    <path d="M 700 1040 L 700 1112"/>
+  </g>
+  <g stroke="#64748b" stroke-width="1.4" fill="none">
+    <path d="M 470 1084 L 470 1096 L 240 1096 L 240 1040"/>
+    <path d="M 470 1096 L 700 1096 L 700 1040"/>
+  </g>
+
+  <!-- M, N → Z -->
+  <g stroke="#64748b" stroke-width="1.4" fill="none" marker-end="url(#05-live-pane--ah)">
+    <path d="M 240 1180 L 240 1216 L 470 1216 L 470 1236"/>
+    <path d="M 700 1196 L 700 1216 L 470 1216"/>
+    <path d="M 470 1296 L 470 1326"/>
+  </g>
+
+  <!-- ===== NODES ===== -->
+  <rect x="270" y="88" width="400" height="46" rx="6" fill="#0f172a"/>
+  <rect x="270" y="88" width="400" height="46" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="108" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">frame timer</text>
+  <text x="470" y="125" fill="#94a3b8" font-size="9" text-anchor="middle">every 90 ms</text>
+
+  <rect x="270" y="162" width="400" height="42" rx="6" fill="#0f172a"/>
+  <rect x="270" y="162" width="400" height="42" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="188" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">LivePane.render</text>
+
+  <rect x="150" y="236" width="640" height="50" rx="6" fill="#0f172a"/>
+  <rect x="150" y="236" width="640" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="258" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">clearLocked walks back exactly p.drawn lines</text>
+  <text x="470" y="276" fill="#94a3b8" font-size="9" text-anchor="middle">no guessing, no clear-screen — only what was written is erased</text>
+
+  <rect x="150" y="314" width="640" height="60" rx="6" fill="#0f172a"/>
+  <rect x="150" y="314" width="640" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="338" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">bodyLocked</text>
+  <text x="470" y="357" fill="#94a3b8" font-size="9" text-anchor="middle">width = paneWidth · budget = TerminalRows − heightMargin 2</text>
+
+  <rect x="150" y="406" width="640" height="46" rx="6" fill="#0f172a"/>
+  <rect x="150" y="406" width="640" height="46" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="434" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">ComposePane(now, width, budget, flow, hud)</text>
+
+  <rect x="110" y="484" width="720" height="60" rx="6" fill="#0f172a"/>
+  <rect x="110" y="484" width="720" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="508" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">RenderFlow yields the raw diagram rows</text>
+  <text x="470" y="527" fill="#94a3b8" font-size="9" text-anchor="middle">5 rows — or none below 46 columns, or when idle</text>
+
+  <polygon points="470,578 680,622 470,666 260,622" fill="#0f172a"/>
+  <polygon points="470,578 680,622 470,666 260,622" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="617" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">raw rows fit in</text>
+  <text x="470" y="632" fill="#cbd5e1" font-size="9" text-anchor="middle">budget − hudFloorRows 6?</text>
+
+  <rect x="480" y="696" width="420" height="114" rx="6" fill="#0f172a"/>
+  <rect x="480" y="696" width="420" height="114" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="690" y="718" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">DIAGRAM KEPT</text>
+  <text x="690" y="738" fill="#e2e8f0" font-size="8" text-anchor="middle">row 0 — you, then ctx, then the provider</text>
+  <text x="690" y="754" fill="#e2e8f0" font-size="8" text-anchor="middle">row 1 — carried payloads</text>
+  <text x="690" y="770" fill="#e2e8f0" font-size="8" text-anchor="middle">rows 2–4 — plan badge in the left gutter</text>
+  <text x="690" y="786" fill="#e2e8f0" font-size="8" text-anchor="middle">rows 3–4 — tool return path</text>
+  <text x="690" y="802" fill="#64748b" font-size="8" text-anchor="middle">packet animation rides these rows</text>
+
+  <rect x="40" y="696" width="400" height="74" rx="6" fill="#0f172a"/>
+  <rect x="40" y="696" width="400" height="74" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="240" y="718" fill="#fb923c" font-size="10" font-weight="700" text-anchor="middle">DIAGRAM DROPPED WHOLE</text>
+  <text x="240" y="738" fill="#e2e8f0" font-size="9" text-anchor="middle">all of it or none of it</text>
+  <text x="240" y="756" fill="#94a3b8" font-size="8" text-anchor="middle">a half-drawn diagram is worse than no diagram</text>
+
+  <rect x="180" y="846" width="580" height="50" rx="6" fill="#0f172a"/>
+  <rect x="180" y="846" width="580" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="868" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">hud.MaxRows = budget − the diagram rows kept</text>
+  <text x="470" y="886" fill="#94a3b8" font-size="9" text-anchor="middle">the HUD gets whatever is left over</text>
+
+  <rect x="180" y="922" width="580" height="46" rx="6" fill="#0f172a"/>
+  <rect x="180" y="922" width="580" height="46" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="950" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">RenderHud sheds until it fits</text>
+
+  <polygon points="470,992 700,1040 470,1088 240,1040" fill="#0f172a"/>
+  <polygon points="470,992 700,1040 470,1088 240,1040" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="470" y="1035" fill="#f1f5f9" font-size="10" font-weight="600" text-anchor="middle">width under MinBoxWidth 20</text>
+  <text x="470" y="1050" fill="#cbd5e1" font-size="9" text-anchor="middle">OR MaxRows under 4?</text>
+
+  <rect x="40" y="1112" width="400" height="68" rx="6" fill="#0f172a"/>
+  <rect x="40" y="1112" width="400" height="68" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="240" y="1136" fill="#fb923c" font-size="10" font-weight="700" text-anchor="middle">ONE UNBOXED STATUS LINE</text>
+  <text x="240" y="1156" fill="#e2e8f0" font-size="9" text-anchor="middle">spinner · route · phase · elapsed</text>
+  <text x="240" y="1172" fill="#94a3b8" font-size="8" text-anchor="middle">the irreducible minimum</text>
+
+  <rect x="480" y="1112" width="420" height="84" rx="6" fill="#0f172a"/>
+  <rect x="480" y="1112" width="420" height="84" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="690" y="1134" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">THE FULL BOX</text>
+  <text x="690" y="1152" fill="#e2e8f0" font-size="8" text-anchor="middle">top chips · status row with route · progress and cost</text>
+  <text x="690" y="1168" fill="#e2e8f0" font-size="8" text-anchor="middle">optional plan note · plan rows beside telemetry cells</text>
+  <text x="690" y="1184" fill="#e2e8f0" font-size="8" text-anchor="middle">reasoning tail · bottom edge</text>
+
+  <rect x="180" y="1236" width="580" height="60" rx="6" fill="#0f172a"/>
+  <rect x="180" y="1236" width="580" height="60" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="470" y="1260" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">diagram rows + HUD rows</text>
+  <text x="470" y="1279" fill="#94a3b8" font-size="9" text-anchor="middle">total within budget · every line within width</text>
+
+  <rect x="250" y="1326" width="440" height="50" rx="6" fill="#0f172a"/>
+  <rect x="250" y="1326" width="440" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="470" y="1348" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">print · p.drawn = the line count just written</text>
+  <text x="470" y="1366" fill="#94a3b8" font-size="9" text-anchor="middle">which is what the next frame will walk back</text>
+
+  <!-- edge labels -->
+  <g font-size="9" font-weight="700">
+    <text x="700" y="614" fill="#34d399">yes</text>
+    <text x="240" y="614" fill="#fb923c" text-anchor="middle">no</text>
+    <text x="212" y="1076" fill="#fb923c" text-anchor="end">yes</text>
+    <text x="726" y="1076" fill="#94a3b8">no</text>
+  </g>
+
+  <!-- ===== SHEDDING ORDER PANEL ===== -->
+  <rect x="940" y="88" width="520" height="1080" rx="12" fill="rgba(2,6,23,0.6)" stroke="#fbbf24" stroke-width="1.4" stroke-dasharray="8,4"/>
+  <text x="968" y="120" fill="#fbbf24" font-size="12" font-weight="700" letter-spacing="1.2">SHEDDING ORDER</text>
+  <text x="968" y="140" fill="#94a3b8" font-size="9">each step re-renders the box and re-measures</text>
+  <text x="968" y="156" fill="#64748b" font-size="8">applied in order, stopping as soon as it fits</text>
+
+  <g>
+    <rect x="968" y="182" width="464" height="128" rx="6" fill="#0f172a"/>
+    <rect x="968" y="182" width="464" height="128" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="208" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="212" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">1</text>
+    <text x="1018" y="212" fill="#f1f5f9" font-size="10" font-weight="700">reasoning tail</text>
+    <text x="996" y="240" fill="#e2e8f0" font-size="9">thinkWindow shrinks 3 → 0</text>
+    <text x="996" y="262" fill="#94a3b8" font-size="8">the model's visible thinking is the first thing to go —</text>
+    <text x="996" y="277" fill="#94a3b8" font-size="8">it is the most interesting and the least load-bearing</text>
+    <text x="996" y="298" fill="#64748b" font-size="8">nothing structural is lost</text>
+
+    <rect x="968" y="326" width="464" height="86" rx="6" fill="#0f172a"/>
+    <rect x="968" y="326" width="464" height="86" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="352" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="356" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">2</text>
+    <text x="1018" y="356" fill="#f1f5f9" font-size="10" font-weight="700">plan note</text>
+    <text x="996" y="384" fill="#e2e8f0" font-size="9">dropped entirely</text>
+    <text x="996" y="402" fill="#94a3b8" font-size="8">the note is commentary; the list itself survives longer</text>
+
+    <rect x="968" y="428" width="464" height="120" rx="6" fill="#0f172a"/>
+    <rect x="968" y="428" width="464" height="120" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="454" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="458" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">3</text>
+    <text x="1018" y="458" fill="#f1f5f9" font-size="10" font-weight="700">task list collapses</text>
+    <text x="996" y="486" fill="#e2e8f0" font-size="9">collapseAfter 8 → 1</text>
+    <text x="996" y="508" fill="#94a3b8" font-size="8">the finished head folds into "N done"</text>
+    <text x="996" y="524" fill="#94a3b8" font-size="8">the tail folds into "N more"</text>
+    <text x="996" y="540" fill="#64748b" font-size="8">the in-flight item is always the one kept</text>
+
+    <rect x="968" y="564" width="464" height="152" rx="6" fill="#0f172a"/>
+    <rect x="968" y="564" width="464" height="152" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="996" cy="590" r="11" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="996" y="594" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">4</text>
+    <text x="1018" y="594" fill="#f1f5f9" font-size="10" font-weight="700">telemetry cells shed by priority</text>
+    <text x="996" y="622" fill="#e2e8f0" font-size="9">limit 8 → telemetryFloor 2</text>
+    <text x="996" y="644" fill="#94a3b8" font-size="8">token counters go first</text>
+    <text x="996" y="660" fill="#94a3b8" font-size="8">then the output sparkline</text>
+    <text x="996" y="682" fill="#34d399" font-size="8">the floor of 2 preserves the clock and the phase label —</text>
+    <text x="996" y="697" fill="#34d399" font-size="8">"is it alive, and what is it doing" outranks every number</text>
+
+    <rect x="968" y="732" width="464" height="92" rx="6" fill="#0f172a"/>
+    <rect x="968" y="732" width="464" height="92" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.3"/>
+    <circle cx="996" cy="758" r="11" fill="rgba(251,113,133,0.25)" stroke="#fb7185" stroke-width="1.2"/>
+    <text x="996" y="762" fill="#fb7185" font-size="10" font-weight="700" text-anchor="middle">5</text>
+    <text x="1018" y="762" fill="#f1f5f9" font-size="10" font-weight="700">last resort</text>
+    <text x="996" y="790" fill="#e2e8f0" font-size="9">keep the head rows, re-append the closing edge</text>
+    <text x="996" y="810" fill="#94a3b8" font-size="8">the box always closes — a torn frame is never printed</text>
+  </g>
+
+  <rect x="968" y="856" width="464" height="126" rx="6" fill="rgba(2,6,23,0.7)" stroke="#334155" stroke-width="1.2"/>
+  <text x="990" y="882" fill="#e2e8f0" font-size="10" font-weight="700">Two invariants hold at every step</text>
+  <circle cx="998" cy="906" r="3" fill="#34d399"/>
+  <text x="1010" y="910" fill="#cbd5e1" font-size="9">total rows ≤ budget</text>
+  <circle cx="998" cy="930" r="3" fill="#34d399"/>
+  <text x="1010" y="934" fill="#cbd5e1" font-size="9">every line ≤ width, measured CJK-aware</text>
+  <text x="990" y="960" fill="#64748b" font-size="8">so a 40-column terminal and a 200-column one both get a frame that fits</text>
+
+  <rect x="968" y="1002" width="464" height="142" rx="6" fill="rgba(2,6,23,0.7)" stroke="#334155" stroke-width="1.2"/>
+  <text x="990" y="1028" fill="#e2e8f0" font-size="10" font-weight="700">Why shedding, not scrolling</text>
+  <text x="990" y="1052" fill="#94a3b8" font-size="9">The pane is redrawn in place, so it cannot be</text>
+  <text x="990" y="1068" fill="#94a3b8" font-size="9">allowed to grow: one extra line and clearLocked</text>
+  <text x="990" y="1084" fill="#94a3b8" font-size="9">walks back the wrong distance, leaving debris</text>
+  <text x="990" y="1100" fill="#94a3b8" font-size="9">on screen for the rest of the session.</text>
+  <text x="990" y="1126" fill="#fb7185" font-size="8">Decorative layers must never fail a run — the pane is allowed</text>
+  <text x="990" y="1140" fill="#fb7185" font-size="8">to lose detail, never to corrupt the terminal.</text>
+
+  <text x="40" y="1416" fill="#475569" font-size="8">The diagram is all-or-nothing; the HUD degrades gracefully. That asymmetry is deliberate — a partial flow diagram misleads about what the agent is doing, while a</text>
+  <text x="40" y="1432" fill="#475569" font-size="8">HUD with fewer cells still tells the truth about the cells it kept.</text>
+</svg>
+</div>
+    <p class="src"><a href="05-live-pane.svg">open the SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="oh-my-pi">
+    <div class="fig-head"><span class="num">06</span><h2>oh-my-pi, the harness it came from</h2></div>
+    <figcaption>The project this one borrowed its skeleton from. GitHub labels it TypeScript; it is a Bazel-built polyglot monorepo — 16 TypeScript packages, 9 Rust crates and a resident Python. Read bottom-up: shell, grep, diff, traversal and AST were pushed down into Rust because tool noise, not model quality, was the bottleneck.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Layered architecture of oh-my-pi: entry, agent core, capability layers, the Rust substrate, bridges, extensibility, and Bazel underneath" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1230" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Layered architecture of oh-my-pi: entry, agent core, capability layers, the Rust substrate, bridges, extensibility, and Bazel underneath</title>
+  <defs>
+    <pattern id="06-oh-my-pi--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="06-oh-my-pi--ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="1230" fill="#020617"/>
+  <rect width="1400" height="1230" fill="url(#06-oh-my-pi--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">oh-my-pi — the harness, as built</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">can1357/oh-my-pi · a Bazel-built polyglot monorepo: 16 TypeScript packages, 9 Rust crates, a resident Python. GitHub labels it "TypeScript" — the substrate is not.</text>
+
+  <!-- band connectors -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#06-oh-my-pi--ah)">
+    <path d="M 700 176 L 700 196"/>
+    <path d="M 700 330 L 700 350"/>
+    <path d="M 700 564 L 700 584"/>
+    <path d="M 700 758 L 700 778"/>
+    <path d="M 700 902 L 700 922"/>
+  </g>
+
+  <!-- ===== BAND 1 · ENTRY ===== -->
+  <rect x="40" y="80" width="1320" height="96" rx="12" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="54" y="98" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">ENTRY</text>
+  <g>
+    <rect x="70" y="106" width="380" height="56" rx="6" fill="#0f172a"/>
+    <rect x="70" y="106" width="380" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="260" y="130" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">packages/tui</text>
+    <text x="260" y="148" fill="#94a3b8" font-size="9" text-anchor="middle">terminal interface</text>
+
+    <rect x="510" y="106" width="380" height="56" rx="6" fill="#0f172a"/>
+    <rect x="510" y="106" width="380" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="700" y="130" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">coding-agent/src/cli</text>
+    <text x="700" y="148" fill="#94a3b8" font-size="9" text-anchor="middle">argument surface · launch · modes</text>
+
+    <rect x="950" y="106" width="380" height="56" rx="6" fill="#0f172a"/>
+    <rect x="950" y="106" width="380" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="1140" y="130" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">slash-commands · commands</text>
+    <text x="1140" y="148" fill="#94a3b8" font-size="9" text-anchor="middle">operator verbs</text>
+  </g>
+
+  <!-- ===== BAND 2 · AGENT CORE ===== -->
+  <rect x="40" y="196" width="1320" height="134" rx="12" fill="none" stroke="#34d399" stroke-width="1.3" stroke-dasharray="8,4" opacity="0.7"/>
+  <text x="54" y="214" fill="#34d399" font-size="9" font-weight="600" letter-spacing="1.4">AGENT CORE — packages/agent · coding-agent/src</text>
+  <g>
+    <rect x="70" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="70" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="166" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">agent loop</text>
+    <text x="166" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">event-driven</text>
+    <text x="166" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">async · live</text>
+
+    <rect x="284" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="284" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="380" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">session</text>
+    <text x="380" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">export · eval</text>
+    <text x="380" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">hindsight</text>
+
+    <rect x="498" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="498" y="238" width="192" height="72" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="594" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">task · subagents</text>
+    <text x="594" y="280" fill="#fdba74" font-size="8" text-anchor="middle">typed, schema-validated</text>
+    <text x="594" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">results the parent reads</text>
+
+    <rect x="712" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="712" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="808" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">modes · plan-mode</text>
+    <text x="808" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">goals · advisor</text>
+    <text x="808" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">auto-thinking</text>
+
+    <rect x="926" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="926" y="238" width="192" height="72" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="1022" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">capability</text>
+    <text x="1022" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">secrets</text>
+    <text x="1022" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">permission surface</text>
+
+    <rect x="1140" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="1140" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1236" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">registry · tools</text>
+    <text x="1236" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">catalog · discovery</text>
+    <text x="1236" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">one tool surface</text>
+  </g>
+
+  <!-- ===== BAND 3 · CAPABILITIES ===== -->
+  <rect x="40" y="350" width="1320" height="214" rx="12" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="54" y="368" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">CAPABILITY LAYERS</text>
+
+  <g>
+    <rect x="70" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="70" y="386" width="300" height="162" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="220" y="410" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">EDIT SAFETY</text>
+    <text x="220" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">packages/hashline</text>
+    <text x="220" y="450" fill="#94a3b8" font-size="8" text-anchor="middle">hash-anchored edits — the anchor is</text>
+    <text x="220" y="464" fill="#94a3b8" font-size="8" text-anchor="middle">verified before the write lands</text>
+    <text x="220" y="486" fill="#f1f5f9" font-size="9" text-anchor="middle">src/edit · src/commit</text>
+    <text x="220" y="508" fill="#f1f5f9" font-size="9" text-anchor="middle">typescript-edit-benchmark</text>
+    <text x="220" y="524" fill="#fbbf24" font-size="8" text-anchor="middle">edit accuracy is measured,</text>
+    <text x="220" y="538" fill="#fbbf24" font-size="8" text-anchor="middle">not assumed</text>
+
+    <rect x="390" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="390" y="386" width="300" height="162" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="540" y="410" fill="#a78bfa" font-size="10" font-weight="700" text-anchor="middle">CONTEXT &amp; MEMORY</text>
+    <text x="540" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">packages/snapcompact</text>
+    <text x="540" y="450" fill="#94a3b8" font-size="8" text-anchor="middle">compaction as its own package</text>
+    <text x="540" y="472" fill="#f1f5f9" font-size="9" text-anchor="middle">mnemopi · memories</text>
+    <text x="540" y="488" fill="#f1f5f9" font-size="9" text-anchor="middle">memory-backend</text>
+    <text x="540" y="510" fill="#f1f5f9" font-size="9" text-anchor="middle">autolearn · autoresearch</text>
+    <text x="540" y="530" fill="#a78bfa" font-size="8" text-anchor="middle">memory persists across sessions</text>
+
+    <rect x="710" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="710" y="386" width="300" height="162" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="860" y="410" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">EXEC &amp; TOOLS</text>
+    <text x="860" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">src/exec · src/subprocess</text>
+    <text x="860" y="456" fill="#f1f5f9" font-size="9" text-anchor="middle">src/web · src/exa</text>
+    <text x="860" y="472" fill="#94a3b8" font-size="8" text-anchor="middle">browser and search</text>
+    <text x="860" y="494" fill="#f1f5f9" font-size="9" text-anchor="middle">src/ssh · src/irc</text>
+    <text x="860" y="516" fill="#f1f5f9" font-size="9" text-anchor="middle">src/stt · src/tts</text>
+    <text x="860" y="532" fill="#94a3b8" font-size="8" text-anchor="middle">speech in and out</text>
+
+    <rect x="1030" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="1030" y="386" width="300" height="162" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="1180" y="410" fill="#22d3ee" font-size="10" font-weight="700" text-anchor="middle">LANGUAGE SERVICES</text>
+    <text x="1180" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">src/lsp</text>
+    <text x="1180" y="450" fill="#94a3b8" font-size="8" text-anchor="middle">renames go through the server:</text>
+    <text x="1180" y="464" fill="#94a3b8" font-size="8" text-anchor="middle">workspace/willRenameFiles</text>
+    <text x="1180" y="486" fill="#f1f5f9" font-size="9" text-anchor="middle">src/dap · src/debug</text>
+    <text x="1180" y="502" fill="#94a3b8" font-size="8" text-anchor="middle">a real debugger, not print statements</text>
+    <text x="1180" y="524" fill="#f1f5f9" font-size="9" text-anchor="middle">src/markit · src/tiny</text>
+  </g>
+
+  <!-- ===== BAND 4 · RUST SUBSTRATE ===== -->
+  <rect x="40" y="584" width="1320" height="174" rx="12" fill="none" stroke="#fb923c" stroke-width="1.3" stroke-dasharray="8,4" opacity="0.75"/>
+  <text x="54" y="602" fill="#fb923c" font-size="9" font-weight="600" letter-spacing="1.4">RUST SUBSTRATE — crates/ · 9 crates, where the performance-critical work moved</text>
+  <g>
+    <rect x="70" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="70" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="170" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-shell</text>
+    <text x="170" y="664" fill="#fdba74" font-size="8" text-anchor="middle">its own shell —</text>
+    <text x="170" y="678" fill="#fdba74" font-size="8" text-anchor="middle">vendored brush (Rust bash)</text>
+    <text x="170" y="700" fill="#f1f5f9" font-size="9" text-anchor="middle">+ minimizer/</text>
+    <text x="170" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">per-toolchain output filters:</text>
+    <text x="170" y="730" fill="#94a3b8" font-size="8" text-anchor="middle">cargo · git · go · jvm · npm</text>
+
+    <rect x="282" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="282" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="382" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-uu-grep</text>
+    <text x="382" y="664" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-uu-diff</text>
+    <text x="382" y="688" fill="#94a3b8" font-size="8" text-anchor="middle">coreutils rewritten on</text>
+    <text x="382" y="702" fill="#94a3b8" font-size="8" text-anchor="middle">uutils, so grep and diff</text>
+    <text x="382" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">behave identically on</text>
+    <text x="382" y="730" fill="#94a3b8" font-size="8" text-anchor="middle">every platform</text>
+
+    <rect x="494" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="494" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="594" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-uutils-ctx</text>
+    <text x="594" y="670" fill="#94a3b8" font-size="8" text-anchor="middle">shared execution context</text>
+    <text x="594" y="684" fill="#94a3b8" font-size="8" text-anchor="middle">for the rewritten utils</text>
+    <text x="594" y="708" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-walker</text>
+    <text x="594" y="728" fill="#94a3b8" font-size="8" text-anchor="middle">the file walker</text>
+
+    <rect x="706" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="706" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="806" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-ast</text>
+    <text x="806" y="670" fill="#94a3b8" font-size="8" text-anchor="middle">per-language AST parsing</text>
+    <text x="806" y="686" fill="#94a3b8" font-size="8" text-anchor="middle">(src/language/)</text>
+    <text x="806" y="710" fill="#fdba74" font-size="8" text-anchor="middle">structure-aware reads,</text>
+    <text x="806" y="724" fill="#fdba74" font-size="8" text-anchor="middle">not line ranges</text>
+
+    <rect x="918" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="918" y="622" width="200" height="118" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="1018" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-iso</text>
+    <text x="1018" y="670" fill="#fda4af" font-size="8" text-anchor="middle">isolation —</text>
+    <text x="1018" y="686" fill="#94a3b8" font-size="8" text-anchor="middle">the sandbox boundary</text>
+    <text x="1018" y="702" fill="#94a3b8" font-size="8" text-anchor="middle">for what the agent</text>
+    <text x="1018" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">is allowed to touch</text>
+
+    <rect x="1130" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="1130" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="1230" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-natives</text>
+    <text x="1230" y="670" fill="#94a3b8" font-size="8" text-anchor="middle">fonts · syntaxes</text>
+    <text x="1230" y="692" fill="#94a3b8" font-size="8" text-anchor="middle">native helpers the TS</text>
+    <text x="1230" y="706" fill="#94a3b8" font-size="8" text-anchor="middle">side loads through</text>
+    <text x="1230" y="720" fill="#94a3b8" font-size="8" text-anchor="middle">packages/natives</text>
+  </g>
+
+  <!-- ===== BAND 5 · BRIDGES ===== -->
+  <rect x="40" y="778" width="1320" height="124" rx="12" fill="none" stroke="#a78bfa" stroke-width="1.3" stroke-dasharray="8,4" opacity="0.7"/>
+  <text x="54" y="796" fill="#a78bfa" font-size="9" font-weight="600" letter-spacing="1.4">BRIDGES — how other runtimes reach back in</text>
+  <g>
+    <rect x="70" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="70" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="220" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">python/ — omp-rpc · robomp</text>
+    <text x="220" y="857" fill="#a78bfa" font-size="8" text-anchor="middle">a resident Python that can call</text>
+    <text x="220" y="871" fill="#a78bfa" font-size="8" text-anchor="middle">back into the agent's own tools</text>
+
+    <rect x="390" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="390" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="540" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">packages/wire</text>
+    <text x="540" y="857" fill="#94a3b8" font-size="8" text-anchor="middle">the transport under it all</text>
+    <text x="540" y="871" fill="#94a3b8" font-size="8" text-anchor="middle">— the loopback bridge</text>
+
+    <rect x="710" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="710" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="860" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">src/jsonrpc · src/internal-urls</text>
+    <text x="860" y="857" fill="#94a3b8" font-size="8" text-anchor="middle">in-process addressing for</text>
+    <text x="860" y="871" fill="#94a3b8" font-size="8" text-anchor="middle">everything the agent exposes</text>
+
+    <rect x="1030" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="1030" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1180" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">src/mcp</text>
+    <text x="1180" y="857" fill="#94a3b8" font-size="8" text-anchor="middle">someone else's tools, on</text>
+    <text x="1180" y="871" fill="#94a3b8" font-size="8" text-anchor="middle">the same registry</text>
+  </g>
+
+  <!-- ===== BAND 6 · EXTENSIBILITY ===== -->
+  <rect x="40" y="922" width="1320" height="118" rx="12" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="54" y="940" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">EXTENSIBILITY — and it dogfoods its own skills</text>
+  <g>
+    <rect x="70" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="70" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="220" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">.omp/skills</text>
+    <text x="220" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">semantic-compression · system-prompts</text>
+    <text x="220" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">tool-prompt-optimization</text>
+
+    <rect x="390" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="390" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="540" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">src/extensibility</text>
+    <text x="540" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">hooks · custom tools · SDK</text>
+    <text x="540" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">(examples/ ships all three)</text>
+
+    <rect x="710" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="710" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="860" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">swarm-extension · collab</text>
+    <text x="860" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">many agents, and collab-web</text>
+    <text x="860" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">to watch them</text>
+
+    <rect x="1030" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="1030" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="1180" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">metaharness · stats · eval</text>
+    <text x="1180" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">the harness measures</text>
+    <text x="1180" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">itself</text>
+  </g>
+
+  <!-- ===== BAND 7 · BUILD ===== -->
+  <rect x="40" y="1060" width="1320" height="58" rx="8" fill="rgba(2,6,23,0.7)" stroke="#fbbf24" stroke-width="1.2"/>
+  <text x="70" y="1085" fill="#fbbf24" font-size="10" font-weight="700">BAZEL</text>
+  <text x="140" y="1085" fill="#cbd5e1" font-size="9">toolchains · platforms · triples · variants — one build graph across Rust, TypeScript and Python</text>
+  <text x="140" y="1103" fill="#64748b" font-size="8">Three languages in one repo is a build problem before it is an architecture problem; Bazel is the answer they picked, and it shapes everything above it.</text>
+
+  <text x="40" y="1168" fill="#475569" font-size="8">Read bottom-up and the thesis is legible: the parts that must be fast and identical everywhere — shell, grep, diff, file walking, AST — were pushed down into Rust,</text>
+  <text x="40" y="1184" fill="#475569" font-size="8">while orchestration, memory and the interface stayed in TypeScript, and Python is kept resident because that is what people actually write scripts in. Its output</text>
+  <text x="40" y="1200" fill="#475569" font-size="8">minimizer has per-toolchain filters with test fixtures — cargo, git, go, jvm, npm — which tells you what the real bottleneck was: not model quality, but tool noise.</text>
+</svg>
+</div>
+    <p class="src"><a href="06-oh-my-pi.svg">open the SVG &rarr;</a> · <a href="https://github.com/can1357/oh-my-pi">can1357/oh-my-pi &rarr;</a></p>
+  </figure>
+
+  <figure id="comparison">
+    <div class="fig-head"><span class="num">07</span><h2>Where the two diverge, and why</h2></div>
+    <figcaption>Seven axes, side by side. oh-my-pi optimizes for changing code; 0xAF-Re optimizes for reading binaries — and almost every difference follows from that one sentence. The last panel records exactly what crossed over and what was left behind on purpose.</figcaption>
+    <div class="frame"><svg role="img" style="width:100%;height:auto;display:block" aria-label="Side-by-side comparison of oh-my-pi and 0xAF-Re across engineering shape, shell and tool output, writing to disk, context and memory, model orchestration, understanding the target, and extensibility" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1180" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+<title>Side-by-side comparison of oh-my-pi and 0xAF-Re across engineering shape, shell and tool output, writing to disk, context and memory, model orchestration, understanding the target, and extensibility</title>
+  <defs>
+    <pattern id="07-vs-oh-my-pi--grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <rect width="1400" height="1180" fill="#020617"/>
+  <rect width="1400" height="1180" fill="url(#07-vs-oh-my-pi--grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">Where the two diverge, and why</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">oh-my-pi optimizes for changing code. 0xAF-Re optimizes for reading binaries. Almost every difference below follows from that one sentence.</text>
+
+  <!-- column headers -->
+  <rect x="40" y="88" width="530" height="60" rx="8" fill="#0f172a"/>
+  <rect x="40" y="88" width="530" height="60" rx="8" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.6"/>
+  <text x="305" y="113" fill="#f1f5f9" font-size="13" font-weight="700" text-anchor="middle">oh-my-pi</text>
+  <text x="305" y="133" fill="#fdba74" font-size="9" text-anchor="middle">can1357/oh-my-pi · a coding agent</text>
+
+  <rect x="830" y="88" width="530" height="60" rx="8" fill="#0f172a"/>
+  <rect x="830" y="88" width="530" height="60" rx="8" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.6"/>
+  <text x="1095" y="113" fill="#f1f5f9" font-size="13" font-weight="700" text-anchor="middle">0xAF-Re</text>
+  <text x="1095" y="133" fill="#67e8f9" font-size="9" text-anchor="middle">this project · a reverse engineering agent</text>
+
+  <text x="700" y="122" fill="#475569" font-size="10" font-weight="700" text-anchor="middle">vs</text>
+
+  <!-- ================= ROW 1 · SHAPE ================= -->
+  <rect x="590" y="188" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="208" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">engineering shape</text>
+  <rect x="40" y="164" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="164" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="190" fill="#f1f5f9" font-size="10" font-weight="700">Bazel monorepo, three languages</text>
+  <text x="62" y="210" fill="#cbd5e1" font-size="9">16 TypeScript packages · 9 Rust crates · resident Python</text>
+  <text x="62" y="228" fill="#cbd5e1" font-size="9">123 modules under coding-agent/src alone</text>
+  <text x="62" y="250" fill="#94a3b8" font-size="8">Breadth is the point: it is a platform, and the build graph is load-bearing.</text>
+
+  <rect x="830" y="164" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="164" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="190" fill="#f1f5f9" font-size="10" font-weight="700">One Go module, one binary</text>
+  <text x="852" y="210" fill="#cbd5e1" font-size="9">64 files · 18,610 lines · 1 external dependency</text>
+  <text x="852" y="228" fill="#cbd5e1" font-size="9">6.7 MB · ~6.7 ms cold start · prompts and skills embedded</text>
+  <text x="852" y="250" fill="#94a3b8" font-size="8">Narrowness is the point: lab boxes rarely have a runtime, and you scp one file.</text>
+
+  <!-- ================= ROW 2 · SHELL ================= -->
+  <rect x="590" y="304" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="324" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">shell &amp; tool output</text>
+  <rect x="40" y="280" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="280" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="306" fill="#f1f5f9" font-size="10" font-weight="700">Ships its own shell — and its own coreutils</text>
+  <text x="62" y="326" fill="#cbd5e1" font-size="9">pi-shell wraps vendored brush (bash in Rust)</text>
+  <text x="62" y="344" fill="#cbd5e1" font-size="9">pi-uu-grep / pi-uu-diff rewrite the utils on uutils</text>
+  <text x="62" y="366" fill="#fdba74" font-size="8">minimizer/ has per-toolchain filters with fixtures — cargo, git, go, jvm, npm.</text>
+
+  <rect x="830" y="280" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="280" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="306" fill="#f1f5f9" font-size="10" font-weight="700">Uses the host shell, and budgets what comes back</text>
+  <text x="852" y="326" fill="#cbd5e1" font-size="9">shell-escape analysis on the way in, output budget on the way out</text>
+  <text x="852" y="344" fill="#cbd5e1" font-size="9">oversized output spills to an artifact — head + tail + path</text>
+  <text x="852" y="366" fill="#94a3b8" font-size="8">`objdump -d` output is noise the same way every time; no per-toolchain filter earns its keep.</text>
+
+  <!-- ================= ROW 3 · EDIT ================= -->
+  <rect x="590" y="420" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="440" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">writing to disk</text>
+  <rect x="40" y="396" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="396" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="422" fill="#f1f5f9" font-size="10" font-weight="700">Hash-anchored edits, and they benchmark them</text>
+  <text x="62" y="442" fill="#cbd5e1" font-size="9">packages/hashline — the anchor is verified before the write</text>
+  <text x="62" y="460" fill="#cbd5e1" font-size="9">typescript-edit-benchmark measures whether it actually works</text>
+  <text x="62" y="482" fill="#fdba74" font-size="8">Editing is the product, so the edit path gets a safety net and a scoreboard.</text>
+
+  <rect x="830" y="396" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="396" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="422" fill="#f1f5f9" font-size="10" font-weight="700">Writes are off until you ask</text>
+  <text x="852" y="442" fill="#cbd5e1" font-size="9">no anchoring, no edit benchmark — deliberately</text>
+  <text x="852" y="460" fill="#cbd5e1" font-size="9">the approval gate is the whole story: tier × mode, per-tool overrides</text>
+  <text x="852" y="482" fill="#94a3b8" font-size="8">The subject is read-only. Building an edit-safety net for solve notes does not pay for itself.</text>
+
+  <!-- ================= ROW 4 · CONTEXT ================= -->
+  <rect x="590" y="536" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="556" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">context &amp; memory</text>
+  <rect x="40" y="512" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="512" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="538" fill="#f1f5f9" font-size="10" font-weight="700">Compaction is a package; memory is a subsystem</text>
+  <text x="62" y="558" fill="#cbd5e1" font-size="9">snapcompact · mnemopi · memories · memory-backend</text>
+  <text x="62" y="576" fill="#cbd5e1" font-size="9">autolearn · autoresearch · hindsight</text>
+  <text x="62" y="598" fill="#fdba74" font-size="8">Knowledge accumulates across sessions — a codebase is a long-running relationship.</text>
+
+  <rect x="830" y="512" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="512" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="538" fill="#f1f5f9" font-size="10" font-weight="700">One function, two passes, and a floor</text>
+  <text x="852" y="558" fill="#cbd5e1" font-size="9">CompactHistory: elide tool bodies, then drop whole exchanges</text>
+  <text x="852" y="576" fill="#cbd5e1" font-size="9">last-exchange floor — go over budget before deleting the live turn</text>
+  <text x="852" y="598" fill="#94a3b8" font-size="8">Memory is the knowledge base instead, and it must cite entry ids or the UI calls it out.</text>
+
+  <!-- ================= ROW 5 · MODELS ================= -->
+  <rect x="590" y="652" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="672" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">model orchestration</text>
+  <rect x="40" y="628" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="628" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="654" fill="#f1f5f9" font-size="10" font-weight="700">One model, fanned out to subagents</text>
+  <text x="62" y="674" fill="#cbd5e1" font-size="9">the task tool splits work; results come back schema-validated</text>
+  <text x="62" y="692" fill="#cbd5e1" font-size="9">swarm-extension scales the same idea wider</text>
+  <text x="62" y="714" fill="#fdba74" font-size="8">Parallelism is the lever: many workers, one mind.</text>
+
+  <rect x="830" y="628" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="628" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="654" fill="#f1f5f9" font-size="10" font-weight="700">Two vendors, two seats, swappable mid-run</text>
+  <text x="852" y="674" fill="#cbd5e1" font-size="9">planner (codex, --sandbox read-only) · executor (claude)</text>
+  <text x="852" y="692" fill="#cbd5e1" font-size="9">/planner /executor /agent /effort — no restart</text>
+  <text x="852" y="714" fill="#67e8f9" font-size="8">Vendor diversity is the lever: on a refusal, ask a different company.</text>
+
+  <!-- ================= ROW 6 · LANGUAGE / TARGET ================= -->
+  <rect x="590" y="768" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="788" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">understanding the target</text>
+  <rect x="40" y="744" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="744" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="770" fill="#f1f5f9" font-size="10" font-weight="700">The language server already knows</text>
+  <text x="62" y="790" fill="#cbd5e1" font-size="9">src/lsp — renames via workspace/willRenameFiles</text>
+  <text x="62" y="808" fill="#cbd5e1" font-size="9">src/dap — a real debugger; pi-ast — per-language parsing</text>
+  <text x="62" y="830" fill="#fdba74" font-size="8">Source has ground truth available. Ask the tooling, do not ask the model to guess.</text>
+
+  <rect x="830" y="744" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="744" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="770" fill="#f1f5f9" font-size="10" font-weight="700">There is no language server for a stripped binary</text>
+  <text x="852" y="790" fill="#cbd5e1" font-size="9">24 tools: triage · entropy · carve · symbols · mitigations · APK · Frida</text>
+  <text x="852" y="808" fill="#cbd5e1" font-size="9">reverse_toolkit fronts radare2 · JADX · Ghidra · gdb · YARA · unidbg</text>
+  <text x="852" y="830" fill="#67e8f9" font-size="8">Ground truth is recovered, not queried — which is why every tool is also a slash command.</text>
+
+  <!-- ================= ROW 7 · EXTENSION ================= -->
+  <rect x="590" y="884" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="904" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">extending it</text>
+  <rect x="40" y="860" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="860" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="886" fill="#f1f5f9" font-size="10" font-weight="700">Hooks, custom tools, an SDK, a swarm</text>
+  <text x="62" y="906" fill="#cbd5e1" font-size="9">src/extensibility with worked examples for all three</text>
+  <text x="62" y="924" fill="#cbd5e1" font-size="9">.omp/skills — it dogfoods its own skill format</text>
+  <text x="62" y="946" fill="#fdba74" font-size="8">metaharness · stats · eval: the harness measures itself.</text>
+
+  <rect x="830" y="860" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="860" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="886" fill="#f1f5f9" font-size="10" font-weight="700">A markdown file, and MCP for the rest</text>
+  <text x="852" y="906" fill="#cbd5e1" font-size="9">skills/&lt;name&gt;/SKILL.md — on-disk copies beat the embedded ones</text>
+  <text x="852" y="924" fill="#cbd5e1" font-size="9">any stdio MCP server joins the same registry and the same gate</text>
+  <text x="852" y="946" fill="#94a3b8" font-size="8">No SDK to learn. The extension surface is a file you can write in a text editor.</text>
+
+  <!-- ================= WHAT WE TOOK ================= -->
+  <rect x="40" y="996" width="1320" height="108" rx="10" fill="rgba(2,6,23,0.75)" stroke="#a78bfa" stroke-width="1.3"/>
+  <text x="62" y="1022" fill="#a78bfa" font-size="11" font-weight="700">What actually crossed over</text>
+  <circle cx="70" cy="1046" r="3.5" fill="#34d399"/>
+  <text x="84" y="1050" fill="#cbd5e1" font-size="9">Taken: the single event-driven loop · output budgets as a first-class concern · structured results instead of parsed prose · one tool registry · MCP · tiered approval</text>
+  <circle cx="70" cy="1072" r="3.5" fill="#fb7185"/>
+  <text x="84" y="1076" fill="#cbd5e1" font-size="9">Left behind: hash-anchored edits · the LSP/DAP layer · cross-language workers · a custom shell and coreutils · cross-session memory · the Bazel monorepo</text>
+  <text x="84" y="1094" fill="#64748b" font-size="8">Every item on the second line is excellent engineering that solves a problem this project does not have.</text>
+
+  <text x="40" y="1140" fill="#475569" font-size="8">The honest summary: oh-my-pi is a platform and 0xAF-Re is a tool. Its Rust substrate exists because a coding agent runs cargo and npm a thousand times a day and</text>
+  <text x="40" y="1156" fill="#475569" font-size="8">their output is the bottleneck. A reverse agent runs strings once and then stares at the result — so the effort went into visibility, approval, and not lying about sources.</text>
+</svg>
+</div>
+    <p class="src"><a href="07-vs-oh-my-pi.svg">open the SVG &rarr;</a></p>
+  </figure>
+
+  <footer>
+    Diagrams are plain SVG — no runtime, no CDN, no fonts to fetch. They render the same in the browser, on GitHub, and in an offline checkout.
+    The Mermaid source for diagrams 1–5 is kept in <a href="../ARCHITECTURE.md" style="color:#64748b">ARCHITECTURE.md</a> under a collapsed block;
+    6 and 7 were drawn directly from the upstream repository layout.
+  </footer>
+</div>
+</body>
+</html>

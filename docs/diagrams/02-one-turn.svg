@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1330" width="1500" height="1330" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="ah" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#94a3b8"/>
+    </marker>
+    <marker id="ah-r" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#64748b"/>
+    </marker>
+    <marker id="ah-sec" markerWidth="9" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 9 3, 0 6" fill="#fb7185"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="1330" fill="#020617"/>
+  <rect width="1500" height="1330" fill="url(#grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">One turn, end to end</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">prompt → compaction → provider → tool calls behind the approval gate → session append → reply. Solid = call, dashed = return.</text>
+
+  <!-- lifelines -->
+  <g stroke="#1e293b" stroke-width="1" stroke-dasharray="3,5">
+    <line x1="118"  y1="130" x2="118"  y2="1230"/>
+    <line x1="275"  y1="130" x2="275"  y2="1230"/>
+    <line x1="432"  y1="130" x2="432"  y2="1230"/>
+    <line x1="589"  y1="130" x2="589"  y2="1230"/>
+    <line x1="746"  y1="130" x2="746"  y2="1230"/>
+    <line x1="903"  y1="130" x2="903"  y2="1230"/>
+    <line x1="1060" y1="130" x2="1060" y2="1230"/>
+    <line x1="1217" y1="130" x2="1217" y2="1230"/>
+    <line x1="1374" y1="130" x2="1374" y2="1230"/>
+  </g>
+
+  <!-- participant heads -->
+  <g font-size="10" font-weight="700" text-anchor="middle">
+    <rect x="48"   y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="48"   y="88" width="140" height="42" rx="6" fill="rgba(30,41,59,0.5)"  stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="118"  y="106" fill="#f1f5f9">Operator</text><text x="118" y="121" fill="#94a3b8" font-size="8" font-weight="400">the human</text>
+
+    <rect x="205"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="205"  y="88" width="140" height="42" rx="6" fill="rgba(8,51,68,0.4)"   stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="275"  y="106" fill="#f1f5f9">app.repl</text><text x="275" y="121" fill="#94a3b8" font-size="8" font-weight="400">interface</text>
+
+    <rect x="362"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="362"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="432"  y="106" fill="#f1f5f9">core.AgentLoop</text><text x="432" y="121" fill="#94a3b8" font-size="8" font-weight="400">the loop</text>
+
+    <rect x="519"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="519"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="589"  y="106" fill="#f1f5f9">CompactHistory</text><text x="589" y="121" fill="#94a3b8" font-size="8" font-weight="400">context budget</text>
+
+    <rect x="676"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="676"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="746"  y="106" fill="#f1f5f9">types.Provider</text><text x="746" y="121" fill="#94a3b8" font-size="8" font-weight="400">the model</text>
+
+    <rect x="833"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="833"  y="88" width="140" height="42" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="903"  y="106" fill="#f1f5f9">RequestApproval</text><text x="903" y="121" fill="#94a3b8" font-size="8" font-weight="400">the gate</text>
+
+    <rect x="990"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="990"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
+    <text x="1060" y="106" fill="#f1f5f9">types.Tool</text><text x="1060" y="121" fill="#94a3b8" font-size="8" font-weight="400">24 local + MCP</text>
+
+    <rect x="1147" y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="1147" y="88" width="140" height="42" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1217" y="106" fill="#f1f5f9">core.Session</text><text x="1217" y="121" fill="#94a3b8" font-size="8" font-weight="400">append-only JSONL</text>
+
+    <rect x="1304" y="88" width="140" height="42" rx="6" fill="#0f172a"/>
+    <rect x="1304" y="88" width="140" height="42" rx="6" fill="rgba(8,51,68,0.4)"   stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="1374" y="106" fill="#f1f5f9">ui.LivePane</text><text x="1374" y="121" fill="#94a3b8" font-size="8" font-weight="400">90ms frames</text>
+  </g>
+
+  <!-- ============ messages ============ -->
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 1 -->
+    <line x1="118" y1="168" x2="268" y2="168" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="122" y="163">① prompt line</text>
+    <!-- 2 -->
+    <line x1="282" y1="196" x2="1367" y2="196" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="286" y="191">② NewLivePane + SetPlan</text>
+    <!-- 3 -->
+    <line x1="282" y1="224" x2="425" y2="224" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="286" y="219">③ Run(prompt, ctx, onEvent)</text>
+    <!-- 4 -->
+    <line x1="439" y1="252" x2="1210" y2="252" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="247">④ AppendMessage user</text>
+  </g>
+
+  <!-- turn-1 band -->
+  <rect x="380" y="272" width="1010" height="238" rx="10" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="394" y="290" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.2">TURN 1</text>
+
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 5 -->
+    <line x1="439" y1="316" x2="582" y2="316" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="311">⑤ CompactHistory(history, budget)</text>
+    <!-- 6 return -->
+    <line x1="582" y1="344" x2="439" y2="344" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#ah-r)"/>
+    <text x="443" y="339" fill="#94a3b8">⑥ view + dropped / elided counts</text>
+    <!-- 7 -->
+    <line x1="439" y1="372" x2="1367" y2="372" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="367">⑦ LoopEvent compaction, wire send</text>
+    <!-- 8 -->
+    <line x1="439" y1="400" x2="739" y2="400" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="395">⑧ Complete(system, view, tools, ctx)</text>
+    <!-- 9 return stream -->
+    <line x1="739" y1="428" x2="439" y2="428" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#ah-r)"/>
+    <text x="443" y="423" fill="#94a3b8">⑨ OnProgress: thinking / text / tool / usage / plan</text>
+    <!-- 10 -->
+    <line x1="439" y1="456" x2="1367" y2="456" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="451">⑩ progress events — plus a plan event when the list changed</text>
+    <!-- 11 -->
+    <line x1="739" y1="484" x2="439" y2="484" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#ah-r)"/>
+    <text x="443" y="479" fill="#94a3b8">⑪ text + toolCalls + usage</text>
+  </g>
+
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 12 -->
+    <line x1="439" y1="534" x2="1210" y2="534" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="529">⑫ AppendMessage assistant</text>
+    <!-- 13 -->
+    <line x1="439" y1="562" x2="1367" y2="562" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="557">⑬ wire recv, reply</text>
+  </g>
+
+  <!-- loop band -->
+  <rect x="96" y="584" width="1294" height="392" rx="10" fill="none" stroke="#fb923c" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.6"/>
+  <text x="110" y="602" fill="#fb923c" font-size="9" font-weight="600" letter-spacing="1.2">LOOP — EACH TOOL CALL</text>
+
+  <g font-size="9" fill="#cbd5e1">
+    <!-- 14 -->
+    <line x1="439" y1="628" x2="1367" y2="628" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="623">⑭ tool_start</text>
+    <!-- 15 -->
+    <line x1="439" y1="656" x2="896" y2="656" stroke="#fb7185" stroke-width="1.2" marker-end="url(#ah-sec)"/>
+    <text x="443" y="651" fill="#fda4af">⑮ tier(Risk) × approvalMode</text>
+  </g>
+
+  <!-- alt: needs a human -->
+  <rect x="112" y="676" width="1262" height="118" rx="8" fill="none" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4" opacity="0.55"/>
+  <text x="126" y="692" fill="#fb7185" font-size="8" font-weight="600" letter-spacing="1">ALT — NEEDS A HUMAN</text>
+  <g font-size="9" fill="#fda4af">
+    <line x1="910" y1="716" x2="1367" y2="716" stroke="#fb7185" stroke-width="1.2" marker-end="url(#ah-sec)"/>
+    <text x="914" y="711">⑯ Pause</text>
+    <line x1="896" y1="744" x2="125" y2="744" stroke="#fb7185" stroke-width="1.2" marker-end="url(#ah-sec)"/>
+    <text x="500" y="739">⑰ draw the request block, read one key — y / a / n / d</text>
+    <line x1="125" y1="772" x2="896" y2="772" stroke="#fb7185" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#ah-sec)"/>
+    <text x="500" y="767">⑱ decision, then Resume the pane</text>
+  </g>
+
+  <!-- alt: allowed / refused -->
+  <rect x="400" y="806" width="990" height="90" rx="8" fill="none" stroke="#334155" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="414" y="822" fill="#475569" font-size="8" font-weight="600" letter-spacing="1">ALT — ALLOWED / REFUSED</text>
+  <g font-size="9" fill="#cbd5e1">
+    <line x1="439" y1="846" x2="1053" y2="846" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="841">⑲ Execute(args, ToolContext{ctx})  →  ToolResult</text>
+    <line x1="1053" y1="874" x2="439" y2="874" stroke="#64748b" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#ah-r)"/>
+    <text x="443" y="869" fill="#94a3b8">⑳ refused or failed — the error itself becomes the tool result</text>
+  </g>
+
+  <g font-size="9" fill="#cbd5e1">
+    <line x1="439" y1="920" x2="1210" y2="920" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="915">㉑ AppendMessage toolResult</text>
+    <line x1="439" y1="948" x2="1367" y2="948" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="443" y="943">㉒ tool_end</text>
+  </g>
+
+  <!-- exit alt -->
+  <rect x="380" y="996" width="1010" height="152" rx="10" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="394" y="1014" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.2">HOW THE TURN ENDS — THREE WAYS</text>
+  <g font-size="9">
+    <circle cx="404" cy="1040" r="3" fill="#fb7185"/>
+    <text x="416" y="1044" fill="#fda4af">^C — cancel ctx, synthesise a result for every unrun call, write the interrupt marker, return RunResult{Interrupted:true} with err = nil</text>
+    <circle cx="404" cy="1074" r="3" fill="#fb923c"/>
+    <text x="416" y="1078" fill="#fdba74">more tool calls issued — next turn re-compacts, now with the results included</text>
+    <circle cx="404" cy="1108" r="3" fill="#34d399"/>
+    <text x="416" y="1112" fill="#6ee7b7">reply had no tool calls — RunResult{Turns:n}, the loop is done</text>
+  </g>
+
+  <g font-size="9" fill="#cbd5e1">
+    <line x1="282" y1="1178" x2="1367" y2="1178" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="286" y="1173">㉓ Stop the pane</text>
+    <line x1="268" y1="1206" x2="125" y2="1206" stroke="#94a3b8" stroke-width="1.2" marker-end="url(#ah)"/>
+    <text x="286" y="1201">㉔ reply header + markdown reply + usage footer</text>
+  </g>
+
+  <text x="40" y="1272" fill="#475569" font-size="8">Every path writes to the session before it writes to the screen. A refused tool and a crashed tool take the same route back into the transcript, which is why an</text>
+  <text x="40" y="1288" fill="#475569" font-size="8">interrupted run stays resumable: the loop never leaves a tool call without a matching result.</text>
+</svg>

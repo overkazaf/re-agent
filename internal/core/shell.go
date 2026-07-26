@@ -1,0 +1,138 @@
+package core
+
+// Operator shell escape: a REPL line starting with `!` runs directly in the
+// workspace instead of going to a model. The same execution policy that guards
+// the agent's run_command tool applies here, so `--allow-network` /
+// `--allow-sensitive` mean the same thing whoever types the command.
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/overkazaf/re-agent/internal/security"
+	"github.com/overkazaf/re-agent/internal/tools"
+	"github.com/overkazaf/re-agent/internal/types"
+	"github.com/overkazaf/re-agent/internal/util"
+)
+
+// ShellContextMaxChars caps what a shell escape contributes to the transcript.
+const ShellContextMaxChars = 8000
+
+type ShellRunOptions struct {
+	Workspace string
+	Policy    *types.ExecutionPolicy
+	Ctx       context.Context
+	Confirm   func(types.ApprovalRequest) types.ApprovalDecision
+	// PreApproved is set when the caller already ran AssertShellCommandAllowed,
+	// so the operator is not asked twice.
+	PreApproved bool
+	OnChunk     func(stream, text string)
+}
+
+type ShellRunResult struct {
+	Command  string
+	Code     int
+	Stdout   string
+	Stderr   string
+	Ms       int64
+	TimedOut bool
+	Aborted  bool
+}
+
+// IsShellEscape is true for REPL lines that are a shell escape, not a prompt.
+func IsShellEscape(line string) bool { return strings.HasPrefix(line, "!") }
+
+// ParseShellEscape strips the `!` marker.
+func ParseShellEscape(line string) string {
+	if strings.HasPrefix(line, "!") {
+		return strings.TrimSpace(line[1:])
+	}
+	return strings.TrimSpace(line)
+}
+
+// AssertShellCommandAllowed clears the command with the policy before any
+// output is drawn. The operator typed this one themselves, so a tripped safety
+// pattern is a question ("really run that?"), not a refusal — unless nobody is
+// there to answer.
+func AssertShellCommandAllowed(
+	command string,
+	policy *types.ExecutionPolicy,
+	confirm func(types.ApprovalRequest) types.ApprovalDecision,
+) error {
+	concerns, err := security.CommandConcerns(command, policy)
+	if err != nil {
+		return err
+	}
+	return security.RequestApproval(
+		types.ApprovalRequest{Tool: "!shell", Tier: types.TierExec, Summary: command, Concerns: concerns},
+		types.ToolContext{Workspace: ".", SessionDir: ".", Policy: policy, Confirm: confirm},
+	)
+}
+
+func RunShellCommand(command string, options ShellRunOptions) (ShellRunResult, error) {
+	if !options.PreApproved {
+		if err := AssertShellCommandAllowed(command, options.Policy, options.Confirm); err != nil {
+			return ShellRunResult{}, err
+		}
+	}
+	started := types.NowMs()
+	result, err := tools.Stream([]string{"bash", "-c", command}, tools.StreamOptions{
+		Cwd:       options.Workspace,
+		TimeoutMs: options.Policy.CommandTimeoutMs,
+		Ctx:       options.Ctx,
+		OnChunk:   options.OnChunk,
+	})
+	if err != nil {
+		return ShellRunResult{}, err
+	}
+	return ShellRunResult{
+		Command:  command,
+		Code:     result.Code,
+		Stdout:   result.Stdout,
+		Stderr:   result.Stderr,
+		Ms:       types.NowMs() - started,
+		TimedOut: result.TimedOut,
+		Aborted:  result.Aborted,
+	}, nil
+}
+
+// ShellContextMessage is the transcript entry recorded for a shell escape. It is
+// attributed to the operator so the model treats it as observed workspace state
+// rather than as an instruction, and it is truncated so a noisy command cannot
+// swamp the context.
+func ShellContextMessage(result ShellRunResult, maxChars int) string {
+	if maxChars <= 0 {
+		maxChars = ShellContextMaxChars
+	}
+	lines := []string{
+		"[operator shell] I ran this command myself in the workspace; here is the output for your context.",
+		"",
+		"$ " + result.Command,
+		fmt.Sprintf("exit=%d%s", result.Code, statusNote(result)),
+	}
+	if strings.TrimSpace(result.Stdout) != "" {
+		lines = append(lines, "", "stdout:", util.Clip(strings.TrimRight(result.Stdout, " \t\r\n"), maxChars))
+	}
+	if strings.TrimSpace(result.Stderr) != "" {
+		limit := maxChars
+		if limit > 2000 {
+			limit = 2000
+		}
+		lines = append(lines, "", "stderr:", util.Clip(strings.TrimRight(result.Stderr, " \t\r\n"), limit))
+	}
+	if strings.TrimSpace(result.Stdout) == "" && strings.TrimSpace(result.Stderr) == "" {
+		lines = append(lines, "", "(no output)")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func statusNote(result ShellRunResult) string {
+	if result.TimedOut {
+		return " (killed: timed out)"
+	}
+	if result.Aborted {
+		return " (killed: cancelled by operator)"
+	}
+	return ""
+}

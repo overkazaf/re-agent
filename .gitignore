@@ -1,0 +1,18 @@
+# build output
+bin/
+*.exe
+
+# runtime state — transcripts and spilled tool output can contain anything
+sessions/
+artifacts/
+*.jsonl
+*.log
+
+# local credentials and machine-specific config
+.env
+agent.config.json
+
+# the knowledge index points at a private corpus on the operator's disk
+knowledge/reverse-index.json
+
+.DS_Store

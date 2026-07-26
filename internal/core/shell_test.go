@@ -1,0 +1,98 @@
+package core
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/overkazaf/re-agent/internal/types"
+)
+
+func TestShellEscapeParsing(t *testing.T) {
+	if !IsShellEscape("!ls -la") || IsShellEscape("ls -la") {
+		t.Fatal("shell escapes are the lines starting with !")
+	}
+	if got := ParseShellEscape("!  ls -la  "); got != "ls -la" {
+		t.Fatalf("marker not stripped: %q", got)
+	}
+	if got := ParseShellEscape("!"); got != "" {
+		t.Fatalf("a bare marker is an empty command: %q", got)
+	}
+}
+
+func TestRunShellCommandCapturesOutputAndStreams(t *testing.T) {
+	policy := &types.ExecutionPolicy{
+		CommandTimeoutMs: 5000, ApprovalMode: types.ApprovalYolo, Approvals: map[string]string{},
+	}
+	var streamed strings.Builder
+	result, err := RunShellCommand("printf 'a\nb\n'; printf 'oops\n' >&2; exit 2", ShellRunOptions{
+		Workspace: t.TempDir(), Policy: policy, PreApproved: true,
+		OnChunk: func(stream, text string) { streamed.WriteString(text) },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 2 || !strings.Contains(result.Stdout, "a\nb") || !strings.Contains(result.Stderr, "oops") {
+		t.Fatalf("command result wrong: %+v", result)
+	}
+	if !strings.Contains(streamed.String(), "a") {
+		t.Fatal("output should also stream as it arrives")
+	}
+
+	message := ShellContextMessage(result, ShellContextMaxChars)
+	for _, want := range []string{"[operator shell]", "exit=2", "stdout:", "stderr:"} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("transcript entry missing %q:\n%s", want, message)
+		}
+	}
+}
+
+func TestRunShellCommandHonoursCancellation(t *testing.T) {
+	policy := &types.ExecutionPolicy{
+		CommandTimeoutMs: 10_000, ApprovalMode: types.ApprovalYolo, Approvals: map[string]string{},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		cancel()
+	}()
+	result, err := RunShellCommand("sleep 5", ShellRunOptions{
+		Workspace: t.TempDir(), Policy: policy, PreApproved: true, Ctx: ctx,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Aborted {
+		t.Fatalf("a cancelled command should report the kill: %+v", result)
+	}
+	if strings.Contains(ShellContextMessage(result, 0), "(killed: timed out)") {
+		t.Fatal("a cancel is not a timeout")
+	}
+}
+
+func TestShellTimeoutIsReported(t *testing.T) {
+	policy := &types.ExecutionPolicy{
+		CommandTimeoutMs: 200, ApprovalMode: types.ApprovalYolo, Approvals: map[string]string{},
+	}
+	result, err := RunShellCommand("sleep 5", ShellRunOptions{
+		Workspace: t.TempDir(), Policy: policy, PreApproved: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.TimedOut {
+		t.Fatalf("expected a timeout: %+v", result)
+	}
+	if !strings.Contains(ShellContextMessage(result, 0), "killed: timed out") {
+		t.Fatal("the transcript should say why the command died")
+	}
+}
+
+func TestAssertShellCommandAllowedRefusesWithoutAnOperator(t *testing.T) {
+	policy := &types.ExecutionPolicy{ApprovalMode: types.ApprovalSafe, Approvals: map[string]string{}}
+	if err := AssertShellCommandAllowed("rm -rf /", policy, nil); err == nil {
+		t.Fatal("a destructive command with no one to ask must be refused")
+	}
+	if err := AssertShellCommandAllowed("file ./chall", policy, nil); err != nil {
+		t.Fatalf("an ordinary command should pass: %v", err)
+	}
+}

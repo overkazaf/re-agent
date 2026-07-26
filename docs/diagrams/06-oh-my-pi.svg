@@ -1,0 +1,256 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1230" width="1400" height="1230" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="1230" fill="#020617"/>
+  <rect width="1400" height="1230" fill="url(#grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">oh-my-pi — the harness, as built</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">can1357/oh-my-pi · a Bazel-built polyglot monorepo: 16 TypeScript packages, 9 Rust crates, a resident Python. GitHub labels it "TypeScript" — the substrate is not.</text>
+
+  <!-- band connectors -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#ah)">
+    <path d="M 700 176 L 700 196"/>
+    <path d="M 700 330 L 700 350"/>
+    <path d="M 700 564 L 700 584"/>
+    <path d="M 700 758 L 700 778"/>
+    <path d="M 700 902 L 700 922"/>
+  </g>
+
+  <!-- ===== BAND 1 · ENTRY ===== -->
+  <rect x="40" y="80" width="1320" height="96" rx="12" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="54" y="98" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">ENTRY</text>
+  <g>
+    <rect x="70" y="106" width="380" height="56" rx="6" fill="#0f172a"/>
+    <rect x="70" y="106" width="380" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="260" y="130" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">packages/tui</text>
+    <text x="260" y="148" fill="#94a3b8" font-size="9" text-anchor="middle">terminal interface</text>
+
+    <rect x="510" y="106" width="380" height="56" rx="6" fill="#0f172a"/>
+    <rect x="510" y="106" width="380" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="700" y="130" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">coding-agent/src/cli</text>
+    <text x="700" y="148" fill="#94a3b8" font-size="9" text-anchor="middle">argument surface · launch · modes</text>
+
+    <rect x="950" y="106" width="380" height="56" rx="6" fill="#0f172a"/>
+    <rect x="950" y="106" width="380" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="1140" y="130" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle">slash-commands · commands</text>
+    <text x="1140" y="148" fill="#94a3b8" font-size="9" text-anchor="middle">operator verbs</text>
+  </g>
+
+  <!-- ===== BAND 2 · AGENT CORE ===== -->
+  <rect x="40" y="196" width="1320" height="134" rx="12" fill="none" stroke="#34d399" stroke-width="1.3" stroke-dasharray="8,4" opacity="0.7"/>
+  <text x="54" y="214" fill="#34d399" font-size="9" font-weight="600" letter-spacing="1.4">AGENT CORE — packages/agent · coding-agent/src</text>
+  <g>
+    <rect x="70" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="70" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="166" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">agent loop</text>
+    <text x="166" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">event-driven</text>
+    <text x="166" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">async · live</text>
+
+    <rect x="284" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="284" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="380" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">session</text>
+    <text x="380" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">export · eval</text>
+    <text x="380" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">hindsight</text>
+
+    <rect x="498" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="498" y="238" width="192" height="72" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="594" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">task · subagents</text>
+    <text x="594" y="280" fill="#fdba74" font-size="8" text-anchor="middle">typed, schema-validated</text>
+    <text x="594" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">results the parent reads</text>
+
+    <rect x="712" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="712" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="808" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">modes · plan-mode</text>
+    <text x="808" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">goals · advisor</text>
+    <text x="808" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">auto-thinking</text>
+
+    <rect x="926" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="926" y="238" width="192" height="72" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="1022" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">capability</text>
+    <text x="1022" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">secrets</text>
+    <text x="1022" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">permission surface</text>
+
+    <rect x="1140" y="238" width="192" height="72" rx="6" fill="#0f172a"/>
+    <rect x="1140" y="238" width="192" height="72" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1236" y="262" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">registry · tools</text>
+    <text x="1236" y="280" fill="#94a3b8" font-size="8" text-anchor="middle">catalog · discovery</text>
+    <text x="1236" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">one tool surface</text>
+  </g>
+
+  <!-- ===== BAND 3 · CAPABILITIES ===== -->
+  <rect x="40" y="350" width="1320" height="214" rx="12" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="54" y="368" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">CAPABILITY LAYERS</text>
+
+  <g>
+    <rect x="70" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="70" y="386" width="300" height="162" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="220" y="410" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">EDIT SAFETY</text>
+    <text x="220" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">packages/hashline</text>
+    <text x="220" y="450" fill="#94a3b8" font-size="8" text-anchor="middle">hash-anchored edits — the anchor is</text>
+    <text x="220" y="464" fill="#94a3b8" font-size="8" text-anchor="middle">verified before the write lands</text>
+    <text x="220" y="486" fill="#f1f5f9" font-size="9" text-anchor="middle">src/edit · src/commit</text>
+    <text x="220" y="508" fill="#f1f5f9" font-size="9" text-anchor="middle">typescript-edit-benchmark</text>
+    <text x="220" y="524" fill="#fbbf24" font-size="8" text-anchor="middle">edit accuracy is measured,</text>
+    <text x="220" y="538" fill="#fbbf24" font-size="8" text-anchor="middle">not assumed</text>
+
+    <rect x="390" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="390" y="386" width="300" height="162" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="540" y="410" fill="#a78bfa" font-size="10" font-weight="700" text-anchor="middle">CONTEXT &amp; MEMORY</text>
+    <text x="540" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">packages/snapcompact</text>
+    <text x="540" y="450" fill="#94a3b8" font-size="8" text-anchor="middle">compaction as its own package</text>
+    <text x="540" y="472" fill="#f1f5f9" font-size="9" text-anchor="middle">mnemopi · memories</text>
+    <text x="540" y="488" fill="#f1f5f9" font-size="9" text-anchor="middle">memory-backend</text>
+    <text x="540" y="510" fill="#f1f5f9" font-size="9" text-anchor="middle">autolearn · autoresearch</text>
+    <text x="540" y="530" fill="#a78bfa" font-size="8" text-anchor="middle">memory persists across sessions</text>
+
+    <rect x="710" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="710" y="386" width="300" height="162" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="860" y="410" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">EXEC &amp; TOOLS</text>
+    <text x="860" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">src/exec · src/subprocess</text>
+    <text x="860" y="456" fill="#f1f5f9" font-size="9" text-anchor="middle">src/web · src/exa</text>
+    <text x="860" y="472" fill="#94a3b8" font-size="8" text-anchor="middle">browser and search</text>
+    <text x="860" y="494" fill="#f1f5f9" font-size="9" text-anchor="middle">src/ssh · src/irc</text>
+    <text x="860" y="516" fill="#f1f5f9" font-size="9" text-anchor="middle">src/stt · src/tts</text>
+    <text x="860" y="532" fill="#94a3b8" font-size="8" text-anchor="middle">speech in and out</text>
+
+    <rect x="1030" y="386" width="300" height="162" rx="6" fill="#0f172a"/>
+    <rect x="1030" y="386" width="300" height="162" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="1180" y="410" fill="#22d3ee" font-size="10" font-weight="700" text-anchor="middle">LANGUAGE SERVICES</text>
+    <text x="1180" y="434" fill="#f1f5f9" font-size="9" text-anchor="middle">src/lsp</text>
+    <text x="1180" y="450" fill="#94a3b8" font-size="8" text-anchor="middle">renames go through the server:</text>
+    <text x="1180" y="464" fill="#94a3b8" font-size="8" text-anchor="middle">workspace/willRenameFiles</text>
+    <text x="1180" y="486" fill="#f1f5f9" font-size="9" text-anchor="middle">src/dap · src/debug</text>
+    <text x="1180" y="502" fill="#94a3b8" font-size="8" text-anchor="middle">a real debugger, not print statements</text>
+    <text x="1180" y="524" fill="#f1f5f9" font-size="9" text-anchor="middle">src/markit · src/tiny</text>
+  </g>
+
+  <!-- ===== BAND 4 · RUST SUBSTRATE ===== -->
+  <rect x="40" y="584" width="1320" height="174" rx="12" fill="none" stroke="#fb923c" stroke-width="1.3" stroke-dasharray="8,4" opacity="0.75"/>
+  <text x="54" y="602" fill="#fb923c" font-size="9" font-weight="600" letter-spacing="1.4">RUST SUBSTRATE — crates/ · 9 crates, where the performance-critical work moved</text>
+  <g>
+    <rect x="70" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="70" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="170" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-shell</text>
+    <text x="170" y="664" fill="#fdba74" font-size="8" text-anchor="middle">its own shell —</text>
+    <text x="170" y="678" fill="#fdba74" font-size="8" text-anchor="middle">vendored brush (Rust bash)</text>
+    <text x="170" y="700" fill="#f1f5f9" font-size="9" text-anchor="middle">+ minimizer/</text>
+    <text x="170" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">per-toolchain output filters:</text>
+    <text x="170" y="730" fill="#94a3b8" font-size="8" text-anchor="middle">cargo · git · go · jvm · npm</text>
+
+    <rect x="282" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="282" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="382" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-uu-grep</text>
+    <text x="382" y="664" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-uu-diff</text>
+    <text x="382" y="688" fill="#94a3b8" font-size="8" text-anchor="middle">coreutils rewritten on</text>
+    <text x="382" y="702" fill="#94a3b8" font-size="8" text-anchor="middle">uutils, so grep and diff</text>
+    <text x="382" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">behave identically on</text>
+    <text x="382" y="730" fill="#94a3b8" font-size="8" text-anchor="middle">every platform</text>
+
+    <rect x="494" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="494" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="594" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-uutils-ctx</text>
+    <text x="594" y="670" fill="#94a3b8" font-size="8" text-anchor="middle">shared execution context</text>
+    <text x="594" y="684" fill="#94a3b8" font-size="8" text-anchor="middle">for the rewritten utils</text>
+    <text x="594" y="708" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-walker</text>
+    <text x="594" y="728" fill="#94a3b8" font-size="8" text-anchor="middle">the file walker</text>
+
+    <rect x="706" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="706" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="806" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-ast</text>
+    <text x="806" y="670" fill="#94a3b8" font-size="8" text-anchor="middle">per-language AST parsing</text>
+    <text x="806" y="686" fill="#94a3b8" font-size="8" text-anchor="middle">(src/language/)</text>
+    <text x="806" y="710" fill="#fdba74" font-size="8" text-anchor="middle">structure-aware reads,</text>
+    <text x="806" y="724" fill="#fdba74" font-size="8" text-anchor="middle">not line ranges</text>
+
+    <rect x="918" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="918" y="622" width="200" height="118" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="1018" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-iso</text>
+    <text x="1018" y="670" fill="#fda4af" font-size="8" text-anchor="middle">isolation —</text>
+    <text x="1018" y="686" fill="#94a3b8" font-size="8" text-anchor="middle">the sandbox boundary</text>
+    <text x="1018" y="702" fill="#94a3b8" font-size="8" text-anchor="middle">for what the agent</text>
+    <text x="1018" y="716" fill="#94a3b8" font-size="8" text-anchor="middle">is allowed to touch</text>
+
+    <rect x="1130" y="622" width="200" height="118" rx="6" fill="#0f172a"/>
+    <rect x="1130" y="622" width="200" height="118" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="1230" y="646" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">pi-natives</text>
+    <text x="1230" y="670" fill="#94a3b8" font-size="8" text-anchor="middle">fonts · syntaxes</text>
+    <text x="1230" y="692" fill="#94a3b8" font-size="8" text-anchor="middle">native helpers the TS</text>
+    <text x="1230" y="706" fill="#94a3b8" font-size="8" text-anchor="middle">side loads through</text>
+    <text x="1230" y="720" fill="#94a3b8" font-size="8" text-anchor="middle">packages/natives</text>
+  </g>
+
+  <!-- ===== BAND 5 · BRIDGES ===== -->
+  <rect x="40" y="778" width="1320" height="124" rx="12" fill="none" stroke="#a78bfa" stroke-width="1.3" stroke-dasharray="8,4" opacity="0.7"/>
+  <text x="54" y="796" fill="#a78bfa" font-size="9" font-weight="600" letter-spacing="1.4">BRIDGES — how other runtimes reach back in</text>
+  <g>
+    <rect x="70" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="70" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="220" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">python/ — omp-rpc · robomp</text>
+    <text x="220" y="857" fill="#a78bfa" font-size="8" text-anchor="middle">a resident Python that can call</text>
+    <text x="220" y="871" fill="#a78bfa" font-size="8" text-anchor="middle">back into the agent's own tools</text>
+
+    <rect x="390" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="390" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="540" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">packages/wire</text>
+    <text x="540" y="857" fill="#94a3b8" font-size="8" text-anchor="middle">the transport under it all</text>
+    <text x="540" y="871" fill="#94a3b8" font-size="8" text-anchor="middle">— the loopback bridge</text>
+
+    <rect x="710" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="710" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="860" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">src/jsonrpc · src/internal-urls</text>
+    <text x="860" y="857" fill="#94a3b8" font-size="8" text-anchor="middle">in-process addressing for</text>
+    <text x="860" y="871" fill="#94a3b8" font-size="8" text-anchor="middle">everything the agent exposes</text>
+
+    <rect x="1030" y="814" width="300" height="74" rx="6" fill="#0f172a"/>
+    <rect x="1030" y="814" width="300" height="74" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1180" y="838" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">src/mcp</text>
+    <text x="1180" y="857" fill="#94a3b8" font-size="8" text-anchor="middle">someone else's tools, on</text>
+    <text x="1180" y="871" fill="#94a3b8" font-size="8" text-anchor="middle">the same registry</text>
+  </g>
+
+  <!-- ===== BAND 6 · EXTENSIBILITY ===== -->
+  <rect x="40" y="922" width="1320" height="118" rx="12" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="8,4"/>
+  <text x="54" y="940" fill="#475569" font-size="9" font-weight="600" letter-spacing="1.4">EXTENSIBILITY — and it dogfoods its own skills</text>
+  <g>
+    <rect x="70" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="70" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="220" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">.omp/skills</text>
+    <text x="220" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">semantic-compression · system-prompts</text>
+    <text x="220" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">tool-prompt-optimization</text>
+
+    <rect x="390" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="390" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="540" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">src/extensibility</text>
+    <text x="540" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">hooks · custom tools · SDK</text>
+    <text x="540" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">(examples/ ships all three)</text>
+
+    <rect x="710" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="710" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="860" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">swarm-extension · collab</text>
+    <text x="860" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">many agents, and collab-web</text>
+    <text x="860" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">to watch them</text>
+
+    <rect x="1030" y="956" width="300" height="68" rx="6" fill="#0f172a"/>
+    <rect x="1030" y="956" width="300" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="1180" y="980" fill="#f1f5f9" font-size="10" font-weight="700" text-anchor="middle">metaharness · stats · eval</text>
+    <text x="1180" y="999" fill="#94a3b8" font-size="8" text-anchor="middle">the harness measures</text>
+    <text x="1180" y="1013" fill="#94a3b8" font-size="8" text-anchor="middle">itself</text>
+  </g>
+
+  <!-- ===== BAND 7 · BUILD ===== -->
+  <rect x="40" y="1060" width="1320" height="58" rx="8" fill="rgba(2,6,23,0.7)" stroke="#fbbf24" stroke-width="1.2"/>
+  <text x="70" y="1085" fill="#fbbf24" font-size="10" font-weight="700">BAZEL</text>
+  <text x="140" y="1085" fill="#cbd5e1" font-size="9">toolchains · platforms · triples · variants — one build graph across Rust, TypeScript and Python</text>
+  <text x="140" y="1103" fill="#64748b" font-size="8">Three languages in one repo is a build problem before it is an architecture problem; Bazel is the answer they picked, and it shapes everything above it.</text>
+
+  <text x="40" y="1168" fill="#475569" font-size="8">Read bottom-up and the thesis is legible: the parts that must be fast and identical everywhere — shell, grep, diff, file walking, AST — were pushed down into Rust,</text>
+  <text x="40" y="1184" fill="#475569" font-size="8">while orchestration, memory and the interface stayed in TypeScript, and Python is kept resident because that is what people actually write scripts in. Its output</text>
+  <text x="40" y="1200" fill="#475569" font-size="8">minimizer has per-toolchain filters with test fixtures — cargo, git, go, jvm, npm — which tells you what the real bottleneck was: not model quality, but tool noise.</text>
+</svg>

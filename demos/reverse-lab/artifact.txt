@@ -1,0 +1,9 @@
+CTF demo artifact
+
+Hints:
+- base64 candidate: ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9
+- suspicious endpoint: https://ctf.example.invalid/api/sign
+- crypto words: AES CBC HMAC SHA256 token secret
+- pwn words: system /bin/sh printf strcpy
+
+The useful answer is encoded, not hidden by network access.

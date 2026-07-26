@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1180" width="1400" height="1180" font-family="ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <rect width="1400" height="1180" fill="#020617"/>
+  <rect width="1400" height="1180" fill="url(#grid)"/>
+
+  <text x="40" y="42" fill="#e2e8f0" font-size="17" font-weight="700">Where the two diverge, and why</text>
+  <text x="40" y="62" fill="#64748b" font-size="10">oh-my-pi optimizes for changing code. 0xAF-Re optimizes for reading binaries. Almost every difference below follows from that one sentence.</text>
+
+  <!-- column headers -->
+  <rect x="40" y="88" width="530" height="60" rx="8" fill="#0f172a"/>
+  <rect x="40" y="88" width="530" height="60" rx="8" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.6"/>
+  <text x="305" y="113" fill="#f1f5f9" font-size="13" font-weight="700" text-anchor="middle">oh-my-pi</text>
+  <text x="305" y="133" fill="#fdba74" font-size="9" text-anchor="middle">can1357/oh-my-pi · a coding agent</text>
+
+  <rect x="830" y="88" width="530" height="60" rx="8" fill="#0f172a"/>
+  <rect x="830" y="88" width="530" height="60" rx="8" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.6"/>
+  <text x="1095" y="113" fill="#f1f5f9" font-size="13" font-weight="700" text-anchor="middle">0xAF-Re</text>
+  <text x="1095" y="133" fill="#67e8f9" font-size="9" text-anchor="middle">this project · a reverse engineering agent</text>
+
+  <text x="700" y="122" fill="#475569" font-size="10" font-weight="700" text-anchor="middle">vs</text>
+
+  <!-- ================= ROW 1 · SHAPE ================= -->
+  <rect x="590" y="188" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="208" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">engineering shape</text>
+  <rect x="40" y="164" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="164" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="190" fill="#f1f5f9" font-size="10" font-weight="700">Bazel monorepo, three languages</text>
+  <text x="62" y="210" fill="#cbd5e1" font-size="9">16 TypeScript packages · 9 Rust crates · resident Python</text>
+  <text x="62" y="228" fill="#cbd5e1" font-size="9">123 modules under coding-agent/src alone</text>
+  <text x="62" y="250" fill="#94a3b8" font-size="8">Breadth is the point: it is a platform, and the build graph is load-bearing.</text>
+
+  <rect x="830" y="164" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="164" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="190" fill="#f1f5f9" font-size="10" font-weight="700">One Go module, one binary</text>
+  <text x="852" y="210" fill="#cbd5e1" font-size="9">64 files · 18,610 lines · 1 external dependency</text>
+  <text x="852" y="228" fill="#cbd5e1" font-size="9">6.7 MB · ~6.7 ms cold start · prompts and skills embedded</text>
+  <text x="852" y="250" fill="#94a3b8" font-size="8">Narrowness is the point: lab boxes rarely have a runtime, and you scp one file.</text>
+
+  <!-- ================= ROW 2 · SHELL ================= -->
+  <rect x="590" y="304" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="324" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">shell &amp; tool output</text>
+  <rect x="40" y="280" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="280" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="306" fill="#f1f5f9" font-size="10" font-weight="700">Ships its own shell — and its own coreutils</text>
+  <text x="62" y="326" fill="#cbd5e1" font-size="9">pi-shell wraps vendored brush (bash in Rust)</text>
+  <text x="62" y="344" fill="#cbd5e1" font-size="9">pi-uu-grep / pi-uu-diff rewrite the utils on uutils</text>
+  <text x="62" y="366" fill="#fdba74" font-size="8">minimizer/ has per-toolchain filters with fixtures — cargo, git, go, jvm, npm.</text>
+
+  <rect x="830" y="280" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="280" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="306" fill="#f1f5f9" font-size="10" font-weight="700">Uses the host shell, and budgets what comes back</text>
+  <text x="852" y="326" fill="#cbd5e1" font-size="9">shell-escape analysis on the way in, output budget on the way out</text>
+  <text x="852" y="344" fill="#cbd5e1" font-size="9">oversized output spills to an artifact — head + tail + path</text>
+  <text x="852" y="366" fill="#94a3b8" font-size="8">`objdump -d` output is noise the same way every time; no per-toolchain filter earns its keep.</text>
+
+  <!-- ================= ROW 3 · EDIT ================= -->
+  <rect x="590" y="420" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="440" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">writing to disk</text>
+  <rect x="40" y="396" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="396" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="422" fill="#f1f5f9" font-size="10" font-weight="700">Hash-anchored edits, and they benchmark them</text>
+  <text x="62" y="442" fill="#cbd5e1" font-size="9">packages/hashline — the anchor is verified before the write</text>
+  <text x="62" y="460" fill="#cbd5e1" font-size="9">typescript-edit-benchmark measures whether it actually works</text>
+  <text x="62" y="482" fill="#fdba74" font-size="8">Editing is the product, so the edit path gets a safety net and a scoreboard.</text>
+
+  <rect x="830" y="396" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="396" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="422" fill="#f1f5f9" font-size="10" font-weight="700">Writes are off until you ask</text>
+  <text x="852" y="442" fill="#cbd5e1" font-size="9">no anchoring, no edit benchmark — deliberately</text>
+  <text x="852" y="460" fill="#cbd5e1" font-size="9">the approval gate is the whole story: tier × mode, per-tool overrides</text>
+  <text x="852" y="482" fill="#94a3b8" font-size="8">The subject is read-only. Building an edit-safety net for solve notes does not pay for itself.</text>
+
+  <!-- ================= ROW 4 · CONTEXT ================= -->
+  <rect x="590" y="536" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="556" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">context &amp; memory</text>
+  <rect x="40" y="512" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="512" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="538" fill="#f1f5f9" font-size="10" font-weight="700">Compaction is a package; memory is a subsystem</text>
+  <text x="62" y="558" fill="#cbd5e1" font-size="9">snapcompact · mnemopi · memories · memory-backend</text>
+  <text x="62" y="576" fill="#cbd5e1" font-size="9">autolearn · autoresearch · hindsight</text>
+  <text x="62" y="598" fill="#fdba74" font-size="8">Knowledge accumulates across sessions — a codebase is a long-running relationship.</text>
+
+  <rect x="830" y="512" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="512" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="538" fill="#f1f5f9" font-size="10" font-weight="700">One function, two passes, and a floor</text>
+  <text x="852" y="558" fill="#cbd5e1" font-size="9">CompactHistory: elide tool bodies, then drop whole exchanges</text>
+  <text x="852" y="576" fill="#cbd5e1" font-size="9">last-exchange floor — go over budget before deleting the live turn</text>
+  <text x="852" y="598" fill="#94a3b8" font-size="8">Memory is the knowledge base instead, and it must cite entry ids or the UI calls it out.</text>
+
+  <!-- ================= ROW 5 · MODELS ================= -->
+  <rect x="590" y="652" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="672" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">model orchestration</text>
+  <rect x="40" y="628" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="628" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="654" fill="#f1f5f9" font-size="10" font-weight="700">One model, fanned out to subagents</text>
+  <text x="62" y="674" fill="#cbd5e1" font-size="9">the task tool splits work; results come back schema-validated</text>
+  <text x="62" y="692" fill="#cbd5e1" font-size="9">swarm-extension scales the same idea wider</text>
+  <text x="62" y="714" fill="#fdba74" font-size="8">Parallelism is the lever: many workers, one mind.</text>
+
+  <rect x="830" y="628" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="628" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="654" fill="#f1f5f9" font-size="10" font-weight="700">Two vendors, two seats, swappable mid-run</text>
+  <text x="852" y="674" fill="#cbd5e1" font-size="9">planner (codex, --sandbox read-only) · executor (claude)</text>
+  <text x="852" y="692" fill="#cbd5e1" font-size="9">/planner /executor /agent /effort — no restart</text>
+  <text x="852" y="714" fill="#67e8f9" font-size="8">Vendor diversity is the lever: on a refusal, ask a different company.</text>
+
+  <!-- ================= ROW 6 · LANGUAGE / TARGET ================= -->
+  <rect x="590" y="768" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="788" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">understanding the target</text>
+  <rect x="40" y="744" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="744" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="770" fill="#f1f5f9" font-size="10" font-weight="700">The language server already knows</text>
+  <text x="62" y="790" fill="#cbd5e1" font-size="9">src/lsp — renames via workspace/willRenameFiles</text>
+  <text x="62" y="808" fill="#cbd5e1" font-size="9">src/dap — a real debugger; pi-ast — per-language parsing</text>
+  <text x="62" y="830" fill="#fdba74" font-size="8">Source has ground truth available. Ask the tooling, do not ask the model to guess.</text>
+
+  <rect x="830" y="744" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="744" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="770" fill="#f1f5f9" font-size="10" font-weight="700">There is no language server for a stripped binary</text>
+  <text x="852" y="790" fill="#cbd5e1" font-size="9">24 tools: triage · entropy · carve · symbols · mitigations · APK · Frida</text>
+  <text x="852" y="808" fill="#cbd5e1" font-size="9">reverse_toolkit fronts radare2 · JADX · Ghidra · gdb · YARA · unidbg</text>
+  <text x="852" y="830" fill="#67e8f9" font-size="8">Ground truth is recovered, not queried — which is why every tool is also a slash command.</text>
+
+  <!-- ================= ROW 7 · EXTENSION ================= -->
+  <rect x="590" y="884" width="220" height="30" rx="15" fill="rgba(2,6,23,0.9)" stroke="#334155" stroke-width="1.2"/>
+  <text x="700" y="904" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">extending it</text>
+  <rect x="40" y="860" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="40" y="860" width="530" height="104" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.3"/>
+  <text x="62" y="886" fill="#f1f5f9" font-size="10" font-weight="700">Hooks, custom tools, an SDK, a swarm</text>
+  <text x="62" y="906" fill="#cbd5e1" font-size="9">src/extensibility with worked examples for all three</text>
+  <text x="62" y="924" fill="#cbd5e1" font-size="9">.omp/skills — it dogfoods its own skill format</text>
+  <text x="62" y="946" fill="#fdba74" font-size="8">metaharness · stats · eval: the harness measures itself.</text>
+
+  <rect x="830" y="860" width="530" height="104" rx="6" fill="#0f172a"/>
+  <rect x="830" y="860" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
+  <text x="852" y="886" fill="#f1f5f9" font-size="10" font-weight="700">A markdown file, and MCP for the rest</text>
+  <text x="852" y="906" fill="#cbd5e1" font-size="9">skills/&lt;name&gt;/SKILL.md — on-disk copies beat the embedded ones</text>
+  <text x="852" y="924" fill="#cbd5e1" font-size="9">any stdio MCP server joins the same registry and the same gate</text>
+  <text x="852" y="946" fill="#94a3b8" font-size="8">No SDK to learn. The extension surface is a file you can write in a text editor.</text>
+
+  <!-- ================= WHAT WE TOOK ================= -->
+  <rect x="40" y="996" width="1320" height="108" rx="10" fill="rgba(2,6,23,0.75)" stroke="#a78bfa" stroke-width="1.3"/>
+  <text x="62" y="1022" fill="#a78bfa" font-size="11" font-weight="700">What actually crossed over</text>
+  <circle cx="70" cy="1046" r="3.5" fill="#34d399"/>
+  <text x="84" y="1050" fill="#cbd5e1" font-size="9">Taken: the single event-driven loop · output budgets as a first-class concern · structured results instead of parsed prose · one tool registry · MCP · tiered approval</text>
+  <circle cx="70" cy="1072" r="3.5" fill="#fb7185"/>
+  <text x="84" y="1076" fill="#cbd5e1" font-size="9">Left behind: hash-anchored edits · the LSP/DAP layer · cross-language workers · a custom shell and coreutils · cross-session memory · the Bazel monorepo</text>
+  <text x="84" y="1094" fill="#64748b" font-size="8">Every item on the second line is excellent engineering that solves a problem this project does not have.</text>
+
+  <text x="40" y="1140" fill="#475569" font-size="8">The honest summary: oh-my-pi is a platform and 0xAF-Re is a tool. Its Rust substrate exists because a coding agent runs cargo and npm a thousand times a day and</text>
+  <text x="40" y="1156" fill="#475569" font-size="8">their output is the bottleneck. A reverse agent runs strings once and then stares at the result — so the effort went into visibility, approval, and not lying about sources.</text>
+</svg>
