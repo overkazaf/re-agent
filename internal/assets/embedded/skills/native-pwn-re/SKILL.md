@@ -29,6 +29,13 @@ pdf @ main
 
 For large binaries, cache analysis under `~/.cache/r2_analysis/<sha256-prefix>` before repeating expensive `aaa` analysis.
 
+## Handoff Rules
+
+- Need deeper radare2 commands, xrefs, debugging, or patch bytes: read `radare2-reverse`.
+- Need decompiler-style navigation and the tool is available: read `ghidra`.
+- Need to emulate a small native routine or shellcode: read `unicorn-emulator`.
+- Need Android JNI/SO execution with Java callbacks: read `unidbg`.
+
 ## Pwn Checklist
 
 - RELRO, canary, NX, PIE, stripped.

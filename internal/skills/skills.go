@@ -112,7 +112,11 @@ func SystemPrompt(list []Skill) string {
 	}
 	catalog := make([]string, 0, len(list))
 	for _, skill := range list {
-		catalog = append(catalog, fmt.Sprintf("- %s: %s", skill.Name, skill.Description))
+		tags := ""
+		if len(skill.Tags) > 0 {
+			tags = " Tags: " + strings.Join(skill.Tags, ", ")
+		}
+		catalog = append(catalog, fmt.Sprintf("- %s: %s%s", skill.Name, skill.Description, tags))
 	}
 	return strings.Join([]string{
 		"",
@@ -131,12 +135,14 @@ func TurnPrompt(skill Skill, task string) string {
 	return strings.Join([]string{
 		"Use built-in skill: " + skill.Name,
 		"",
-		util.Clip(skill.Body, 20_000),
+		util.Clip(skill.Body, turnPromptSkillLimit),
 		"",
 		"Task:",
 		strings.TrimSpace(task),
 	}, "\n")
 }
+
+const turnPromptSkillLimit = 32_000
 
 var (
 	frontmatterRE = regexp.MustCompile(`^([A-Za-z0-9_-]+):\s*(.*)$`)

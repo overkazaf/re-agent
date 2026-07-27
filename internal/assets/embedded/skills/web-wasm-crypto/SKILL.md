@@ -16,6 +16,13 @@ Use this for web CTFs, JavaScript obfuscation, browser crypto, WASM modules, sig
 4. For WASM, locate `00 61 73 6d`, exports/imports, memory, and JS glue code.
 5. Hook before rewriting: wrap `fetch`, `XMLHttpRequest`, `WebAssembly.instantiate`, and crypto functions to capture inputs/outputs.
 
+## Handoff Rules
+
+- WASM section/export/import analysis: read `wasm-reverser`.
+- Browser runtime hooks or anti-debug probes: read `browser-hook`.
+- Request signing or API parameter cracking: read `api-signature-crack` or `web-crypto-analyzer`.
+- Native module or Node addon discovered under the web app: read `native-pwn-re` or `radare2-reverse`.
+
 ## Useful Patterns
 
 ```javascript

@@ -1,6 +1,7 @@
 ---
 name: jadx
 description: Use when analyzing APK files, decompiling Android apps, searching for classes/methods/strings in APK, or extracting resources. Triggers on keywords like APK, Android app analysis, decompile, dex.
+tags: android apk dex jadx java smali decompile resources manifest
 ---
 
 # jadx - Android APK Decompiler CLI
@@ -11,20 +12,36 @@ jadx decompiles Android APK/DEX files to Java source code. Use CLI for automated
 
 ## Java Environment Setup
 
-jadx requires Java 11+. If you encounter version errors, set JAVA_HOME:
+jadx requires Java 11+. Start by checking the local toolchain:
 
 ```bash
-# macOS - Use Java 17 (recommended)
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
-
-# Or find available Java versions
-/usr/libexec/java_home -V
-
-# Run jadx with specific Java version
-JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home jadx -d output/ app.apk
+jadx --version
+java -version
 ```
 
-**IMPORTANT:** Always prefix jadx commands with `JAVA_HOME=...` when running from CLI to avoid version conflicts.
+Use the environment's default Java when it works. Set `JAVA_HOME` only when `jadx --version` fails, Java is too old, or the host has multiple conflicting JDKs.
+
+```bash
+# macOS: list available Java versions, then choose Java 17+ if needed.
+/usr/libexec/java_home -V
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+
+# Linux: common fallback if a JDK is installed under /usr/lib/jvm.
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Run with a specific Java only for this command.
+JAVA_HOME=/path/to/jdk jadx -d output/ app.apk
+```
+
+Do not hard-code a macOS `JAVA_HOME` on Linux or CI.
+
+## Agent Workflow
+
+1. Run `apk_inspect` first when available to identify packers, DEX count, native libraries, package name, and entry components.
+2. Decompile to a deterministic output directory, usually `jadx_out/` or `/tmp/<case>-jadx`.
+3. Search for entry points, network endpoints, crypto/signature code, root/debug/frida checks, and `System.loadLibrary`.
+4. When native libraries appear, hand off static SO analysis to `radare2-reverse`; emulate JNI/signature code with `unidbg`; use `unicorn-emulator` for isolated native functions.
+5. Keep findings tied to class names, method signatures, source file paths, and native library names.
 
 ## Quick Reference
 

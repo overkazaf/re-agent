@@ -1,23 +1,23 @@
 ---
 name: radare2-reverse
 description: Use when analyzing binaries with radare2, disassembling, debugging, patching, or performing reverse engineering tasks. Covers ELF, PE, Mach-O, APK analysis with r2 commands and scripting.
+tags: radare2 r2 binary elf macho pe disassembly xref patch android so
 ---
 
 # Radare2 Reverse Engineering
 
-Comprehensive guide for using radare2 (r2) in reverse engineering tasks including binary analysis, disassembly, debugging, and patching.
+Use radare2 for authorized binary analysis, disassembly, xrefs, debugging, patching, CTF crackmes, malware labs, and Android native `.so` analysis.
 
-## When to Use
+## Agent Workflow
 
-- Analyzing unknown binaries (ELF, PE, Mach-O, DEX)
-- Disassembling and understanding code flow
-- Finding vulnerabilities in executables
-- Patching binaries
-- CTF challenges and crackmes
-- Malware analysis
-- Android native library (SO) analysis
+1. Identify the target first: run `file_info`, `binary_mitigations`, and `extract_symbols` when available. Record architecture, bitness, endianness, PIE/base address, imports, exports, and whether the binary is stripped.
+2. Open read-only first. Use `r2 -A <file>` for normal binaries; only add `-a`, `-b`, or `-m` after the file metadata confirms the architecture or load base.
+3. Start broad: `iI`, `ii`, `ie`, `izz`, `afl`, then xref from useful strings/imports with `axt`.
+4. Move from evidence to functions: inspect `main`, JNI exports, suspicious imports, string xrefs, and validation branches with `pdf @ <addr>`.
+5. Patch only after a hypothesis is tested. Re-open with `r2 -w` and record original bytes, patched bytes, file offset, and virtual address.
+6. Hand off when useful: APK/Dex work goes to `jadx`; JNI/SO algorithm emulation goes to `unidbg`; isolated instruction/function emulation goes to `unicorn-emulator`; pwn triage goes to `native-pwn-re`.
 
-## Analysis Caching (IMPORTANT — Use This for Large Binaries)
+## Analysis Caching (Use for Large Binaries)
 
 r2's `aaa` analysis can be very slow on large binaries. Always use caching to avoid re-analyzing.
 
@@ -33,21 +33,31 @@ mkdir -p ~/.cache/r2_analysis
 ### Method 1: r2 Project Save/Load (Recommended)
 
 ```bash
+portable_sha256_16() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print substr($1,1,16)}'
+    else
+        shasum -a 256 "$1" | awk '{print substr($1,1,16)}'
+    fi
+}
+
 # First time: analyze and save project
-HASH=$(sha256sum binary | cut -c1-16)
+HASH=$(portable_sha256_16 binary)
 PROJ_DIR=~/.cache/r2_analysis/$HASH
 mkdir -p "$PROJ_DIR"
-r2 -a arm -b 64 -m 0 binary -e "prj.dir=$PROJ_DIR" -i /dev/stdin <<'EOF'
+r2 binary -e "prj.dir=$PROJ_DIR" -i /dev/stdin <<'EOF'
 aaa
 afr @@f
 Ps cache
 EOF
 
 # Subsequent times: load cached project (instant)
-r2 -a arm -b 64 -m 0 binary -e "prj.dir=$PROJ_DIR" -i /dev/stdin <<'EOF'
+r2 binary -e "prj.dir=$PROJ_DIR" -i /dev/stdin <<'EOF'
 Po cache
 EOF
 ```
+
+If metadata proves a non-default target, set explicit flags before both commands, for example `R2FLAGS="-a arm -b 64"` and run `r2 $R2FLAGS binary`.
 
 ### Method 2: r2 Script Cache (Simpler, More Portable)
 
@@ -57,14 +67,19 @@ Save analysis results as an r2 script file that can be sourced instantly:
 # Helper: get cache path for a binary
 r2_cache_path() {
     local file="$1"
-    local hash=$(sha256sum "$file" 2>/dev/null || shasum -a 256 "$file" | cut -c1-16)
+    local hash
+    if command -v sha256sum >/dev/null 2>&1; then
+        hash=$(sha256sum "$file" | awk '{print substr($1,1,16)}')
+    else
+        hash=$(shasum -a 256 "$file" | awk '{print substr($1,1,16)}')
+    fi
     echo "$HOME/.cache/r2_analysis/${hash}"
 }
 
 # First time: full analysis → export to r2 script
 CACHE=$(r2_cache_path binary)
 mkdir -p "$CACHE"
-r2 -q -a arm -b 64 -m 0 binary -c "
+r2 -q binary -c "
 aaa
 afr @@f
 agfj > $CACHE/functions.json
@@ -149,12 +164,9 @@ r2_cached_cmd() {
 # List cached analyses
 ls -la ~/.cache/r2_analysis/
 
-# Clear all caches
-rm -rf ~/.cache/r2_analysis/*
-
-# Clear cache for specific binary
-HASH=$(shasum -a 256 binary | cut -c1-16)
-rm -rf ~/.cache/r2_analysis/$HASH
+# Prefer targeted cleanup. Avoid clearing all caches unless the operator asks.
+HASH=$(portable_sha256_16 binary)
+rm -rf -- "$HOME/.cache/r2_analysis/$HASH"
 ```
 
 ## Quick Reference - Essential Commands
@@ -222,7 +234,7 @@ r2 -w binary
 # Open in debug mode
 r2 -d binary
 
-# Open with specific architecture
+# Open with specific architecture only after file metadata confirms it
 r2 -a arm -b 64 binary
 
 # Open Android SO

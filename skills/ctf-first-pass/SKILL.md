@@ -24,6 +24,14 @@ Use this when the artifact type is unclear or the operator says "triage", "look 
 - Multiple magic offsets: forensics/carving path.
 - APK/DEX/SO indicators: switch to `android-apk-frida`.
 
+## Handoff Rules
+
+- ELF/Mach-O/PE, crackme, or exploitability path: read `native-pwn-re`.
+- Android APK/Dex/SO: read `android-apk-frida`, then `jadx`, `radare2-reverse`, or `unidbg` as evidence narrows.
+- JavaScript/WASM/browser crypto: read `web-wasm-crypto`.
+- Obfuscated native algorithm that needs instruction-level execution: read `unicorn-emulator`.
+- Finished analysis or flag path: read `re-writeup` for the report structure.
+
 ## Useful Direct Commands
 
 ```text

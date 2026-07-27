@@ -1,6 +1,7 @@
 ---
 name: unicorn-emulator
 description: Generate Unicorn Engine scripts for CPU emulation, binary analysis, algorithm extraction, and reverse engineering. Supports ARM/ARM64/x86/x64 architectures. Use for SO function emulation, encryption algorithm recovery, and obfuscation analysis.
+tags: unicorn emulator shellcode native arm arm64 x86 mips algorithm tracing
 ---
 
 # Unicorn Emulator Skill
@@ -9,7 +10,27 @@ A skill for generating Unicorn Engine scripts to emulate CPU instructions and an
 
 ## Overview
 
-Unicorn Engine is a lightweight multi-architecture CPU emulator framework based on QEMU. This skill helps generate Python scripts for:
+Unicorn Engine is a lightweight multi-architecture CPU emulator framework based on QEMU. Use this skill when the task is local, authorized, and benefits from emulating a small function, shellcode block, unpacked code range, or extracted algorithm.
+
+Prefer the bundled scripts before writing a new emulator from scratch:
+
+- `scripts/arm_emulator.py`: ARM32 ARM/Thumb function calls.
+- `scripts/arm64_emulator.py`: AArch64 function calls.
+- `scripts/x86_emulator.py`: x86/x64 function calls.
+- `scripts/android_so_emulator.py`: Android `.so` helper with lightweight JNI/libc simulation.
+- `scripts/algorithm_extractor.py`: trace and compare crypto-like routines.
+- `scripts/utils.py`: memory, hexdump, and conversion helpers.
+
+## Agent Workflow
+
+1. Confirm architecture, bitness, endianness, function address, function size, calling convention, and required input buffers. Use `file_info`, `extract_symbols`, `radare2-reverse`, or `native-pwn-re` first if these are unknown.
+2. Extract only the needed bytes/range when possible. Whole ELF/SO emulation is harder than mapping a known code range plus the data it touches.
+3. Choose the bundled script that matches the architecture. Add or patch hooks instead of rewriting boilerplate.
+4. Define a stable memory map: code, stack, heap/data, input buffers, and a stop address. Set LR/return address for ARM/ARM64 and a max instruction count or timeout.
+5. Start with trace enabled for a tiny input. Then disable noisy tracing and run controlled test vectors.
+6. If the function depends on Java objects, Android framework state, or many JNI callbacks, hand off to `unidbg`.
+
+This skill helps generate Python scripts for:
 
 - **Binary Analysis**: Emulate and trace code execution
 - **Algorithm Extraction**: Recover encryption/decryption algorithms from native code

@@ -69,6 +69,17 @@ description: embedded jadx
 	}
 }
 
+func TestSystemPromptIncludesTags(t *testing.T) {
+	prompt := SystemPrompt([]Skill{{
+		Name:        "unidbg",
+		Description: "Android native emulator",
+		Tags:        []string{"android", "jni", "so"},
+	}})
+	if !strings.Contains(prompt, "Tags: android, jni, so") {
+		t.Fatalf("expected tags in system prompt, got:\n%s", prompt)
+	}
+}
+
 func writeSkill(t *testing.T, root, name, body string) {
 	t.Helper()
 	dir := filepath.Join(root, name)

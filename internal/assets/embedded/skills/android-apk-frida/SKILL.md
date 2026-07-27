@@ -16,6 +16,14 @@ Use this for APK, DEX, Android native `.so`, Java method hooks, JNI tracing, or 
 4. Use `frida_hook_template` to generate a hook scaffold only after class/method/module targets are known.
 5. If native code is involved, combine `extract_symbols`, `binary_mitigations`, and JNI name search.
 
+## Handoff Rules
+
+- Mostly Java/Dex or manifest/resource analysis: read `jadx`.
+- Native `.so` static analysis, xrefs, or patching: read `radare2-reverse` or `native-pwn-re`.
+- JNI signature or app signing function emulation: read `unidbg`.
+- Small isolated native function emulation: read `unicorn-emulator`.
+- Browser/API signature logic found in WebView assets: read `web-wasm-crypto`.
+
 ## JADX Fast Path
 
 ```bash
