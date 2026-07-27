@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0xAF-Re - 终端里的逆向工程 Agent</title>
+<meta name="description" content="0xAF-Re 是一个逆向工程与 CTF agent：planner/executor/researcher 角色路由、24 个本地工具、workflow 模式、任务队列和实时可视化。">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar__inner">
+    <a class="brand" href="#top"><b>0xAF</b> RE</a>
+    <nav aria-label="页面导航">
+      <a href="#use-cases">使用场景</a>
+      <a href="#workflow">工作流</a>
+      <a href="#routing">角色</a>
+      <a href="#arsenal">工具</a>
+      <a href="#marketing">海报</a>
+      <a href="#install">安装</a>
+      <a href="index.html">English</a>
+      <a href="https://github.com/overkazaf/re-agent">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<div class="wrap hero">
+  <p class="hero__eyebrow">reverse ops deck · v0.1.1 · go 1.22</p>
+  <h1>会展示过程的<br>逆向工程 Agent。</h1>
+  <p class="hero__lede">
+    0xAF-Re 在终端里把 <strong>planner</strong>、<strong>executor</strong>
+    和 <strong>researcher</strong> 分开调度，配 24 个本地逆向/CTF 工具。
+    它能做 APK、ELF、Web/WASM、Frida hook、radare2/JADX/Ghidra/Unicorn/unidbg
+    工作流，也能在当前任务运行时排队下一条任务。一个静态 Go 二进制，不需要 JS runtime。
+  </p>
+
+  <div class="cmd">
+    <span class="cmd__prompt" aria-hidden="true">$</span>
+    <code id="install-cmd">go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1</code>
+    <span class="caret" aria-hidden="true"></span>
+    <button class="copy" type="button" data-copy="#install-cmd">复制</button>
+  </div>
+
+  <div class="hero__cta">
+    <span class="pill"><b>6.7 ms</b> 启动</span>
+    <span class="pill"><b>6.7 MB</b> 二进制</span>
+    <span class="pill"><b>24</b> 工具</span>
+    <span class="pill"><b>8</b> provider</span>
+    <span class="pill"><b>3</b> workflow</span>
+  </div>
+
+  <figure class="capture">
+    <div class="capture__bar"><span class="dot" aria-hidden="true"></span>真实运行画面 · 100×40 pty</div>
+    <div class="capture__scroll">
+      <img src="shots/live.svg" alt="0xAF-Re 运行中的任务列表、数据流图和 trace">
+    </div>
+    <figcaption>运行时能看到模型请求、工具调用、任务进度、耗时和 token 信息。</figcaption>
+  </figure>
+</div>
+
+<section id="use-cases">
+  <div class="wrap">
+    <p class="label">使用场景</p>
+    <h2>10 个可以直接照着敲的起手式。</h2>
+    <p>
+      把路径换成你自己的目标即可。斜杠命令直接跑本地工具；
+      <code class="inline">-p</code> 会启动一次 agent 任务。
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>想做什么</th><th>从这里开始</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>不知道文件是什么</td><td><code class="inline">/scan ./chall</code></td></tr>
+          <tr><td>2</td><td>看 ELF/Mach-O/PE 保护</td><td><code class="inline">/mitigations ./chall</code></td></tr>
+          <tr><td>3</td><td>找加壳、压缩或加密区段</td><td><code class="inline">/entropy ./chall</code></td></tr>
+          <tr><td>4</td><td>从 blob 里挖内嵌文件</td><td><code class="inline">/carve ./blob</code></td></tr>
+          <tr><td>5</td><td>解可疑 flag/token</td><td><code class="inline">/decode auto ZmxhZ3s...</code></td></tr>
+          <tr><td>6</td><td>APK 首轮分析</td><td><code class="inline">/apk ./app.apk</code></td></tr>
+          <tr><td>7</td><td>生成 Java/native hook 脚手架</td><td><code class="inline">/hook java com.example.Crypto sign</code></td></tr>
+          <tr><td>8</td><td>检查 radare2/JADX/Ghidra/Unicorn 等工具</td><td><code class="inline">/retool inventory</code></td></tr>
+          <tr><td>9</td><td>Web/WASM 加密题</td><td><code class="inline">/skill web-wasm-crypto inspect ./dist/app.js and ./dist/module.wasm</code></td></tr>
+          <tr><td>10</td><td>调研壳、算法或相似样本</td><td><code class="inline">0xaf --role researcher -p "调研这个壳名，并列出安全的本地检查步骤"</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="workflow">
+  <div class="wrap">
+    <p class="label">Workflow</p>
+    <h2>有专用订阅就直跑；没有就拆成本地证据包。</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>模式</th><th>适合什么时候</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">off</code></td><td>默认</td><td>不改写你的 prompt</td></tr>
+          <tr><td><code class="inline">auto</code></td><td>机器上可能有 GPT Cyber / CC CVP 路由</td><td>能走 specialist 就走，否则走 caveman</td></tr>
+          <tr><td><code class="inline">specialist</code></td><td>有授权 cyber/CVP 类 provider</td><td>先规划，再调用 skills 和本地工具推进</td></tr>
+          <tr><td><code class="inline">caveman</code></td><td>普通 provider</td><td>拆成文件类型、字符串、熵、导入、假设和验证命令</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre class="block">/workflow auto
+/workflow caveman
+0xaf --workflow specialist -p "triage ./app.apk"</pre>
+    <p>
+      caveman 模式不是暗语、编码或绕策略；它只把授权逆向任务拆小，优先让本地工具拿证据。
+    </p>
+  </div>
+</section>
+
+<section id="routing">
+  <div class="wrap">
+    <p class="label">角色与模型</p>
+    <h2>Planner 想路线，Executor 跑工具，Researcher 查资料。</h2>
+    <pre class="block">/planner deepseek
+/executor claude-api
+/researcher codex
+/model planner gpt-5.3-codex-high
+/prompt edit researcher</pre>
+    <p>
+      provider 和具体模型都能运行中切换；每个角色的 system prompt 也能单独编辑。
+    </p>
+  </div>
+</section>
+
+<section id="arsenal">
+  <div class="wrap">
+    <p class="label">工具</p>
+    <h2>24 个本地工具，粗筛不必花 token。</h2>
+    <pre class="block">/tools                         <span class="c">列出内置工具</span>
+/skills                        <span class="c">列出内置逆向 skill</span>
+/retool inventory              <span class="c">检查 radare2、JADX、Ghidra、Unicorn、unidbg</span>
+/know frida ssl pinning        <span class="c">从本地知识库回答，带出处</span>
+!file ./chall &amp;&amp; strings -n 8 ./chall | head</pre>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>/scan artifact.txt</div>
+      <div class="capture__scroll">
+        <img src="shots/scan.svg" alt="/scan 本地粗筛输出">
+      </div>
+      <figcaption>输出过大时只把头尾放进上下文，全文落到 artifact 文件，模型可以按需再读。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="marketing">
+  <div class="wrap">
+    <p class="label">宣传图</p>
+    <h2>可以直接下载发小红书或朋友圈。</h2>
+    <p>
+      Banner 已合入群二维码；竖版卡片是 1080×1440，适合小红书笔记。
+    </p>
+
+    <div class="promo-grid">
+      <a class="promo-tile promo-tile--wide" href="social-card.png" download>
+        <img src="social-card.png" alt="0xAF-Re 带二维码宣传 banner" loading="lazy" decoding="async">
+        <span>下载带二维码 banner PNG</span>
+      </a>
+      <a class="promo-tile" href="cards/png/01-cover.png" download>
+        <img src="cards/png/01-cover.png" alt="0xAF-Re 封面卡片" loading="lazy" decoding="async">
+        <span>01 封面</span>
+      </a>
+      <a class="promo-tile" href="cards/png/09-workflow-modes.png" download>
+        <img src="cards/png/09-workflow-modes.png" alt="workflow 模式卡片" loading="lazy" decoding="async">
+        <span>09 workflow 模式</span>
+      </a>
+      <a class="promo-tile" href="cards/png/10-live-queue.png" download>
+        <img src="cards/png/10-live-queue.png" alt="任务队列卡片" loading="lazy" decoding="async">
+        <span>10 任务队列</span>
+      </a>
+      <a class="promo-tile promo-tile--qr" href="xhs-group-qr.png" download>
+        <img src="xhs-group-qr-crop.png" alt="小红书群二维码" loading="lazy" decoding="async">
+        <span>下载群二维码</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <p class="label">安装</p>
+    <h2>四条命令跑起来。</h2>
+    <pre class="block"><span class="c"># 1. 安装固定版本</span>
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1
+
+<span class="c"># 2. 离线自检：不需要 key、网络或 CLI 登录</span>
+0xaf --smoke
+
+<span class="c"># 3. 看当前 provider 登录状态</span>
+0xaf auth status
+
+<span class="c"># 4. 打开工作区</span>
+0xaf --workspace ./ctf</pre>
+    <p>
+      默认复用本机 <code class="inline">codex</code> 和 <code class="inline">claude</code>
+      CLI 登录；也可以改成 DeepSeek、GLM、Grok、OpenAI-compatible 或自建模型服务。
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="scope">
+      面向已获授权的 CTF、实验环境与本地逆向工作：二进制粗筛、静态分析、本地动态实验、solve 计划和可复现记录。
+    </p>
+    <p>
+      <a href="https://github.com/overkazaf/re-agent">github.com/overkazaf/re-agent</a>
+      <span class="muted"> · <a href="index.html">English page</a> · <a href="https://github.com/overkazaf/re-agent/blob/main/README.zh-CN.md">中文 README</a></span>
+    </p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".copy").forEach(function (button) {
+  button.addEventListener("click", function () {
+    var target = document.querySelector(button.dataset.copy);
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent.trim()).then(function () {
+      var previous = button.textContent;
+      button.textContent = "已复制";
+      setTimeout(function () { button.textContent = previous; }, 1400);
+    }, function () {
+      button.textContent = "手动复制";
+    });
+  });
+});
+</script>
+
+</body>
+</html>

@@ -4,7 +4,7 @@
 显式 workflow 模式、运行中排队下一任务，外加一张能看清「这一轮到底在干什么」的实时画面 ——
 打包成单个静态 Go 二进制，不需要装任何运行时。
 
-[English](README.md) · [架构文档](docs/ARCHITECTURE.md) · [项目主页](https://overkazaf.github.io/re-agent/)
+**语言:** [English](README.md) | 中文 · [架构文档](docs/ARCHITECTURE.md) · [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html)
 
 <p align="center">
   <img src="docs/shots/live.svg" alt="一轮对话进行中的真实画面：数据流图上有数据包在 [you]、[ctx]、模型与 [tools] 之间移动，下方 HUD 盒子里是任务列表、每步耗时与进度条。" width="900">
@@ -277,6 +277,23 @@ codex 吐 `plan_update` / `todo_list` —— 这些事件被解析出来，直�
 /agent auto              回到角色路由
 /effort codex high       调推理强度（支持的后端才有效）
 ```
+
+## 使用场景
+
+把路径换成你自己的目标即可。斜杠命令直接跑本地工具；`-p` 会启动一次 agent 任务。
+
+| # | 想做什么 | 从这里开始 |
+| --- | --- | --- |
+| 1 | 不知道文件是什么 | `/scan ./chall` |
+| 2 | 看 ELF/Mach-O/PE 保护 | `/mitigations ./chall` |
+| 3 | 找加壳、压缩或加密区段 | `/entropy ./chall` |
+| 4 | 从 blob 里挖内嵌文件 | `/carve ./blob` |
+| 5 | 解可疑 flag/token | `/decode auto ZmxhZ3s...` |
+| 6 | APK 首轮分析 | `/apk ./app.apk` |
+| 7 | 生成 Java/native hook 脚手架 | `/hook java com.example.Crypto sign` |
+| 8 | 检查 radare2/JADX/Ghidra/Unicorn 等工具 | `/retool inventory` |
+| 9 | Web/WASM 加密题 | `/skill web-wasm-crypto inspect ./dist/app.js and ./dist/module.wasm` |
+| 10 | 调研壳、算法或相似样本 | `0xaf --role researcher -p "调研这个壳名，并列出安全的本地检查步骤"` |
 
 ## Workflow 模式
 

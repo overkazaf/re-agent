@@ -5,7 +5,7 @@ model, one executor model, 24 local tools, explicit workflow modes, queued
 next prompts, and a live picture of what the turn is actually doing — as a
 single static Go binary with no runtime to install.
 
-[中文说明](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) · [Project page](https://overkazaf.github.io/re-agent/)
+**Language:** English | [中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) · [Project page](https://overkazaf.github.io/re-agent/)
 
 <p align="center">
   <img src="docs/shots/live.svg" alt="A live mid-turn frame: the dataflow diagram showing packets moving from [you] through [ctx] to the model and back through [tools], above a HUD box carrying the task list with one step in progress, per-step elapsed times, and a progress bar." width="900">
@@ -288,6 +288,24 @@ export DEEPSEEK_API_KEY=...           # or ANTHROPIC_API_KEY / OPENAI_API_KEY / 
 0xaf --planner deepseek --executor deepseek --workspace ./ctf
 0xaf auth login claude-api            # or store one locally instead
 ```
+
+## Use cases
+
+Replace paths with your own targets. Slash commands run local tools directly;
+`-p` starts an agent turn.
+
+| # | Goal | Start with |
+| --- | --- | --- |
+| 1 | Unknown CTF file | `/scan ./chall` |
+| 2 | Native binary protections | `/mitigations ./chall` |
+| 3 | Packed or encrypted region | `/entropy ./chall` |
+| 4 | Embedded payloads | `/carve ./blob` |
+| 5 | Encoded flag or token | `/decode auto ZmxhZ3s...` |
+| 6 | Android APK first pass | `/apk ./app.apk` |
+| 7 | Java or native hook scaffold | `/hook java com.example.Crypto sign` |
+| 8 | radare2/JADX/Ghidra/Unicorn inventory | `/retool inventory` |
+| 9 | Web/WASM crypto challenge | `/skill web-wasm-crypto inspect ./dist/app.js and ./dist/module.wasm` |
+| 10 | Background research with sources | `0xaf --role researcher -p "Research this packer name and list safe local checks"` |
 
 ## Workflow modes
 

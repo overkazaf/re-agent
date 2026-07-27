@@ -14,6 +14,7 @@
   <div class="wrap topbar__inner">
     <a class="brand" href="#top"><b>0xAF</b> RE</a>
     <nav aria-label="Sections">
+      <a href="#use-cases">use cases</a>
       <a href="#turn">the turn</a>
       <a href="#routing">routing</a>
       <a href="#workflow">workflow</a>
@@ -21,7 +22,7 @@
       <a href="#arsenal">arsenal</a>
       <a href="#safety">safety</a>
       <a href="#install">install</a>
-      <a href="https://github.com/overkazaf/re-agent/blob/main/README.zh-CN.md">中文</a>
+      <a href="index.zh-CN.html">中文</a>
       <a href="https://github.com/overkazaf/re-agent">github</a>
     </nav>
   </div>
@@ -134,6 +135,35 @@
           ask. Destructive shell forms are refused.
         </p>
       </article>
+    </div>
+  </div>
+</section>
+
+<section id="use-cases">
+  <div class="wrap">
+    <p class="label">use cases</p>
+    <h2>Ten good first prompts.</h2>
+    <p>
+      Replace the paths with your own artifacts. Slash commands run local tools directly;
+      <code class="inline">-p</code> starts an agent turn.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>goal</th><th>start with</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Unknown CTF file</td><td><code class="inline">/scan ./chall</code></td></tr>
+          <tr><td>2</td><td>Native binary protections</td><td><code class="inline">/mitigations ./chall</code></td></tr>
+          <tr><td>3</td><td>Packed or encrypted region</td><td><code class="inline">/entropy ./chall</code></td></tr>
+          <tr><td>4</td><td>Embedded payloads</td><td><code class="inline">/carve ./blob</code></td></tr>
+          <tr><td>5</td><td>Encoded flag or token</td><td><code class="inline">/decode auto ZmxhZ3s...</code></td></tr>
+          <tr><td>6</td><td>Android APK first pass</td><td><code class="inline">/apk ./app.apk</code></td></tr>
+          <tr><td>7</td><td>Java or native hook scaffold</td><td><code class="inline">/hook java com.example.Crypto sign</code></td></tr>
+          <tr><td>8</td><td>radare2/JADX/Ghidra/Unicorn inventory</td><td><code class="inline">/retool inventory</code></td></tr>
+          <tr><td>9</td><td>Web/WASM crypto challenge</td><td><code class="inline">/skill web-wasm-crypto inspect ./dist/app.js and ./dist/module.wasm</code></td></tr>
+          <tr><td>10</td><td>Background research with sources</td><td><code class="inline">0xaf --role researcher -p "Research this packer name and list safe local checks"</code></td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
