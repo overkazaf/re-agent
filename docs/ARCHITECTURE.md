@@ -39,7 +39,7 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
-| `internal/skills` | Loads `skills/<name>/SKILL.md` (on-disk wins, embedded fallback), builds the system-prompt catalog. | `assets`, `util` |
+| `internal/skills` | Loads embedded skills plus `skills/<name>/SKILL.md` overrides, builds the system-prompt catalog. | `assets`, `util` |
 | `internal/workflow` | Explicit `off` / `auto` / `specialist` / `caveman` prompt shaping for authorized RE workflows. | `types` |
 | `internal/tools` | The 24-tool built-in registry, the subprocess runner (`process.go`), the output-spill budget (`output.go`). | `knowledge`, `plan`, `security`, `skills`, `types`, `util` |
 | `internal/mcp` | stdio JSON-RPC 2.0 client (`client.go`) and the wrapper that turns server tools into `types.Tool` (`tools.go`). | `auth`, `tools`, `types` |
@@ -1031,11 +1031,13 @@ prompt (`SystemPrompt`, `skills.go:101`), so the model knows the skill exists an
 can pull the body with `read_skill`. `/skills` lists them, `/skill <name> <task>`
 forces one workflow for a turn (body clipped to 20 000 chars).
 
-On-disk skills win over the embedded copies whenever
-`assets.Root()` resolves — `$OXAF_RE_HOME`, else the executable's directory or a
-parent, else the cwd or a parent, looking for a directory containing both
-`prompts/system.md` and `skills/` (`internal/assets/assets.go:75`). So editing a
-skill in a checkout needs no rebuild; shipping a new built-in one does, since
+Embedded skills are loaded first; on-disk skills with the same `name` override
+them whenever `assets.Root()` resolves — `$OXAF_RE_HOME`, else the executable's
+directory or a parent, else the cwd or a parent, looking for a directory
+containing both `prompts/system.md` and `skills/` (`internal/assets/assets.go:75`).
+So editing a skill in a checkout needs no rebuild, but a partial or stale local
+`skills/` directory cannot hide newly shipped embedded skills. Shipping a new
+built-in one still requires rebuilding because
 `//go:embed embedded/prompts/system.md embedded/skills` is baked in at compile
 time.
 

@@ -1,6 +1,7 @@
 // Package assets embeds the project's prompt and skill files so a single
 // binary works from any directory, and resolves the on-disk project root when
-// one is present (which then wins, so editing a skill does not need a rebuild).
+// one is present (whose prompt and same-named skills override the embedded
+// copies, so editing a skill does not need a rebuild).
 package assets
 
 import (

@@ -25,8 +25,16 @@ type Skill struct {
 // Load reads every skill directory. Missing or unreadable skills are skipped
 // rather than fatal.
 func Load() []Skill {
-	var out []Skill
-	if dir := assets.SkillsDir(); dir != "" {
+	return loadFrom(assets.SkillsDir(), assets.EmbeddedSkills())
+}
+
+func loadFrom(dir string, embedded map[string]string) []Skill {
+	byName := map[string]Skill{}
+	for name, body := range embedded {
+		skill := parse(name, "embedded:skills/"+name+"/SKILL.md", body)
+		byName[strings.ToLower(skill.Name)] = skill
+	}
+	if dir != "" {
 		entries, err := os.ReadDir(dir)
 		if err == nil {
 			for _, entry := range entries {
@@ -38,14 +46,14 @@ func Load() []Skill {
 				if err != nil {
 					continue
 				}
-				out = append(out, parse(entry.Name(), skillPath, string(data)))
+				skill := parse(entry.Name(), skillPath, string(data))
+				byName[strings.ToLower(skill.Name)] = skill
 			}
 		}
 	}
-	if len(out) == 0 {
-		for name, body := range assets.EmbeddedSkills() {
-			out = append(out, parse(name, "embedded:skills/"+name+"/SKILL.md", body))
-		}
+	out := make([]Skill, 0, len(byName))
+	for _, skill := range byName {
+		out = append(out, skill)
 	}
 	sort.Slice(out, func(a, b int) bool { return out[a].Name < out[b].Name })
 	return out

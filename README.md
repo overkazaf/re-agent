@@ -64,7 +64,7 @@ revised hypothesis — and every decision here follows from it.
 - **A refusal is an answer.** A blocked command becomes a tool result the model
   reads, and the turn continues.
 - **Decorative layers must never fail a run.** Plan and HUD errors are swallowed.
-- **One binary.** Prompts and skills are embedded; on-disk copies win when present.
+- **One binary.** Prompts and skills are embedded; on-disk same-name skills override them.
 - **Sessions are the record.** Append-only JSONL that repairs itself on load.
 
 ### What oh-my-pi is, and how it works
@@ -503,8 +503,9 @@ JADX, Unicorn, unidbg, and imported local RE playbooks.
 ### Where it looks for your files
 
 The single most common trip-up. The binary embeds a copy of the prompts and
-skills, **but a project directory found on disk always wins** — which is why
-editing a skill needs no rebuild.
+skills. A project directory found on disk supplies your local files; same-name
+skills override the embedded copies, while embedded skills that are missing on
+disk still stay available.
 
 Resolution order, first hit wins:
 
@@ -513,7 +514,7 @@ Resolution order, first hit wins:
 | 1 | `$OXAF_RE_HOME` |
 | 2 | the **executable's directory**, then up to 6 parent directories |
 | 3 | the **working directory**, then up to 6 parent directories |
-| 4 | nothing found → the embedded copies (built-in skills only; yours are invisible) |
+| 4 | nothing found → the embedded prompt and built-in skills |
 
 The test for "is this a project root" is specific: the directory must contain
 **both** `prompts/system.md` **and** a `skills/` directory. One without the other
