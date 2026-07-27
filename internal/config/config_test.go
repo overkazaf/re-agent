@@ -14,6 +14,7 @@ func TestLoadMergesOverDefaults(t *testing.T) {
 	file := filepath.Join(dir, "agent.config.json")
 	body := `{
 	  "plannerProvider": "deepseek",
+	  "researcherProvider": "deepseek",
 	  "providers": {
 	    "deepseek": { "model": "deepseek-reasoner" },
 	    "local": { "type": "openai-chat", "model": "llama", "baseUrl": "http://localhost:1234/v1" }
@@ -31,6 +32,9 @@ func TestLoadMergesOverDefaults(t *testing.T) {
 	}
 	if config.PlannerProvider != "deepseek" || config.ExecutorProvider != "claude" {
 		t.Fatalf("merge wrong: planner=%s executor=%s", config.PlannerProvider, config.ExecutorProvider)
+	}
+	if config.ResearcherProvider != "deepseek" {
+		t.Fatalf("researcher provider not merged: %s", config.ResearcherProvider)
 	}
 	// A partial provider block overlays the default field by field.
 	deepseek := config.Providers["deepseek"]

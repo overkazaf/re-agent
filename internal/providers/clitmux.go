@@ -79,7 +79,7 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 	}
 	var prompt string
 	if resuming {
-		prompt = buildResumePrompt(deltaSince(input.Messages, p.name), workspace, maxChars)
+		prompt = buildResumePrompt(input.System, deltaSince(input.Messages, p.name), workspace, maxChars)
 	} else {
 		prompt = buildPrompt(input.System, input.Messages, input.Tools, workspace, maxChars)
 	}
@@ -316,7 +316,7 @@ func buildPrompt(system string, messages []types.Message, tools []types.Tool, wo
 	return clipPrompt(prompt, maxChars)
 }
 
-func buildResumePrompt(messages []types.Message, workspace string, maxChars int) string {
+func buildResumePrompt(system string, messages []types.Message, workspace string, maxChars int) string {
 	transcript := formatTranscript(messages)
 	if transcript == "" {
 		transcript = "(no new turns)"
@@ -329,6 +329,9 @@ func buildResumePrompt(messages []types.Message, workspace string, maxChars int)
 		// session, so the standing instructions that matter for the operator's
 		// view have to ride along with every resume.
 		"Keep your task list current with your native task tool (TaskCreate/TaskUpdate, update_plan, TodoWrite): one step in_progress at a time, mark steps completed as they land.",
+		"",
+		"Current 0xAF-Re system and active-role instructions:",
+		system,
 		"",
 		"New turns:",
 		transcript,

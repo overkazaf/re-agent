@@ -17,11 +17,12 @@ import (
 // route the same way out of the box.
 func Defaults() *types.AgentConfig {
 	return &types.AgentConfig{
-		Name:             "0xAF-Re",
-		PlannerProvider:  "codex",
-		ExecutorProvider: "claude",
-		DefaultRole:      types.RoleAuto,
-		MaxTurns:         8,
+		Name:               "0xAF-Re",
+		PlannerProvider:    "codex",
+		ExecutorProvider:   "claude",
+		ResearcherProvider: "codex",
+		DefaultRole:        types.RoleAuto,
+		MaxTurns:           8,
 		Providers: map[string]*types.ProviderConfig{
 			"codex": {
 				Type:       types.KindCLITmux,
@@ -152,6 +153,9 @@ func merge(base, next *types.AgentConfig) *types.AgentConfig {
 	}
 	if next.ExecutorProvider != "" {
 		out.ExecutorProvider = next.ExecutorProvider
+	}
+	if next.ResearcherProvider != "" {
+		out.ResearcherProvider = next.ResearcherProvider
 	}
 	if next.KnowledgeProvider != "" {
 		out.KnowledgeProvider = next.KnowledgeProvider

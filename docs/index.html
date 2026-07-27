@@ -331,7 +331,7 @@
 <section id="routing">
   <div class="wrap">
     <p class="label">routing</p>
-    <h2>Planner thinks. Executor does.</h2>
+    <h2>Planner thinks. Executor does. Researcher gathers.</h2>
     <p>
       Under <code class="inline">--role auto</code> each prompt is routed by shape:
       execution-flavoured prompts ("run", "inspect ./", "读取") go to the executor, everything
@@ -344,9 +344,11 @@
         <tbody>
           <tr><td><code class="inline">--role planner</code></td><td>analysis, exploitability reasoning, solve plans</td></tr>
           <tr><td><code class="inline">--role executor</code></td><td>tools, file inspection, summarizing</td></tr>
+          <tr><td><code class="inline">--role researcher</code></td><td>background research, source synthesis, prior art</td></tr>
           <tr><td><code class="inline">/agent &lt;name&gt;</code></td><td>pin one provider for the next prompts</td></tr>
           <tr><td><code class="inline">/model &lt;provider&gt; &lt;model&gt;</code></td><td>override the concrete model for this session</td></tr>
-          <tr><td><code class="inline">/planner</code> · <code class="inline">/executor</code></td><td>change either side mid-session</td></tr>
+          <tr><td><code class="inline">/planner</code> · <code class="inline">/executor</code> · <code class="inline">/researcher</code></td><td>change a role provider mid-session</td></tr>
+          <tr><td><code class="inline">/prompt edit researcher</code></td><td>edit per-role system prompts without rebuilding</td></tr>
           <tr><td><code class="inline">/effort codex high</code></td><td>reasoning effort, for backends that take one</td></tr>
         </tbody>
       </table>

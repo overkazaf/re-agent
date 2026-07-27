@@ -21,14 +21,15 @@ const (
 type AgentRole string
 
 const (
-	RolePlanner  AgentRole = "planner"
-	RoleExecutor AgentRole = "executor"
-	RoleAuto     AgentRole = "auto"
+	RolePlanner    AgentRole = "planner"
+	RoleExecutor   AgentRole = "executor"
+	RoleResearcher AgentRole = "researcher"
+	RoleAuto       AgentRole = "auto"
 )
 
 func IsRole(value string) bool {
 	switch AgentRole(value) {
-	case RolePlanner, RoleExecutor, RoleAuto:
+	case RolePlanner, RoleExecutor, RoleResearcher, RoleAuto:
 		return true
 	}
 	return false
@@ -95,9 +96,10 @@ type ProviderConfig struct {
 }
 
 type AgentConfig struct {
-	Name             string `json:"name"`
-	PlannerProvider  string `json:"plannerProvider"`
-	ExecutorProvider string `json:"executorProvider"`
+	Name               string `json:"name"`
+	PlannerProvider    string `json:"plannerProvider"`
+	ExecutorProvider   string `json:"executorProvider"`
+	ResearcherProvider string `json:"researcherProvider,omitempty"`
 	// KnowledgeProvider answers `/know` lookups; falls back to the executor.
 	KnowledgeProvider string                      `json:"knowledgeProvider,omitempty"`
 	DefaultRole       AgentRole                   `json:"defaultRole"`

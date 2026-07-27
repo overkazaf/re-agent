@@ -88,6 +88,8 @@ func handleCommand(line string, state *State) error {
 		return nil
 	case "/model":
 		return handleModelCommand(arg, state, nil)
+	case "/prompt":
+		return handlePromptCommand(arg, state)
 	case "/providers":
 		fmt.Print(ui.FormatProviders(state.Config))
 		return nil
@@ -298,7 +300,7 @@ func handleCommand(line string, state *State) error {
 		return nil
 	case "/role":
 		if !types.IsRole(arg) {
-			return fmt.Errorf("usage: /role planner|executor|auto")
+			return fmt.Errorf("usage: /role planner|executor|researcher|auto")
 		}
 		state.Role = types.AgentRole(arg)
 		state.Provider = ""
@@ -329,6 +331,13 @@ func handleCommand(line string, state *State) error {
 		}
 		state.Config.ExecutorProvider = arg
 		fmt.Printf("executor=%s\n", arg)
+		return nil
+	case "/researcher":
+		if _, ok := state.Config.Providers[arg]; !ok {
+			return fmt.Errorf("unknown provider: %s", arg)
+		}
+		state.Config.ResearcherProvider = arg
+		fmt.Printf("researcher=%s\n", arg)
 		return nil
 	case "/read":
 		return runDirectTool("read_file", map[string]any{"path": arg}, state)
@@ -394,7 +403,7 @@ func handleModelCommand(arg string, state *State, pane *ui.LivePane) error {
 		return nil
 	}
 	if len(fields) < 2 {
-		return fmt.Errorf("usage: /model <provider|planner|executor> <model>")
+		return fmt.Errorf("usage: /model <provider|planner|executor|researcher> <model>")
 	}
 	names, err := modelTargets(fields[0], state)
 	if err != nil {
@@ -402,7 +411,7 @@ func handleModelCommand(arg string, state *State, pane *ui.LivePane) error {
 	}
 	model := strings.TrimSpace(strings.Join(fields[1:], " "))
 	if model == "" {
-		return fmt.Errorf("usage: /model <provider|planner|executor> <model>")
+		return fmt.Errorf("usage: /model <provider|planner|executor|researcher> <model>")
 	}
 	var notices []string
 	for _, name := range names {
@@ -423,17 +432,26 @@ func modelTargets(target string, state *State) ([]string, error) {
 		return []string{state.Config.PlannerProvider}, nil
 	case "executor":
 		return []string{state.Config.ExecutorProvider}, nil
+	case "researcher":
+		return []string{researcherProvider(state.Config)}, nil
 	case "active", "agent":
 		if state.Provider != "" {
 			return []string{state.Provider}, nil
 		}
-		return unique([]string{state.Config.PlannerProvider, state.Config.ExecutorProvider}), nil
+		return unique([]string{state.Config.PlannerProvider, state.Config.ExecutorProvider, researcherProvider(state.Config)}), nil
 	default:
 		if _, ok := state.Config.Providers[target]; !ok {
 			return nil, fmt.Errorf("unknown provider: %s", target)
 		}
 		return []string{target}, nil
 	}
+}
+
+func researcherProvider(config *types.AgentConfig) string {
+	if config.ResearcherProvider != "" {
+		return config.ResearcherProvider
+	}
+	return config.PlannerProvider
 }
 
 func handleQueueCommand(arg string, state *State, pane *ui.LivePane) error {

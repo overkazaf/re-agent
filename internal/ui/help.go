@@ -32,6 +32,7 @@ var SlashCommandSections = []HelpSection{
 		{"/workflow", "[off|auto|specialist|caveman]", "Pick RE workflow mode"},
 		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
 		{"/queue", "[list|add|edit|cancel|clear|run]", "Manage queued prompts"},
+		{"/prompt", "[list|show|path|edit|set|reset|reload]", "Edit global and per-role system prompts"},
 		{"/context", "", "Show the context estimate against the budget"},
 		{"/compact", "[provider]", "Fold the session into a summary and free context"},
 		{"/session", "", "Print the JSONL transcript path"},
@@ -43,11 +44,12 @@ var SlashCommandSections = []HelpSection{
 		{"/quit", "", "Quit"},
 	}},
 	{"routing", []HelpEntry{
-		{"/role", "planner|executor|auto", "Pick which side of the deck answers"},
+		{"/role", "planner|executor|researcher|auto", "Pick which side of the deck answers"},
 		{"/agent", "<name>|auto", "Pin one provider for the next prompts"},
-		{"/model", "<provider|planner|executor> <model>", "Override a provider model for this session"},
+		{"/model", "<provider|planner|executor|researcher> <model>", "Override a provider model for this session"},
 		{"/planner", "<name>", "Set the planner provider"},
 		{"/executor", "<name>", "Set the executor provider"},
+		{"/researcher", "<name>", "Set the researcher provider"},
 		{"/effort", "<provider> <level>", "Set reasoning effort (minimal…max)"},
 		{"/providers", "", "List configured providers"},
 	}},
@@ -142,7 +144,11 @@ var slashCommandEntries = func() []HelpEntry {
 	return out
 }()
 
-var roles = []string{"planner", "executor", "auto"}
+var roles = []string{"planner", "executor", "researcher", "auto"}
+
+var promptTargets = []string{"system", "planner", "executor", "researcher"}
+
+var promptActions = []string{"list", "show", "path", "edit", "set", "reset", "reload"}
 
 var workflowModes = []string{"off", "auto", "specialist", "caveman"}
 
@@ -156,7 +162,7 @@ var retoolNames = []string{
 }
 
 var providerArgCommands = map[string]bool{
-	"/planner": true, "/executor": true, "/login": true, "/logout": true,
+	"/planner": true, "/executor": true, "/researcher": true, "/login": true, "/logout": true,
 }
 
 func SlashCompletions(line string, providerNames, skillNames []string) []CompletionItem {
@@ -235,14 +241,23 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 		}
 		return out
 	}
-	if argIndex != 1 && command != "/effort" {
+	if argIndex != 1 && command != "/effort" && command != "/prompt" {
 		if command != "/model" {
 			return nil
 		}
 	}
 	if command == "/model" {
 		if argIndex == 1 {
-			return simple(append([]string{"active", "planner", "executor"}, providerNames...), "provider")
+			return simple(append([]string{"active", "planner", "executor", "researcher"}, providerNames...), "provider")
+		}
+		return nil
+	}
+	if command == "/prompt" {
+		if argIndex == 1 {
+			return simple(promptActions, "prompt action")
+		}
+		if argIndex == 2 {
+			return simple(promptTargets, "prompt target")
 		}
 		return nil
 	}

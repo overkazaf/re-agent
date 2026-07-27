@@ -2,6 +2,7 @@
   "name": "0xAF-Re",
   "plannerProvider": "codex",
   "executorProvider": "claude",
+  "researcherProvider": "codex",
   "defaultRole": "auto",
   "maxTurns": 8,
   "providers": {

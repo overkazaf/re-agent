@@ -25,7 +25,7 @@ import (
 )
 
 // State is everything one session needs; the REPL mutates it in place as the
-// operator re-routes with /agent, /role, /planner, /executor.
+// operator re-routes with /agent, /role, /planner, /executor, /researcher.
 type State struct {
 	Config      *types.AgentConfig
 	Loop        *core.AgentLoop
@@ -73,11 +73,14 @@ func Run(argv []string) error {
 	if args.Executor != "" {
 		agentConfig.ExecutorProvider = args.Executor
 	}
+	if args.Researcher != "" {
+		agentConfig.ResearcherProvider = args.Researcher
+	}
 	if args.Effort != "" {
 		// Applies to whichever providers this invocation can actually route to.
 		targets := []string{args.Provider}
 		if args.Provider == "" {
-			targets = unique([]string{agentConfig.PlannerProvider, agentConfig.ExecutorProvider})
+			targets = unique([]string{agentConfig.PlannerProvider, agentConfig.ExecutorProvider, agentConfig.ResearcherProvider})
 		}
 		for _, name := range targets {
 			if provider, ok := agentConfig.Providers[name]; ok {
@@ -108,6 +111,7 @@ func Run(argv []string) error {
 	if args.Smoke {
 		agentConfig.PlannerProvider = "mock"
 		agentConfig.ExecutorProvider = "mock"
+		agentConfig.ResearcherProvider = "mock"
 		agentConfig.DefaultRole = types.RoleAuto
 	}
 
@@ -116,7 +120,8 @@ func Run(argv []string) error {
 	}
 
 	builtInSkills := skills.Load()
-	systemPrompt := assets.SystemPrompt() + skills.SystemPrompt(builtInSkills)
+	systemPrompt := buildRuntimeSystemPrompt(builtInSkills)
+	rolePrompts := loadRuntimeRolePrompts()
 	build := buildinfo.Current()
 
 	policy := &types.ExecutionPolicy{
@@ -173,8 +178,9 @@ func Run(argv []string) error {
 		"agent": agentConfig.Name, "version": build.Version, "commit": build.Commit,
 		"moduleVersion": build.ModuleVersion, "workspace": workspace,
 		"configPath": configPath, "plannerProvider": agentConfig.PlannerProvider,
-		"executorProvider": agentConfig.ExecutorProvider, "workflow": workflow.Status(args.Workflow, agentConfig, args.Provider),
-		"policy": policy,
+		"executorProvider": agentConfig.ExecutorProvider, "researcherProvider": agentConfig.ResearcherProvider,
+		"workflow": workflow.Status(args.Workflow, agentConfig, args.Provider),
+		"policy":   policy,
 	}); err != nil {
 		return err
 	}
@@ -182,7 +188,7 @@ func Run(argv []string) error {
 	toolContext := &types.ToolContext{Workspace: workspace, SessionDir: sessionDir, Policy: policy}
 	loop := core.NewAgentLoop(core.LoopOptions{
 		Config: agentConfig, Providers: providerMap, Tools: registry,
-		ToolContext: toolContext, SystemPrompt: systemPrompt, Session: session,
+		ToolContext: toolContext, SystemPrompt: systemPrompt, RolePrompts: rolePrompts, Session: session,
 	})
 
 	if args.ListSessions {

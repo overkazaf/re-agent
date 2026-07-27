@@ -86,7 +86,8 @@ func WelcomeText(options WelcomeOptions) string {
 	route := "planner/executor from config"
 	if options.Config != nil {
 		route = "planner " + options.Config.PlannerProvider + " " + C.Rule("·") +
-			" executor " + options.Config.ExecutorProvider
+			" executor " + options.Config.ExecutorProvider + " " + C.Rule("·") +
+			" researcher " + researcherProvider(options.Config)
 	}
 
 	out := []string{

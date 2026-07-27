@@ -36,6 +36,7 @@ type Args struct {
 	Provider    string
 	Planner     string
 	Executor    string
+	Researcher  string
 	Prompt      string
 	Print       bool
 	Smoke       bool
@@ -110,6 +111,9 @@ func ParseArgs(argv []string) (Args, error) {
 		case "--executor":
 			index++
 			args.Executor, err = requireValue(index, item)
+		case "--researcher":
+			index++
+			args.Researcher, err = requireValue(index, item)
 		case "--prompt":
 			index++
 			args.Prompt, err = requireValue(index, item)

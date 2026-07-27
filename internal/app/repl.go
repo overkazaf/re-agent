@@ -132,6 +132,8 @@ func routeLabel(state *State) string {
 		return state.Config.PlannerProvider
 	case types.RoleExecutor:
 		return state.Config.ExecutorProvider
+	case types.RoleResearcher:
+		return researcherProvider(state.Config)
 	}
 	return "auto"
 }
@@ -157,6 +159,8 @@ func runTurn(state *State, line string) bool {
 			active = state.Config.PlannerProvider
 		case types.RoleExecutor:
 			active = state.Config.ExecutorProvider
+		case types.RoleResearcher:
+			active = researcherProvider(state.Config)
 		}
 	}
 	paneOptions := ui.LivePaneOptions{

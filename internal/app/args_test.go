@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
@@ -48,6 +49,19 @@ func TestParseArgsVersion(t *testing.T) {
 	}
 	if args.Prompt != "" {
 		t.Fatalf("--version became a prompt: %q", args.Prompt)
+	}
+}
+
+func TestParseArgsResearcherRoleAndProvider(t *testing.T) {
+	args, err := ParseArgs([]string{"--role", "researcher", "--researcher", "grok"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if args.Role != types.RoleResearcher {
+		t.Fatalf("researcher role not parsed: %s", args.Role)
+	}
+	if args.Researcher != "grok" {
+		t.Fatalf("researcher provider not parsed: %s", args.Researcher)
 	}
 }
 

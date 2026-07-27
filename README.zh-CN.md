@@ -324,7 +324,16 @@ laundering；它会把任务拆成有边界的本地证据包：文件类型、�
 
 ```bash
 0xaf -p "粗筛 ./chall，指出校验点，给一个 solve 计划" --role planner
+0xaf -p "调研这个壳/算法的资料和相似样本" --role researcher
 0xaf --workspace ./ctf          # 或者直接进 REPL 聊
+```
+
+**要改角色提示词，直接编辑 role system prompt：**
+
+```text
+/prompt list
+/prompt edit researcher
+/prompt set planner 先给假设、证据和最小实验，不要直接跑重命令。
 ```
 
 **切具体模型，不换 provider：**

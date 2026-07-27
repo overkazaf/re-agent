@@ -14,6 +14,7 @@ type scriptedProvider struct {
 	responses []types.ProviderResponse
 	turn      int
 	seen      [][]types.Message
+	systems   []string
 }
 
 func (p *scriptedProvider) Name() string                  { return "scripted" }
@@ -21,6 +22,7 @@ func (p *scriptedProvider) Config() *types.ProviderConfig { return p.config }
 
 func (p *scriptedProvider) Complete(input types.ProviderInput) (types.ProviderResponse, error) {
 	p.seen = append(p.seen, input.Messages)
+	p.systems = append(p.systems, input.System)
 	index := p.turn
 	if index > len(p.responses)-1 {
 		index = len(p.responses) - 1
@@ -44,7 +46,8 @@ func newTestLoop(t *testing.T, provider types.Provider, tools []types.Tool) (*Ag
 	loop := NewAgentLoop(LoopOptions{
 		Config: &types.AgentConfig{
 			PlannerProvider: "scripted", ExecutorProvider: "scripted",
-			DefaultRole: types.RoleAuto, MaxTurns: 6,
+			ResearcherProvider: "scripted",
+			DefaultRole:        types.RoleAuto, MaxTurns: 6,
 			Providers: map[string]*types.ProviderConfig{"scripted": provider.Config()},
 		},
 		Providers:   map[string]types.Provider{"scripted": provider},
@@ -196,6 +199,34 @@ func TestRoutingPrefersExecutorForExecutionPrompts(t *testing.T) {
 	}
 	if got := loop.routeProvider(types.RoleExecutor, "anything"); got != "executor" {
 		t.Fatalf("explicit role ignored: %s", got)
+	}
+	loop.options.Config.ResearcherProvider = "researcher"
+	if got := loop.routeProvider(types.RoleResearcher, "map prior art"); got != "researcher" {
+		t.Fatalf("expected researcher routing, got %s", got)
+	}
+}
+
+func TestRunAddsEffectiveRolePrompt(t *testing.T) {
+	provider := &scriptedProvider{
+		config:    &types.ProviderConfig{Type: types.KindMock, Model: "scripted"},
+		responses: []types.ProviderResponse{{Text: "ok"}},
+	}
+	loop, _ := newTestLoop(t, provider, nil)
+	loop.options.SystemPrompt = "global system"
+	loop.options.RolePrompts = map[types.AgentRole]string{
+		types.RolePlanner:    "planner prompt",
+		types.RoleExecutor:   "executor prompt",
+		types.RoleResearcher: "researcher prompt",
+	}
+
+	if _, err := loop.Run("collect background", RunOptions{Role: types.RoleResearcher}); err != nil {
+		t.Fatal(err)
+	}
+	if len(provider.systems) == 0 || !strings.Contains(provider.systems[0], "researcher prompt") {
+		t.Fatalf("researcher prompt missing: %#v", provider.systems)
+	}
+	if strings.Contains(provider.systems[0], "planner prompt") || strings.Contains(provider.systems[0], "executor prompt") {
+		t.Fatalf("wrong role prompt included: %q", provider.systems[0])
 	}
 }
 

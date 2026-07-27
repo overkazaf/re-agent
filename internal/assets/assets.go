@@ -1,11 +1,12 @@
 // Package assets embeds the project's prompt and skill files so a single
 // binary works from any directory, and resolves the on-disk project root when
 // one is present (whose prompt and same-named skills override the embedded
-// copies, so editing a skill does not need a rebuild).
+// copies, so editing prompts or skills does not need a rebuild).
 package assets
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,10 +14,18 @@ import (
 	"sync"
 )
 
-//go:embed embedded/prompts/system.md embedded/skills
+//go:embed embedded/prompts embedded/skills
 var embedded embed.FS
 
 const rootEnv = "OXAF_RE_HOME"
+
+type PromptDoc struct {
+	Name string
+	Text string
+	Path string
+	// Source is project, user, embedded, or fallback.
+	Source string
+}
 
 var (
 	rootOnce sync.Once
@@ -85,15 +94,76 @@ func isProjectRoot(dir string) bool {
 
 // SystemPrompt prefers the on-disk prompt, falling back to the embedded copy.
 func SystemPrompt() string {
-	if root := Root(); root != "" {
-		if data, err := os.ReadFile(filepath.Join(root, "prompts", "system.md")); err == nil {
-			return string(data)
+	return Prompt("system").Text
+}
+
+func Prompt(name string) PromptDoc {
+	name = normalizePromptName(name)
+	if name == "" {
+		name = "system"
+	}
+	for _, candidate := range promptCandidates(name) {
+		if data, err := os.ReadFile(candidate.path); err == nil {
+			return PromptDoc{Name: name, Text: string(data), Path: candidate.path, Source: candidate.source}
 		}
 	}
-	if data, err := embedded.ReadFile("embedded/prompts/system.md"); err == nil {
-		return string(data)
+	if data, err := embedded.ReadFile(embeddedPromptPath(name)); err == nil {
+		return PromptDoc{Name: name, Text: string(data), Path: "embedded:" + embeddedPromptPath(name), Source: "embedded"}
 	}
-	return "You are 0xAF-Re, a reverse engineering and CTF assistant."
+	return PromptDoc{Name: name, Text: fallbackPrompt(name), Source: "fallback"}
+}
+
+func DefaultPrompt(name string) PromptDoc {
+	name = normalizePromptName(name)
+	if data, err := embedded.ReadFile(embeddedPromptPath(name)); err == nil {
+		return PromptDoc{Name: name, Text: string(data), Path: "embedded:" + embeddedPromptPath(name), Source: "embedded"}
+	}
+	return PromptDoc{Name: name, Text: fallbackPrompt(name), Source: "fallback"}
+}
+
+func RolePrompt(name string) PromptDoc {
+	return Prompt("roles/" + name)
+}
+
+func RolePrompts(names []string) map[string]PromptDoc {
+	out := map[string]PromptDoc{}
+	for _, name := range names {
+		out[name] = RolePrompt(name)
+	}
+	return out
+}
+
+// EditablePromptPath returns where `/prompt edit` writes. Project-local prompts
+// win when a project root is detected; otherwise edits are stored under the
+// user's 0xAF config directory.
+func EditablePromptPath(name string) string {
+	name = normalizePromptName(name)
+	if root := Root(); root != "" {
+		return filepath.Join(root, "prompts", promptRelativePath(name))
+	}
+	return filepath.Join(userConfigDir(), "prompts", promptRelativePath(name))
+}
+
+func EnsureEditablePrompt(name string) (string, error) {
+	name = normalizePromptName(name)
+	if name == "" {
+		return "", fmt.Errorf("empty prompt name")
+	}
+	path := EditablePromptPath(name)
+	if _, err := os.Stat(path); err == nil {
+		return path, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return "", err
+	}
+	seed := Prompt(name).Text
+	if strings.TrimSpace(seed) == "" {
+		seed = fallbackPrompt(name)
+	}
+	if err := os.WriteFile(path, []byte(ensureTrailingNewline(seed)), 0o600); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // SkillsDir is the on-disk skills directory, or "" when only the embedded
@@ -137,4 +207,75 @@ func KnowledgeIndexPath() string {
 		}
 	}
 	return filepath.Join(root, "knowledge", "reverse-index.json")
+}
+
+type promptCandidate struct {
+	path   string
+	source string
+}
+
+func promptCandidates(name string) []promptCandidate {
+	relative := promptRelativePath(name)
+	var out []promptCandidate
+	if root := Root(); root != "" {
+		out = append(out, promptCandidate{path: filepath.Join(root, "prompts", relative), source: "project"})
+	}
+	out = append(out, promptCandidate{path: filepath.Join(userConfigDir(), "prompts", relative), source: "user"})
+	return out
+}
+
+func promptRelativePath(name string) string {
+	name = normalizePromptName(name)
+	if name == "system" {
+		return "system.md"
+	}
+	return name + ".md"
+}
+
+func embeddedPromptPath(name string) string {
+	return "embedded/prompts/" + promptRelativePath(name)
+}
+
+func normalizePromptName(name string) string {
+	name = strings.TrimSpace(strings.TrimPrefix(name, "/"))
+	name = strings.TrimSuffix(name, ".md")
+	name = strings.TrimPrefix(name, "prompts/")
+	switch name {
+	case "", "system":
+		return "system"
+	case "planner", "executor", "researcher":
+		return "roles/" + name
+	}
+	if strings.HasPrefix(name, "roles/") {
+		return name
+	}
+	return name
+}
+
+func userConfigDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return ".0xaf-re-agent"
+	}
+	return filepath.Join(home, ".0xaf-re-agent")
+}
+
+func fallbackPrompt(name string) string {
+	switch normalizePromptName(name) {
+	case "roles/planner":
+		return "## Active Role: planner\n\nPlan the reverse-engineering work before execution. Prefer hypotheses, evidence, and the smallest next experiment."
+	case "roles/executor":
+		return "## Active Role: executor\n\nExecute local inspection and tooling carefully. Preserve evidence and summarize command results concisely."
+	case "roles/researcher":
+		return "## Active Role: researcher\n\nResearch the target, surrounding ecosystem, prior art, APIs, formats, and references. Cite sources or local evidence when possible."
+	default:
+		return "You are 0xAF-Re, a reverse engineering and CTF assistant."
+	}
+}
+
+func ensureTrailingNewline(text string) string {
+	if strings.HasSuffix(text, "\n") {
+		return text
+	}
+	return text + "\n"
 }

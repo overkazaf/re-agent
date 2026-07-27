@@ -63,6 +63,7 @@ type LoopOptions struct {
 	Tools        []types.Tool
 	ToolContext  *types.ToolContext
 	SystemPrompt string
+	RolePrompts  map[types.AgentRole]string
 	Session      *Session
 }
 
@@ -263,8 +264,12 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 		role = l.options.Config.DefaultRole
 	}
 	providerName := options.ProviderName
+	effectiveRole := role
 	if providerName == "" {
-		providerName = l.routeProvider(role, prompt)
+		var route routedRole
+		route = l.route(role, prompt)
+		providerName = route.Provider
+		effectiveRole = route.Role
 	}
 	provider, ok := l.options.Providers[providerName]
 	if !ok {
@@ -321,7 +326,7 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 		})
 
 		response, err := provider.Complete(types.ProviderInput{
-			System:     l.options.SystemPrompt,
+			System:     l.systemPrompt(effectiveRole),
 			Messages:   view.Messages,
 			Tools:      l.options.Tools,
 			Workspace:  l.options.ToolContext.Workspace,
@@ -447,15 +452,51 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 	}, nil
 }
 
-func (l *AgentLoop) routeProvider(role types.AgentRole, prompt string) string {
-	if role == types.RolePlanner {
-		return l.options.Config.PlannerProvider
+func (l *AgentLoop) SetPrompts(system string, rolePrompts map[types.AgentRole]string) {
+	l.options.SystemPrompt = system
+	l.options.RolePrompts = rolePrompts
+}
+
+func (l *AgentLoop) systemPrompt(role types.AgentRole) string {
+	var parts []string
+	if strings.TrimSpace(l.options.SystemPrompt) != "" {
+		parts = append(parts, strings.TrimSpace(l.options.SystemPrompt))
 	}
-	if role == types.RoleExecutor {
-		return l.options.Config.ExecutorProvider
+	if role != "" && role != types.RoleAuto {
+		if prompt := strings.TrimSpace(l.options.RolePrompts[role]); prompt != "" {
+			parts = append(parts, prompt)
+		}
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+type routedRole struct {
+	Provider string
+	Role     types.AgentRole
+}
+
+func (l *AgentLoop) route(role types.AgentRole, prompt string) routedRole {
+	switch role {
+	case types.RolePlanner:
+		return routedRole{Provider: l.options.Config.PlannerProvider, Role: types.RolePlanner}
+	case types.RoleExecutor:
+		return routedRole{Provider: l.options.Config.ExecutorProvider, Role: types.RoleExecutor}
+	case types.RoleResearcher:
+		return routedRole{Provider: l.researcherProvider(), Role: types.RoleResearcher}
 	}
 	if isExecutionPrompt(strings.ToLower(prompt)) {
-		return l.options.Config.ExecutorProvider
+		return routedRole{Provider: l.options.Config.ExecutorProvider, Role: types.RoleExecutor}
+	}
+	return routedRole{Provider: l.options.Config.PlannerProvider, Role: types.RolePlanner}
+}
+
+func (l *AgentLoop) routeProvider(role types.AgentRole, prompt string) string {
+	return l.route(role, prompt).Provider
+}
+
+func (l *AgentLoop) researcherProvider() string {
+	if l.options.Config.ResearcherProvider != "" {
+		return l.options.Config.ResearcherProvider
 	}
 	return l.options.Config.PlannerProvider
 }

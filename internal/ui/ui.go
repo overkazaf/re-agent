@@ -34,6 +34,7 @@ func Banner(config *types.AgentConfig, sessionFile string, policy *types.Executi
 	route := strings.Join([]string{
 		kv("plan", C.Accent(config.PlannerProvider)),
 		kv("exec", C.Violet(config.ExecutorProvider)),
+		kv("research", C.Accent(researcherProvider(config))),
 		kv("turns", C.Text(fmt.Sprintf("%d", config.MaxTurns))),
 	}, C.Rule("  ·  "))
 
@@ -81,6 +82,8 @@ func PromptLabel(config *types.AgentConfig, role types.AgentRole, forcedProvider
 			route = config.PlannerProvider
 		case types.RoleExecutor:
 			route = config.ExecutorProvider
+		case types.RoleResearcher:
+			route = researcherProvider(config)
 		default:
 			route = "auto"
 		}
@@ -377,13 +380,8 @@ func FormatProviders(config *types.AgentConfig) string {
 	for _, name := range names {
 		provider := config.Providers[name]
 		role := C.Faint("–")
-		switch {
-		case name == config.PlannerProvider && name == config.ExecutorProvider:
-			role = C.Violet("plan+exec")
-		case name == config.PlannerProvider:
-			role = C.Accent("planner")
-		case name == config.ExecutorProvider:
-			role = C.Violet("executor")
+		if labels := providerRoleLabels(config, name); len(labels) > 0 {
+			role = C.Violet(strings.Join(labels, "+"))
 		}
 		kind := C.Faint(string(provider.Type))
 		if provider.Type == types.KindCLITmux {
@@ -396,6 +394,27 @@ func FormatProviders(config *types.AgentConfig) string {
 		rows = append(rows, []string{C.Text(name), role, kind, C.Muted(provider.Model), effort})
 	}
 	return table("PROVIDERS", []string{"name", "role", "kind", "model", "effort"}, rows)
+}
+
+func providerRoleLabels(config *types.AgentConfig, name string) []string {
+	var labels []string
+	if name == config.PlannerProvider {
+		labels = append(labels, "planner")
+	}
+	if name == config.ExecutorProvider {
+		labels = append(labels, "executor")
+	}
+	if name == researcherProvider(config) {
+		labels = append(labels, "researcher")
+	}
+	return labels
+}
+
+func researcherProvider(config *types.AgentConfig) string {
+	if config.ResearcherProvider != "" {
+		return config.ResearcherProvider
+	}
+	return config.PlannerProvider
 }
 
 func FormatTools(tools []types.Tool) string {

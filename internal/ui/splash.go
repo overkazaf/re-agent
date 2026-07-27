@@ -222,6 +222,7 @@ func RenderPanel(ctx SplashContext) []string {
 	for _, entry := range [][2]string{
 		{"plan", ctx.Config.PlannerProvider},
 		{"exec", ctx.Config.ExecutorProvider},
+		{"research", researcherProvider(ctx.Config)},
 	} {
 		provider := ctx.Config.Providers[entry[1]]
 		state := C.Faint("checking…")

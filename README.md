@@ -444,9 +444,11 @@ up right now?"
 | --- | --- |
 | `--role planner` | route to the planner (analysis, exploitability, solve plans) |
 | `--role executor` | route to the executor (tools, inspection, summarizing) |
+| `--role researcher` | route to the researcher (background research, source synthesis, prior art) |
 | `--role auto` | pick per prompt — execution-shaped prompts go to the executor |
 | `/agent <name>` | pin one provider for the next prompts |
-| `/planner <name>` · `/executor <name>` | change either side mid-session |
+| `/planner <name>` · `/executor <name>` · `/researcher <name>` | change a role's provider mid-session |
+| `/prompt edit <role>` | edit `system`, `planner`, `executor`, or `researcher` system prompts |
 | `/effort <provider> high` | reasoning effort, for the backends that take one |
 
 <img src="docs/shots/providers.svg" alt="The providers table: claude and codex as cli-tmux providers marked executor and planner, claude-api, codex-api, deepseek, glm, grok, grok-cli and mock, each with kind, model and reasoning effort." width="900">
@@ -730,6 +732,7 @@ configurable:
 {
   "plannerProvider": "codex",
   "executorProvider": "claude",
+  "researcherProvider": "codex",
   "maxTurns": 8,
   "providers": {
     "deepseek": {

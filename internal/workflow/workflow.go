@@ -61,12 +61,19 @@ func HasSpecialistProvider(config *types.AgentConfig, pinnedProvider string) boo
 	if pinnedProvider != "" {
 		return providerLooksSpecialist(pinnedProvider, config.Providers[pinnedProvider])
 	}
-	for _, name := range []string{config.PlannerProvider, config.ExecutorProvider} {
+	for _, name := range []string{config.PlannerProvider, config.ExecutorProvider, researcherProvider(config)} {
 		if providerLooksSpecialist(name, config.Providers[name]) {
 			return true
 		}
 	}
 	return false
+}
+
+func researcherProvider(config *types.AgentConfig) string {
+	if config.ResearcherProvider != "" {
+		return config.ResearcherProvider
+	}
+	return config.PlannerProvider
 }
 
 func providerLooksSpecialist(name string, provider *types.ProviderConfig) bool {
