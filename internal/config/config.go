@@ -354,6 +354,77 @@ func SetReasoningEffort(provider *types.ProviderConfig, effort types.ReasoningEf
 	}
 }
 
+type ModelChange struct {
+	PassedToCLI bool
+	Detail      string
+}
+
+// SetProviderModel applies a session-local model override. HTTP providers carry
+// the model in their request body. CLI providers need argv help: custom CLI
+// configs can use {model}, and the built-in codex/claude routes get a --model
+// flag inserted when the operator explicitly switches model.
+func SetProviderModel(provider *types.ProviderConfig, model string) ModelChange {
+	model = strings.TrimSpace(model)
+	provider.Model = model
+	if provider.Type != types.KindCLITmux {
+		return ModelChange{Detail: "request body"}
+	}
+	args := append([]string{}, provider.CLIArgs...)
+	if hasModelPlaceholder(args) {
+		provider.CLIArgs = args
+		return ModelChange{PassedToCLI: true, Detail: "via {model} placeholder"}
+	}
+	if updated, ok := updatedModelFlag(args, model); ok {
+		provider.CLIArgs = updated
+		return ModelChange{PassedToCLI: true, Detail: "via existing --model flag"}
+	}
+	switch provider.CLICommand {
+	case "claude":
+		provider.CLIArgs = append([]string{"--model", model}, args...)
+		return ModelChange{PassedToCLI: true, Detail: "via claude --model"}
+	case "codex":
+		at := 0
+		if anchor := indexOf(args, "exec"); anchor >= 0 {
+			at = anchor + 1
+		}
+		provider.CLIArgs = append(args[:at], append([]string{"--model", model}, args[at:]...)...)
+		return ModelChange{PassedToCLI: true, Detail: "via codex exec --model"}
+	default:
+		provider.CLIArgs = args
+		return ModelChange{Detail: "model recorded; add {model} or --model to cliArgs to pass it to this CLI"}
+	}
+}
+
+func hasModelPlaceholder(args []string) bool {
+	for _, arg := range args {
+		if strings.Contains(arg, "{model}") {
+			return true
+		}
+	}
+	return false
+}
+
+func updatedModelFlag(args []string, model string) ([]string, bool) {
+	for i, arg := range args {
+		switch {
+		case arg == "--model" || arg == "-m":
+			if i+1 < len(args) {
+				args[i+1] = model
+			} else {
+				args = append(args, model)
+			}
+			return args, true
+		case strings.HasPrefix(arg, "--model="):
+			args[i] = "--model=" + model
+			return args, true
+		case strings.HasPrefix(arg, "-m="):
+			args[i] = "-m=" + model
+			return args, true
+		}
+	}
+	return args, false
+}
+
 func indexOf(list []string, value string) int {
 	for i, item := range list {
 		if item == value {

@@ -1,8 +1,9 @@
 # 0xAF-Re
 
 A reverse-engineering and CTF agent that lives in your terminal. One planner
-model, one executor model, 24 local tools, and a live picture of what the turn
-is actually doing — as a single static Go binary with no runtime to install.
+model, one executor model, 24 local tools, explicit workflow modes, queued
+next prompts, and a live picture of what the turn is actually doing — as a
+single static Go binary with no runtime to install.
 
 [中文说明](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) · [Project page](https://overkazaf.github.io/re-agent/)
 
@@ -36,8 +37,8 @@ when it goes somewhere useless.
   local `codex` and `claude` CLIs in tmux because it reuses logins you already
   have, but `grok-build` (`grok-cli`) is a first-class CLI provider too, and
   seats can be mixed — a local CLI planning, a direct API executing, or the
-  reverse. Swap either seat mid-run with `/planner`, `/executor` or `/agent`;
-  no restart, no config edit.
+  reverse. Swap either seat mid-run with `/planner`, `/executor` or `/agent`,
+  and override the concrete model with `/model`; no restart, no config edit.
 - **Cancellation that reaches the tree.** `^C` cancels the HTTP request, kills
   the tmux session, and signals tool subprocesses in their own process group —
   no orphaned `objdump` chewing a core.
@@ -287,6 +288,35 @@ export DEEPSEEK_API_KEY=...           # or ANTHROPIC_API_KEY / OPENAI_API_KEY / 
 0xaf auth login claude-api            # or store one locally instead
 ```
 
+## Workflow modes
+
+Workflow mode is explicit. With it off, prompts are sent as-is. Turn it on when
+you want the host to shape reverse-engineering work before it reaches the model:
+
+```text
+/workflow off          default: no extra workflow wrapper
+/workflow auto         use specialist if GPT Cyber / CC CVP is configured, else caveman
+/workflow specialist   plan and run directly with a cyber/CVP-style route
+/workflow caveman      split into small local evidence packets
+```
+
+`specialist` is for a configured GPT Cyber, Claude Code CVP, or comparable
+authorized RE route: publish a short plan, use the bundled skills and local
+tools, preserve paths/offsets/hashes/commands, and keep going on the allowed
+artifact-analysis parts.
+
+`caveman` is the fallback for ordinary providers. It is deliberately **not**
+translation, classical Chinese, ciphering, euphemism, or prompt laundering. It
+turns the task into bounded, local-first evidence packets — file type, strings,
+entropy, imports, platform-specific skill, focused hypothesis, one verification
+command — so the operator can keep solving authorized reverse tasks without
+asking the model to bypass a policy boundary.
+
+```bash
+0xaf --workflow auto --workspace ./ctf
+0xaf --workflow caveman -p "triage ./app.apk and identify the next local check"
+```
+
 ## Common usage
 
 **Triage an unknown artifact.** The fast path is no model at all — the direct
@@ -313,6 +343,33 @@ doing to the executor:
 ```bash
 0xaf -p "Triage ./chall, identify the check, and propose a solve plan" --role planner
 0xaf --workspace ./ctf                  # then just talk to it
+```
+
+**Switch the concrete model without changing provider.**
+
+```text
+/model deepseek deepseek-reasoner
+/model planner gpt-5.3-codex-high
+```
+
+```bash
+0xaf --model deepseek=deepseek-reasoner --planner deepseek -p "triage ./chall"
+```
+
+HTTP providers use the override in the request body. Known local CLI providers
+get a `--model` argument; custom CLI configs can pass it with a `{model}`
+placeholder in `cliArgs`.
+
+**Queue the next task while the current one is still running.** In an interactive
+turn, type a normal line and press Enter: it is queued instead of interrupting
+the current provider call. Before it runs:
+
+```text
+/queue list
+/queue edit 2 triage ./fixed.apk instead
+/queue cancel 2
+/tasks collapse     # fold the live task list
+/tasks expand       # show as much as the terminal budget allows
 ```
 
 **Run a command yourself mid-conversation.** A line starting with `!` runs in
@@ -434,10 +491,12 @@ and skipped, never fatal. `/mcp` shows the state of each one.
 
 Project-local workflows live in `skills/<name>/SKILL.md`. They are loaded at
 startup, summarized into the system prompt, exposed as tools, and can be forced
-for a single turn:
+for a single turn. The checkout ships a broader reverse-engineering set now:
+CTF first pass, APK/Frida, native pwn/RE, web/WASM crypto, radare2, Ghidra,
+JADX, Unicorn, unidbg, and imported local RE playbooks.
 
 ```text
-/skills                                  ctf-first-pass · android-apk-frida · native-pwn-re · web-wasm-crypto
+/skills                                  ctf-first-pass · android-apk-frida · native-pwn-re · radare2-reverse · ...
 /skill android-apk-frida inspect this APK and propose hooks
 ```
 
@@ -689,12 +748,12 @@ Nothing is ever written into the repo.
 ## Verification
 
 ```bash
-make test     # 9 packages
+make test     # 10 packages
 make vet
 make build
 ```
 
-<img src="docs/shots/verify.svg" alt="Terminal output of go vet and go test across nine packages all passing, the 6.7 MB binary listing, and fifty startups of 0xaf --welcome completing in 0.335 seconds total." width="900">
+<img src="docs/shots/verify.svg" alt="Terminal output of go vet and go test across the suite all passing, the 6.7 MB binary listing, and fifty startups of 0xaf --welcome completing in 0.335 seconds total." width="900">
 
 ## Layout
 
@@ -707,10 +766,11 @@ internal/tools          reverse/CTF registry · process runner · output budget
 internal/security       command safety patterns · tier × mode approval gate
 internal/plan           task-list tracker both sources feed
 internal/ui             theme · HUD · dataflow diagram · trace · markdown · palette
-internal/app            args · REPL · slash commands · line editor
+internal/app            args · REPL · slash commands · queued prompts · line editor
 internal/mcp            stdio MCP client and tool adapter
 internal/knowledge      index search · context packing · answer parsing
 internal/skills         SKILL.md loading
+internal/workflow       explicit off/auto/specialist/caveman prompt shaping
 internal/assets         embedded prompt/skills · project-root resolution
 prompts/ skills/        loaded from disk when present, embedded otherwise
 demos/                  two toy workspaces used by --welcome

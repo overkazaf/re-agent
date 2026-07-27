@@ -8,14 +8,19 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/overkazaf/re-agent/internal/auth"
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/workflow"
+	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 )
 
 func repl(state *State) error {
@@ -94,7 +99,9 @@ func repl(state *State) error {
 			}
 			continue
 		}
-		runTurn(state, line)
+		if runTurn(state, line) {
+			drainQueue(state)
+		}
 	}
 }
 
@@ -131,7 +138,7 @@ func routeLabel(state *State) string {
 // runTurn executes one prompt with live narration: streamed reasoning and token
 // counters in a status pane, tool calls as a tree, then the markdown-rendered
 // reply and a usage footer.
-func runTurn(state *State, line string) {
+func runTurn(state *State, line string) bool {
 	viz := state.Flow
 	if viz == "" {
 		viz = "full"
@@ -155,6 +162,7 @@ func runTurn(state *State, line string) {
 		Route: &ui.HudRoute{
 			Planner: state.Config.PlannerProvider, Executor: state.Config.ExecutorProvider, Active: active,
 		},
+		PlanDisplay: state.PlanDisplay,
 	}
 	if viz == "full" || viz == "flow" {
 		paneOptions.Flow = flow
@@ -300,7 +308,11 @@ func runTurn(state *State, line string) {
 
 	// Tools ask through the same prompt the shell escape uses, with the pane out
 	// of the way while the question is on screen.
-	state.ToolContext.Confirm = createApprover(state, pane)
+	liveInput := newLiveInputController(state, pane, cancel)
+	liveInput.Start()
+	defer liveInput.Stop()
+
+	state.ToolContext.Confirm = createApprover(state, pane, liveInput.Pause)
 	defer func() { state.ToolContext.Confirm = nil }()
 
 	// The live pane is gone once stopped, so the final task list is archived
@@ -319,9 +331,11 @@ func runTurn(state *State, line string) {
 		}
 	}
 
-	result, err := state.Loop.Run(line, core.RunOptions{
+	wrappedLine := workflow.WrapPrompt(line, state.Workflow, state.Config, state.Provider)
+	result, err := state.Loop.Run(wrappedLine, core.RunOptions{
 		Role: state.Role, ProviderName: state.Provider, Ctx: ctx, OnEvent: onEvent,
 	})
+	liveInput.Stop()
 	if err != nil {
 		flow.End("error", err.Error())
 		pane.Stop()
@@ -332,7 +346,7 @@ func runTurn(state *State, line string) {
 		} else {
 			fmt.Printf("%s\n\n", ui.RenderError(err.Error()))
 		}
-		return
+		return false
 	}
 
 	endStage := ui.FlowStage("done")
@@ -355,7 +369,7 @@ func runTurn(state *State, line string) {
 		fmt.Printf("%s\n\n", ui.RunFooter(ui.RunFooterOptions{
 			Provider: result.Provider, Role: string(result.Role), Turns: result.Turns, Ms: ms, Usage: result.Usage,
 		}))
-		return
+		return false
 	}
 
 	model := ""
@@ -371,16 +385,291 @@ func runTurn(state *State, line string) {
 	fmt.Printf("%s\n\n", ui.RunFooter(ui.RunFooterOptions{
 		Provider: result.Provider, Role: string(result.Role), Turns: result.Turns, Ms: ms, Usage: result.Usage,
 	}))
+	return true
+}
+
+func drainQueue(state *State) {
+	if state.Queue == nil {
+		return
+	}
+	for {
+		item, ok := state.Queue.Pop()
+		if !ok {
+			return
+		}
+		fmt.Println(ui.RenderNotice(fmt.Sprintf("running queued #%d", item.ID)))
+		if !runTurn(state, item.Text) {
+			return
+		}
+	}
+}
+
+type liveInputController struct {
+	state  *State
+	pane   *ui.LivePane
+	cancel context.CancelFunc
+	fd     int
+
+	done chan struct{}
+	once sync.Once
+	wg   sync.WaitGroup
+
+	mu       sync.Mutex
+	rawState *term.State
+	raw      bool
+	paused   bool
+	stopped  bool
+	active   bool
+	buffer   []rune
+}
+
+func newLiveInputController(state *State, pane *ui.LivePane, cancel context.CancelFunc) *liveInputController {
+	return &liveInputController{
+		state: state, pane: pane, cancel: cancel,
+		fd: int(os.Stdin.Fd()), done: make(chan struct{}),
+	}
+}
+
+func (c *liveInputController) Start() {
+	if c.state.editor == nil || !c.state.editor.Interactive() {
+		return
+	}
+	c.mu.Lock()
+	c.active = c.setRawLocked()
+	c.mu.Unlock()
+	if !c.active {
+		return
+	}
+	c.refreshQueueState()
+	c.wg.Add(1)
+	go c.loop()
+}
+
+func (c *liveInputController) Stop() {
+	c.mu.Lock()
+	if c.stopped {
+		c.mu.Unlock()
+		return
+	}
+	c.stopped = true
+	c.mu.Unlock()
+	c.once.Do(func() { close(c.done) })
+	c.wg.Wait()
+	c.mu.Lock()
+	c.restoreLocked()
+	c.buffer = nil
+	c.mu.Unlock()
+	if c.pane != nil {
+		c.pane.SetQueueDraft("")
+	}
+	c.refreshQueueState()
+}
+
+func (c *liveInputController) Pause() func() {
+	c.mu.Lock()
+	if !c.active || c.stopped {
+		c.mu.Unlock()
+		return func() {}
+	}
+	wasPaused := c.paused
+	draft := string(c.buffer)
+	c.paused = true
+	c.restoreLocked()
+	c.mu.Unlock()
+	if c.pane != nil {
+		c.pane.SetQueueDraft("")
+	}
+	return func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.stopped || wasPaused {
+			return
+		}
+		c.paused = false
+		c.setRawLocked()
+		if c.pane != nil {
+			c.pane.SetQueueDraft(draft)
+		}
+	}
+}
+
+func (c *liveInputController) setRawLocked() bool {
+	if c.raw {
+		return true
+	}
+	state, err := term.MakeRaw(c.fd)
+	if err != nil {
+		return false
+	}
+	c.rawState = state
+	c.raw = true
+	return true
+}
+
+func (c *liveInputController) restoreLocked() {
+	if !c.raw {
+		return
+	}
+	_ = term.Restore(c.fd, c.rawState)
+	c.raw = false
+}
+
+func (c *liveInputController) loop() {
+	defer c.wg.Done()
+	for {
+		select {
+		case <-c.done:
+			return
+		default:
+		}
+		c.mu.Lock()
+		paused := c.paused || c.stopped
+		c.mu.Unlock()
+		if paused {
+			select {
+			case <-c.done:
+				return
+			case <-time.After(50 * time.Millisecond):
+				continue
+			}
+		}
+		fds := []unix.PollFd{{Fd: int32(c.fd), Events: unix.POLLIN}}
+		n, err := unix.Poll(fds, 100)
+		if err == unix.EINTR {
+			continue
+		}
+		if err != nil || n <= 0 {
+			continue
+		}
+		char, _, err := c.state.editor.reader.ReadRune()
+		if err != nil {
+			continue
+		}
+		c.handleRune(char)
+	}
+}
+
+func (c *liveInputController) handleRune(char rune) {
+	switch char {
+	case 3: // ^C
+		if c.pane != nil {
+			c.pane.SetPhase("interrupting")
+		}
+		c.cancel()
+	case '\r', '\n':
+		c.submit()
+	case 127, 8: // backspace
+		c.mu.Lock()
+		if len(c.buffer) > 0 {
+			c.buffer = c.buffer[:len(c.buffer)-1]
+		}
+		draft := string(c.buffer)
+		c.mu.Unlock()
+		if c.pane != nil {
+			c.pane.SetQueueDraft(draft)
+		}
+	case 21: // ^U
+		c.mu.Lock()
+		c.buffer = nil
+		c.mu.Unlock()
+		if c.pane != nil {
+			c.pane.SetQueueDraft("")
+		}
+	case 23: // ^W
+		c.killWord()
+	case 27: // escape sequence; ignore the rest on the next poll ticks
+		return
+	default:
+		if char < 32 {
+			return
+		}
+		c.mu.Lock()
+		c.buffer = append(c.buffer, char)
+		draft := string(c.buffer)
+		c.mu.Unlock()
+		if c.pane != nil {
+			c.pane.SetQueueDraft(draft)
+		}
+	}
+}
+
+func (c *liveInputController) killWord() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	end := len(c.buffer)
+	for end > 0 && c.buffer[end-1] == ' ' {
+		end--
+	}
+	for end > 0 && c.buffer[end-1] != ' ' {
+		end--
+	}
+	c.buffer = c.buffer[:end]
+	if c.pane != nil {
+		c.pane.SetQueueDraft(string(c.buffer))
+	}
+}
+
+func (c *liveInputController) submit() {
+	c.mu.Lock()
+	line := strings.TrimSpace(string(c.buffer))
+	c.buffer = nil
+	c.mu.Unlock()
+	if c.pane != nil {
+		c.pane.SetQueueDraft("")
+	}
+	if line == "" {
+		return
+	}
+	c.state.editor.AppendHistory(line)
+	if strings.HasPrefix(line, "/") {
+		if err := c.handleLiveCommand(line); err != nil {
+			emitError(c.pane, err.Error())
+		}
+		c.refreshQueueState()
+		return
+	}
+	if c.state.Queue == nil {
+		c.state.Queue = newTaskQueue()
+	}
+	item := c.state.Queue.Add(line)
+	c.refreshQueueState()
+	emitNotice(c.pane, fmt.Sprintf("queued #%d for the next turn", item.ID))
+}
+
+func (c *liveInputController) handleLiveCommand(line string) error {
+	command, arg := splitCommand(line)
+	switch command {
+	case "/queue":
+		return handleQueueCommand(arg, c.state, c.pane)
+	case "/tasks":
+		return handleTasksCommand(arg, c.state, c.pane)
+	case "/model":
+		return handleModelCommand(arg, c.state, c.pane)
+	default:
+		return fmt.Errorf("during a turn use /queue, /tasks, or /model; other commands run at the normal prompt")
+	}
+}
+
+func (c *liveInputController) refreshQueueState() {
+	if c.pane == nil || c.state.Queue == nil {
+		return
+	}
+	c.pane.SetQueueCount(c.state.Queue.Len())
 }
 
 // createApprover builds the interactive approval prompt. The live pane is paused
 // so the prompt owns the screen, and a bare Enter means "no" — the safe answer
 // is the one you get by reflex.
-func createApprover(state *State, pane *ui.LivePane) func(types.ApprovalRequest) types.ApprovalDecision {
+func createApprover(state *State, pane *ui.LivePane, pauseInput func() func()) func(types.ApprovalRequest) types.ApprovalDecision {
 	if state.editor == nil || !state.editor.Interactive() {
 		return nil
 	}
 	return func(request types.ApprovalRequest) types.ApprovalDecision {
+		var resumeInput func()
+		if pauseInput != nil {
+			resumeInput = pauseInput()
+			defer resumeInput()
+		}
 		if pane != nil {
 			pane.Pause()
 			defer pane.Resume()
@@ -416,7 +705,7 @@ func runShellEscape(state *State, line string) error {
 
 	// Clear it before drawing the header, so a refused command never leaves an
 	// unfinished output box behind.
-	if err := core.AssertShellCommandAllowed(command, state.ToolContext.Policy, createApprover(state, nil)); err != nil {
+	if err := core.AssertShellCommandAllowed(command, state.ToolContext.Policy, createApprover(state, nil, nil)); err != nil {
 		return err
 	}
 

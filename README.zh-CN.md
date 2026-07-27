@@ -1,7 +1,8 @@
 # 0xAF-Re
 
-一个住在终端里的逆向工程与 CTF agent。一个规划模型、一个执行模型、24 个本地工具，
-外加一张能看清「这一轮到底在干什么」的实时画面 —— 打包成单个静态 Go 二进制，不需要装任何运行时。
+一个住在终端里的逆向工程与 CTF agent。一个规划模型、一个执行模型、24 个本地工具、
+显式 workflow 模式、运行中排队下一任务，外加一张能看清「这一轮到底在干什么」的实时画面 ——
+打包成单个静态 Go 二进制，不需要装任何运行时。
 
 [English](README.md) · [架构文档](docs/ARCHITECTURE.md) · [项目主页](https://overkazaf.github.io/re-agent/)
 
@@ -164,6 +165,8 @@ carve 内嵌文件 → 拆 APK → 写 Frida hook。所以这些工具**同时�
 /executor claude-api     执行换成直连 API
 /agent grok              这几轮两个位置都用 grok
 /agent auto              回到角色路由
+/model planner gpt-5.3-codex-high
+/model deepseek deepseek-reasoner
 ```
 
 默认路由是 **planner = 本地 `codex` CLI，executor = 本地 `claude` CLI**，都跑在 tmux 里。
@@ -274,6 +277,31 @@ codex 吐 `plan_update` / `todo_list` —— 这些事件被解析出来，直�
 /effort codex high       调推理强度（支持的后端才有效）
 ```
 
+## Workflow 模式
+
+workflow 是显式开启的。默认 `off` 不会改写你的 prompt；只有你通过命令打开时，
+宿主才会在请求模型之前把逆向任务整理成指定工作流：
+
+```text
+/workflow off            默认：不加额外 workflow wrapper
+/workflow auto           检测到 GPT Cyber / CC CVP 配置就走 specialist，否则走 caveman
+/workflow specialist     有 cyber/CVP 类订阅时，直接规划并跑授权逆向任务
+/workflow caveman        没有专用订阅时，拆成小的本地证据包
+```
+
+`specialist` 面向 GPT Cyber、Claude Code CVP 或同类授权逆向路线：先给短计划，
+再用内置 skills 和本地工具推进，保留路径、偏移、哈希、命令和输出；如果请求里混进越界部分，
+只拒绝越界部分，继续做允许的本地 artifact 分析。
+
+`caveman` 是普通 provider 的兜底模式。它**不是**翻译成文言文、暗语、编码或其它 prompt
+laundering；它会把任务拆成有边界的本地证据包：文件类型、字符串、熵、导入/符号、平台 skill、
+聚焦假设、一个最小验证命令。这样用户能继续解决授权逆向问题，同时不要求模型绕过平台策略。
+
+```bash
+0xaf --workflow auto --workspace ./ctf
+0xaf --workflow caveman -p "粗筛 ./app.apk，指出下一个本地检查点"
+```
+
 ## 常用用法
 
 **先做一次不花 token 的粗筛。** 每个分析工具同时也是斜杠命令，本地直接出结果：
@@ -296,6 +324,31 @@ codex 吐 `plan_update` / `todo_list` —— 这些事件被解析出来，直�
 ```bash
 0xaf -p "粗筛 ./chall，指出校验点，给一个 solve 计划" --role planner
 0xaf --workspace ./ctf          # 或者直接进 REPL 聊
+```
+
+**切具体模型，不换 provider：**
+
+```text
+/model deepseek deepseek-reasoner
+/model planner gpt-5.3-codex-high
+```
+
+```bash
+0xaf --model deepseek=deepseek-reasoner --planner deepseek -p "粗筛 ./chall"
+```
+
+HTTP provider 会把 model override 放进请求体；内置的 codex/claude CLI provider 会注入
+`--model` 参数；自定义 CLI provider 可以在 `cliArgs` 里写 `{model}` 占位符。
+
+**当前任务还在跑时，先把下一条排上。** 交互式 turn 进行中，直接输入普通文本并回车，
+它会进入待执行队列，不会打断当前 provider 调用。还没执行前可以改、删、清空：
+
+```text
+/queue list
+/queue edit 2 改成分析 ./fixed.apk
+/queue cancel 2
+/tasks collapse     折叠 live 任务列表
+/tasks expand       在终端高度允许范围内展开
 ```
 
 **自己插一条命令进去。** 以 `!` 开头的行在工作区里执行，走同一套策略；
@@ -379,7 +432,9 @@ codex 吐 `plan_update` / `todo_list` —— 这些事件被解析出来，直�
 ## 技能与知识库
 
 项目内的工作流放在 `skills/<name>/SKILL.md`，启动时加载、摘要进系统提示、也能当工具调用，
-还能强制某一轮就按它走。内置四个：CTF 首轮粗筛、Android APK + Frida、native pwn/RE、Web/WASM 加密。
+还能强制某一轮就按它走。现在仓库里带的是更完整的逆向技能集合：CTF 首轮粗筛、
+Android APK + Frida、native pwn/RE、Web/WASM 加密、radare2、Ghidra、JADX、
+Unicorn、unidbg，以及从本机导入的常用逆向 playbook。
 
 ### 先搞清楚：它去哪里找你的东西
 
@@ -492,7 +547,7 @@ go run ./cmd/import-knowledge ~/notes/re ~/notes/ctf ~/some/single-note.md
 ```bash
 git clone https://github.com/overkazaf/re-agent && cd re-agent
 make build     # ./bin/0xaf 和 ./bin/import-knowledge
-make test      # 9 个包
+make test      # 10 个包
 make cross     # linux/darwin × amd64/arm64 静态二进制
 ./bin/0xaf --smoke   # 离线自检：不需要 key、网络、CLI 登录
 ```
@@ -514,10 +569,11 @@ internal/tools          逆向/CTF 工具注册表 · 进程执行 · 输出预�
 internal/security       命令安全模式 · 等级 × 模式 审批闸门
 internal/plan           两个来源共用的任务列表追踪器
 internal/ui             主题 · HUD · 数据流图 · trace · markdown · 命令面板
-internal/app            参数解析 · REPL · 斜杠命令 · 行编辑器
+internal/app            参数解析 · REPL · 斜杠命令 · 待执行队列 · 行编辑器
 internal/mcp            stdio MCP 客户端与工具适配
 internal/knowledge      索引检索 · 上下文打包 · 回答解析
 internal/skills         SKILL.md 加载
+internal/workflow       显式 off/auto/specialist/caveman prompt 整形
 internal/assets         内嵌 prompt/skills · 项目根定位
 ```
 

@@ -86,6 +86,48 @@ func TestSetReasoningEffortRewritesCLIArgs(t *testing.T) {
 	}
 }
 
+func TestSetProviderModelRewritesKnownCLIArgs(t *testing.T) {
+	codex := &types.ProviderConfig{
+		Type: types.KindCLITmux, CLICommand: "codex",
+		CLIArgs: []string{"exec", "--json", "-"},
+	}
+	change := SetProviderModel(codex, "gpt-5.3-codex-high")
+	if !change.PassedToCLI || codex.Model != "gpt-5.3-codex-high" {
+		t.Fatalf("codex model not applied: change=%+v provider=%+v", change, codex)
+	}
+	joined := strings.Join(codex.CLIArgs, " ")
+	if !strings.Contains(joined, "exec --model gpt-5.3-codex-high --json") {
+		t.Fatalf("codex --model should sit after exec: %v", codex.CLIArgs)
+	}
+
+	claude := &types.ProviderConfig{Type: types.KindCLITmux, CLICommand: "claude", CLIArgs: []string{"-p"}}
+	change = SetProviderModel(claude, "opus")
+	if !change.PassedToCLI || claude.CLIArgs[0] != "--model" || claude.CLIArgs[1] != "opus" {
+		t.Fatalf("claude model not applied: change=%+v args=%v", change, claude.CLIArgs)
+	}
+	SetProviderModel(claude, "sonnet")
+	if strings.Count(strings.Join(claude.CLIArgs, " "), "--model") != 1 || claude.CLIArgs[1] != "sonnet" {
+		t.Fatalf("existing model flag should be replaced: %v", claude.CLIArgs)
+	}
+}
+
+func TestSetProviderModelSupportsPlaceholderAndHTTP(t *testing.T) {
+	cli := &types.ProviderConfig{
+		Type: types.KindCLITmux, CLICommand: "custom",
+		CLIArgs: []string{"run", "--model", "{model}"},
+	}
+	change := SetProviderModel(cli, "local-re")
+	if !change.PassedToCLI || cli.Model != "local-re" || cli.CLIArgs[2] != "{model}" {
+		t.Fatalf("placeholder CLI should record model without rewriting args: change=%+v args=%v", change, cli.CLIArgs)
+	}
+
+	api := &types.ProviderConfig{Type: types.KindOpenAIChat, Model: "old"}
+	change = SetProviderModel(api, "new")
+	if change.PassedToCLI || change.Detail != "request body" || api.Model != "new" {
+		t.Fatalf("HTTP model should only change config: change=%+v provider=%+v", change, api)
+	}
+}
+
 func TestResolveAPIKeyPrefersConfigThenEnv(t *testing.T) {
 	provider := &types.ProviderConfig{APIKeyEnv: []string{"TEST_0XAF_KEY"}}
 	t.Setenv("TEST_0XAF_KEY", "from-env")

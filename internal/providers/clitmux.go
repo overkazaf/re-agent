@@ -89,7 +89,7 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 
 	args := append(append([]string{}, p.config.CLIArgs...), sessionArgs...)
 	for i, arg := range args {
-		args[i] = replacePlaceholders(arg, paths, workspace)
+		args[i] = replacePlaceholders(arg, paths, workspace, p.config.Model)
 	}
 	sessionName := tmuxSessionName(p.name)
 	script, err := runnerScript(command, args, paths, workspace, p.config.CLIUnsetEnv)
@@ -652,7 +652,7 @@ func formatCLIAuthIssue(providerName, command, issue string) string {
 	return fmt.Sprintf("CLI provider '%s' is not authenticated. Status: %s", providerName, issue)
 }
 
-func replacePlaceholders(value string, paths cliPaths, workspace string) string {
+func replacePlaceholders(value string, paths cliPaths, workspace, model string) string {
 	return strings.NewReplacer(
 		"{prompt}", paths.prompt,
 		"{output}", paths.output,
@@ -660,6 +660,7 @@ func replacePlaceholders(value string, paths cliPaths, workspace string) string 
 		"{stderr}", paths.stderr,
 		"{runDir}", paths.runDir,
 		"{workspace}", workspace,
+		"{model}", model,
 	).Replace(value)
 }
 

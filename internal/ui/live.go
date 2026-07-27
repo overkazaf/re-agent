@@ -55,6 +55,9 @@ type LivePaneOptions struct {
 	Flow *FlowModel
 	// OnFrame is called once per animation frame, before the redraw.
 	OnFrame func()
+	// PlanDisplay controls whether task rows start auto-sized, folded, or
+	// expanded. The terminal height budget still wins.
+	PlanDisplay PlanDisplayMode
 }
 
 type LivePane struct {
@@ -71,6 +74,9 @@ type LivePane struct {
 	thinking   string
 	thinkChars int
 	plan       *types.PlanSnapshot
+	planMode   PlanDisplayMode
+	queueDraft string
+	queueCount int
 	drawn      int
 	tick       int
 	stopped    bool
@@ -140,6 +146,7 @@ func NewLivePane(label string, options LivePaneOptions) *LivePane {
 		route:       options.Route,
 		flow:        options.Flow,
 		onFrame:     options.OnFrame,
+		planMode:    options.PlanDisplay,
 	}
 	if !pane.interactive {
 		// Non-TTY (pipes, --print, CI): emit one static line, no animation.
@@ -212,6 +219,27 @@ func (p *LivePane) PushThinking(delta string) {
 func (p *LivePane) SetPlan(snapshot *types.PlanSnapshot) {
 	p.mu.Lock()
 	p.plan = snapshot
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) SetPlanDisplay(mode PlanDisplayMode) {
+	p.mu.Lock()
+	p.planMode = mode
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) SetQueueDraft(draft string) {
+	p.mu.Lock()
+	p.queueDraft = draft
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) SetQueueCount(count int) {
+	p.mu.Lock()
+	p.queueCount = count
 	p.mu.Unlock()
 	p.render()
 }
@@ -432,6 +460,9 @@ func (p *LivePane) bodyLocked() []string {
 		Spark:          p.spark,
 		Route:          p.route,
 		Plan:           p.plan,
+		PlanDisplay:    p.planMode,
+		QueueDraft:     p.queueDraft,
+		QueueCount:     p.queueCount,
 		Thinking:       p.thinking,
 		ThinkingWindow: thinkWindow,
 	})

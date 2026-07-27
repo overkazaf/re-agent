@@ -20,6 +20,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
 func handleCommand(line string, state *State) error {
@@ -81,6 +82,8 @@ func handleCommand(line string, state *State) error {
 		}
 		fmt.Println(ui.RenderNotice(fields[0] + " effort=" + fields[1] + via))
 		return nil
+	case "/model":
+		return handleModelCommand(arg, state, nil)
 	case "/providers":
 		fmt.Print(ui.FormatProviders(state.Config))
 		return nil
@@ -172,6 +175,21 @@ func handleCommand(line string, state *State) error {
 		config.SaveUIPrefs(config.UIPrefs{Flow: arg})
 		fmt.Println(ui.RenderNotice("flow=" + arg + " (saved)"))
 		return nil
+	case "/workflow":
+		if arg == "" {
+			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
+			return nil
+		}
+		if !workflow.IsMode(arg) {
+			return fmt.Errorf("usage: /workflow %s", workflow.List())
+		}
+		state.Workflow = workflow.Mode(arg)
+		fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
+		return nil
+	case "/queue":
+		return handleQueueCommand(arg, state, nil)
+	case "/tasks":
+		return handleTasksCommand(arg, state, nil)
 	case "/context":
 		tokens := state.Loop.ContextTokens()
 		name := routeLabel(state)
@@ -354,6 +372,182 @@ func handleApproval(arg string, state *State) error {
 	policy.ApprovalMode = types.ApprovalMode(fields[0])
 	fmt.Println(ui.RenderNotice("approval=" + fields[0]))
 	return nil
+}
+
+func handleModelCommand(arg string, state *State, pane *ui.LivePane) error {
+	fields := strings.Fields(arg)
+	if len(fields) == 0 {
+		var lines []string
+		for _, name := range providerNames(state) {
+			provider := state.Config.Providers[name]
+			model := provider.Model
+			if model == "" {
+				model = "(provider default)"
+			}
+			lines = append(lines, fmt.Sprintf("%s=%s", name, model))
+		}
+		emitNotice(pane, "models: "+strings.Join(lines, " · "))
+		return nil
+	}
+	if len(fields) < 2 {
+		return fmt.Errorf("usage: /model <provider|planner|executor> <model>")
+	}
+	names, err := modelTargets(fields[0], state)
+	if err != nil {
+		return err
+	}
+	model := strings.TrimSpace(strings.Join(fields[1:], " "))
+	if model == "" {
+		return fmt.Errorf("usage: /model <provider|planner|executor> <model>")
+	}
+	var notices []string
+	for _, name := range names {
+		provider, ok := state.Config.Providers[name]
+		if !ok {
+			return fmt.Errorf("unknown provider: %s", name)
+		}
+		change := config.SetProviderModel(provider, model)
+		notices = append(notices, fmt.Sprintf("%s model=%s (%s)", name, model, change.Detail))
+	}
+	emitNotice(pane, strings.Join(notices, " · ")+"; applies to the next provider turn")
+	return nil
+}
+
+func modelTargets(target string, state *State) ([]string, error) {
+	switch target {
+	case "planner":
+		return []string{state.Config.PlannerProvider}, nil
+	case "executor":
+		return []string{state.Config.ExecutorProvider}, nil
+	case "active", "agent":
+		if state.Provider != "" {
+			return []string{state.Provider}, nil
+		}
+		return unique([]string{state.Config.PlannerProvider, state.Config.ExecutorProvider}), nil
+	default:
+		if _, ok := state.Config.Providers[target]; !ok {
+			return nil, fmt.Errorf("unknown provider: %s", target)
+		}
+		return []string{target}, nil
+	}
+}
+
+func handleQueueCommand(arg string, state *State, pane *ui.LivePane) error {
+	if state.Queue == nil {
+		state.Queue = newTaskQueue()
+	}
+	defer updateQueuePane(state, pane)
+	action, rest := splitFirstToken(arg)
+	switch action {
+	case "", "list":
+		emitNotice(pane, formatQueue(state.Queue.List()))
+	case "add":
+		if strings.TrimSpace(rest) == "" {
+			return fmt.Errorf("usage: /queue add <task>")
+		}
+		item := state.Queue.Add(rest)
+		emitNotice(pane, fmt.Sprintf("queued #%d", item.ID))
+	case "edit":
+		idText, text := splitFirstToken(rest)
+		id, err := strconv.Atoi(idText)
+		if err != nil || strings.TrimSpace(text) == "" {
+			return fmt.Errorf("usage: /queue edit <id> <task>")
+		}
+		if !state.Queue.Edit(id, text) {
+			return fmt.Errorf("queued task not found: #%d", id)
+		}
+		emitNotice(pane, fmt.Sprintf("edited queued task #%d", id))
+	case "cancel", "rm", "drop":
+		target, _ := splitFirstToken(rest)
+		if target == "all" {
+			count := state.Queue.Clear()
+			emitNotice(pane, fmt.Sprintf("cancelled %d queued task(s)", count))
+			return nil
+		}
+		id, err := strconv.Atoi(target)
+		if err != nil {
+			return fmt.Errorf("usage: /queue cancel <id|all>")
+		}
+		if !state.Queue.Cancel(id) {
+			return fmt.Errorf("queued task not found: #%d", id)
+		}
+		emitNotice(pane, fmt.Sprintf("cancelled queued task #%d", id))
+	case "clear":
+		count := state.Queue.Clear()
+		emitNotice(pane, fmt.Sprintf("cancelled %d queued task(s)", count))
+	case "run":
+		if pane != nil {
+			emitNotice(pane, "queue will continue after the current turn")
+			return nil
+		}
+		drainQueue(state)
+	default:
+		return fmt.Errorf("usage: /queue [list|add <task>|edit <id> <task>|cancel <id|all>|clear|run]")
+	}
+	return nil
+}
+
+func updateQueuePane(state *State, pane *ui.LivePane) {
+	if pane == nil || state.Queue == nil {
+		return
+	}
+	pane.SetQueueCount(state.Queue.Len())
+}
+
+func handleTasksCommand(arg string, state *State, pane *ui.LivePane) error {
+	mode := strings.TrimSpace(arg)
+	if mode == "" {
+		emitNotice(pane, fmt.Sprintf("tasks=%s — auto · collapse · expand · toggle", planDisplayLabel(state.PlanDisplay)))
+		return nil
+	}
+	switch mode {
+	case "auto":
+		state.PlanDisplay = ui.PlanDisplayAuto
+	case "collapse", "collapsed":
+		state.PlanDisplay = ui.PlanDisplayCollapsed
+	case "expand", "expanded":
+		state.PlanDisplay = ui.PlanDisplayExpanded
+	case "toggle":
+		if state.PlanDisplay == ui.PlanDisplayCollapsed {
+			state.PlanDisplay = ui.PlanDisplayExpanded
+		} else {
+			state.PlanDisplay = ui.PlanDisplayCollapsed
+		}
+	default:
+		return fmt.Errorf("usage: /tasks auto|collapse|expand|toggle")
+	}
+	if pane != nil {
+		pane.SetPlanDisplay(state.PlanDisplay)
+	}
+	emitNotice(pane, "tasks="+planDisplayLabel(state.PlanDisplay))
+	return nil
+}
+
+func planDisplayLabel(mode ui.PlanDisplayMode) string {
+	if mode == "" {
+		return string(ui.PlanDisplayAuto)
+	}
+	return string(mode)
+}
+
+func emitNotice(pane *ui.LivePane, message string) {
+	for _, line := range strings.Split(message, "\n") {
+		if pane != nil {
+			pane.Commit(ui.RenderNotice(line))
+		} else {
+			fmt.Println(ui.RenderNotice(line))
+		}
+	}
+}
+
+func emitError(pane *ui.LivePane, message string) {
+	for _, line := range strings.Split(message, "\n") {
+		if pane != nil {
+			pane.Commit(ui.RenderError(line))
+		} else {
+			fmt.Println(ui.RenderError(line))
+		}
+	}
 }
 
 // redrawSplash re-renders the boot screen from the cached probe results.

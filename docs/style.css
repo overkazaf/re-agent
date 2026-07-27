@@ -132,7 +132,7 @@ pre,
   align-items: baseline;
   gap: 0.5ch;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   color: var(--ink);
   text-decoration: none;
 }
@@ -173,7 +173,7 @@ pre,
   font-family: var(--mono);
   font-size: var(--step--1);
   color: var(--faint);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -182,7 +182,7 @@ pre,
   font-family: var(--mono);
   font-size: var(--step-4);
   line-height: 1.08;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   font-weight: 700;
   text-wrap: balance;
 }
@@ -293,7 +293,7 @@ section {
   gap: 1ch;
   font-family: var(--mono);
   font-size: var(--step--1);
-  letter-spacing: 0.09em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--faint);
   margin-bottom: 0.7rem;
@@ -309,7 +309,7 @@ h2 {
   font-family: var(--mono);
   font-size: var(--step-3);
   line-height: 1.15;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   font-weight: 700;
   text-wrap: balance;
 }
@@ -333,6 +333,78 @@ p.wide {
 
 .muted {
   color: var(--muted);
+}
+
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  max-width: none;
+  margin-top: 1.2rem;
+}
+
+.download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.1rem;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 0.22rem 0.9ch;
+  font-family: var(--mono);
+  font-size: var(--step--1);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.download:hover,
+.download:focus-visible {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.community-invite {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
+  gap: 1rem;
+  align-items: center;
+  max-width: 56rem;
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.community-invite h3 {
+  margin-top: 0;
+}
+
+.community-invite p:last-child {
+  margin-bottom: 0;
+}
+
+.qr-link {
+  display: block;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.qr-link img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+@media (max-width: 620px) {
+  .community-invite {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-link {
+    max-width: 12rem;
+  }
 }
 
 /* --- captures ----------------------------------------------------------- */
@@ -448,7 +520,7 @@ td {
 thead th {
   font-family: var(--mono);
   font-size: var(--step--1);
-  letter-spacing: 0.07em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--faint);
   font-weight: 600;

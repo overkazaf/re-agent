@@ -12,6 +12,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
 const Version = "0.1.0"
@@ -19,6 +20,11 @@ const Version = "0.1.0"
 type authCommand struct {
 	Action   string // login | status | logout
 	Provider string
+}
+
+type modelOverride struct {
+	Provider string
+	Model    string
 }
 
 type Args struct {
@@ -33,6 +39,8 @@ type Args struct {
 	Print      bool
 	Smoke      bool
 	Welcome    bool
+	Workflow   workflow.Mode
+	Models     []modelOverride
 
 	AllowWrites    bool
 	AllowNetwork   bool
@@ -112,6 +120,29 @@ func ParseArgs(argv []string) (Args, error) {
 					return args, fmt.Errorf("--theme must be one of: %s", strings.Join(ui.ThemeNames, ", "))
 				}
 				args.Theme = theme
+			}
+		case "--workflow":
+			index++
+			var mode string
+			mode, err = requireValue(index, item)
+			if err == nil {
+				if !workflow.IsMode(mode) {
+					return args, fmt.Errorf("--workflow must be one of: %s", workflow.List())
+				}
+				args.Workflow = workflow.Mode(mode)
+			}
+		case "--model":
+			index++
+			var value string
+			value, err = requireValue(index, item)
+			if err == nil {
+				provider, model, ok := strings.Cut(value, "=")
+				provider = strings.TrimSpace(provider)
+				model = strings.TrimSpace(model)
+				if !ok || provider == "" || model == "" {
+					return args, fmt.Errorf("--model requires provider=model")
+				}
+				args.Models = append(args.Models, modelOverride{Provider: provider, Model: model})
 			}
 		case "--effort":
 			index++

@@ -28,6 +28,9 @@ var SlashCommandSections = []HelpSection{
 		{"/clear", "", "Clear the screen and redraw the banner"},
 		{"/theme", "[name]", "Switch palette (deck/amber/matrix/mono)"},
 		{"/flow", "[full|flow|trace|off]", "Live dataflow diagram and trace lines"},
+		{"/workflow", "[off|auto|specialist|caveman]", "Pick RE workflow mode"},
+		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
+		{"/queue", "[list|add|edit|cancel|clear|run]", "Manage queued prompts"},
 		{"/context", "", "Show the context estimate against the budget"},
 		{"/compact", "[provider]", "Fold the session into a summary and free context"},
 		{"/session", "", "Print the JSONL transcript path"},
@@ -41,6 +44,7 @@ var SlashCommandSections = []HelpSection{
 	{"routing", []HelpEntry{
 		{"/role", "planner|executor|auto", "Pick which side of the deck answers"},
 		{"/agent", "<name>|auto", "Pin one provider for the next prompts"},
+		{"/model", "<provider|planner|executor> <model>", "Override a provider model for this session"},
 		{"/planner", "<name>", "Set the planner provider"},
 		{"/executor", "<name>", "Set the executor provider"},
 		{"/effort", "<provider> <level>", "Set reasoning effort (minimal…max)"},
@@ -138,6 +142,12 @@ var slashCommandEntries = func() []HelpEntry {
 
 var roles = []string{"planner", "executor", "auto"}
 
+var workflowModes = []string{"off", "auto", "specialist", "caveman"}
+
+var taskModes = []string{"auto", "collapse", "expand", "toggle"}
+
+var queueActions = []string{"list", "add", "edit", "cancel", "clear", "run"}
+
 var retoolNames = []string{
 	"inventory", "radare2", "rizin", "jadx", "apktool", "binwalk", "yara", "ghidra",
 	"gdb", "lldb", "objdump", "readelf", "nm", "apkid", "aapt", "frida", "unicorn", "unidbg",
@@ -224,6 +234,14 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 		return out
 	}
 	if argIndex != 1 && command != "/effort" {
+		if command != "/model" {
+			return nil
+		}
+	}
+	if command == "/model" {
+		if argIndex == 1 {
+			return simple(append([]string{"active", "planner", "executor"}, providerNames...), "provider")
+		}
 		return nil
 	}
 	switch command {
@@ -235,6 +253,12 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 			modes = append(modes, string(mode))
 		}
 		return simple(modes, "visualization")
+	case "/workflow":
+		return simple(workflowModes, "workflow mode")
+	case "/tasks":
+		return simple(taskModes, "task display")
+	case "/queue":
+		return simple(queueActions, "queue action")
 	case "/role":
 		return simple(roles, "role")
 	case "/agent":

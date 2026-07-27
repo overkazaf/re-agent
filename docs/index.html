@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>0xAF-Re — a reverse engineering agent for the terminal</title>
-<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent: a planner model, an executor model, 24 local tools, and a live picture of the turn — as one static Go binary.">
+<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent: planner/executor routing, workflow modes for cyber/CVP or caveman evidence packets, 24 local tools, and a live picture of the turn — as one static Go binary.">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -16,6 +16,7 @@
     <nav aria-label="Sections">
       <a href="#turn">the turn</a>
       <a href="#routing">routing</a>
+      <a href="#workflow">workflow</a>
       <a href="#arsenal">arsenal</a>
       <a href="#safety">safety</a>
       <a href="#install">install</a>
@@ -32,8 +33,9 @@
   <h1>A reverse engineering agent<br>that shows its <span>work</span>.</h1>
   <p class="hero__lede">
     0xAF-Re drives a <strong>planner model</strong> and an <strong>executor model</strong> over
-    24 local tools — triage, entropy, carving, symbols, APK inspection, Frida scaffolds, external RE tool wrappers — and
-    draws the turn while it runs, so you can see where the time went and stop it when it goes
+    24 local tools — triage, entropy, carving, symbols, APK inspection, Frida scaffolds, external RE tool wrappers —
+    plus workflow modes that route cyber/CVP subscriptions directly, break ordinary-provider work into local
+    evidence packets, and queue your next prompt while the current turn runs. It draws the turn while it runs, so you can see where the time went and stop it when it goes
     somewhere useless. One static binary. No runtime to install.
   </p>
 
@@ -49,6 +51,7 @@
     <span class="pill"><b>6.7 MB</b> binary</span>
     <span class="pill"><b>24</b> tools</span>
     <span class="pill"><b>8</b> providers</span>
+    <span class="pill"><b>3</b> workflows</span>
     <span class="pill"><b>1</b> dependency</span>
   </div>
 
@@ -267,7 +270,14 @@
 /flow full     <span class="c">diagram + trace (default)</span>
 /flow flow     <span class="c">diagram only</span>
 /flow trace    <span class="c">trace lines only</span>
-/flow off      <span class="c">neither — the plain tool tree comes back</span></pre>
+/flow off      <span class="c">neither — the plain tool tree comes back</span>
+
+<span class="c"># while a turn is running, type the next task and Enter to queue it</span>
+/queue list
+/queue edit 2 triage ./fixed.apk
+/queue cancel 2
+/tasks collapse
+/tasks expand</pre>
     <p class="muted">
       The diagram hides itself below 46 columns and in non-TTY output; the trace degrades to
       plain text without escape sequences, which is what you want when piping a run into a log.
@@ -334,6 +344,7 @@
           <tr><td><code class="inline">--role planner</code></td><td>analysis, exploitability reasoning, solve plans</td></tr>
           <tr><td><code class="inline">--role executor</code></td><td>tools, file inspection, summarizing</td></tr>
           <tr><td><code class="inline">/agent &lt;name&gt;</code></td><td>pin one provider for the next prompts</td></tr>
+          <tr><td><code class="inline">/model &lt;provider&gt; &lt;model&gt;</code></td><td>override the concrete model for this session</td></tr>
           <tr><td><code class="inline">/planner</code> · <code class="inline">/executor</code></td><td>change either side mid-session</td></tr>
           <tr><td><code class="inline">/effort codex high</code></td><td>reasoning effort, for backends that take one</td></tr>
         </tbody>
@@ -369,6 +380,63 @@
         <code class="inline">--smoke</code> use.
       </figcaption>
     </figure>
+  </div>
+</section>
+
+<section id="workflow">
+  <div class="wrap">
+    <p class="label">workflow modes</p>
+    <h2>Specialist when you have it. Caveman when you do not.</h2>
+    <p>
+      Workflow mode is explicit: the default is <code class="inline">off</code>, so ordinary
+      prompts are sent as-is. When turned on, 0xAF-Re shapes authorized reverse-engineering
+      requests before they reach the selected provider.
+    </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>mode</th><th>when to use it</th><th>what it does</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">off</code></td><td>default</td><td>no workflow wrapper</td></tr>
+          <tr><td><code class="inline">auto</code></td><td>mixed machines</td><td>detects GPT Cyber / CC CVP-style provider markers, otherwise picks caveman</td></tr>
+          <tr><td><code class="inline">specialist</code></td><td>cyber or CVP route configured</td><td>plans first, then runs skills and local tools while preserving evidence</td></tr>
+          <tr><td><code class="inline">caveman</code></td><td>ordinary providers</td><td>splits the task into bounded local evidence packets and one small verification at a time</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre class="block">/workflow auto                 <span class="c">use specialist if a cyber/CVP route is configured</span>
+/workflow caveman              <span class="c">local evidence packets: type, strings, entropy, imports, skill, check</span>
+0xaf --workflow specialist -p "triage ./app.apk"</pre>
+
+    <p>
+      Caveman mode is not translation, classical Chinese, ciphering, euphemism, or prompt
+      laundering. It keeps the work plain, local-first, and artifact-focused, and it refuses
+      only the unsafe part if a request moves outside authorized lab or CTF analysis.
+    </p>
+
+    <p class="downloads">
+      <a class="download" href="cards/png/09-workflow-modes.png" download>download workflow card</a>
+      <a class="download" href="cards/png/10-live-queue.png" download>download queue card</a>
+      <a class="download" href="cards/png/11-xhs-group.png" download>download group card</a>
+      <a class="download" href="cards/09-workflow-modes.svg" download>download SVG</a>
+      <a class="download" href="social-card.png" download>download banner</a>
+      <a class="download" href="xhs-group-qr.png" download>download XHS QR</a>
+    </p>
+
+    <div class="community-invite">
+      <div>
+        <h3>Xiaohongshu discussion group</h3>
+        <p>
+          Scan this code in Xiaohongshu to join the 0xAF RE Agent discussion group for
+          reverse-engineering tasks, provider behavior, workflow feedback, and artifact triage.
+        </p>
+        <p class="muted">二维码有效期至 2026-08-25。</p>
+      </div>
+      <a class="qr-link" href="xhs-group-qr.png" download>
+        <img src="xhs-group-qr-crop.png" alt="0xAF RE Agent Xiaohongshu group QR code">
+      </a>
+    </div>
   </div>
 </section>
 
@@ -552,8 +620,9 @@
     <p>
       Project-local workflows live in <code class="inline">skills/&lt;name&gt;/SKILL.md</code>.
       They are loaded at startup, summarized into the system prompt, exposed as tools, and can
-      be forced for a single turn. Four ship: a CTF first pass, an Android APK + Frida
-      workflow, native pwn/RE, and web/WASM crypto.
+      be forced for a single turn. The checkout now ships a broader RE set: CTF first pass,
+      APK/Frida, native pwn/RE, web/WASM crypto, radare2, Ghidra, JADX, Unicorn, unidbg,
+      and imported local playbooks.
     </p>
     <pre class="block">/skills
 /skill android-apk-frida inspect this APK and propose hooks</pre>
@@ -701,7 +770,7 @@ go install github.com/overkazaf/re-agent/cmd/0xaf@latest
 <section id="verify">
   <div class="wrap">
     <p class="label">verification</p>
-    <h2>Nine test packages, and a startup you can measure.</h2>
+    <h2>Ten test packages, and a startup you can measure.</h2>
     <p>
       The tests pin the parts that are easy to break silently: the context-budget invariant, the
       plan tracker's no-op suppression, the CLI task-table binding rules, the approval matrix,
@@ -711,8 +780,8 @@ go install github.com/overkazaf/re-agent/cmd/0xaf@latest
     <figure class="capture">
       <div class="capture__bar"><span class="dot" aria-hidden="true"></span>go vet · go test · build · startup</div>
       <div class="capture__scroll">
-        <svg role="img" style="width:100%;height:auto;display:block" aria-label="Terminal output: go vet followed by go test across nine packages, all reporting ok with timings; the 6.7 megabyte 0xaf binary listed; and fifty consecutive runs of 0xaf --welcome completing in 0.335 seconds of real time." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 440" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
-<title>Terminal output: go vet followed by go test across nine packages, all reporting ok with timings; the 6.7 megabyte 0xaf binary listed; and fifty consecutive runs of 0xaf --welcome completing in 0.335 seconds of real time.</title>
+        <svg role="img" style="width:100%;height:auto;display:block" aria-label="Terminal output: go vet followed by go test across the suite, all reporting ok with timings; the 6.7 megabyte 0xaf binary listed; and fifty consecutive runs of 0xaf --welcome completing in 0.335 seconds of real time." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 872 440" font-family='ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace' font-size="13.5">
+<title>Terminal output: go vet followed by go test across the suite, all reporting ok with timings; the 6.7 megabyte 0xaf binary listed; and fifty consecutive runs of 0xaf --welcome completing in 0.335 seconds of real time.</title>
 <rect width="100%" height="100%" rx="10" fill="#0b0f14"/>
 <rect x="0.5" y="0.5" width="99.9%" height="99.5%" rx="10" fill="none" stroke="#1e2936"/>
 <text x="16" y="30.1" fill="#64748b" font-size="12">go vet · go test · build · startup</text>

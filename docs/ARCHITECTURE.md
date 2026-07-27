@@ -40,12 +40,13 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
 | `internal/skills` | Loads `skills/<name>/SKILL.md` (on-disk wins, embedded fallback), builds the system-prompt catalog. | `assets`, `util` |
+| `internal/workflow` | Explicit `off` / `auto` / `specialist` / `caveman` prompt shaping for authorized RE workflows. | `types` |
 | `internal/tools` | The 24-tool built-in registry, the subprocess runner (`process.go`), the output-spill budget (`output.go`). | `knowledge`, `plan`, `security`, `skills`, `types`, `util` |
 | `internal/mcp` | stdio JSON-RPC 2.0 client (`client.go`) and the wrapper that turns server tools into `types.Tool` (`tools.go`). | `auth`, `tools`, `types` |
 | `internal/providers` | The five adapters, the CLI JSONL stream normalizer (`stream.go`), usage extraction. | `auth`, `config`, `types`, `util` |
 | `internal/core` | The loop, `LoopEvent`, context budgeting, the append-only session, the `!` shell escape. | `plan`, `security`, `tools`, `types`, `util` |
 | `internal/ui` | Theme + width math, the live pane, the HUD, the dataflow diagram, trace lines, plan box, markdown, palette, splash. | `auth`, `core`, `plan`, `types` |
-| `internal/app` | Argument parsing, the REPL, slash commands, the raw-mode line editor, one-shot `--print` mode. | everything above |
+| `internal/app` | Argument parsing, the REPL, slash commands, the queued prompt controller, the raw-mode line editor, one-shot `--print` mode. | everything above |
 
 ### Why the arrows point this way
 
@@ -113,6 +114,7 @@ graph TD
     assets["assets<br/>embedded prompt/skills"]
     skills["skills"]
     knowledge["knowledge"]
+    workflow["workflow<br/>RE prompt shaping"]
   end
 
   subgraph Leaves
@@ -123,6 +125,7 @@ graph TD
   main --> app
   app --> core & providers & toolsPkg & mcp & ui & security
   app --> config & auth & skills & knowledge & assets
+  app --> workflow
 
   core --> toolsPkg & security & planPkg
   toolsPkg --> security & planPkg & skills & knowledge
@@ -130,6 +133,7 @@ graph TD
   providers --> auth & config
   ui --> core & planPkg & auth
   skills --> assets
+  workflow --> types
   knowledge --> assets
 
   core & providers & toolsPkg & ui & security & planPkg & config & auth --> types
@@ -1035,6 +1039,47 @@ skill in a checkout needs no rebuild; shipping a new built-in one does, since
 `//go:embed embedded/prompts/system.md embedded/skills` is baked in at compile
 time.
 
+### Add or tune a workflow mode
+
+Workflow modes live in `internal/workflow`. They are explicit: empty / `off`
+returns the user's prompt unchanged. `auto` checks the pinned provider, planner,
+and executor config for GPT Cyber / CVP-style markers and resolves to
+`specialist` when found, otherwise to `caveman`. `specialist` asks the model to
+plan then run authorized RE work through the existing skills and local tools.
+`caveman` asks for smaller local evidence packets and explicitly forbids
+translation, ciphering, euphemism, or prompt laundering as a policy bypass.
+
+`app.ParseArgs` accepts `--workflow`, `/workflow` changes it at runtime, and
+both the REPL and one-shot path call `workflow.WrapPrompt` immediately before
+`AgentLoop.Run`.
+
+### Change models at runtime
+
+Provider selection and model selection are separate. `--planner`, `--executor`,
+`/planner`, `/executor`, and `/agent` choose the route; `--model provider=model`
+and `/model <provider|planner|executor|active> <model>` override only the
+provider's `Model` field for the current process.
+
+`config.SetProviderModel` is the single mutation point. HTTP providers read the
+new model from the request body. CLI providers record it for UI/session
+attribution and can pass it through argv: custom configs use `{model}`, while
+the built-in `codex` and `claude` routes get a `--model` flag inserted or
+updated.
+
+### Queue prompts while a turn runs
+
+`internal/app/queue.go` is an in-memory FIFO for prompts that have not run yet.
+The normal REPL path drains it after a successful turn. While the live pane is
+running, `liveInputController` puts stdin in raw mode, captures a line without
+terminal echo, and either queues it as the next prompt or handles the safe
+control commands `/queue`, `/tasks`, and `/model`. Approval prompts pause that
+controller and restore the terminal first, so a `y`/`n` decision cannot be
+swallowed by background input capture.
+
+`/tasks collapse|expand|auto|toggle` changes `State.PlanDisplay`, which is
+copied into `ui.LivePaneOptions` and then into `HudModel.PlanDisplay`; terminal
+height still wins if the user asks for an expanded list that cannot fit.
+
 ### Change the palette or add a theme
 
 Everything colour lives in `internal/ui/theme.go`. A `palette` is 11 `tone`s
@@ -1133,7 +1178,7 @@ shapes (`internal/util/util.go:20`).
 
 ## 15. Testing
 
-`make test` → `go test ./...`. Nine packages carry tests; no network, no tmux,
+`make test` → `go test ./...`. Ten packages carry tests; no network, no tmux,
 no API keys, no TTY required. `make vet` runs `go vet ./...`.
 
 | Package | Tests | What is actually pinned |
@@ -1147,10 +1192,11 @@ no API keys, no TTY required. `make vet` runs `go vet ./...`.
 | `internal/security` | 10 | concern detection, **whole-word network matching** (so `concat` is not `nc`), path/write validation, the full mode × tier matrix, **concerns outrank an allow override**, `always`/`never` memory |
 | `internal/plan` | 5 | no-op suppression, timing carry-over, sanitize/clamp, control-character stripping, counts |
 | `internal/tools` | 16 | registry completeness, workspace escape refused, `--write` enforced, decode/carve/find-bytes/triage/entropy behaviour, `update_plan` publishing through `ToolContext`, frida templates, command exit capture and policy enforcement, **`SpillIfLarge` writes an artifact** |
-| `internal/config` | 4 | partial-block merge over defaults, defaults with no file, **`SetReasoningEffort` rewriting CLI argv per tool**, key resolution order |
+| `internal/config` | 6 | partial-block merge over defaults, defaults with no file, **`SetReasoningEffort` and `SetProviderModel` rewriting CLI argv per tool**, key resolution order |
 | `internal/knowledge` | 10 | answer parsing, invented-citation flagging, aliases/bullets, raw fallback, markdown links are not citations, byte-budget packing, prompt construction, ranking |
-| `internal/ui` | 20 | **the width and height contract** across a width × rows matrix, plan-row collapse, bounded plan box, sparkline, trace shapes, **trace plan transitions only**, flow diagram fits and reacts, **`ComposePane` keeps the HUD floor**, markdown, completions, palette width, shell stream buffering, formatting |
-| `internal/app` | 2 | `layout` newline + soft-wrap accounting (the editor's half of the redraw contract), `commonPrefix` |
+| `internal/workflow` | 5 | default-off behaviour, auto choosing specialist vs caveman, and both prompt wrappers |
+| `internal/ui` | 22 | **the width and height contract** across a width × rows matrix, plan-row collapse and display mode, bounded plan box, sparkline, trace shapes, **trace plan transitions only**, flow diagram fits and reacts, **`ComposePane` keeps the HUD floor**, markdown, completions, palette width, shell stream buffering, formatting |
+| `internal/app` | 13 | `layout` newline + soft-wrap accounting (the editor's half of the redraw contract), `commonPrefix`, frame redraw, `--workflow` / `--model` parsing, queued task edit/cancel |
 
 Useful invocations:
 

@@ -93,6 +93,14 @@ type HudRoute struct {
 	Active string
 }
 
+type PlanDisplayMode string
+
+const (
+	PlanDisplayAuto      PlanDisplayMode = "auto"
+	PlanDisplayCollapsed PlanDisplayMode = "collapsed"
+	PlanDisplayExpanded  PlanDisplayMode = "expanded"
+)
+
 type HudModel struct {
 	// Label is the route label used when no dual-model Route is supplied.
 	Label string
@@ -108,6 +116,11 @@ type HudModel struct {
 	Spark []float64
 	Route *HudRoute
 	Plan  *types.PlanSnapshot
+	// PlanDisplay lets the operator explicitly fold or expand the task list
+	// while a turn is running. The height budget still wins.
+	PlanDisplay PlanDisplayMode
+	QueueCount  int
+	QueueDraft  string
 	// Thinking is raw streamed reasoning; the HUD wraps and tails it.
 	Thinking       string
 	ThinkingWindow int
@@ -686,6 +699,30 @@ func statusRow(model HudModel, inner int) string {
 	return C.Bold(C.Accent(Truncate(route.Plain, inner)))
 }
 
+func queueRow(model HudModel, inner int) string {
+	if model.QueueCount <= 0 && strings.TrimSpace(model.QueueDraft) == "" {
+		return ""
+	}
+	parts := []string{C.Faint("queue")}
+	if model.QueueCount > 0 {
+		parts = append(parts, C.Violet(fmt.Sprintf("%d pending", model.QueueCount)))
+	} else {
+		parts = append(parts, C.Violet("capturing"))
+	}
+	if draft := strings.TrimSpace(model.QueueDraft); draft != "" {
+		room := inner - 16
+		if room < 4 {
+			room = 4
+		}
+		parts = append(parts, C.Rule("·"), C.Muted(Truncate(draft, room)))
+	}
+	joined := strings.Join(parts, " ")
+	if DisplayWidth(joined) <= inner {
+		return joined
+	}
+	return C.Faint(Truncate(StripAnsi(joined), inner))
+}
+
 // compactStatusRow is the narrow fallback: the whole right column on one line,
 // in the same order. The clock is laid down first and the phase label is sized
 // from what is left, so a long tool invocation cannot crowd out the elapsed
@@ -768,6 +805,9 @@ func build(model HudModel, width int, options buildOptions) []string {
 	head = append(head, chip(HudTitle, C.Bold(C.Accent(HudTitle))))
 
 	lines := []string{BoxTop(width, head), BoxRow(statusRow(model, inner), width)}
+	if row := queueRow(model, inner); row != "" {
+		lines = append(lines, BoxRow(row, width))
+	}
 
 	if options.note && model.Plan != nil && model.Plan.Note != "" {
 		lines = append(lines, BoxRow(C.Faint(Truncate(model.Plan.Note, inner)), width))
@@ -836,6 +876,12 @@ func RenderHud(model HudModel) []string {
 	}
 	options := buildOptions{
 		thinkWindow: thinkWindow, collapseAfter: defaultCollapse, telemetryLimit: 8, note: true,
+	}
+	switch model.PlanDisplay {
+	case PlanDisplayCollapsed:
+		options.collapseAfter = 1
+	case PlanDisplayExpanded:
+		options.collapseAfter = math.MaxInt32 / 4
 	}
 	body := build(model, width, options)
 	for len(body) > maxRows && options.thinkWindow > 0 {

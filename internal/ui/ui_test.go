@@ -121,6 +121,32 @@ func TestPlanRowsCollapseButKeepTheActiveStep(t *testing.T) {
 	}
 }
 
+func TestHudPlanDisplayMode(t *testing.T) {
+	var steps []types.PlanStep
+	for index := 0; index < 6; index++ {
+		steps = append(steps, types.PlanStep{Text: "done step", Status: types.StepCompleted})
+	}
+	steps = append(steps, types.PlanStep{Text: "current step", Status: types.StepInProgress})
+	steps = append(steps, types.PlanStep{Text: "later step", Status: types.StepPending})
+	plan := &types.PlanSnapshot{Source: "test", Steps: steps}
+
+	collapsed := strings.Join(hudFits(t, HudModel{
+		Label: "codex", Phase: "working", Frame: "⠹", Width: 100, MaxRows: 20,
+		Plan: plan, PlanDisplay: PlanDisplayCollapsed,
+	}), "\n")
+	if !strings.Contains(collapsed, "current step") || strings.Contains(collapsed, "later step") {
+		t.Fatalf("collapsed plan should keep active row and hide tail:\n%s", collapsed)
+	}
+
+	expanded := strings.Join(hudFits(t, HudModel{
+		Label: "codex", Phase: "working", Frame: "⠹", Width: 100, MaxRows: 20,
+		Plan: plan, PlanDisplay: PlanDisplayExpanded,
+	}), "\n")
+	if !strings.Contains(expanded, "later step") {
+		t.Fatalf("expanded plan should show pending tail:\n%s", expanded)
+	}
+}
+
 func TestRenderPlanBoxIsBounded(t *testing.T) {
 	lines := RenderPlan(samplePlan(), RenderPlanOptions{Width: 60})
 	for _, line := range lines {

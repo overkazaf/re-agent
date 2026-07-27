@@ -20,6 +20,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
 // State is everything one session needs; the REPL mutates it in place as the
@@ -37,6 +38,9 @@ type State struct {
 	Flow        ui.VizMode
 	Splash      *ui.SplashContext
 	Providers   map[string]types.Provider
+	Workflow    workflow.Mode
+	Queue       *taskQueue
+	PlanDisplay ui.PlanDisplayMode
 	editor      *Editor
 }
 
@@ -75,6 +79,13 @@ func Run(argv []string) error {
 				config.SetReasoningEffort(provider, args.Effort)
 			}
 		}
+	}
+	for _, override := range args.Models {
+		provider, ok := agentConfig.Providers[override.Provider]
+		if !ok {
+			return fmt.Errorf("unknown provider for --model: %s", override.Provider)
+		}
+		config.SetProviderModel(provider, override.Model)
 	}
 
 	workspace, _ := filepath.Abs(args.Workspace)
@@ -155,7 +166,8 @@ func Run(argv []string) error {
 	if err := session.Init(map[string]any{
 		"agent": agentConfig.Name, "version": Version, "workspace": workspace,
 		"configPath": configPath, "plannerProvider": agentConfig.PlannerProvider,
-		"executorProvider": agentConfig.ExecutorProvider, "policy": policy,
+		"executorProvider": agentConfig.ExecutorProvider, "workflow": workflow.Status(args.Workflow, agentConfig, args.Provider),
+		"policy": policy,
 	}); err != nil {
 		return err
 	}
@@ -202,7 +214,8 @@ func Run(argv []string) error {
 		Config: agentConfig, Loop: loop, Session: session, Tools: registry,
 		ToolContext: toolContext, Role: orRole(args.Role, agentConfig.DefaultRole),
 		Provider: args.Provider, Skills: builtInSkills, MCP: connections,
-		Providers: providerMap,
+		Providers: providerMap, Workflow: args.Workflow, Queue: newTaskQueue(),
+		PlanDisplay: ui.PlanDisplayAuto,
 	}
 
 	if args.Smoke {
@@ -273,7 +286,8 @@ func runOneShot(state *State, prompt string, viz ui.VizMode) error {
 		}
 	}
 
-	result, err := state.Loop.Run(prompt, core.RunOptions{
+	wrappedPrompt := workflow.WrapPrompt(prompt, state.Workflow, state.Config, state.Provider)
+	result, err := state.Loop.Run(wrappedPrompt, core.RunOptions{
 		Role: state.Role, ProviderName: state.Provider, Ctx: ctx, OnEvent: onEvent,
 	})
 	if err != nil {
