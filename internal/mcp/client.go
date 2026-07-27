@@ -20,7 +20,7 @@ import (
 
 const protocolVersion = "2024-11-05"
 
-var clientInfo = map[string]any{"name": "0xaf-re-agent", "version": "0.1.0"}
+var clientInfo = map[string]any{"name": "0xaf-re-agent", "version": "0.1.1"}
 
 type ToolInfo struct {
 	Name        string         `json:"name"`

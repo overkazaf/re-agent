@@ -27,7 +27,7 @@
     <text x="103" y="89" fill="#020617" font-size="15" font-weight="700" text-anchor="middle">0xAF</text>
     <text x="146" y="89" fill="#e2e8f0" font-size="15" font-weight="700" letter-spacing="0">RE</text>
     <text x="196" y="89" fill="#334155" font-size="13">·</text>
-    <text x="214" y="89" fill="#64748b" font-size="11.5">reverse ops deck · v0.1.0</text>
+    <text x="214" y="89" fill="#64748b" font-size="11.5">reverse ops deck · v0.1.1</text>
 
     <text x="72" y="176" fill="#f1f5f9" font-size="43" font-weight="700" letter-spacing="0">A reverse engineering</text>
     <text x="72" y="228" fill="#f1f5f9" font-size="43" font-weight="700" letter-spacing="0">agent that shows</text>
@@ -43,7 +43,7 @@
     <!-- install line -->
     <rect x="72" y="446" width="516" height="42" rx="7" fill="#0b1220" stroke="#1e293b" stroke-width="1.2"/>
     <text x="90" y="472" fill="#34d399" font-size="13" font-weight="700">$</text>
-    <text x="108" y="472" fill="#cbd5e1" font-size="12.5">go install github.com/overkazaf/re-agent/cmd/0xaf@latest</text>
+    <text x="108" y="472" fill="#cbd5e1" font-size="12.5">go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1</text>
 
     <!-- stat pills -->
     <g font-size="11.5">
