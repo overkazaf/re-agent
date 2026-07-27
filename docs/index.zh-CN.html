@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>0xAF-Re - 终端里的逆向工程 Agent</title>
-<meta name="description" content="0xAF-Re 是一个逆向工程与 CTF agent：planner/executor/researcher 角色路由、24 个本地工具、workflow 模式、任务队列和实时可视化。">
+<meta name="description" content="0xAF-Re 是一个面向授权本地逆向与 CTF 的 agent：多模型角色、GPT Cyber/Claude Code CVP/Grok specialist 路由、caveman 证据包、24 个本地工具和实时可视化。">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -14,6 +14,7 @@
   <div class="wrap topbar__inner">
     <a class="brand" href="#top"><b>0xAF</b> RE</a>
     <nav aria-label="页面导航">
+      <a href="#why">特点</a>
       <a href="#use-cases">使用场景</a>
       <a href="#workflow">工作流</a>
       <a href="#routing">角色</a>
@@ -35,7 +36,8 @@
     0xAF-Re 在终端里把 <strong>planner</strong>、<strong>executor</strong>
     和 <strong>researcher</strong> 分开调度，配 24 个本地逆向/CTF 工具。
     它能做 APK、ELF、Web/WASM、Frida hook、radare2/JADX/Ghidra/Unicorn/unidbg
-    工作流，也能在当前任务运行时排队下一条任务。一个静态 Go 二进制，不需要 JS runtime。
+    工作流；有 GPT Cyber、Claude Code CVP、Grok 等更适配安全研究的 route 时体验更顺，
+    普通 provider 则可走 caveman 本地证据包。一个静态 Go 二进制，不需要 JS runtime。
   </p>
 
   <div class="cmd">
@@ -61,6 +63,43 @@
     <figcaption>运行时能看到模型请求、工具调用、任务进度、耗时和 token 信息。</figcaption>
   </figure>
 </div>
+
+<section id="why">
+  <div class="wrap">
+    <p class="label">项目特点</p>
+    <h2>为日常授权逆向里“模型太谨慎、过程不可见”的问题做改良。</h2>
+    <p>
+      0xAF-Re 源于作者日常 RE/CTF 工作里的痛点：CC 类 CLI 风控升级后，普通模型面对逆向语义也更容易过度谨慎，本地样本分析经常被打断。它不做隐写、暗语或绕策略，而是把任务限定在授权、本地、可审计范围内，再用多模型角色组合提升体验。
+    </p>
+
+    <div class="cols">
+      <article class="card">
+        <h4>多模型组合</h4>
+        <p>
+          planner 负责路线，executor 负责工具，researcher 负责资料。三个角色可以接不同 provider 或具体模型，并可在运行中用 <code class="inline">/planner</code>、<code class="inline">/executor</code>、<code class="inline">/researcher</code>、<code class="inline">/model</code> 切换。
+        </p>
+      </article>
+      <article class="card">
+        <h4>专用订阅加成</h4>
+        <p>
+          如果你有 GPT Cyber、Claude Code CVP、Grok 或类似更适配安全研究/逆向的 route，<code class="inline">/workflow auto</code> 可以走 specialist 路径，规划和工具推进会更顺。
+        </p>
+      </article>
+      <article class="card">
+        <h4>普通模型也能跑</h4>
+        <p>
+          没有 specialist route 时，caveman 会把任务拆成 planner 全局视图和 executor 本地证据包。executor 只拿收窄后的只读工具，专注文件类型、字符串、熵、导入、符号和偏移等事实。
+        </p>
+      </article>
+      <article class="card">
+        <h4>后续可评测</h4>
+        <p>
+          计划加入本地模型和具体评测样例：同一个 artifact、同一套 workflow、不同 provider，对比完成率、证据质量、耗时和人工修正量，用结果推动迭代。
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
 
 <section id="use-cases">
   <div class="wrap">

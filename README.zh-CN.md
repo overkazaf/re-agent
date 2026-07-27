@@ -14,6 +14,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 ## 目录
 
 - [概览](#概览)
+- [项目动机](#项目动机)
 - [安装](#安装)
 - [快速开始](#快速开始)
 - [基础 Demos](#基础-demos)
@@ -31,6 +32,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 | 中文 | English |
 | --- | --- |
 | [概览](#概览) | [Overview](README.md#overview) |
+| [项目动机](#项目动机) | [Project Motivation](README.md#project-motivation) |
 | [安装](#安装) | [Install](README.md#install) |
 | [快速开始](#快速开始) | [Quick Start](README.md#quick-start) |
 | [基础 Demos](#基础-demos) | [Basic Demos](README.md#basic-demos) |
@@ -51,6 +53,15 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。图形化概览见
 [中文架构图](docs/diagrams/index.zh-CN.html)。
+
+## 项目动机
+
+0xAF-Re 源于作者日常授权 RE/CTF 工作里的痛点：CC 类 CLI 风控升级后，普通模型面对逆向语义也更容易过度谨慎，本地样本分析经常被打断。这个项目不做隐写、暗语或绕策略，而是把工作限定在授权、本地、可审计范围内，再通过角色拆分和多模型组合改善体验。
+
+- **模型组合:** planner 负责路线，executor 负责工具，researcher 负责背景资料；三个角色可以接不同模型。
+- **专用订阅加成:** 如果有 GPT Cyber、Claude Code CVP、Grok 或类似更适配安全研究/逆向的 route，`workflow auto` 会更顺。
+- **普通 provider 也能跑:** caveman 模式把任务收窄成本地证据包，让谨慎的 executor 只收集文件事实。
+- **后续计划:** 加入本地模型和可复现评测样例，用样例结果衡量不同 provider/workflow 的效果并迭代。
 
 ## 安装
 

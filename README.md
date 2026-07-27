@@ -15,6 +15,7 @@ and a live view of each turn in one static Go binary.
 ## Table of Contents
 
 - [Overview](#overview)
+- [Project Motivation](#project-motivation)
 - [Install](#install)
 - [Quick Start](#quick-start)
 - [Basic Demos](#basic-demos)
@@ -32,6 +33,7 @@ The English and Chinese READMEs keep the same structure for quick switching.
 | English | 中文 |
 | --- | --- |
 | [Overview](#overview) | [概览](README.zh-CN.md#概览) |
+| [Project Motivation](#project-motivation) | [项目动机](README.zh-CN.md#项目动机) |
 | [Install](#install) | [安装](README.zh-CN.md#安装) |
 | [Quick Start](#quick-start) | [快速开始](README.zh-CN.md#快速开始) |
 | [Basic Demos](#basic-demos) | [基础 Demos](README.zh-CN.md#基础-demos) |
@@ -57,6 +59,23 @@ The English and Chinese READMEs keep the same structure for quick switching.
 
 For the full design, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the
 visual overview, see [the architecture diagrams](docs/diagrams/).
+
+## Project Motivation
+
+0xAF-Re grew out of daily authorized RE/CTF work where coding-agent risk
+controls tightened and general models became more cautious around
+reverse-engineering language. The goal is not to hide intent. The agent keeps
+work local, authorized, and auditable, then improves the experience by splitting
+roles and composing models.
+
+- **Model composition:** use one model for planning, another for tool execution,
+  and a researcher role for background context.
+- **Specialist routes:** GPT Cyber, Claude Code CVP, Grok, or similar
+  security-research-friendly routes make `workflow auto` smoother.
+- **Ordinary-provider path:** caveman mode narrows the task into local evidence
+  packets so cautious executors can still collect file facts safely.
+- **Roadmap:** local models and reproducible benchmark cases will be added so
+  provider/workflow quality can be measured and improved over time.
 
 ## Install
 

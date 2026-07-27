@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>0xAF-Re — a reverse engineering agent for the terminal</title>
-<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent: planner/executor routing, workflow modes for cyber/CVP or caveman evidence packets, 24 local tools, and a live picture of the turn — as one static Go binary.">
+<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent built for authorized local work: multi-model roles, cyber/CVP specialist routes, caveman evidence packets, 24 local tools, and a live picture of each turn.">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -14,6 +14,7 @@
   <div class="wrap topbar__inner">
     <a class="brand" href="#top"><b>0xAF</b> RE</a>
     <nav aria-label="Sections">
+      <a href="#why">why</a>
       <a href="#use-cases">use cases</a>
       <a href="#turn">the turn</a>
       <a href="#routing">routing</a>
@@ -36,8 +37,9 @@
   <p class="hero__lede">
     0xAF-Re drives a <strong>planner model</strong> and an <strong>executor model</strong> over
     24 local tools — triage, entropy, carving, symbols, APK inspection, Frida scaffolds, external RE tool wrappers —
-    plus workflow modes that route cyber/CVP subscriptions directly, break ordinary-provider work into local
-    evidence packets, and queue your next prompt while the current turn runs. It draws the turn while it runs, so you can see where the time went and stop it when it goes
+    plus workflow modes that route GPT Cyber, Claude Code CVP, Grok, or similar specialist subscriptions directly,
+    break ordinary-provider work into local evidence packets, and queue your next prompt while the current turn runs.
+    It draws the turn while it runs, so you can see where the time went and stop it when it goes
     somewhere useless. One static binary. No runtime to install.
   </p>
 
@@ -90,14 +92,40 @@
 <section id="why">
   <div class="wrap">
     <p class="label">why it is built this way</p>
-    <h2>Local tools, and visibility.</h2>
+    <h2>Built after ordinary coding agents got less useful for RE.</h2>
     <p>
-      Reverse engineering is a long conversation with a binary. Two things make an agent useful
-      for it: tools that run on your machine against the real artifact, and enough visibility
-      that you trust what came back. Everything else in this project follows from those two.
+      The project started from daily authorized RE/CTF work where CLI risk controls tightened
+      and general models became more cautious around reverse-engineering language. 0xAF-Re does
+      not hide intent. It keeps work local, authorized, and auditable, then composes models so
+      each one handles the part it is good at.
     </p>
 
     <div class="cols">
+      <article class="card">
+        <h4>Model composition</h4>
+        <p>
+          A planner reasons about the target, an executor drives local tools, and a researcher
+          gathers background context. Each role can use a different provider or model, switched
+          live with <code class="inline">/planner</code>, <code class="inline">/executor</code>,
+          <code class="inline">/researcher</code>, and <code class="inline">/model</code>.
+        </p>
+      </article>
+      <article class="card">
+        <h4>Specialist when available</h4>
+        <p>
+          If you have GPT Cyber, Claude Code CVP, Grok, or a similar route that is tuned for
+          security research, <code class="inline">/workflow auto</code> can take the specialist
+          path and keep planning plus tool work in one smoother loop.
+        </p>
+      </article>
+      <article class="card">
+        <h4>Caveman for ordinary models</h4>
+        <p>
+          Without a specialist route, caveman mode splits the task into a full planner view and
+          a narrow executor packet. The executor sees local evidence requests, not the whole
+          objective, and uses a read-only toolset for file facts.
+        </p>
+      </article>
       <article class="card">
         <h4>One binary</h4>
         <p>
@@ -107,16 +135,11 @@
         </p>
       </article>
       <article class="card">
-        <h4>Two seats, one loop</h4>
+        <h4>Roadmap with measurements</h4>
         <p>
-          A planner reasons about the target; an executor drives the tools. Neither seat is
-          bound to a vendor — any of the eight providers can take either one. The default is
-          your local <code class="inline">codex</code> and <code class="inline">claude</code>
-          CLIs in tmux because it reuses logins you already have, but
-          <code class="inline">grok-build</code> is a first-class CLI provider too, and the
-          seats mix freely: a local CLI planning while a direct API executes, or the reverse.
-          Swap either one mid-run with <code class="inline">/planner</code> or
-          <code class="inline">/executor</code> — no restart, no config edit.
+          Local model routes and concrete evaluation samples are planned so the agent can be
+          measured: same artifact, same workflow, different provider. That gives the project a
+          practical way to improve instead of relying on anecdotes.
         </p>
       </article>
       <article class="card">
