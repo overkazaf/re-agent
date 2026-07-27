@@ -38,6 +38,19 @@ func TestParseArgsModelOverride(t *testing.T) {
 	}
 }
 
+func TestParseArgsVersion(t *testing.T) {
+	args, err := ParseArgs([]string{"--version"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !args.ShowVersion {
+		t.Fatalf("--version was not parsed")
+	}
+	if args.Prompt != "" {
+		t.Fatalf("--version became a prompt: %q", args.Prompt)
+	}
+}
+
 func TestParseArgsRejectsMalformedModelOverride(t *testing.T) {
 	for _, argv := range [][]string{
 		{"--model", "deepseek"},

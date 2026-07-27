@@ -9,13 +9,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
 	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
-const Version = "0.1.0"
+const Version = buildinfo.Version
 
 type authCommand struct {
 	Action   string // login | status | logout
@@ -28,19 +29,20 @@ type modelOverride struct {
 }
 
 type Args struct {
-	Config     string
-	Workspace  string
-	SessionDir string
-	Role       types.AgentRole
-	Provider   string
-	Planner    string
-	Executor   string
-	Prompt     string
-	Print      bool
-	Smoke      bool
-	Welcome    bool
-	Workflow   workflow.Mode
-	Models     []modelOverride
+	Config      string
+	Workspace   string
+	SessionDir  string
+	Role        types.AgentRole
+	Provider    string
+	Planner     string
+	Executor    string
+	Prompt      string
+	Print       bool
+	Smoke       bool
+	Welcome     bool
+	ShowVersion bool
+	Workflow    workflow.Mode
+	Models      []modelOverride
 
 	AllowWrites    bool
 	AllowNetwork   bool
@@ -160,6 +162,8 @@ func ParseArgs(argv []string) (Args, error) {
 			args.Smoke = true
 		case "--welcome", "welcome":
 			args.Welcome = true
+		case "--version", "version":
+			args.ShowVersion = true
 		case "--write":
 			args.AllowWrites = true
 		case "--allow-network":

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/overkazaf/re-agent/internal/auth"
+	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/types"
 )
 
@@ -45,6 +46,7 @@ type SplashContext struct {
 	Policy      *types.ExecutionPolicy
 	SessionFile string
 	Version     string
+	Build       buildinfo.Info
 	Tools       []types.Tool
 	System      SystemInfo
 	Workspace   WorkspaceInfo
@@ -194,6 +196,7 @@ func RenderPanel(ctx SplashContext) []string {
 
 	out := []string{"  " + C.Rule("┌─") + " " + C.Bold(C.Accent("SYSTEM"))}
 	out = append(out, branch(label("runtime")+C.Text(ctx.System.Runtime)+" "+C.Rule("·")+" "+C.Muted(ctx.System.Platform)))
+	out = append(out, branch(label("commit")+commitText(ctx.Build)))
 	tmux := C.OK(ctx.System.Tmux)
 	if ctx.System.Tmux == "missing" {
 		tmux = C.Warn("missing (direct fallback)")
@@ -269,6 +272,21 @@ func RenderPanel(ctx SplashContext) []string {
 	out = append(out, "  "+C.Rule("└─")+" "+C.Faint("policy")+" "+flags+" "+C.Rule("·")+" "+
 		C.Faint("log")+" "+C.Faint(ElidePath(ctx.SessionFile, 24)))
 	return out
+}
+
+func commitText(info buildinfo.Info) string {
+	commit := buildinfo.ShortCommit(info.Commit)
+	if commit == "" {
+		commit = "unknown"
+	}
+	text := C.Text(commit)
+	if info.Modified {
+		text += " " + C.Rule("·") + " " + C.Warn("dirty")
+	}
+	if info.ModuleVersion != "" && info.ModuleVersion != "(devel)" {
+		text += " " + C.Rule("·") + " " + C.Faint(info.ModuleVersion)
+	}
+	return text
 }
 
 func flagText(name string, enabled bool) string {

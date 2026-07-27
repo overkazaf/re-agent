@@ -13,6 +13,7 @@ single static Go binary with no runtime to install.
 
 ```bash
 go install github.com/overkazaf/re-agent/cmd/0xaf@latest
+0xaf --version          # version, commit, module version
 0xaf --welcome          # guided first-run demos
 0xaf --workspace ./ctf  # open a workspace and start working
 ```

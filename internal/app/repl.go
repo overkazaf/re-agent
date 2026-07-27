@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/overkazaf/re-agent/internal/auth"
+	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
@@ -35,7 +36,7 @@ func repl(state *State) error {
 
 	splash := ui.SplashContext{
 		Config: state.Config, Policy: state.ToolContext.Policy, SessionFile: state.Session.File,
-		Version: Version, Tools: state.Tools,
+		Version: buildinfo.DisplayVersion(), Build: buildinfo.Current(), Tools: state.Tools,
 		System: ui.ProbeSystem(), Workspace: ui.ProbeWorkspace(state.ToolContext.Workspace),
 	}
 	splash.Auth = ui.PlaySplash(splash, authProbe)
@@ -645,8 +646,11 @@ func (c *liveInputController) handleLiveCommand(line string) error {
 		return handleTasksCommand(arg, c.state, c.pane)
 	case "/model":
 		return handleModelCommand(arg, c.state, c.pane)
+	case "/version":
+		emitNotice(c.pane, buildinfo.VersionReport())
+		return nil
 	default:
-		return fmt.Errorf("during a turn use /queue, /tasks, or /model; other commands run at the normal prompt")
+		return fmt.Errorf("during a turn use /queue, /tasks, /model, or /version; other commands run at the normal prompt")
 	}
 }
 

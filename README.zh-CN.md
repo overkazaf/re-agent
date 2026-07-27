@@ -12,6 +12,7 @@
 
 ```bash
 go install github.com/overkazaf/re-agent/cmd/0xaf@latest
+0xaf --version           # 查看版本、commit、module version
 0xaf --welcome           # 引导式首次运行示例
 0xaf --workspace ./ctf   # 打开工作区开始干活
 ```

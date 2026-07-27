@@ -12,6 +12,7 @@ import (
 
 	"github.com/overkazaf/re-agent/internal/assets"
 	"github.com/overkazaf/re-agent/internal/auth"
+	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/mcp"
@@ -48,6 +49,10 @@ func Run(argv []string) error {
 	args, err := ParseArgs(argv)
 	if err != nil {
 		return err
+	}
+	if args.ShowVersion {
+		fmt.Println(buildinfo.VersionReport())
+		return nil
 	}
 
 	// Theme first: everything rendered afterwards (banner, errors) uses it.
@@ -112,6 +117,7 @@ func Run(argv []string) error {
 
 	builtInSkills := skills.Load()
 	systemPrompt := assets.SystemPrompt() + skills.SystemPrompt(builtInSkills)
+	build := buildinfo.Current()
 
 	policy := &types.ExecutionPolicy{
 		AllowWrites:        args.AllowWrites,
@@ -164,7 +170,8 @@ func Run(argv []string) error {
 
 	session := core.NewSession(sessionDir, "0xaf")
 	if err := session.Init(map[string]any{
-		"agent": agentConfig.Name, "version": Version, "workspace": workspace,
+		"agent": agentConfig.Name, "version": build.Version, "commit": build.Commit,
+		"moduleVersion": build.ModuleVersion, "workspace": workspace,
 		"configPath": configPath, "plannerProvider": agentConfig.PlannerProvider,
 		"executorProvider": agentConfig.ExecutorProvider, "workflow": workflow.Status(args.Workflow, agentConfig, args.Provider),
 		"policy": policy,

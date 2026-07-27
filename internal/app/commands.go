@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/overkazaf/re-agent/internal/auth"
+	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/knowledge"
@@ -36,6 +37,9 @@ func handleCommand(line string, state *State) error {
 		return nil
 	case "/help":
 		fmt.Print(ui.HelpText())
+		return nil
+	case "/version":
+		fmt.Println(buildinfo.VersionReport())
 		return nil
 	case "/theme":
 		if arg == "" {
@@ -555,7 +559,7 @@ func redrawSplash(state *State) string {
 	if state.Splash != nil {
 		return ui.RenderSplash(*state.Splash)
 	}
-	return ui.Banner(state.Config, state.Session.File, state.ToolContext.Policy, Version)
+	return ui.Banner(state.Config, state.Session.File, state.ToolContext.Policy, buildinfo.DisplayVersion())
 }
 
 func mcpRows(state *State) []ui.MCPRow {
