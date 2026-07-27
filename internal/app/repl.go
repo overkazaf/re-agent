@@ -19,7 +19,6 @@ import (
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
-	"github.com/overkazaf/re-agent/internal/workflow"
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
@@ -196,6 +195,11 @@ func runTurn(state *State, line string) bool {
 		if event.Type == "wire" && event.Phase == "recv" && event.Ms > slowestMs {
 			slowestMs = event.Ms
 		}
+		if event.Type == "wire" && event.Phase == "send" && event.Provider != "" {
+			pane.SetRoute(&ui.HudRoute{
+				Planner: state.Config.PlannerProvider, Executor: state.Config.ExecutorProvider, Active: event.Provider,
+			})
+		}
 		if traceOn {
 			for _, traced := range ui.TraceEvent(event, ui.TraceOptions{
 				StartedAt: started, SlowestMs: slowestMs, PreviousPlan: previousPlan,
@@ -286,6 +290,23 @@ func runTurn(state *State, line string) bool {
 			pane.SetPhase("working")
 		}
 	}
+	onPhase := func(provider string, role types.AgentRole) {
+		if provider == "" {
+			return
+		}
+		flow.Begin(provider)
+		pane.SetRoute(&ui.HudRoute{
+			Planner: state.Config.PlannerProvider, Executor: state.Config.ExecutorProvider, Active: provider,
+		})
+		switch role {
+		case types.RolePlanner:
+			pane.SetPhase("planning")
+		case types.RoleExecutor:
+			pane.SetPhase("executing")
+		default:
+			pane.SetPhase("working")
+		}
+	}
 
 	// ^C aborts the turn (killing the provider request or its tmux task) and
 	// returns to the prompt; the REPL itself only ends on /exit or EOF.
@@ -336,9 +357,8 @@ func runTurn(state *State, line string) bool {
 		}
 	}
 
-	wrappedLine := workflow.WrapPrompt(line, state.Workflow, state.Config, state.Provider)
-	result, err := state.Loop.Run(wrappedLine, core.RunOptions{
-		Role: state.Role, ProviderName: state.Provider, Ctx: ctx, OnEvent: onEvent,
+	result, err := runWithWorkflow(state, line, workflowRunOptions{
+		Ctx: ctx, OnEvent: onEvent, OnPhase: onPhase,
 	})
 	liveInput.Stop()
 	if err != nil {

@@ -29,7 +29,7 @@
 <main id="top">
 
 <div class="wrap hero">
-  <p class="hero__eyebrow">reverse ops deck · v0.1.1 · go 1.22</p>
+  <p class="hero__eyebrow">reverse ops deck · v0.1.2 · go 1.22</p>
   <h1>会展示过程的<br>逆向工程 Agent。</h1>
   <p class="hero__lede">
     0xAF-Re 在终端里把 <strong>planner</strong>、<strong>executor</strong>
@@ -40,7 +40,7 @@
 
   <div class="cmd">
     <span class="cmd__prompt" aria-hidden="true">$</span>
-    <code id="install-cmd">go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1</code>
+    <code id="install-cmd">go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.2</code>
     <span class="caret" aria-hidden="true"></span>
     <button class="copy" type="button" data-copy="#install-cmd">复制</button>
   </div>
@@ -102,7 +102,7 @@
           <tr><td><code class="inline">off</code></td><td>默认</td><td>不改写你的 prompt</td></tr>
           <tr><td><code class="inline">auto</code></td><td>机器上可能有 GPT Cyber / CC CVP 路由</td><td>能走 specialist 就走，否则走 caveman</td></tr>
           <tr><td><code class="inline">specialist</code></td><td>有授权 cyber/CVP 类 provider</td><td>先规划，再调用 skills 和本地工具推进</td></tr>
-          <tr><td><code class="inline">caveman</code></td><td>普通 provider</td><td>拆成文件类型、字符串、熵、导入、假设和验证命令</td></tr>
+          <tr><td><code class="inline">caveman</code></td><td>普通 provider</td><td>planner -> 隔离 executor，只传本地证据包</td></tr>
         </tbody>
       </table>
     </div>
@@ -110,7 +110,9 @@
 /workflow caveman
 0xaf --workflow specialist -p "triage ./app.apk"</pre>
     <p>
-      caveman 模式不是暗语、编码或绕策略；它只把授权逆向任务拆小，优先让本地工具拿证据。
+      caveman 模式不是暗语、编码或绕策略。planner 看到完整授权任务；executor 开全新会话，
+      只拿本地 evidence packet 和收窄后的只读工具，用来收集文件类型、字符串、熵、导入/符号、
+      包结构、哈希、偏移和本地 blocker。
     </p>
   </div>
 </section>
@@ -187,7 +189,7 @@
     <p class="label">安装</p>
     <h2>四条命令跑起来。</h2>
     <pre class="block"><span class="c"># 1. 安装固定版本</span>
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.2
 
 <span class="c"># 2. 离线自检：不需要 key、网络或 CLI 登录</span>
 0xaf --smoke

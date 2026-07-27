@@ -418,6 +418,10 @@ type ProviderInput struct {
 	SessionDir string
 	Ctx        context.Context
 	OnProgress func(ProviderProgress)
+	// FreshSession asks stateful providers, such as local CLI providers with
+	// native resume enabled, to run this request without resuming their previous
+	// native conversation.
+	FreshSession bool
 }
 
 func (in ProviderInput) Context() context.Context {

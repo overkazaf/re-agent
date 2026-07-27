@@ -12,7 +12,7 @@ single static Go binary with no runtime to install.
 </p>
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.2
 0xaf --version          # version, commit, module version
 0xaf --welcome          # guided first-run demos
 0xaf --workspace ./ctf  # open a workspace and start working
@@ -316,7 +316,7 @@ you want the host to shape reverse-engineering work before it reaches the model:
 /workflow off          default: no extra workflow wrapper
 /workflow auto         use specialist if GPT Cyber / CC CVP is configured, else caveman
 /workflow specialist   plan and run directly with a cyber/CVP-style route
-/workflow caveman      split into small local evidence packets
+/workflow caveman      planner -> isolated executor with local evidence packets
 ```
 
 `specialist` is for a configured GPT Cyber, Claude Code CVP, or comparable
@@ -326,10 +326,10 @@ artifact-analysis parts.
 
 `caveman` is the fallback for ordinary providers. It is deliberately **not**
 translation, classical Chinese, ciphering, euphemism, or prompt laundering. It
-turns the task into bounded, local-first evidence packets — file type, strings,
-entropy, imports, platform-specific skill, focused hypothesis, one verification
-command — so the operator can keep solving authorized reverse tasks without
-asking the model to bypass a policy boundary.
+runs as a host-level delegation: the planner sees the authorized task and writes
+a bounded executor packet; the executor starts in a fresh provider session with
+only that packet and a narrow read-only tool surface for file type, strings,
+entropy, imports, symbols, package metadata, hashes, offsets, and local blockers.
 
 ```bash
 0xaf --workflow auto --workspace ./ctf

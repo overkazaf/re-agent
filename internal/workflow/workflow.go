@@ -1,6 +1,6 @@
-// Package workflow defines high-level RE execution modes. It deliberately
-// shapes prompts instead of changing provider internals, so the same loop,
-// tools, approvals, sessions, and UI keep working.
+// Package workflow defines high-level RE execution modes. Specialist mode is a
+// prompt contract for purpose-built routes; caveman mode is a host-level
+// planner -> isolated executor delegation with a narrow local-evidence surface.
 package workflow
 
 import (
@@ -97,7 +97,11 @@ func Status(requested Mode, config *types.AgentConfig, pinnedProvider string) st
 	if HasSpecialistProvider(config, pinnedProvider) {
 		specialist = "configured"
 	}
-	return fmt.Sprintf("workflow=%s effective=%s specialist=%s", orOff(requested), effective, specialist)
+	runner := "single-provider"
+	if effective == Caveman && pinnedProvider == "" {
+		runner = "delegated-planner-executor"
+	}
+	return fmt.Sprintf("workflow=%s effective=%s specialist=%s runner=%s", orOff(requested), effective, specialist, runner)
 }
 
 func WrapPrompt(prompt string, requested Mode, config *types.AgentConfig, pinnedProvider string) string {

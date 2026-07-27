@@ -371,24 +371,24 @@ c.rule(gap=46, width=330)
 c.para([
     "If your route is backed by GPT Cyber or CC CVP,",
     "0xAF-Re can plan and run the RE task directly.",
-    "If not, it falls back to local evidence packets.",
+    "If not, it delegates through a local evidence runner.",
 ], gap=62, size=28, lh=45)
 c.rows([
     (GREEN, "auto  ", "— detect cyber / CVP provider markers"),
     (CYAN, "specialist  ", "— plan, use skills, preserve evidence"),
-    (AMBER, "caveman  ", "— split into safe local RE contexts"),
+    (AMBER, "caveman  ", "— planner -> isolated executor packet"),
 ], gap=62, size=27, lh=78)
 c.code([
     mono("/workflow auto", CYAN, True) +
     mono("        route by provider", FAINT),
     mono("/workflow caveman", AMBER, True) +
-    mono("     local evidence packets", FAINT),
+    mono("     isolated evidence runner", FAINT),
     mono("0xaf --workflow specialist -p \"triage ./app.apk\"", CYAN),
 ], gap=70, size=23, lh=40)
 c.note([
-    "Caveman mode is not prompt laundering. It explicitly avoids",
-    "translation tricks and keeps the work bounded to authorized",
-    "local artifact analysis.",
+    "Caveman mode is not prompt laundering. The planner keeps",
+    "the full authorized task; the executor gets only a bounded",
+    "read-only local evidence packet.",
 ], gap=64)
 c.foot()
 

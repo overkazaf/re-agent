@@ -181,7 +181,7 @@ func (l *AgentLoop) Compact(providerName string, ctx context.Context) (CompactRe
 
 // pushToolResult appends a tool result, keeping the in-memory history and the
 // JSONL in step.
-func (l *AgentLoop) pushToolResult(call types.ToolCall, content []types.ContentBlock, isError bool, details any) {
+func (l *AgentLoop) pushToolResult(call types.ToolCall, content []types.ContentBlock, isError bool, details any) types.Message {
 	message := types.Message{
 		Role:       types.MessageToolResult,
 		ToolCallID: call.ID,
@@ -193,6 +193,7 @@ func (l *AgentLoop) pushToolResult(call types.ToolCall, content []types.ContentB
 	}
 	l.messages = append(l.messages, message)
 	_ = l.options.Session.AppendMessage(message)
+	return message
 }
 
 // noteInterrupted closes out an interrupted run. The marker keeps
@@ -241,6 +242,20 @@ type RunOptions struct {
 	MaxTurns     int
 	Ctx          context.Context
 	OnEvent      func(LoopEvent)
+	// Isolated sends only this run's messages to the provider while still
+	// appending the exchange to the full session transcript. Delegated workflows
+	// use this so an executor receives a bounded packet instead of the planner's
+	// full context.
+	Isolated bool
+	// SystemPrompt overrides the normal global + role prompt for this run.
+	// Empty means "use the configured prompts".
+	SystemPrompt string
+	// Tools overrides the tool list visible to the provider and callable during
+	// this run. Nil means "use the configured tools"; an empty slice means no
+	// tools.
+	Tools []types.Tool
+	// FreshSession asks stateful providers not to resume their native session.
+	FreshSession bool
 }
 
 func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, error) {
@@ -277,9 +292,22 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 	}
 	l.lastProviderName = providerName
 
+	turnTools := l.options.Tools
+	if options.Tools != nil {
+		turnTools = options.Tools
+	}
+	systemPrompt := l.systemPrompt(effectiveRole)
+	if strings.TrimSpace(options.SystemPrompt) != "" {
+		systemPrompt = strings.TrimSpace(options.SystemPrompt)
+	}
+
 	userMessage := types.UserMessage(prompt)
 	l.messages = append(l.messages, userMessage)
 	_ = l.options.Session.AppendMessage(userMessage)
+	runMessages := l.messages
+	if options.Isolated {
+		runMessages = []types.Message{userMessage}
+	}
 
 	maxTurns := options.MaxTurns
 	if maxTurns <= 0 {
@@ -306,7 +334,11 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 
 		// The transcript on disk stays complete; only the view sent upstream is
 		// trimmed to the provider's budget.
-		view := CompactHistory(l.messages, CompactionOptions{BudgetTokens: budgetFor(provider.Config())})
+		viewMessages := l.messages
+		if options.Isolated {
+			viewMessages = runMessages
+		}
+		view := CompactHistory(viewMessages, CompactionOptions{BudgetTokens: budgetFor(provider.Config())})
 		if view.DroppedMessages > 0 || view.ElidedToolResults > 0 {
 			emit(LoopEvent{
 				Type: "compaction", TokensBefore: view.TokensBefore, TokensAfter: view.TokensAfter,
@@ -322,16 +354,17 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 		emit(LoopEvent{
 			Type: "wire", Phase: "send", Provider: providerName, Model: provider.Config().Model,
 			Endpoint: DescribeEndpoint(provider.Config()), Messages: len(view.Messages),
-			Tokens: view.TokensAfter, Tools: len(l.options.Tools),
+			Tokens: view.TokensAfter, Tools: len(turnTools),
 		})
 
 		response, err := provider.Complete(types.ProviderInput{
-			System:     l.systemPrompt(effectiveRole),
-			Messages:   view.Messages,
-			Tools:      l.options.Tools,
-			Workspace:  l.options.ToolContext.Workspace,
-			SessionDir: l.options.ToolContext.SessionDir,
-			Ctx:        ctx,
+			System:       systemPrompt,
+			Messages:     view.Messages,
+			Tools:        turnTools,
+			Workspace:    l.options.ToolContext.Workspace,
+			SessionDir:   l.options.ToolContext.SessionDir,
+			Ctx:          ctx,
+			FreshSession: options.FreshSession,
 			OnProgress: func(progress types.ProviderProgress) {
 				if progress.Kind == "plan" && len(progress.Plan) > 0 {
 					l.publishPlan(progress.Plan, types.PlanUpdateMeta{Source: providerName, Note: progress.PlanNote})
@@ -377,6 +410,9 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 		}
 		l.messages = append(l.messages, assistant)
 		_ = l.options.Session.AppendMessage(assistant)
+		if options.Isolated {
+			runMessages = append(runMessages, assistant)
+		}
 
 		if len(response.ToolCalls) == 0 {
 			return finish(turns+1, false), nil
@@ -388,16 +424,22 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 		for _, call := range response.ToolCalls {
 			if interrupted || ctx.Err() != nil {
 				interrupted = true
-				l.pushToolResult(call, []types.ContentBlock{
+				message := l.pushToolResult(call, []types.ContentBlock{
 					types.TextBlock("Interrupted by operator before this tool ran."),
 				}, true, nil)
+				if options.Isolated {
+					runMessages = append(runMessages, message)
+				}
 				continue
 			}
-			tool := findTool(l.options.Tools, call.Name)
+			tool := findTool(turnTools, call.Name)
 			if tool == nil {
-				l.pushToolResult(call, []types.ContentBlock{
+				message := l.pushToolResult(call, []types.ContentBlock{
 					types.TextBlock("Tool not found: " + call.Name),
 				}, true, nil)
+				if options.Isolated {
+					runMessages = append(runMessages, message)
+				}
 				continue
 			}
 
@@ -425,13 +467,19 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					message = "Interrupted by operator."
 				}
 				emit(LoopEvent{Type: "tool_end", Name: call.Name, OK: false, Ms: types.NowMs() - startedAt, Preview: message})
-				l.pushToolResult(call, []types.ContentBlock{types.TextBlock(message)}, true, nil)
+				resultMessage := l.pushToolResult(call, []types.ContentBlock{types.TextBlock(message)}, true, nil)
+				if options.Isolated {
+					runMessages = append(runMessages, resultMessage)
+				}
 			} else {
 				emit(LoopEvent{
 					Type: "tool_end", Name: call.Name, OK: !result.IsError,
 					Ms: types.NowMs() - startedAt, Preview: previewOf(result.Content),
 				})
-				l.pushToolResult(call, result.Content, result.IsError, result.Details)
+				resultMessage := l.pushToolResult(call, result.Content, result.IsError, result.Details)
+				if options.Isolated {
+					runMessages = append(runMessages, resultMessage)
+				}
 			}
 			// A tool call that finished right as the operator hit ^C still
 			// counts: the remaining calls in this batch are the ones to skip.

@@ -11,7 +11,7 @@
 </p>
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.1
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.2
 0xaf --version           # 查看版本、commit、module version
 0xaf --welcome           # 引导式首次运行示例
 0xaf --workspace ./ctf   # 打开工作区开始干活
@@ -304,7 +304,7 @@ workflow 是显式开启的。默认 `off` 不会改写你的 prompt；只有你
 /workflow off            默认：不加额外 workflow wrapper
 /workflow auto           检测到 GPT Cyber / CC CVP 配置就走 specialist，否则走 caveman
 /workflow specialist     有 cyber/CVP 类订阅时，直接规划并跑授权逆向任务
-/workflow caveman        没有专用订阅时，拆成小的本地证据包
+/workflow caveman        planner -> 隔离 executor，只跑本地证据包
 ```
 
 `specialist` 面向 GPT Cyber、Claude Code CVP 或同类授权逆向路线：先给短计划，
@@ -312,8 +312,9 @@ workflow 是显式开启的。默认 `off` 不会改写你的 prompt；只有你
 只拒绝越界部分，继续做允许的本地 artifact 分析。
 
 `caveman` 是普通 provider 的兜底模式。它**不是**翻译成文言文、暗语、编码或其它 prompt
-laundering；它会把任务拆成有边界的本地证据包：文件类型、字符串、熵、导入/符号、平台 skill、
-聚焦假设、一个最小验证命令。这样用户能继续解决授权逆向问题，同时不要求模型绕过平台策略。
+laundering；它现在是真正的宿主级委派：planner 看到完整授权任务并生成 executor packet，
+executor 用全新的 provider session 启动，只拿这个 packet 和收窄后的只读工具面，负责文件类型、
+字符串、熵、导入/符号、包结构、哈希、偏移和本地 blocker 等证据收集。
 
 ```bash
 0xaf --workflow auto --workspace ./ctf

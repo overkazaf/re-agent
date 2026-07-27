@@ -70,7 +70,7 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 	if maxChars == 0 {
 		maxChars = 80_000
 	}
-	resuming, sessionArgs, sessionID := p.resolveSession()
+	resuming, sessionArgs, sessionID := p.resolveSession(input.FreshSession)
 	// A non-resuming turn spawns a brand new CLI session whose task ids restart
 	// at 1. Keeping the old table would let those ids collide with the previous
 	// session's steps and corrupt the plan.
@@ -222,8 +222,8 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 // the running one, and produces the extra argv needed. The session id is claimed
 // eagerly (before the CLI runs) so a mid-run failure never re-issues the same
 // `--session-id`, which the CLI rejects as "already in use".
-func (p *CLITmuxProvider) resolveSession() (resuming bool, args []string, id string) {
-	if !p.config.CLIResumeSession {
+func (p *CLITmuxProvider) resolveSession(fresh bool) (resuming bool, args []string, id string) {
+	if fresh || !p.config.CLIResumeSession {
 		return false, nil, ""
 	}
 	idArg := p.config.CLISessionIDArg

@@ -299,10 +299,7 @@ func runOneShot(state *State, prompt string, viz ui.VizMode) error {
 		}
 	}
 
-	wrappedPrompt := workflow.WrapPrompt(prompt, state.Workflow, state.Config, state.Provider)
-	result, err := state.Loop.Run(wrappedPrompt, core.RunOptions{
-		Role: state.Role, ProviderName: state.Provider, Ctx: ctx, OnEvent: onEvent,
-	})
+	result, err := runWithWorkflow(state, prompt, workflowRunOptions{Ctx: ctx, OnEvent: onEvent})
 	if err != nil {
 		return err
 	}

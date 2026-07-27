@@ -15,6 +15,8 @@ type scriptedProvider struct {
 	turn      int
 	seen      [][]types.Message
 	systems   []string
+	tools     [][]types.Tool
+	fresh     []bool
 }
 
 func (p *scriptedProvider) Name() string                  { return "scripted" }
@@ -23,6 +25,8 @@ func (p *scriptedProvider) Config() *types.ProviderConfig { return p.config }
 func (p *scriptedProvider) Complete(input types.ProviderInput) (types.ProviderResponse, error) {
 	p.seen = append(p.seen, input.Messages)
 	p.systems = append(p.systems, input.System)
+	p.tools = append(p.tools, input.Tools)
+	p.fresh = append(p.fresh, input.FreshSession)
 	index := p.turn
 	if index > len(p.responses)-1 {
 		index = len(p.responses) - 1
@@ -227,6 +231,48 @@ func TestRunAddsEffectiveRolePrompt(t *testing.T) {
 	}
 	if strings.Contains(provider.systems[0], "planner prompt") || strings.Contains(provider.systems[0], "executor prompt") {
 		t.Fatalf("wrong role prompt included: %q", provider.systems[0])
+	}
+}
+
+func TestIsolatedRunUsesOnlyCurrentPromptAndOverrides(t *testing.T) {
+	provider := &scriptedProvider{
+		config: &types.ProviderConfig{Type: types.KindMock, Model: "scripted"},
+		responses: []types.ProviderResponse{
+			{Text: "planner saw the full task"},
+			{Text: "executor collected local evidence"},
+		},
+	}
+	loop, _ := newTestLoop(t, provider, nil)
+
+	if _, err := loop.Run("full authorized CTF objective for ./chall", RunOptions{Role: types.RolePlanner}); err != nil {
+		t.Fatal(err)
+	}
+	limitedTools := []types.Tool{{Name: "file_info", Description: "identify", Risk: types.RiskRead}}
+	if _, err := loop.Run("Objective: collect local evidence about ./chall", RunOptions{
+		Role: types.RoleExecutor, Isolated: true, SystemPrompt: "neutral executor system",
+		Tools: limitedTools, FreshSession: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(provider.seen) != 2 {
+		t.Fatalf("expected two provider calls, got %d", len(provider.seen))
+	}
+	second := provider.seen[1]
+	if len(second) != 1 {
+		t.Fatalf("isolated run should send only the current prompt, got %d messages", len(second))
+	}
+	if strings.Contains(second[0].Text(), "CTF objective") {
+		t.Fatalf("isolated run leaked previous planner prompt: %q", second[0].Text())
+	}
+	if provider.systems[1] != "neutral executor system" {
+		t.Fatalf("system override not applied: %q", provider.systems[1])
+	}
+	if len(provider.tools[1]) != 1 || provider.tools[1][0].Name != "file_info" {
+		t.Fatalf("tool override not applied: %#v", provider.tools[1])
+	}
+	if !provider.fresh[1] {
+		t.Fatal("fresh session flag not forwarded")
 	}
 }
 

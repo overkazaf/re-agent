@@ -70,3 +70,82 @@ func TestWrapSpecialistPlansThenExecutes(t *testing.T) {
 		}
 	}
 }
+
+func TestShouldDelegateOnlyForImplicitCavemanRoute(t *testing.T) {
+	config := &types.AgentConfig{
+		PlannerProvider:  "codex",
+		ExecutorProvider: "claude",
+		Providers: map[string]*types.ProviderConfig{
+			"codex":  {Model: "codex-cli"},
+			"claude": {Model: "claude-code-cli"},
+		},
+	}
+	if !ShouldDelegate(Caveman, config, "", types.RoleAuto) {
+		t.Fatal("caveman auto route should delegate")
+	}
+	if !ShouldDelegate(Auto, config, "", types.RoleAuto) {
+		t.Fatal("auto without specialist should delegate through caveman")
+	}
+	if ShouldDelegate(Caveman, config, "claude", types.RoleAuto) {
+		t.Fatal("pinned provider should bypass delegation")
+	}
+	if ShouldDelegate(Caveman, config, "", types.RolePlanner) {
+		t.Fatal("explicit role should bypass delegation")
+	}
+	config.Providers["codex"].Model = "gpt-cyber-reasoner"
+	if ShouldDelegate(Auto, config, "", types.RoleAuto) {
+		t.Fatal("specialist route should not use caveman delegation")
+	}
+}
+
+func TestExtractExecutorPacketReadsFencedSection(t *testing.T) {
+	text := strings.Join([]string{
+		"PLAN:",
+		"- inspect locally",
+		"",
+		"EXECUTOR_PACKET:",
+		"```text",
+		"Objective: collect local evidence about ./chall.",
+		"Return: hashes and strings.",
+		"```",
+		"",
+		"NOTES:",
+		"- private planner notes",
+	}, "\n")
+	packet := ExtractExecutorPacket(text)
+	if !strings.Contains(packet, "Objective: collect local evidence") {
+		t.Fatalf("packet objective missing: %q", packet)
+	}
+	if strings.Contains(packet, "private planner notes") {
+		t.Fatalf("packet extraction included following section: %q", packet)
+	}
+}
+
+func TestDelegatedExecutorToolsAreReadOnlyLocalEvidenceTools(t *testing.T) {
+	available := []types.Tool{
+		{Name: "run_command", Risk: types.RiskExecute},
+		{Name: "ctf_triage", Risk: types.RiskRead},
+		{Name: "file_info", Description: "old", Risk: types.RiskRead},
+		{Name: "strings", Risk: types.RiskRead},
+		{Name: "reverse_toolkit", Risk: types.RiskExecute},
+		{Name: "update_plan", Risk: types.RiskRead},
+	}
+	selected := DelegatedExecutorTools(available)
+	names := map[string]bool{}
+	for _, tool := range selected {
+		names[tool.Name] = true
+		if tool.Name == "file_info" && tool.Description == "old" {
+			t.Fatal("selected tool description should be neutralized")
+		}
+	}
+	for _, forbidden := range []string{"run_command", "ctf_triage", "reverse_toolkit"} {
+		if names[forbidden] {
+			t.Fatalf("delegated executor exposed %s", forbidden)
+		}
+	}
+	for _, want := range []string{"file_info", "strings", "update_plan"} {
+		if !names[want] {
+			t.Fatalf("delegated executor did not expose %s", want)
+		}
+	}
+}

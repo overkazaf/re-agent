@@ -1048,11 +1048,14 @@ returns the user's prompt unchanged. `auto` checks the pinned provider, planner,
 and executor config for GPT Cyber / CVP-style markers and resolves to
 `specialist` when found, otherwise to `caveman`. `specialist` asks the model to
 plan then run authorized RE work through the existing skills and local tools.
-`caveman` asks for smaller local evidence packets and explicitly forbids
-translation, ciphering, euphemism, or prompt laundering as a policy bypass.
+`caveman` runs as a host-level planner -> isolated executor workflow: the
+planner sees the full authorized task and writes an executor packet, while the
+executor receives only that packet, a fresh provider session, and a narrowed
+read-only local-evidence tool surface. It explicitly forbids translation,
+ciphering, euphemism, or prompt laundering as a policy bypass.
 
 `app.ParseArgs` accepts `--workflow`, `/workflow` changes it at runtime, and
-both the REPL and one-shot path call `workflow.WrapPrompt` immediately before
+both the REPL and one-shot path call `app.runWithWorkflow` immediately before
 `AgentLoop.Run`.
 
 ### Change models at runtime
@@ -1196,7 +1199,7 @@ no API keys, no TTY required. `make vet` runs `go vet ./...`.
 | `internal/tools` | 16 | registry completeness, workspace escape refused, `--write` enforced, decode/carve/find-bytes/triage/entropy behaviour, `update_plan` publishing through `ToolContext`, frida templates, command exit capture and policy enforcement, **`SpillIfLarge` writes an artifact** |
 | `internal/config` | 6 | partial-block merge over defaults, defaults with no file, **`SetReasoningEffort` and `SetProviderModel` rewriting CLI argv per tool**, key resolution order |
 | `internal/knowledge` | 10 | answer parsing, invented-citation flagging, aliases/bullets, raw fallback, markdown links are not citations, byte-budget packing, prompt construction, ranking |
-| `internal/workflow` | 5 | default-off behaviour, auto choosing specialist vs caveman, and both prompt wrappers |
+| `internal/workflow` | 8 | default-off behaviour, auto choosing specialist vs caveman, prompt wrappers, delegated packet extraction, delegation gating, and narrowed executor tools |
 | `internal/ui` | 22 | **the width and height contract** across a width × rows matrix, plan-row collapse and display mode, bounded plan box, sparkline, trace shapes, **trace plan transitions only**, flow diagram fits and reacts, **`ComposePane` keeps the HUD floor**, markdown, completions, palette width, shell stream buffering, formatting |
 | `internal/app` | 13 | `layout` newline + soft-wrap accounting (the editor's half of the redraw contract), `commonPrefix`, frame redraw, `--workflow` / `--model` parsing, queued task edit/cancel |
 

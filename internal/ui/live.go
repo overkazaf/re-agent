@@ -230,6 +230,18 @@ func (p *LivePane) SetPlanDisplay(mode PlanDisplayMode) {
 	p.render()
 }
 
+func (p *LivePane) SetRoute(route *HudRoute) {
+	p.mu.Lock()
+	if route == nil {
+		p.route = nil
+	} else {
+		copy := *route
+		p.route = &copy
+	}
+	p.mu.Unlock()
+	p.render()
+}
+
 func (p *LivePane) SetQueueDraft(draft string) {
 	p.mu.Lock()
 	p.queueDraft = draft
