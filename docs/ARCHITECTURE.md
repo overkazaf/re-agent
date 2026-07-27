@@ -1,5 +1,7 @@
 # 0xAF-Re — Architecture
 
+**Language:** English | [中文](ARCHITECTURE.zh-CN.md)
+
 > Audience: someone about to extend or audit this binary. Every claim here should
 > be checkable against a file. Anchors are `path:line` against the tree as
 > committed.

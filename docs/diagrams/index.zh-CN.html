@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0xAF-Re · 架构图</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #020617;
+    color: #cbd5e1;
+    font-family: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    line-height: 1.6;
+    background-image:
+      linear-gradient(#0b1220 1px, transparent 1px),
+      linear-gradient(90deg, #0b1220 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { border-bottom: 1px solid #1e293b; padding-bottom: 28px; margin-bottom: 12px; }
+  h1 { margin: 0 0 8px; font-size: 24px; color: #f1f5f9; }
+  .sub { margin: 0; color: #64748b; font-size: 12.5px; max-width: 90ch; }
+  .topline { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; font-size: 12px; }
+  .topline a { color: #22d3ee; text-decoration: none; }
+  .topline a:hover { text-decoration: underline; }
+  nav { margin: 28px 0 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav a {
+    font-size: 11.5px; color: #94a3b8; text-decoration: none;
+    border: 1px solid #1e293b; border-radius: 999px; padding: 5px 13px;
+    background: rgba(15,23,42,0.7); transition: border-color .15s, color .15s;
+  }
+  nav a:hover { border-color: #22d3ee; color: #22d3ee; }
+  figure { margin: 56px 0 0; }
+  .fig-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .num {
+    font-size: 10px; font-weight: 700; color: #fbbf24;
+    border: 1px solid rgba(251,191,36,0.4); border-radius: 4px;
+    padding: 2px 7px; background: rgba(120,53,15,0.3);
+  }
+  h2 { margin: 0; font-size: 17px; color: #f1f5f9; font-weight: 700; }
+  figcaption { color: #64748b; font-size: 12px; margin: 0 0 16px; max-width: 82ch; }
+  .frame {
+    border: 1px solid #1e293b; border-radius: 10px; overflow-x: auto;
+    background: #020617; padding: 10px;
+  }
+  .frame img { display: block; width: 100%; height: auto; min-width: 720px; }
+  .src { margin-top: 10px; font-size: 11.5px; }
+  .src a { color: #64748b; text-decoration: none; }
+  .src a:hover { color: #22d3ee; text-decoration: underline; }
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid #1e293b; color: #475569; font-size: 11px; }
+  footer a { color: #64748b; }
+  @media (max-width: 640px) { .wrap { padding: 32px 14px 64px; } h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topline">
+    <a href="../index.zh-CN.html">&larr; 返回 0xAF-Re</a>
+    <a href="index.html">English diagrams</a>
+    <a href="../ARCHITECTURE.zh-CN.md">中文架构文档</a>
+  </div>
+
+  <header>
+    <h1>架构图</h1>
+    <p class="sub">
+      七张图说明 0xAF-Re 的真实运行方式：包分层、单轮请求、上下文预算、审批闸门、
+      实时面板、oh-my-pi 参考结构，以及两者的取舍差异。
+    </p>
+  </header>
+
+  <nav>
+    <a href="#module-graph">1 · 模块图</a>
+    <a href="#one-turn">2 · 单轮时序</a>
+    <a href="#context-budget">3 · 上下文预算</a>
+    <a href="#approval-gate">4 · 审批闸门</a>
+    <a href="#live-pane">5 · 实时面板</a>
+    <a href="#oh-my-pi">6 · oh-my-pi</a>
+    <a href="#comparison">7 · 对比</a>
+  </nav>
+
+  <figure id="module-graph">
+    <div class="fig-head"><span class="num">01</span><h2>模块依赖图</h2></div>
+    <figcaption>说明每个 internal 包的边界和导入方向。依赖向下流动，`types` 和 `util` 保持叶子层，避免循环依赖。</figcaption>
+    <div class="frame"><img src="01-module-graph.svg" alt="0xAF-Re 模块依赖图"></div>
+    <p class="src"><a href="01-module-graph.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="one-turn">
+    <div class="fig-head"><span class="num">02</span><h2>单轮请求</h2></div>
+    <figcaption>从 operator 输入到 provider 请求、assistant 回复、tool call、approval、tool result，再回到下一 turn 的完整链路。</figcaption>
+    <div class="frame"><img src="02-one-turn.svg" alt="0xAF-Re 单轮请求时序图"></div>
+    <p class="src"><a href="02-one-turn.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="context-budget">
+    <div class="fig-head"><span class="num">03</span><h2>上下文预算</h2></div>
+    <figcaption>磁盘 transcript 保留完整记录；发送给模型的上下文会压缩旧消息、摘要大输出，并保留可重新读取的 artifact 路径。</figcaption>
+    <div class="frame"><img src="03-context-budget.svg" alt="0xAF-Re 上下文预算图"></div>
+    <p class="src"><a href="03-context-budget.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="approval-gate">
+    <div class="fig-head"><span class="num">04</span><h2>审批闸门</h2></div>
+    <figcaption>模型 tool call、MCP tool 和手动 shell escape 都经过同一套 tier x mode 策略。</figcaption>
+    <div class="frame"><img src="04-approval-gate.svg" alt="0xAF-Re 审批闸门图"></div>
+    <p class="src"><a href="04-approval-gate.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="live-pane">
+    <div class="fig-head"><span class="num">05</span><h2>实时面板</h2></div>
+    <figcaption>UI 只消费 `core.LoopEvent`，展示 role、provider、phase、工具、任务进度、耗时和 token 信息。</figcaption>
+    <div class="frame"><img src="05-live-pane.svg" alt="0xAF-Re 实时面板图"></div>
+    <p class="src"><a href="05-live-pane.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="oh-my-pi">
+    <div class="fig-head"><span class="num">06</span><h2>oh-my-pi 参考结构</h2></div>
+    <figcaption>记录 0xAF-Re 借鉴的事件循环、工具 registry、输出预算和审批思路，以及没有继承的平台级能力。</figcaption>
+    <div class="frame"><img src="06-oh-my-pi.svg" alt="oh-my-pi 架构参考图"></div>
+    <p class="src"><a href="06-oh-my-pi.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <figure id="comparison">
+    <div class="fig-head"><span class="num">07</span><h2>0xAF-Re vs oh-my-pi</h2></div>
+    <figcaption>对比两个项目的定位：oh-my-pi 更像平台，0xAF-Re 更像面向本地授权逆向任务的单二进制工具。</figcaption>
+    <div class="frame"><img src="07-vs-oh-my-pi.svg" alt="0xAF-Re 和 oh-my-pi 对比图"></div>
+    <p class="src"><a href="07-vs-oh-my-pi.svg">打开 SVG &rarr;</a></p>
+  </figure>
+
+  <footer>
+    图表都是纯 SVG，无运行时、无 CDN。图 1-5 的 Mermaid 源保留在
+    <a href="../ARCHITECTURE.md">英文架构文档</a> 的折叠块中；中文说明见
+    <a href="../ARCHITECTURE.zh-CN.md">ARCHITECTURE.zh-CN.md</a>。
+  </footer>
+</div>
+</body>
+</html>

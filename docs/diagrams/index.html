@@ -22,8 +22,9 @@
   header { border-bottom: 1px solid #1e293b; padding-bottom: 28px; margin-bottom: 12px; }
   h1 { margin: 0 0 8px; font-size: 24px; color: #f1f5f9; letter-spacing: -0.3px; }
   .sub { margin: 0; color: #64748b; font-size: 12.5px; }
-  .back { display: inline-block; margin-bottom: 20px; color: #22d3ee; text-decoration: none; font-size: 12px; }
-  .back:hover { text-decoration: underline; }
+  .topline { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; font-size: 12px; }
+  .topline a { color: #22d3ee; text-decoration: none; }
+  .topline a:hover { text-decoration: underline; }
 
   nav { margin: 28px 0 8px; display: flex; flex-wrap: wrap; gap: 8px; }
   nav a {
@@ -57,7 +58,11 @@
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="../">&larr; back to 0xAF-Re</a>
+  <div class="topline">
+    <a href="../">&larr; back to 0xAF-Re</a>
+    <a href="index.zh-CN.html">中文架构图</a>
+    <a href="../ARCHITECTURE.md">Architecture doc</a>
+  </div>
   <header>
     <h1>Architecture diagrams</h1>
     <p class="sub">Five views of how 0xAF-Re actually runs — module layering, one full turn, the context budget, the approval gate, the live pane — then the harness it borrowed from, and where the two diverge.</p>
@@ -1552,7 +1557,8 @@
 
   <footer>
     Diagrams are plain SVG — no runtime, no CDN, no fonts to fetch. They render the same in the browser, on GitHub, and in an offline checkout.
-    The Mermaid source for diagrams 1–5 is kept in <a href="../ARCHITECTURE.md" style="color:#64748b">ARCHITECTURE.md</a> under a collapsed block;
+    The Mermaid source for diagrams 1–5 is kept in <a href="../ARCHITECTURE.md" style="color:#64748b">ARCHITECTURE.md</a> under a collapsed block.
+    A concise Chinese companion is available at <a href="../ARCHITECTURE.zh-CN.md" style="color:#64748b">ARCHITECTURE.zh-CN.md</a>;
     6 and 7 were drawn directly from the upstream repository layout.
   </footer>
 </div>

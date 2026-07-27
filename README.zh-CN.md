@@ -5,7 +5,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 **语言:** [English](README.md) | 中文
 
-**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构文档](docs/ARCHITECTURE.md) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg)
+**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg)
 
 <p align="center">
   <img src="docs/shots/live.svg" alt="一轮运行中的实时画面：数据流图、HUD、任务进度和 token 遥测。" width="900">
@@ -49,8 +49,8 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 - **默认收敛:** 默认只能读工作区；写盘、联网和敏感操作都需要显式放开。
 - **单二进制:** prompt 和内置 skills 已嵌入；需要本地覆盖时，用 `OXAF_RE_HOME` 指向仓库目录。
 
-完整设计见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。与 oh-my-pi 的取舍对比见
-[对比图](docs/diagrams/07-vs-oh-my-pi.svg)。
+完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。图形化概览见
+[中文架构图](docs/diagrams/index.zh-CN.html)。
 
 ## 安装
 
@@ -248,7 +248,8 @@ REPL 内：
 
 ## 更多文档
 
-- [架构深挖](docs/ARCHITECTURE.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。
+- [架构深挖](docs/ARCHITECTURE.zh-CN.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。
+- [架构图索引](docs/diagrams/index.zh-CN.html)：核心运行机制的图形化入口。
 - [模块图](docs/diagrams/01-module-graph.svg)
 - [单轮时序](docs/diagrams/02-one-turn.svg)
 - [上下文预算](docs/diagrams/03-context-budget.svg)

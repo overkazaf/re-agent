@@ -6,7 +6,7 @@ and a live view of each turn in one static Go binary.
 
 **Language:** English | [中文](README.zh-CN.md)
 
-**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture](docs/ARCHITECTURE.md) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg)
+**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg)
 
 <p align="center">
   <img src="docs/shots/live.svg" alt="A live mid-turn frame with a dataflow diagram, a HUD, task progress, and token telemetry." width="900">
@@ -56,7 +56,7 @@ The English and Chinese READMEs keep the same structure for quick switching.
   project-local files can override them when `OXAF_RE_HOME` points at a checkout.
 
 For the full design, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the
-oh-my-pi comparison, see [the comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg).
+visual overview, see [the architecture diagrams](docs/diagrams/).
 
 ## Install
 
@@ -259,6 +259,7 @@ Inside the REPL:
 
 - [Architecture deep dive](docs/ARCHITECTURE.md): package map, turn sequence,
   context budget, approval gate, data formats, invariants, and extension points.
+- [Architecture diagrams](docs/diagrams/): visual index for the core runtime.
 - [Module graph](docs/diagrams/01-module-graph.svg)
 - [One turn sequence](docs/diagrams/02-one-turn.svg)
 - [Context budget](docs/diagrams/03-context-budget.svg)
