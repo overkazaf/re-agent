@@ -264,7 +264,9 @@ func (p *LivePane) Commit(line string) {
 	}
 	p.mu.Lock()
 	p.clearLocked()
-	fmt.Println(line)
+	// CRLF, not Println: raw mode during a turn drops ONLCR, so a bare "\n"
+	// would leave the next redraw starting mid-row (see render).
+	fmt.Print(line + "\r\n")
 	p.mu.Unlock()
 	p.render()
 }
@@ -437,7 +439,12 @@ func (p *LivePane) render() {
 	// clearLocked erases exactly the line count it last drew, so the body is
 	// free to grow and shrink between frames.
 	body := p.bodyLocked()
-	fmt.Print(strings.Join(body, "\n"))
+	// Join with CRLF, not a bare LF: the live-input controller holds the
+	// terminal in raw mode for the whole turn, which clears ONLCR, so a lone
+	// "\n" moves the cursor down without returning the carriage and every row
+	// staircases to the right. An explicit "\r" is a no-op in cooked mode, so
+	// this is correct whichever mode the terminal is in.
+	fmt.Print(strings.Join(body, "\r\n"))
 	p.drawn = len(body)
 }
 
