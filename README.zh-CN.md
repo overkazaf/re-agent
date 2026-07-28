@@ -14,6 +14,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 ## 目录
 
 - [概览](#概览)
+- [开发者亮点](#开发者亮点)
 - [项目动机](#项目动机)
 - [安装](#安装)
 - [快速开始](#快速开始)
@@ -32,6 +33,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 | 中文 | English |
 | --- | --- |
 | [概览](#概览) | [Overview](README.md#overview) |
+| [开发者亮点](#开发者亮点) | [Developer Highlights](README.md#developer-highlights) |
 | [项目动机](#项目动机) | [Project Motivation](README.md#project-motivation) |
 | [安装](#安装) | [Install](README.md#install) |
 | [快速开始](#快速开始) | [Quick Start](README.md#quick-start) |
@@ -53,6 +55,19 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。图形化概览见
 [中文架构图](docs/diagrams/index.zh-CN.html)。
+
+## 开发者亮点
+
+如果你在做 agent，0xAF-Re 是一个足够小、但关键部件齐全的 RE 场景参考实现：
+单个 Go 二进制里包含 provider 路由、工具治理、实时遥测、prompt/skill 覆盖、
+任务队列和审计日志。它不像 demo 那样只展示聊天，而是把 agent 真正落地时麻烦的部分也摊开。
+
+- **安装像单文件工具:** 一个静态二进制，一个 Go 依赖，关键路径不需要 Node 或浏览器 runtime。
+- **模型座位可组合:** planner、executor、researcher 可以接不同 provider、不同模型和不同 prompt。
+- **证据优先 workflow:** 有 GPT Cyber / Claude Code CVP / Grok 类订阅就直走 specialist；
+  普通模型走 caveman，只拿只读本地证据包。
+- **过程可调试:** HUD、trace、token/耗时遥测、任务状态和 JSONL session 让每一轮都能复盘。
+- **扩展面够直接:** 内置 RE 工具、MCP tools、skills、知识库导入、本地覆盖和运行中任务队列。
 
 ## 项目动机
 

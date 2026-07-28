@@ -15,6 +15,7 @@ and a live view of each turn in one static Go binary.
 ## Table of Contents
 
 - [Overview](#overview)
+- [Developer Highlights](#developer-highlights)
 - [Project Motivation](#project-motivation)
 - [Install](#install)
 - [Quick Start](#quick-start)
@@ -33,6 +34,7 @@ The English and Chinese READMEs keep the same structure for quick switching.
 | English | 中文 |
 | --- | --- |
 | [Overview](#overview) | [概览](README.zh-CN.md#概览) |
+| [Developer Highlights](#developer-highlights) | [开发者亮点](README.zh-CN.md#开发者亮点) |
 | [Project Motivation](#project-motivation) | [项目动机](README.zh-CN.md#项目动机) |
 | [Install](#install) | [安装](README.zh-CN.md#安装) |
 | [Quick Start](#quick-start) | [快速开始](README.zh-CN.md#快速开始) |
@@ -59,6 +61,25 @@ The English and Chinese READMEs keep the same structure for quick switching.
 
 For the full design, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the
 visual overview, see [the architecture diagrams](docs/diagrams/).
+
+## Developer Highlights
+
+If you build agents, 0xAF-Re is a compact RE-focused reference implementation:
+one Go binary with provider routing, tool governance, live telemetry,
+prompt/skill overrides, queueing, and audit logs. It is small enough to read,
+but opinionated enough to show the parts most agent demos skip.
+
+- **Single-file install feel:** one static binary, one Go dependency, no Node or
+  browser runtime in the critical path.
+- **Composable model seats:** planner, executor, and researcher can use
+  different providers, models, and editable prompts.
+- **Evidence-first workflows:** specialist routes use GPT Cyber / CC CVP / Grok
+  style subscriptions directly; caveman mode isolates ordinary executors to
+  read-only local evidence packets.
+- **Visible agent loop:** HUD, trace lines, token/timing telemetry, task state,
+  and JSONL sessions make each turn debuggable.
+- **Hackable surface area:** built-in RE tools, MCP tools, skills, knowledge
+  import, project-local overrides, and runtime queue editing.
 
 ## Project Motivation
 
