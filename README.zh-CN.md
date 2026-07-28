@@ -161,6 +161,15 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 caveman 不是翻译、暗语、编码或 prompt laundering。它让普通 executor 专注本地文件事实；
 遇到 live target、凭据、持久化、部署或网络动作会拒绝，不会隐藏成其它说法。
 
+关于模型风控和标记：0xAF-Re 不绕过 provider 的策略检查，也不保证某一轮不会被 provider
+分类。它做的是降低授权本地 RE 被误伤的概率，让每个角色只看到自己确实需要的内容：
+
+- planner 看到完整授权目标，并产出有边界的 packet
+- executor 只看到工作区路径和证据收集步骤
+- executor 的工具面是只读、本地的
+- session transcript 保留两段完整记录，方便审计
+- 不安全请求会被拒绝，而不是藏进其它说法
+
 ## Provider 与模型
 
 planner、executor、researcher 是角色；provider 是可替换的座位。
@@ -176,6 +185,22 @@ planner、executor、researcher 是角色；provider 是可替换的座位。
 
 HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--model`；
 自定义 CLI provider 可以在 `cliArgs` 里使用 `{model}` 占位符。
+
+不同角色的 prompt 可以运行中编辑：
+
+```text
+/prompt list
+/prompt show planner
+/prompt path executor
+/prompt edit researcher
+/prompt set executor <text>
+/prompt reset system
+/prompt reload
+```
+
+可编辑目标是 `system`、`planner`、`executor`、`researcher`。`/prompt edit`
+会从内置 prompt 初始化文件，打开 `$VISUAL` 或 `$EDITOR`，保存后立即 reload。
+如果检测到项目根目录，会写到 `prompts/`；否则写到 `~/.0xaf-re-agent/prompts/`。
 
 最小配置示例：
 

@@ -1076,7 +1076,9 @@ If the operator pins a provider or forces `/role planner`, `/role executor`, or
 prompt wrapper. This preserves explicit routing semantics.
 
 It explicitly forbids translation, ciphering, euphemism, or prompt laundering as
-a policy bypass.
+a policy bypass. Provider policy checks still apply; the design reduces
+false-positive surface by separating full planning context from read-only local
+evidence collection, not by hiding intent.
 
 `app.ParseArgs` accepts `--workflow`, `/workflow` changes it at runtime, and
 both the REPL and one-shot path call `app.runWithWorkflow` immediately before

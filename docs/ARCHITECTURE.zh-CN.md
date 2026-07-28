@@ -120,6 +120,8 @@ CLI provider 会尝试通过 `{model}`、已有 `--model`、或内置 codex/clau
 ## 5. Workflow 模式
 
 Workflow 是 RE 场景的高层调度模式，不是安全策略绕过层。
+provider 的策略检查仍然生效；这里做的是把完整规划上下文和只读本地证据收集拆开，
+降低授权本地逆向被误伤的概率，而不是隐藏意图。
 
 | 模式 | 行为 |
 | --- | --- |
@@ -246,7 +248,7 @@ role prompts 可运行中编辑：
 /prompt reload
 ```
 
-runtime prompt 保存在用户目录，不需要重新编译二进制。
+runtime prompt 保存在项目 `prompts/` 或 `~/.0xaf-re-agent/prompts/`，不需要重新编译二进制。
 
 ---
 

@@ -401,11 +401,20 @@
           <tr><td><code class="inline">/agent &lt;name&gt;</code></td><td>pin one provider for the next prompts</td></tr>
           <tr><td><code class="inline">/model &lt;provider&gt; &lt;model&gt;</code></td><td>override the concrete model for this session</td></tr>
           <tr><td><code class="inline">/planner</code> · <code class="inline">/executor</code> · <code class="inline">/researcher</code></td><td>change a role provider mid-session</td></tr>
-          <tr><td><code class="inline">/prompt edit researcher</code></td><td>edit per-role system prompts without rebuilding</td></tr>
+          <tr><td><code class="inline">/prompt list</code> · <code class="inline">/prompt path executor</code></td><td>inspect active prompt sources and editable file paths</td></tr>
+          <tr><td><code class="inline">/prompt edit researcher</code></td><td>edit system, planner, executor, or researcher prompts without rebuilding</td></tr>
           <tr><td><code class="inline">/effort codex high</code></td><td>reasoning effort, for backends that take one</td></tr>
         </tbody>
       </table>
     </div>
+
+    <p>
+      Editable prompt targets are <code class="inline">system</code>,
+      <code class="inline">planner</code>, <code class="inline">executor</code>, and
+      <code class="inline">researcher</code>. Edits are seeded from embedded prompts, saved under
+      <code class="inline">prompts/</code> or <code class="inline">~/.0xaf-re-agent/prompts/</code>,
+      and reloaded immediately.
+    </p>
 
     <figure class="capture">
       <div class="capture__bar"><span class="dot" aria-hidden="true"></span>auto/auto ❯ /providers</div>
@@ -489,6 +498,13 @@
       configured, otherwise caveman. The two-phase delegated path only runs when the role is
       <code class="inline">auto</code> and no provider is pinned; explicit roles or forced providers
       keep their normal meaning and receive only the workflow prompt wrapper.
+    </p>
+
+    <p>
+      It does not bypass provider safety systems or hide marked intent. The practical effect is
+      narrower legitimate context: the planner handles the full authorized objective, the
+      executor receives only workspace-local evidence steps, the callable tools are read-only,
+      and both phases remain visible in the transcript.
     </p>
 
     <div class="community-invite">

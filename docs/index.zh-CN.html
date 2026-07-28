@@ -171,6 +171,11 @@
       否则走 caveman。真正的两段隔离执行只在 role 为 <code class="inline">auto</code>
       且没有固定 provider 时触发；显式角色或强制 provider 会保持原语义，只套 workflow prompt。
     </p>
+    <p>
+      它不绕过 provider 风控，也不隐藏会被标记的意图。实际效果是缩小合法上下文：
+      planner 处理完整授权目标，executor 只收到工作区本地证据步骤，可调用工具保持只读，
+      两段过程都留在 transcript 里。
+    </p>
   </div>
 </section>
 
@@ -182,9 +187,13 @@
 /executor claude-api
 /researcher codex
 /model planner gpt-5.3-codex-high
+/prompt list
+/prompt path executor
 /prompt edit researcher</pre>
     <p>
-      provider 和具体模型都能运行中切换；每个角色的 system prompt 也能单独编辑。
+      provider 和具体模型都能运行中切换；`system`、`planner`、`executor`、
+      `researcher` 的 prompt 都能单独编辑。编辑文件会从内置 prompt 初始化，
+      保存到 `prompts/` 或 `~/.0xaf-re-agent/prompts/`，并立即 reload。
     </p>
   </div>
 </section>

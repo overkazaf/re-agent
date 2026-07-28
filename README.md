@@ -184,6 +184,16 @@ Caveman mode is not translation, ciphering, or prompt laundering. It keeps the
 ordinary executor focused on workspace-local file facts and refuses unsafe live
 target, credential, persistence, deployment, or network work.
 
+About provider safety systems: 0xAF-Re does not bypass model policy checks or
+guarantee that a provider will not classify a turn. It reduces false positives
+for authorized local RE by changing what each role legitimately needs to see:
+
+- the planner sees the full authorized objective and produces a bounded packet
+- the executor sees only workspace paths and evidence-collection steps
+- the executor tool list is read-only and local
+- the session transcript keeps both phases auditable
+- unsafe requests are refused instead of being hidden in alternate wording
+
 ## Providers and Models
 
 Planner, executor, and researcher are roles. Providers are replaceable seats.
@@ -199,6 +209,23 @@ Planner, executor, and researcher are roles. Providers are replaceable seats.
 
 HTTP providers use model overrides in the request body. Built-in CLI providers
 inject `--model`; custom CLI configs can use the `{model}` placeholder.
+
+Role prompts are editable at runtime:
+
+```text
+/prompt list
+/prompt show planner
+/prompt path executor
+/prompt edit researcher
+/prompt set executor <text>
+/prompt reset system
+/prompt reload
+```
+
+Editable targets are `system`, `planner`, `executor`, and `researcher`.
+`/prompt edit` seeds the file from the embedded prompt, opens `$VISUAL` or
+`$EDITOR`, and reloads immediately. With a detected project root it writes under
+`prompts/`; otherwise it writes under `~/.0xaf-re-agent/prompts/`.
 
 Minimal config override:
 
