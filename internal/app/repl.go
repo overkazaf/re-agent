@@ -713,6 +713,22 @@ func runShellEscape(state *State, line string) error {
 		return err
 	}
 
+	// `cd` has to be intercepted: it runs in a throwaway `bash -c`, so letting it
+	// through would change a child's directory and then discard it. Moving the
+	// shared ToolContext.Workspace instead makes the new directory stick for the
+	// next `!` command and for the agent's own tools, which read the same field.
+	if core.IsChdir(command) {
+		resolved, chErr := core.ResolveChdir(state.ToolContext.Workspace, command, state.ToolContext.Policy)
+		if chErr != nil {
+			return chErr
+		}
+		state.ToolContext.Workspace = resolved
+		fmt.Printf("%s\n\n", ui.RenderNotice("workspace → "+ui.ElidePath(resolved, 60)))
+		_ = state.Loop.AddContext(fmt.Sprintf(
+			"[operator shell] I changed the workspace directory with `%s`; it is now %s.", command, resolved))
+		return nil
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	signals := make(chan os.Signal, 1)

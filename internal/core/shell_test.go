@@ -20,6 +20,43 @@ func TestShellEscapeParsing(t *testing.T) {
 	}
 }
 
+func TestIsChdirInterceptsOnlyThePureForm(t *testing.T) {
+	for _, command := range []string{"cd", "cd ..", "cd /tmp", "cd  ~/work", "cd internal/ui"} {
+		if !IsChdir(command) {
+			t.Fatalf("a bare cd should be intercepted: %q", command)
+		}
+	}
+	for _, command := range []string{"cd foo && ls", "cd foo; ls", "cd foo | tee x", "ls", "cdr", "echo cd"} {
+		if IsChdir(command) {
+			t.Fatalf("only a standalone cd may be intercepted: %q", command)
+		}
+	}
+}
+
+func TestResolveChdirMovesAndReportsFailures(t *testing.T) {
+	policy := &types.ExecutionPolicy{CommandTimeoutMs: 5000}
+	root := t.TempDir()
+
+	moved, err := ResolveChdir(root, "cd .", policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The workspace resolves through symlinks (macOS /tmp, for one), so compare
+	// against pwd's own answer rather than the raw temp path.
+	if !strings.HasSuffix(moved, root) && moved != root {
+		// pwd -P may differ from t.TempDir()'s prefix; a relative cd . must at
+		// least stay put, so re-resolving it is idempotent.
+		again, err := ResolveChdir(moved, "cd .", policy)
+		if err != nil || again != moved {
+			t.Fatalf("cd . should be idempotent: %q -> %q (%v)", moved, again, err)
+		}
+	}
+
+	if _, err := ResolveChdir(root, "cd does-not-exist", policy); err == nil {
+		t.Fatal("cd into a missing directory must be an error")
+	}
+}
+
 func TestRunShellCommandCapturesOutputAndStreams(t *testing.T) {
 	policy := &types.ExecutionPolicy{
 		CommandTimeoutMs: 5000, ApprovalMode: types.ApprovalYolo, Approvals: map[string]string{},

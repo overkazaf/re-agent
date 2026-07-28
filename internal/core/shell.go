@@ -7,6 +7,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -68,6 +69,49 @@ func AssertShellCommandAllowed(
 		types.ApprovalRequest{Tool: "!shell", Tier: types.TierExec, Summary: command, Concerns: concerns},
 		types.ToolContext{Workspace: ".", SessionDir: ".", Policy: policy, Confirm: confirm},
 	)
+}
+
+// IsChdir reports whether a shell escape is a standalone directory change.
+// Each `!` command runs in its own `bash -c`, so a `cd` inside one is discarded
+// the instant the child exits; the REPL has to intercept the pure form and move
+// its own workspace instead. Anything that chains another command (`&&`, `;`,
+// `|`, a newline) is left to bash untouched — its side effects still matter and
+// only bash can run them — so just the plain `cd [dir]` shape is intercepted.
+func IsChdir(command string) bool {
+	trimmed := strings.TrimSpace(command)
+	if trimmed != "cd" && !strings.HasPrefix(trimmed, "cd ") {
+		return false
+	}
+	return !strings.ContainsAny(trimmed, "&|;\n\r")
+}
+
+// ResolveChdir runs the `cd` against the current workspace and returns the
+// directory it lands in as an absolute path. Resolution is delegated to bash so
+// `~`, `$VARS`, relative paths, and symlinks behave exactly as they would for
+// any other command run in the workspace.
+func ResolveChdir(workspace, command string, policy *types.ExecutionPolicy) (string, error) {
+	timeout := 0
+	if policy != nil {
+		timeout = policy.CommandTimeoutMs
+	}
+	result, err := tools.Stream([]string{"bash", "-c", command + " && pwd"}, tools.StreamOptions{
+		Cwd:       workspace,
+		TimeoutMs: timeout,
+	})
+	if err != nil {
+		return "", err
+	}
+	if result.Code != 0 {
+		if message := strings.TrimSpace(result.Stderr); message != "" {
+			return "", errors.New(message)
+		}
+		return "", fmt.Errorf("cd failed (exit %d)", result.Code)
+	}
+	dir := strings.TrimSpace(result.Stdout)
+	if dir == "" {
+		return "", errors.New("cd produced no directory")
+	}
+	return dir, nil
 }
 
 func RunShellCommand(command string, options ShellRunOptions) (ShellRunResult, error) {
