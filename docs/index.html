@@ -472,6 +472,25 @@
       refused rather than hidden.
     </p>
 
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>delegated local evidence flow</th><th>what happens</th></tr></thead>
+        <tbody>
+          <tr><td>1 · planner phase</td><td>planner sees the full authorized task and writes a short plan plus an <code class="inline">EXECUTOR_PACKET</code></td></tr>
+          <tr><td>2 · isolated executor</td><td>executor starts a fresh provider session with only that packet, a dedicated system prompt, and narrowed tools</td></tr>
+          <tr><td>3 · evidence tools</td><td>executor can list, read, grep, hash, run strings/hexdump, scan entropy, inspect symbols, mitigations, carved signatures, and APK structure</td></tr>
+          <tr><td>4 · merged result</td><td>both phases are recorded in one transcript and returned as a combined <code class="inline">planner-&gt;executor</code> run</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      <code class="inline">auto</code> is just the resolver: specialist if a cyber/CVP marker is
+      configured, otherwise caveman. The two-phase delegated path only runs when the role is
+      <code class="inline">auto</code> and no provider is pinned; explicit roles or forced providers
+      keep their normal meaning and receive only the workflow prompt wrapper.
+    </p>
+
     <div class="community-invite">
       <div>
         <h3>Xiaohongshu discussion group</h3>

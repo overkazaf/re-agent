@@ -145,7 +145,21 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 0xaf --workflow specialist -p "triage ./app.apk"
 ```
 
-caveman 不是翻译、暗语、编码或 prompt laundering；它是宿主级委派，让 executor 专注本地文件证据。
+“跑隔离本地证据模式”指的就是 `caveman` workflow。它不是单纯改写 prompt，
+而是宿主把一次请求拆成两个模型调用：
+
+1. **planner 阶段:** planner 看到完整授权 RE/CTF 任务，输出短计划和 `EXECUTOR_PACKET`。
+2. **executor 阶段:** executor 开新的隔离上下文，只看到这个 packet、专用 executor system prompt，以及收窄后的只读工具。
+3. **证据收集:** executor 只能围绕工作区本地文件收集事实，例如 list/read/search、文件类型、hash、strings、hex 范围、熵、导入/符号、保护信息、carve 线索和 APK 结构。
+4. **结果合并:** 0xAF-Re 把两段记录写进同一个 session transcript，并返回 `planner->executor` 的合并结果。
+
+`auto` 是 resolver：检测到 GPT Cyber / CC CVP 类 provider 标记时走
+`specialist`，否则选择 `caveman`。真正的 delegated caveman 只在 role 是
+`auto`、且没有固定 provider 时触发；如果显式 `/role planner`、`/role executor`
+或强制某个 provider，0xAF-Re 会尊重这个选择，只做 prompt wrapper。
+
+caveman 不是翻译、暗语、编码或 prompt laundering。它让普通 executor 专注本地文件事实；
+遇到 live target、凭据、持久化、部署或网络动作会拒绝，不会隐藏成其它说法。
 
 ## Provider 与模型
 

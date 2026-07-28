@@ -42,7 +42,7 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
 | `internal/skills` | Loads embedded skills plus `skills/<name>/SKILL.md` overrides, builds the system-prompt catalog. | `assets`, `util` |
-| `internal/workflow` | Explicit `off` / `auto` / `specialist` / `caveman` prompt shaping for authorized RE workflows. | `types` |
+| `internal/workflow` | Explicit `off` / `auto` / `specialist` / `caveman` mode resolution, prompt wrappers, and delegated local-evidence workflow helpers. | `types` |
 | `internal/tools` | The 24-tool built-in registry, the subprocess runner (`process.go`), the output-spill budget (`output.go`). | `knowledge`, `plan`, `security`, `skills`, `types`, `util` |
 | `internal/mcp` | stdio JSON-RPC 2.0 client (`client.go`) and the wrapper that turns server tools into `types.Tool` (`tools.go`). | `auth`, `tools`, `types` |
 | `internal/providers` | The five adapters, the CLI JSONL stream normalizer (`stream.go`), usage extraction. | `auth`, `config`, `types`, `util` |
@@ -1047,14 +1047,36 @@ time.
 
 Workflow modes live in `internal/workflow`. They are explicit: empty / `off`
 returns the user's prompt unchanged. `auto` checks the pinned provider, planner,
-and executor config for GPT Cyber / CVP-style markers and resolves to
-`specialist` when found, otherwise to `caveman`. `specialist` asks the model to
-plan then run authorized RE work through the existing skills and local tools.
-`caveman` runs as a host-level planner -> isolated executor workflow: the
-planner sees the full authorized task and writes an executor packet, while the
-executor receives only that packet, a fresh provider session, and a narrowed
-read-only local-evidence tool surface. It explicitly forbids translation,
-ciphering, euphemism, or prompt laundering as a policy bypass.
+executor, and researcher config for GPT Cyber / CVP-style markers and resolves
+to `specialist` when found, otherwise to `caveman`. `specialist` asks the model
+to plan then run authorized RE work through the existing skills and local tools.
+
+`caveman` is the delegated local-evidence workflow. When no provider is pinned
+and the active role is `auto`, `app.runWithWorkflow` calls
+`runDelegatedWorkflow` instead of sending one prompt directly to
+`AgentLoop.Run`:
+
+1. Planner run: `DelegatedPlannerPrompt` gives the planner the full authorized
+   task and asks for a concise plan plus an `EXECUTOR_PACKET`. The only tool
+   exposed here is `update_plan`.
+2. Executor run: `DelegatedExecutorPrompt` extracts that packet, falls back to a
+   path-based packet if extraction fails, and starts the executor with
+   `Isolated: true`, `FreshSession: true`, a dedicated executor system prompt,
+   and a narrowed tool list.
+3. Tool surface: the executor can list/read/grep, inspect file type, strings,
+   hexdump ranges, hashes, symbols/imports, entropy, mitigations, byte patterns,
+   carved signatures, and APK structure. It cannot see the broader objective
+   unless the planner placed a bounded local-evidence request in the packet.
+4. Merge: `combineDelegatedResults` returns a `planner->executor` provider label,
+   adds usage and turn counts, and the full session transcript still contains
+   both phases.
+
+If the operator pins a provider or forces `/role planner`, `/role executor`, or
+`/role researcher`, delegation is bypassed and the workflow behaves as a normal
+prompt wrapper. This preserves explicit routing semantics.
+
+It explicitly forbids translation, ciphering, euphemism, or prompt laundering as
+a policy bypass.
 
 `app.ParseArgs` accepts `--workflow`, `/workflow` changes it at runtime, and
 both the REPL and one-shot path call `app.runWithWorkflow` immediately before

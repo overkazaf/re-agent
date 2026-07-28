@@ -153,6 +153,24 @@
       只拿本地 evidence packet 和收窄后的只读工具，用来收集文件类型、字符串、熵、导入/符号、
       包结构、哈希、偏移和本地 blocker。
     </p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>隔离本地证据流程</th><th>具体做什么</th></tr></thead>
+        <tbody>
+          <tr><td>1 · planner 阶段</td><td>planner 看到完整授权任务，输出短计划和 <code class="inline">EXECUTOR_PACKET</code></td></tr>
+          <tr><td>2 · 隔离 executor</td><td>executor 开新的 provider session，只拿 packet、专用 system prompt 和收窄工具</td></tr>
+          <tr><td>3 · 证据工具</td><td>executor 可 list/read/grep/hash，跑 strings/hexdump/entropy，检查符号、保护、carve 线索和 APK 结构</td></tr>
+          <tr><td>4 · 合并结果</td><td>两段都写入同一个 transcript，最终返回 <code class="inline">planner-&gt;executor</code> 合并结果</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      <code class="inline">auto</code> 只是 resolver：检测到 cyber/CVP 标记就走 specialist，
+      否则走 caveman。真正的两段隔离执行只在 role 为 <code class="inline">auto</code>
+      且没有固定 provider 时触发；显式角色或强制 provider 会保持原语义，只套 workflow prompt。
+    </p>
   </div>
 </section>
 

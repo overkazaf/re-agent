@@ -138,6 +138,21 @@ delegated caveman 的关键点：
 
 这套设计的目的，是把 CTF/逆向任务拆成“完整规划”和“低敏本地证据收集”两个清晰上下文，而不是把任务翻译、编码或伪装。
 
+具体执行链路：
+
+1. `app.runWithWorkflow` 先调用 `workflow.ShouldDelegate`。只有 role 是
+   `auto`、且没有固定 provider 时，`caveman` 才会进入两段委派；显式
+   `/role planner`、`/role executor`、`/role researcher` 或强制 provider 时，
+   只保留 workflow prompt wrapper。
+2. planner run 使用 `DelegatedPlannerPrompt`，planner 能看到完整授权任务，但工具面只保留
+   `update_plan`，输出必须包含短计划和 `EXECUTOR_PACKET`。
+3. executor run 使用 `DelegatedExecutorPrompt`。它会提取 packet；提取失败时，根据 prompt
+   里的本地路径生成 fallback packet。
+4. executor run 传入 `Isolated: true`、`FreshSession: true`、专用 executor system prompt
+   和收窄工具列表，所以 provider 只收到当前 packet，不收到 planner 的完整上下文。
+5. `combineDelegatedResults` 把两段 usage、turns 和 provider label 合并成
+   `planner->executor`，同时 session JSONL 仍保留完整两段记录。
+
 ---
 
 ## 6. 上下文预算

@@ -160,8 +160,29 @@ Workflow mode is explicit. Default `off` sends prompts unchanged.
 0xaf --workflow specialist -p "triage ./app.apk"
 ```
 
-Caveman mode is not translation, ciphering, or prompt laundering. It is a
-host-level delegation that keeps the executor focused on local file evidence.
+The "delegated local evidence mode" demo is the `caveman` workflow. It means the
+host splits one operator request into two model calls:
+
+1. **Planner phase:** the planner sees the full authorized RE/CTF task and
+   writes a short plan plus an `EXECUTOR_PACKET`.
+2. **Executor phase:** the executor starts in a fresh isolated context. It sees
+   only that packet, a dedicated executor system prompt, and a narrowed read-only
+   toolset for local evidence.
+3. **Evidence collection:** the executor can list/read/search files, identify
+   file type, hash, strings, byte ranges, entropy, symbols/imports, mitigations,
+   carved signatures, and APK structure.
+4. **Merge:** 0xAF-Re appends both phases to the same session transcript and
+   returns a combined `planner->executor` result.
+
+`auto` is a resolver: it uses `specialist` when a GPT Cyber / CC CVP-style
+provider marker is configured; otherwise it selects `caveman`. True delegated
+caveman runs when role is `auto` and no provider is pinned. If you explicitly
+set `/role planner`, `/role executor`, or force one provider, 0xAF-Re respects
+that choice and only wraps the prompt.
+
+Caveman mode is not translation, ciphering, or prompt laundering. It keeps the
+ordinary executor focused on workspace-local file facts and refuses unsafe live
+target, credential, persistence, deployment, or network work.
 
 ## Providers and Models
 
