@@ -101,7 +101,7 @@ roles and composing models.
 ## Install
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.2
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.3
 0xaf --version
 0xaf --welcome
 ```
@@ -115,7 +115,7 @@ make build
 ./bin/0xaf --version
 ```
 
-`go install ...@v0.1.2` is the recommended install path. `@main` can lag behind
+`go install ...@v0.1.3` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
 ## Quick Start

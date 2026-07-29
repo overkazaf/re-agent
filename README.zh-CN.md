@@ -81,7 +81,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 ## 安装
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.2
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.3
 0xaf --version
 0xaf --welcome
 ```
@@ -95,7 +95,7 @@ make build
 ./bin/0xaf --version
 ```
 
-推荐固定安装 `@v0.1.2`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
+推荐固定安装 `@v0.1.3`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
 ## 快速开始
 
