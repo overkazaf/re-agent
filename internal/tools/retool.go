@@ -33,6 +33,8 @@ var reverseToolProbes = []retoolProbe{
 	{"yara", []string{"yara", "yarac"}, nil, "rule-based artifact scanning"},
 	{"native-debug", []string{"gdb", "lldb", "qemu-x86_64", "qemu-aarch64", "qemu-arm"}, nil, "batch debugger and user-mode emulation helpers"},
 	{"frida", []string{"frida", "frida-ps", "frida-trace", "frida-ls-devices", "objection"}, nil, "dynamic instrumentation and mobile runtime inspection"},
+	{"burp", []string{"burpsuite", "BurpSuiteCommunity", "BurpSuitePro"}, nil, "Burp Suite HTTP interception, mobile proxy setup, and history export triage"},
+	{"mitmproxy", []string{"mitmproxy", "mitmdump", "mitmweb"}, nil, "scriptable HTTP(S) interception proxy capture and flow analysis"},
 	{"angr", []string{"python3"}, []string{"angr", "claripy", "cle", "pyvex"}, "symbolic execution, CFG recovery, and path exploration"},
 	{"binary-utils", []string{"objdump", "readelf", "nm", "strings", "file"}, nil, "binutils and baseline native triage"},
 	{"python-re-libs", []string{"python3"}, []string{"unicorn", "capstone", "keystone", "lief", "angr", "androguard"}, "Python RE libraries for emulation, disassembly, lifting, and APK work"},
@@ -42,12 +44,12 @@ var reverseToolProbes = []retoolProbe{
 func reverseToolkitTool() types.Tool {
 	return types.Tool{
 		Name:        "reverse_toolkit",
-		Description: "Use common external reverse-engineering tools through fixed safe actions: radare2/rizin, JADX, apktool, binwalk, YARA, Ghidra headless, gdb/lldb, APKID/AAPT, Frida inventory/templates, plus angr/Unicorn/unidbg harness templates.",
+		Description: "Use common external reverse-engineering tools through fixed safe actions: radare2/rizin, JADX, apktool, binwalk, YARA, Ghidra headless, gdb/lldb, APKID/AAPT, Frida inventory/templates, Burp/mitmproxy proxy templates, plus angr/Unicorn/unidbg harness templates.",
 		Risk:        types.RiskExecute,
 		Parameters: objectSchema(map[string]any{
 			"tool": map[string]any{
 				"type":        "string",
-				"description": "Tool family: inventory, radare2/r2, rizin, jadx, apktool, binwalk, yara, ghidra, gdb, lldb, objdump, readelf, nm, apkid, aapt, frida, angr, unicorn, unidbg.",
+				"description": "Tool family: inventory, radare2/r2, rizin, jadx, apktool, binwalk, yara, ghidra, gdb, lldb, objdump, readelf, nm, apkid, aapt, frida, burp, mitmproxy, angr, unicorn, unidbg.",
 				"default":     "inventory",
 			},
 			"action": map[string]any{
@@ -55,11 +57,13 @@ func reverseToolkitTool() types.Tool {
 				"description": "Action for the tool family, for example info/functions/strings/decompile/scan/extract/template.",
 				"default":     "auto",
 			},
-			"template": map[string]any{"type": "string", "description": "Named Frida template when tool=frida action=template."},
+			"template": map[string]any{"type": "string", "description": "Named Frida or proxy template when action=template."},
 			"path":     map[string]any{"type": "string", "description": "Workspace-relative artifact path when the action needs one."},
 			"rules":    map[string]any{"type": "string", "description": "Workspace-relative YARA rules path."},
 			"address":  map[string]any{"type": "string", "description": "Address or symbol for focused disassembly/templates.", "default": ""},
 			"symbol":   map[string]any{"type": "string", "description": "Class, method, symbol, or module name used by a few actions.", "default": ""},
+			"host":     map[string]any{"type": "string", "description": "Hostname filter for proxy templates.", "default": ""},
+			"port":     map[string]any{"type": "number", "description": "Local proxy listener port for proxy templates.", "default": 8080},
 			"arch":     map[string]any{"type": "string", "description": "Architecture for emulation templates: x86, x64, arm, arm64.", "default": "x64"},
 			"lines":    map[string]any{"type": "number", "description": "Disassembly line count for focused radare2/rizin actions.", "default": 80},
 			"maxBytes": map[string]any{"type": "number", "description": "Maximum output characters kept in context before spilling.", "default": 65536},
@@ -108,6 +112,10 @@ func reverseToolkitTool() types.Tool {
 				return runAAPTAction(action, args, tc)
 			case "frida":
 				return runFridaAction(action, args, tc)
+			case "burp":
+				return runBurpAction(action, args, tc)
+			case "mitmproxy":
+				return runMITMProxyAction(action, args, tc)
 			case "angr":
 				return textResult(angrTemplate(args), map[string]any{"tool": tool, "action": "template"}), nil
 			case "unicorn":
@@ -135,6 +143,10 @@ func normalizeRETool(tool string) string {
 			return "angr"
 		}
 		return strings.ToLower(strings.TrimSpace(tool))
+	case "burp", "burpsuite", "burp-suite", "burp_suite", "burpcommunity", "burppro":
+		return "burp"
+	case "mitm", "mitmproxy", "mitmdump", "mitmweb", "http-proxy", "httpproxy", "proxy":
+		return "mitmproxy"
 	}
 	return strings.ToLower(strings.TrimSpace(tool))
 }
@@ -149,7 +161,7 @@ func defaultREAction(tool string) string {
 		return "scan"
 	case "ghidra":
 		return "analyze"
-	case "angr", "unicorn", "unidbg":
+	case "angr", "unicorn", "unidbg", "burp", "mitmproxy":
 		return "template"
 	case "aapt":
 		return "badging"
@@ -209,6 +221,7 @@ func reverseToolkitInventory(tc types.ToolContext) string {
 		"- yara: scan with workspace-local rules",
 		"- ghidra: analyzeHeadless import into the session artifact directory",
 		"- gdb/lldb/objdump/readelf/nm/apkid/aapt/frida: fixed read-only/batch actions",
+		"- burp/mitmproxy: mobile/API interception setup, flow capture addon, and history export parser templates",
 		"- angr/unicorn/unidbg: emit harness templates for symbolic execution and local emulation work",
 		"- frida template: common Android SSL, crypto, root/debug, class-loader, and native trace scaffolds",
 	)
@@ -506,6 +519,310 @@ func runFridaAction(action string, args map[string]any, tc types.ToolContext) (t
 		return textResult(script, map[string]any{"tool": "frida", "action": "template", "template": template}), nil
 	}
 	return errorResult("unsupported frida action: " + action), nil
+}
+
+func runBurpAction(action string, args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
+	switch action {
+	case "template", "mobile", "setup", "checklist", "export", "parser", "catalog":
+		defaultTemplate := "burp_mobile"
+		if action == "export" || action == "parser" {
+			defaultTemplate = "burp_export_parser"
+		}
+		template, host := proxyTemplateAndHost(args, defaultTemplate)
+		if action == "catalog" {
+			template = "catalog"
+		}
+		body, err := proxyTemplate(template, host, proxyPort(args))
+		if err != nil {
+			return types.ToolResult{}, err
+		}
+		return textResult(body, map[string]any{"tool": "burp", "action": "template", "template": template, "host": host}), nil
+	case "info":
+		return textResult(burpMobileTemplate(proxyHost(args), proxyPort(args)), map[string]any{"tool": "burp", "action": "info"}), nil
+	}
+	return errorResult("unsupported burp action: " + action), nil
+}
+
+func runMITMProxyAction(action string, args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
+	switch action {
+	case "info", "version":
+		return runRECommand("reverse_toolkit", []string{"mitmdump", "--version"}, "mitmdump --version", args, tc, "")
+	case "template", "addon", "capture", "flow", "flows", "catalog":
+		defaultTemplate := "mitmproxy_addon"
+		template, host := proxyTemplateAndHost(args, defaultTemplate)
+		if action == "catalog" {
+			template = "catalog"
+		}
+		body, err := proxyTemplate(template, host, proxyPort(args))
+		if err != nil {
+			return types.ToolResult{}, err
+		}
+		return textResult(body, map[string]any{"tool": "mitmproxy", "action": "template", "template": template, "host": host}), nil
+	}
+	return errorResult("unsupported mitmproxy action: " + action), nil
+}
+
+func proxyTemplateAndHost(args map[string]any, fallback string) (string, string) {
+	host := proxyHost(args)
+	rawTemplate := strings.TrimSpace(util.AsString(args["template"]))
+	rawPath := strings.TrimSpace(util.AsString(args["path"]))
+	raw := rawTemplate
+	if raw == "" {
+		raw = rawPath
+	}
+	if raw == "" {
+		return fallback, host
+	}
+	normalized := normalizeProxyTemplate(raw)
+	if isKnownProxyTemplate(normalized) {
+		return normalized, host
+	}
+	if rawTemplate == "" && host == "example.test" {
+		return fallback, raw
+	}
+	return normalized, host
+}
+
+func proxyHost(args map[string]any) string {
+	host := strings.TrimSpace(util.AsString(args["host"]))
+	if host == "" {
+		host = strings.TrimSpace(util.AsString(args["symbol"]))
+	}
+	if host == "" {
+		host = "example.test"
+	}
+	return host
+}
+
+func proxyPort(args map[string]any) int {
+	port := util.AsInt(args["port"], 8080)
+	return clampInt(port, 1, 65535)
+}
+
+func normalizeProxyTemplate(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "auto":
+		return ""
+	case "list", "templates", "catalog":
+		return "catalog"
+	case "mitm", "mitmproxy", "mitmdump", "addon", "capture", "captures", "flow", "flows", "jsonl", "traffic":
+		return "mitmproxy_addon"
+	case "burp", "mobile", "android", "ios", "setup", "checklist", "burp_mobile", "burp_setup":
+		return "burp_mobile"
+	case "export", "parser", "xml", "history", "http_history", "burp_xml", "burp_export", "burp_export_parser":
+		return "burp_export_parser"
+	default:
+		return strings.ToLower(strings.TrimSpace(value))
+	}
+}
+
+func isKnownProxyTemplate(template string) bool {
+	switch template {
+	case "catalog", "mitmproxy_addon", "burp_mobile", "burp_export_parser":
+		return true
+	default:
+		return false
+	}
+}
+
+func proxyTemplate(template, host string, port int) (string, error) {
+	switch template {
+	case "catalog":
+		return proxyTemplateCatalog(), nil
+	case "mitmproxy_addon":
+		return mitmproxyAddonTemplate(host, port), nil
+	case "burp_mobile":
+		return burpMobileTemplate(host, port), nil
+	case "burp_export_parser":
+		return burpExportParserTemplate(), nil
+	default:
+		return "", fmt.Errorf("unsupported proxy template: %s", template)
+	}
+}
+
+func proxyTemplateCatalog() string {
+	return strings.Join([]string{
+		"PROXY TOOL TEMPLATE CATALOG",
+		"",
+		"- mitmproxy_addon: scoped mitmdump addon that records request/response digests as JSONL",
+		"- burp_mobile: Burp Suite mobile/API interception checklist for a scoped lab target",
+		"- burp_export_parser: Python parser for Burp XML HTTP history exports",
+		"",
+		"Examples:",
+		`/retool mitmproxy template api.example.test`,
+		`/retool burp template mobile`,
+		`/retool burp template export`,
+	}, "\n")
+}
+
+func mitmproxyAddonTemplate(host string, port int) string {
+	template := `# mitmproxy scoped capture addon for authorized local RE/CTF work.
+# Save as capture_flows.py, then run:
+#   MITM_HOST=__HOST_VALUE__ MITM_OUT=flows.jsonl mitmdump -q -p __PORT__ -s capture_flows.py --set flow_detail=0
+#
+# Point the test browser/device at the proxy, import the mitmproxy CA into that
+# lab profile, and keep MITM_HOST set to the target host you are analyzing.
+
+from mitmproxy import http
+import base64
+import hashlib
+import json
+import os
+import time
+
+FLOW_LOG = os.environ.get("MITM_OUT", "flows.jsonl")
+HOST_FILTER = os.environ.get("MITM_HOST", __HOST_JSON__)
+MAX_BODY = int(os.environ.get("MITM_MAX_BODY", "4096"))
+
+
+def body_info(data):
+    data = data or b""
+    return {
+        "len": len(data),
+        "sha256": hashlib.sha256(data).hexdigest() if data else "",
+        "preview_b64": base64.b64encode(data[:MAX_BODY]).decode("ascii"),
+    }
+
+
+def in_scope(flow):
+    if not HOST_FILTER:
+        return True
+    return HOST_FILTER in flow.request.pretty_host
+
+
+def emit(event, flow, extra):
+    row = {
+        "ts": time.time(),
+        "event": event,
+        "id": flow.id,
+        "client": flow.client_conn.address,
+        "method": flow.request.method,
+        "url": flow.request.pretty_url,
+        "host": flow.request.pretty_host,
+        "request_headers": dict(flow.request.headers),
+    }
+    row.update(extra)
+    with open(FLOW_LOG, "a", encoding="utf-8") as fp:
+        fp.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def request(flow: http.HTTPFlow):
+    if not in_scope(flow):
+        return
+    flow.metadata["capture"] = True
+    emit("request", flow, {"request_body": body_info(flow.request.raw_content)})
+
+
+def response(flow: http.HTTPFlow):
+    if not flow.metadata.get("capture"):
+        return
+    emit("response", flow, {
+        "status_code": flow.response.status_code if flow.response else 0,
+        "response_headers": dict(flow.response.headers) if flow.response else {},
+        "response_body": body_info(flow.response.raw_content if flow.response else b""),
+    })
+`
+	replacements := map[string]string{
+		"__HOST_VALUE__": host,
+		"__HOST_JSON__":  jsonString(host),
+		"__PORT__":       strconv.Itoa(port),
+	}
+	for key, value := range replacements {
+		template = strings.ReplaceAll(template, key, value)
+	}
+	return template
+}
+
+func burpMobileTemplate(host string, port int) string {
+	return fmt.Sprintf(`BURP SUITE MOBILE/API CAPTURE CHECKLIST
+
+scope:
+- target host: %s
+- local listener: 127.0.0.1:%d
+
+setup:
+1. Start Burp Suite and create a project for the lab target.
+2. Proxy > Proxy settings > Proxy listeners: bind 127.0.0.1:%d for local browser testing.
+3. For a device on the LAN, bind the listener to the host LAN IP and keep the scope limited to the target host.
+4. Import the Burp CA into the lab browser/profile/device trust store.
+5. Add the target host to Target > Scope, then enable "show only in-scope items" in Proxy history.
+
+Android emulator proxy:
+adb shell settings put global http_proxy 10.0.2.2:%d
+adb shell settings put global http_proxy :0
+
+triage:
+1. Capture login, challenge load, signing, crypto, upload, and result-check requests.
+2. Send one representative request to Repeater and vary one parameter at a time.
+3. Export selected HTTP history as XML or HAR for offline notes and parser-based comparison.
+4. If a mobile app blocks trusted lab interception, prefer debug builds or authorized instrumentation in the same lab.
+
+related templates:
+- /retool burp template export
+- /retool mitmproxy template %s
+- /retool frida template android_ssl_pinning
+`, host, port, port, port, host)
+}
+
+func burpExportParserTemplate() string {
+	return `#!/usr/bin/env python3
+# Parse a Burp Suite XML HTTP history export into one JSON object per item.
+# Usage:
+#   python3 burp_xml_digest.py burp-history.xml > burp-history.jsonl
+
+import base64
+import hashlib
+import json
+import sys
+import xml.etree.ElementTree as ET
+
+
+def node_text(item, name):
+    node = item.find(name)
+    return "" if node is None or node.text is None else node.text
+
+
+def node_bytes(item, name):
+    node = item.find(name)
+    if node is None or node.text is None:
+        return b""
+    data = node.text.strip()
+    if node.get("base64") == "true":
+        return base64.b64decode(data)
+    return data.encode("utf-8", errors="replace")
+
+
+def digest(data):
+    return {
+        "len": len(data),
+        "sha256": hashlib.sha256(data).hexdigest() if data else "",
+        "preview": data[:240].decode("utf-8", errors="replace"),
+    }
+
+
+def main(path):
+    root = ET.parse(path).getroot()
+    for item in root.findall(".//item"):
+        request = node_bytes(item, "request")
+        response = node_bytes(item, "response")
+        row = {
+            "time": node_text(item, "time"),
+            "host": node_text(item, "host"),
+            "method": node_text(item, "method"),
+            "url": node_text(item, "url"),
+            "status": node_text(item, "status"),
+            "mime": node_text(item, "mimetype"),
+            "request": digest(request),
+            "response": digest(response),
+        }
+        print(json.dumps(row, ensure_ascii=False, sort_keys=True))
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: burp_xml_digest.py burp-history.xml")
+    main(sys.argv[1])
+`
 }
 
 func runRECommand(toolName string, command []string, label string, args map[string]any, tc types.ToolContext, outputDir string) (types.ToolResult, error) {

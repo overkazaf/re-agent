@@ -101,7 +101,7 @@ roles and composing models.
 ## Install
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.3
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.4
 0xaf --version
 0xaf --welcome
 ```
@@ -115,7 +115,7 @@ make build
 ./bin/0xaf --version
 ```
 
-`go install ...@v0.1.3` is the recommended install path. `@main` can lag behind
+`go install ...@v0.1.4` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
 ## Quick Start
@@ -158,6 +158,7 @@ Use the built-in demo workspace first, then replace paths with your own files.
 | Decode a token or flag-like string | `/decode auto ZmxhZ3s...` |
 | Inspect an APK | `/apk ./app.apk` |
 | Check local RE tools | `/retool inventory` |
+| Prepare mobile/API traffic capture | `/retool mitmproxy template api.example.test` |
 | Ask for a solve plan | `0xaf --role planner -p "triage ./chall and propose next checks"` |
 | Run delegated local evidence mode | `0xaf --workflow caveman -p "triage ./app.apk"` |
 
@@ -270,12 +271,13 @@ Copy `config.example.json` to `agent.config.json` for a full local config.
 ## Skills and Knowledge
 
 Built-in skills cover common RE paths: CTF first pass, Android APK + Frida,
-native pwn/RE, Web/WASM crypto, radare2, Ghidra, JADX, angr, Unicorn, unidbg,
+native pwn/RE, Web/WASM crypto, radare2, Ghidra, JADX, Burp/mitmproxy, angr, Unicorn, unidbg,
 and local playbooks.
 
 ```text
 /skills
 /skill android-apk-frida inspect this APK
+/skill proxy-capture capture api.example.test traffic
 ```
 
 Add your own skill:
@@ -334,9 +336,11 @@ Inside the REPL:
 | `/scan <path>` | local CTF/file triage |
 | `/decode auto <text>` | try common encodings |
 | `/mitigations <path>` | native binary protections |
-| `/retool inventory` | check radare2/JADX/Ghidra/angr/Unicorn/unidbg availability |
+| `/retool inventory` | check radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg availability |
 | `/retool angr template ./chall` | emit an angr symbolic execution harness |
 | `/retool frida template android_ssl_pinning` | emit common Frida SSL/crypto/root/debug/native templates |
+| `/retool mitmproxy template api.example.test` | emit a scoped mitmproxy capture addon |
+| `/retool burp template mobile` | emit a Burp mobile/API capture checklist |
 | `/queue list` | show queued prompts |
 | `/queue edit <id> <text>` | edit queued work before it runs |
 | `/queue cancel <id>` | cancel queued work |

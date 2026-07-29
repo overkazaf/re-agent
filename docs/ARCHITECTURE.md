@@ -503,6 +503,11 @@ built-ins in `/tools` display order. 24 tools; all `read` except three:
 | `write` | `write_file` |
 | `execute` | `run_command` `reverse_toolkit` |
 
+`reverse_toolkit` wraps fixed actions for common external tools: radare2/rizin,
+JADX, apktool, binwalk, YARA, Ghidra headless, gdb/lldb, objdump/readelf/nm,
+APKID/AAPT, Frida templates, Burp/mitmproxy proxy templates, angr, Unicorn,
+and unidbg templates.
+
 `update_plan` is `RiskRead` on purpose: it mutates nothing but the operator's
 view, and prompting for it would be noise.
 
@@ -1222,7 +1227,7 @@ no API keys, no TTY required. `make vet` runs `go vet ./...`.
 | `internal/providers` (http) | 8 | request shapes for all three HTTP adapters, **tool calls echoed back in Responses input**, response parsing including malformed tool arguments, the mock script, `deltaSince` |
 | `internal/security` | 10 | concern detection, **whole-word network matching** (so `concat` is not `nc`), path/write validation, the full mode × tier matrix, **concerns outrank an allow override**, `always`/`never` memory |
 | `internal/plan` | 5 | no-op suppression, timing carry-over, sanitize/clamp, control-character stripping, counts |
-| `internal/tools` | 16 | registry completeness, workspace escape refused, `--write` enforced, decode/carve/find-bytes/triage/entropy behaviour, `update_plan` publishing through `ToolContext`, frida templates, command exit capture and policy enforcement, **`SpillIfLarge` writes an artifact** |
+| `internal/tools` | 16 | registry completeness, workspace escape refused, `--write` enforced, decode/carve/find-bytes/triage/entropy behaviour, `update_plan` publishing through `ToolContext`, frida/proxy templates, command exit capture and policy enforcement, **`SpillIfLarge` writes an artifact** |
 | `internal/config` | 6 | partial-block merge over defaults, defaults with no file, **`SetReasoningEffort` and `SetProviderModel` rewriting CLI argv per tool**, key resolution order |
 | `internal/knowledge` | 10 | answer parsing, invented-citation flagging, aliases/bullets, raw fallback, markdown links are not citations, byte-budget packing, prompt construction, ranking |
 | `internal/workflow` | 8 | default-off behaviour, auto choosing specialist vs caveman, prompt wrappers, delegated packet extraction, delegation gating, and narrowed executor tools |

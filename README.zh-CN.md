@@ -81,7 +81,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 ## 安装
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.3
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.4
 0xaf --version
 0xaf --welcome
 ```
@@ -95,7 +95,7 @@ make build
 ./bin/0xaf --version
 ```
 
-推荐固定安装 `@v0.1.3`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
+推荐固定安装 `@v0.1.4`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
 ## 快速开始
 
@@ -137,6 +137,7 @@ claude auth status --text
 | 解 token 或 flag-like 字符串 | `/decode auto ZmxhZ3s...` |
 | 检查 APK | `/apk ./app.apk` |
 | 检查本地逆向工具 | `/retool inventory` |
+| 准备移动/API 抓包 | `/retool mitmproxy template api.example.test` |
 | 让 planner 给 solve 思路 | `0xaf --role planner -p "粗筛 ./chall 并给下一步"` |
 | 跑隔离本地证据模式 | `0xaf --workflow caveman -p "粗筛 ./app.apk"` |
 
@@ -239,11 +240,12 @@ HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--
 ## Skills 与知识库
 
 内置 skills 覆盖常见逆向路径：CTF first pass、Android APK + Frida、native pwn/RE、
-Web/WASM crypto、radare2、Ghidra、JADX、angr、Unicorn、unidbg 和本地 playbook。
+Web/WASM crypto、radare2、Ghidra、JADX、Burp/mitmproxy、angr、Unicorn、unidbg 和本地 playbook。
 
 ```text
 /skills
 /skill android-apk-frida inspect this APK
+/skill proxy-capture capture api.example.test traffic
 ```
 
 添加自己的 skill：
@@ -302,9 +304,11 @@ REPL 内：
 | `/scan <path>` | 本地 CTF/file 粗筛 |
 | `/decode auto <text>` | 尝试常见编码 |
 | `/mitigations <path>` | 查看二进制保护 |
-| `/retool inventory` | 检查 radare2/JADX/Ghidra/angr/Unicorn/unidbg 可用性 |
+| `/retool inventory` | 检查 radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg 可用性 |
 | `/retool angr template ./chall` | 生成 angr 符号执行 harness |
 | `/retool frida template android_ssl_pinning` | 生成常见 Frida SSL/crypto/root/debug/native 模板 |
+| `/retool mitmproxy template api.example.test` | 生成带 host 过滤的 mitmproxy 抓包 addon |
+| `/retool burp template mobile` | 生成 Burp 移动/API 抓包检查清单 |
 | `/queue list` | 查看待执行任务 |
 | `/queue edit <id> <text>` | 修改尚未执行的任务 |
 | `/queue cancel <id>` | 取消尚未执行的任务 |

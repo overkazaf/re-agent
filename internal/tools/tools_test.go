@@ -58,7 +58,7 @@ func TestRegistryIsComplete(t *testing.T) {
 func TestReverseToolkitInventoryMentionsCommonTools(t *testing.T) {
 	tc := testContext(t)
 	body := text(run(t, "reverse_toolkit", map[string]any{"tool": "inventory"}, tc))
-	for _, want := range []string{"radare2", "jadx", "angr", "unicorn", "unidbg", "ghidra"} {
+	for _, want := range []string{"radare2", "jadx", "angr", "unicorn", "unidbg", "ghidra", "burp", "mitmproxy"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("inventory missing %q:\n%s", want, body)
 		}
@@ -91,6 +91,25 @@ func TestReverseToolkitTemplates(t *testing.T) {
 	}, tc))
 	if !strings.Contains(frida, "CertificatePinner") || !strings.Contains(frida, "TrustManagerImpl") {
 		t.Fatalf("frida template via reverse_toolkit wrong:\n%s", frida)
+	}
+	mitm := text(run(t, "reverse_toolkit", map[string]any{
+		"tool": "mitmproxy", "action": "template", "path": "api.example.test",
+	}, tc))
+	if !strings.Contains(mitm, "from mitmproxy import http") || !strings.Contains(mitm, `"api.example.test"`) {
+		t.Fatalf("mitmproxy template wrong:\n%s", mitm)
+	}
+	burp := text(run(t, "reverse_toolkit", map[string]any{
+		"tool": "burp", "action": "template", "path": "mobile",
+	}, tc))
+	if !strings.Contains(burp, "BURP SUITE MOBILE/API CAPTURE CHECKLIST") ||
+		!strings.Contains(burp, "127.0.0.1:8080") {
+		t.Fatalf("burp mobile template wrong:\n%s", burp)
+	}
+	burpExport := text(run(t, "reverse_toolkit", map[string]any{
+		"tool": "burp", "action": "export",
+	}, tc))
+	if !strings.Contains(burpExport, "ET.parse") || !strings.Contains(burpExport, "base64.b64decode") {
+		t.Fatalf("burp export parser template wrong:\n%s", burpExport)
 	}
 }
 
