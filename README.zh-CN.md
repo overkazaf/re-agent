@@ -239,7 +239,7 @@ HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--
 ## Skills 与知识库
 
 内置 skills 覆盖常见逆向路径：CTF first pass、Android APK + Frida、native pwn/RE、
-Web/WASM crypto、radare2、Ghidra、JADX、Unicorn、unidbg 和本地 playbook。
+Web/WASM crypto、radare2、Ghidra、JADX、angr、Unicorn、unidbg 和本地 playbook。
 
 ```text
 /skills
@@ -302,7 +302,9 @@ REPL 内：
 | `/scan <path>` | 本地 CTF/file 粗筛 |
 | `/decode auto <text>` | 尝试常见编码 |
 | `/mitigations <path>` | 查看二进制保护 |
-| `/retool inventory` | 检查 radare2/JADX/Ghidra/Unicorn/unidbg 可用性 |
+| `/retool inventory` | 检查 radare2/JADX/Ghidra/angr/Unicorn/unidbg 可用性 |
+| `/retool angr template ./chall` | 生成 angr 符号执行 harness |
+| `/retool frida template android_ssl_pinning` | 生成常见 Frida SSL/crypto/root/debug/native 模板 |
 | `/queue list` | 查看待执行任务 |
 | `/queue edit <id> <text>` | 修改尚未执行的任务 |
 | `/queue cancel <id>` | 取消尚未执行的任务 |

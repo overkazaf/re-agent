@@ -270,8 +270,8 @@ Copy `config.example.json` to `agent.config.json` for a full local config.
 ## Skills and Knowledge
 
 Built-in skills cover common RE paths: CTF first pass, Android APK + Frida,
-native pwn/RE, Web/WASM crypto, radare2, Ghidra, JADX, Unicorn, unidbg, and
-local playbooks.
+native pwn/RE, Web/WASM crypto, radare2, Ghidra, JADX, angr, Unicorn, unidbg,
+and local playbooks.
 
 ```text
 /skills
@@ -334,7 +334,9 @@ Inside the REPL:
 | `/scan <path>` | local CTF/file triage |
 | `/decode auto <text>` | try common encodings |
 | `/mitigations <path>` | native binary protections |
-| `/retool inventory` | check radare2/JADX/Ghidra/Unicorn/unidbg availability |
+| `/retool inventory` | check radare2/JADX/Ghidra/angr/Unicorn/unidbg availability |
+| `/retool angr template ./chall` | emit an angr symbolic execution harness |
+| `/retool frida template android_ssl_pinning` | emit common Frida SSL/crypto/root/debug/native templates |
 | `/queue list` | show queued prompts |
 | `/queue edit <id> <text>` | edit queued work before it runs |
 | `/queue cancel <id>` | cancel queued work |

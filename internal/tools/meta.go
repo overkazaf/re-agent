@@ -21,25 +21,19 @@ import (
 func fridaHookTemplateTool() types.Tool {
 	return types.Tool{
 		Name:        "frida_hook_template",
-		Description: "Generate a Frida hook scaffold for Android Java, Android native export/address, or iOS Objective-C targets. Writes only when outputPath is provided and --write is enabled.",
+		Description: "Generate Frida scaffolds: targeted Android Java/native/iOS hooks plus common Android SSL, crypto, root/debug, class-loader, and native trace templates. Writes only when outputPath is provided and --write is enabled.",
 		Risk:        types.RiskRead,
 		Parameters: objectSchema(map[string]any{
 			"platform":     map[string]any{"type": "string", "enum": []string{"android_java", "android_native", "ios_objc"}, "default": "android_java"},
+			"template":     map[string]any{"type": "string", "description": "Optional named template: catalog, android_ssl_pinning, android_crypto, android_root_debug, android_class_loader, native_trace."},
 			"target":       map[string]any{"type": "string", "description": "Class name, module!export, module+offset, or ObjC class."},
 			"method":       map[string]any{"type": "string", "description": "Method name for Java/ObjC targets."},
 			"signature":    map[string]any{"type": "string", "description": "Optional comma-separated Java overload types."},
 			"includeStack": map[string]any{"type": "boolean", "default": true},
 			"outputPath":   map[string]any{"type": "string", "description": "Optional workspace-relative path to write the hook script."},
-		}, "target"),
+		}),
 		Execute: func(args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
-			platform := util.AsString(args["platform"], "android_java")
-			script, err := generateFridaHook(
-				platform,
-				util.AsString(args["target"]),
-				util.AsString(args["method"]),
-				util.AsString(args["signature"]),
-				util.AsBool(args["includeStack"], true),
-			)
+			script, err := generateFridaTemplate(args)
 			if err != nil {
 				return types.ToolResult{}, err
 			}
@@ -63,6 +57,328 @@ func fridaHookTemplateTool() types.Tool {
 			return textResult(fmt.Sprintf("Wrote %s\n\n%s", relative(tc.Workspace, target), script), nil), nil
 		},
 	}
+}
+
+func generateFridaTemplate(args map[string]any) (string, error) {
+	template := normalizeFridaTemplate(util.AsString(args["template"], "auto"))
+	if template != "" && template != "auto" {
+		return commonFridaTemplate(template, args)
+	}
+	return generateFridaHook(
+		util.AsString(args["platform"], "android_java"),
+		util.AsString(args["target"]),
+		util.AsString(args["method"]),
+		util.AsString(args["signature"]),
+		util.AsBool(args["includeStack"], true),
+	)
+}
+
+func normalizeFridaTemplate(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "auto", "target", "hook":
+		return "auto"
+	case "list", "templates", "catalog":
+		return "catalog"
+	case "ssl", "tls", "pinning", "ssl_pinning", "android_ssl", "android_ssl_pinning", "okhttp":
+		return "android_ssl_pinning"
+	case "crypto", "cipher", "javax_crypto", "android_crypto", "java_crypto":
+		return "android_crypto"
+	case "root", "debug", "anti_debug", "root_debug", "android_root", "android_root_debug":
+		return "android_root_debug"
+	case "class", "classloader", "class_loader", "dex", "android_class_loader":
+		return "android_class_loader"
+	case "native", "native_trace", "stalker", "module_trace":
+		return "native_trace"
+	default:
+		return strings.ToLower(strings.TrimSpace(value))
+	}
+}
+
+func commonFridaTemplate(template string, args map[string]any) (string, error) {
+	switch template {
+	case "catalog":
+		return fridaTemplateCatalog(), nil
+	case "android_ssl_pinning":
+		return androidSSLPinningTemplate(), nil
+	case "android_crypto":
+		return androidCryptoTemplate(), nil
+	case "android_root_debug":
+		return androidRootDebugTemplate(), nil
+	case "android_class_loader":
+		return androidClassLoaderTemplate(), nil
+	case "native_trace":
+		return nativeTraceTemplate(
+			util.AsString(args["target"], "libtarget.so"),
+			util.AsString(args["symbol"], util.AsString(args["method"], "")),
+		), nil
+	default:
+		return "", fmt.Errorf("unsupported frida template: %s", template)
+	}
+}
+
+func fridaTemplateCatalog() string {
+	return strings.Join([]string{
+		"FRIDA TEMPLATE CATALOG",
+		"",
+		"- android_ssl_pinning: TrustManagerImpl, OkHostnameVerifier, CertificatePinner, SSLContext hooks",
+		"- android_crypto: Cipher, SecretKeySpec, IvParameterSpec, MessageDigest, Mac tracing",
+		"- android_root_debug: local root/debug/frida check tracing and neutralizers for authorized testing",
+		"- android_class_loader: ClassLoader/DexClassLoader tracing for packed or plugin apps",
+		"- native_trace: module export/address trace with Interceptor and optional Stalker",
+		"",
+		"Examples:",
+		`frida_hook_template {"template":"android_ssl_pinning"}`,
+		`frida_hook_template {"template":"android_crypto"}`,
+		`frida_hook_template {"template":"native_trace","target":"libfoo.so","symbol":"sign"}`,
+	}, "\n")
+}
+
+func androidSSLPinningTemplate() string {
+	return strings.TrimSpace(`
+// Android SSL pinning inspection template for authorized local testing.
+// Run: frida -U -f <package> -l ssl-pinning.js --no-pause
+Java.perform(function () {
+  function hook(name, fn) {
+    try { fn(); console.log("[+] hooked " + name); }
+    catch (e) { console.log("[-] " + name + ": " + e); }
+  }
+
+  hook("TrustManagerImpl", function () {
+    const TMI = Java.use("com.android.org.conscrypt.TrustManagerImpl");
+    TMI.checkTrustedRecursive.implementation = function () {
+      console.log("[SSL] TrustManagerImpl.checkTrustedRecursive");
+      return Java.use("java.util.ArrayList").$new();
+    };
+    TMI.verifyChain.implementation = function (chain, anchors, host, clientAuth, ocsp, sct) {
+      console.log("[SSL] TrustManagerImpl.verifyChain host=" + host);
+      return chain;
+    };
+  });
+
+  hook("OkHostnameVerifier", function () {
+    const Verifier = Java.use("com.android.okhttp.internal.tls.OkHostnameVerifier");
+    Verifier.verify.overload("java.lang.String", "javax.net.ssl.SSLSession").implementation = function (host, session) {
+      console.log("[SSL] OkHostnameVerifier.verify " + host);
+      return true;
+    };
+  });
+
+  hook("OkHttp CertificatePinner", function () {
+    const Pinner = Java.use("okhttp3.CertificatePinner");
+    Pinner.check.overloads.forEach(function (overload) {
+      overload.implementation = function () {
+        console.log("[SSL] CertificatePinner.check " + arguments[0]);
+        return;
+      };
+    });
+  });
+
+  hook("SSLContext.init", function () {
+    const SSLContext = Java.use("javax.net.ssl.SSLContext");
+    const init = SSLContext.init.overload("[Ljavax.net.ssl.KeyManager;", "[Ljavax.net.ssl.TrustManager;", "java.security.SecureRandom");
+    init.implementation = function (km, tm, sr) {
+      console.log("[SSL] SSLContext.init");
+      return init.call(this, km, tm, sr);
+    };
+  });
+});
+`) + "\n"
+}
+
+func androidCryptoTemplate() string {
+	return strings.TrimSpace(`
+// Android Java crypto tracing template.
+// Captures algorithm names, key/IV material, inputs, and outputs in hex.
+Java.perform(function () {
+  function hex(bytes) {
+    if (bytes === null || bytes === undefined) return "null";
+    const out = [];
+    for (let i = 0; i < bytes.length; i++) {
+      const v = bytes[i] & 0xff;
+      out.push(("0" + v.toString(16)).slice(-2));
+    }
+    return out.join("");
+  }
+
+  const SecretKeySpec = Java.use("javax.crypto.spec.SecretKeySpec");
+  const secretKeyInit = SecretKeySpec.$init.overload("[B", "java.lang.String");
+  secretKeyInit.implementation = function (key, alg) {
+    console.log("[KEY] " + alg + " " + hex(key));
+    return secretKeyInit.call(this, key, alg);
+  };
+
+  const IvParameterSpec = Java.use("javax.crypto.spec.IvParameterSpec");
+  const ivInit = IvParameterSpec.$init.overload("[B");
+  ivInit.implementation = function (iv) {
+    console.log("[IV] " + hex(iv));
+    return ivInit.call(this, iv);
+  };
+
+  const Cipher = Java.use("javax.crypto.Cipher");
+  const cipherGetInstance = Cipher.getInstance.overload("java.lang.String");
+  cipherGetInstance.implementation = function (name) {
+    console.log("[Cipher.getInstance] " + name);
+    return cipherGetInstance.call(Cipher, name);
+  };
+  const cipherDoFinal = Cipher.doFinal.overload("[B");
+  cipherDoFinal.implementation = function (input) {
+    console.log("[Cipher.doFinal in]  " + hex(input));
+    const out = cipherDoFinal.call(this, input);
+    console.log("[Cipher.doFinal out] " + hex(out));
+    return out;
+  };
+
+  const MessageDigest = Java.use("java.security.MessageDigest");
+  const digestUpdate = MessageDigest.update.overload("[B");
+  digestUpdate.implementation = function (input) {
+    console.log("[Digest.update] " + this.getAlgorithm() + " " + hex(input));
+    return digestUpdate.call(this, input);
+  };
+  const digestFinal = MessageDigest.digest.overload();
+  digestFinal.implementation = function () {
+    const out = digestFinal.call(this);
+    console.log("[Digest.out] " + this.getAlgorithm() + " " + hex(out));
+    return out;
+  };
+
+  const Mac = Java.use("javax.crypto.Mac");
+  const macDoFinal = Mac.doFinal.overload("[B");
+  macDoFinal.implementation = function (input) {
+    console.log("[Mac.doFinal in]  " + hex(input));
+    const out = macDoFinal.call(this, input);
+    console.log("[Mac.doFinal out] " + hex(out));
+    return out;
+  };
+});
+`) + "\n"
+}
+
+func androidRootDebugTemplate() string {
+	return strings.TrimSpace(`
+// Android root/debug/frida check tracing template for authorized local testing.
+Java.perform(function () {
+  function hook(name, fn) {
+    try { fn(); console.log("[+] hooked " + name); }
+    catch (e) { console.log("[-] " + name + ": " + e); }
+  }
+
+  hook("Debug.isDebuggerConnected", function () {
+    const Debug = Java.use("android.os.Debug");
+    Debug.isDebuggerConnected.implementation = function () {
+      console.log("[anti-debug] isDebuggerConnected");
+      return false;
+    };
+  });
+
+  hook("File.exists", function () {
+    const File = Java.use("java.io.File");
+    const exists = File.exists.overload();
+    exists.implementation = function () {
+      const path = this.getAbsolutePath();
+      if (path.indexOf("/su") >= 0 || path.indexOf("magisk") >= 0 || path.indexOf("frida") >= 0) {
+        console.log("[anti-root] File.exists " + path + " -> false");
+        return false;
+      }
+      return exists.call(this);
+    };
+  });
+
+  hook("Runtime.exec", function () {
+    const Runtime = Java.use("java.lang.Runtime");
+    Runtime.exec.overloads.forEach(function (overload) {
+      overload.implementation = function () {
+        console.log("[exec] " + JSON.stringify(arguments));
+        return overload.apply(this, arguments);
+      };
+    });
+  });
+
+  hook("SystemProperties.get", function () {
+    const SP = Java.use("android.os.SystemProperties");
+    const get = SP.get.overload("java.lang.String");
+    get.implementation = function (key) {
+      const value = get.call(SP, key);
+      console.log("[prop] " + key + "=" + value);
+      return value;
+    };
+  });
+});
+`) + "\n"
+}
+
+func androidClassLoaderTemplate() string {
+	return strings.TrimSpace(`
+// Android class loader tracing template for packed, plugin, or dynamic DEX apps.
+Java.perform(function () {
+  const ClassLoader = Java.use("java.lang.ClassLoader");
+  const loadClass = ClassLoader.loadClass.overload("java.lang.String");
+  loadClass.implementation = function (name) {
+    const cls = loadClass.call(this, name);
+    if (name.indexOf("com.") === 0 || name.indexOf("okhttp") >= 0 || name.indexOf("crypto") >= 0) {
+      console.log("[loadClass] " + name + " via " + this);
+    }
+    return cls;
+  };
+
+  const DexClassLoader = Java.use("dalvik.system.DexClassLoader");
+  const init = DexClassLoader.$init.overload("java.lang.String", "java.lang.String", "java.lang.String", "java.lang.ClassLoader");
+  init.implementation = function (dexPath, optimizedDir, libPath, parent) {
+    console.log("[DexClassLoader] dex=" + dexPath + " opt=" + optimizedDir + " lib=" + libPath);
+    return init.call(this, dexPath, optimizedDir, libPath, parent);
+  };
+
+  Java.enumerateClassLoaders({
+    onMatch(loader) { console.log("[loader] " + loader); },
+    onComplete() { console.log("[loader] done"); }
+  });
+});
+`) + "\n"
+}
+
+func nativeTraceTemplate(moduleName, symbol string) string {
+	if strings.TrimSpace(moduleName) == "" {
+		moduleName = "libtarget.so"
+	}
+	symbolLine := ""
+	if strings.TrimSpace(symbol) != "" {
+		symbolLine = fmt.Sprintf("const symbolName = %s;", jsonString(symbol))
+	} else {
+		symbolLine = "const symbolName = null; // set to an export name to attach one function"
+	}
+	return strings.TrimSpace(fmt.Sprintf(`
+// Native module trace template. Set moduleName and optional symbolName.
+const moduleName = %s;
+%s
+
+function attach(ptrValue, label) {
+  if (ptrValue === null) throw new Error("target not found: " + label);
+  Interceptor.attach(ptrValue, {
+    onEnter(args) {
+      this.tid = Process.getCurrentThreadId();
+      console.log("[native enter] " + label + " tid=" + this.tid);
+      for (let i = 0; i < 6; i++) console.log("  arg" + i + ": " + args[i]);
+      Stalker.follow(this.tid, {
+        events: { call: true, ret: false, exec: false, block: false, compile: false },
+        onReceive(events) { console.log("[stalker] events=" + events.byteLength); }
+      });
+    },
+    onLeave(retval) {
+      Stalker.unfollow(this.tid);
+      console.log("[native leave] " + label + " ret=" + retval);
+    }
+  });
+}
+
+const mod = Process.getModuleByName(moduleName);
+console.log("[module] " + moduleName + " base=" + mod.base + " size=" + mod.size);
+if (symbolName) {
+  attach(Module.findExportByName(moduleName, symbolName), moduleName + "!" + symbolName);
+} else {
+  mod.enumerateExports().slice(0, 40).forEach(function (exp) {
+    console.log("[export] " + exp.name + " " + exp.address);
+  });
+}
+`, jsonString(moduleName), symbolLine)) + "\n"
 }
 
 func generateFridaHook(platform, target, method, signature string, includeStack bool) (string, error) {

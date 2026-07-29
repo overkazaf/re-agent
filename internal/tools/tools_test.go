@@ -58,7 +58,7 @@ func TestRegistryIsComplete(t *testing.T) {
 func TestReverseToolkitInventoryMentionsCommonTools(t *testing.T) {
 	tc := testContext(t)
 	body := text(run(t, "reverse_toolkit", map[string]any{"tool": "inventory"}, tc))
-	for _, want := range []string{"radare2", "jadx", "unicorn", "unidbg", "ghidra"} {
+	for _, want := range []string{"radare2", "jadx", "angr", "unicorn", "unidbg", "ghidra"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("inventory missing %q:\n%s", want, body)
 		}
@@ -78,6 +78,19 @@ func TestReverseToolkitTemplates(t *testing.T) {
 	}, tc))
 	if !strings.Contains(unidbg, "AndroidEmulatorBuilder") || !strings.Contains(unidbg, "libfoo.so") {
 		t.Fatalf("unidbg template wrong:\n%s", unidbg)
+	}
+	angr := text(run(t, "reverse_toolkit", map[string]any{
+		"tool": "angr", "action": "template", "path": "chall", "address": "0x401234", "symbol": "0x402000",
+	}, tc))
+	if !strings.Contains(angr, "angr.Project") || !strings.Contains(angr, "claripy.BVS") ||
+		!strings.Contains(angr, `"0x401234"`) || !strings.Contains(angr, `"0x402000"`) {
+		t.Fatalf("angr template wrong:\n%s", angr)
+	}
+	frida := text(run(t, "reverse_toolkit", map[string]any{
+		"tool": "frida", "action": "template", "path": "android_ssl_pinning",
+	}, tc))
+	if !strings.Contains(frida, "CertificatePinner") || !strings.Contains(frida, "TrustManagerImpl") {
+		t.Fatalf("frida template via reverse_toolkit wrong:\n%s", frida)
 	}
 }
 
@@ -253,6 +266,24 @@ func TestFridaHookTemplates(t *testing.T) {
 	}, tc))
 	if !strings.Contains(objc, "ObjC.classes") {
 		t.Fatalf("objc hook wrong:\n%s", objc)
+	}
+	ssl := text(run(t, "frida_hook_template", map[string]any{"template": "android_ssl_pinning"}, tc))
+	if !strings.Contains(ssl, "CertificatePinner") || !strings.Contains(ssl, "TrustManagerImpl") {
+		t.Fatalf("ssl template wrong:\n%s", ssl)
+	}
+	crypto := text(run(t, "frida_hook_template", map[string]any{"template": "android_crypto"}, tc))
+	if !strings.Contains(crypto, "javax.crypto.Cipher") || !strings.Contains(crypto, "SecretKeySpec") {
+		t.Fatalf("crypto template wrong:\n%s", crypto)
+	}
+	rootDebug := text(run(t, "frida_hook_template", map[string]any{"template": "android_root_debug"}, tc))
+	if !strings.Contains(rootDebug, "Debug.isDebuggerConnected") || !strings.Contains(rootDebug, "Runtime.exec") {
+		t.Fatalf("root/debug template wrong:\n%s", rootDebug)
+	}
+	trace := text(run(t, "frida_hook_template", map[string]any{
+		"template": "native_trace", "target": "libfoo.so", "symbol": "sign",
+	}, tc))
+	if !strings.Contains(trace, "Stalker.follow") || !strings.Contains(trace, `"libfoo.so"`) || !strings.Contains(trace, `"sign"`) {
+		t.Fatalf("native trace template wrong:\n%s", trace)
 	}
 }
 

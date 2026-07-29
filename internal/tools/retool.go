@@ -33,6 +33,7 @@ var reverseToolProbes = []retoolProbe{
 	{"yara", []string{"yara", "yarac"}, nil, "rule-based artifact scanning"},
 	{"native-debug", []string{"gdb", "lldb", "qemu-x86_64", "qemu-aarch64", "qemu-arm"}, nil, "batch debugger and user-mode emulation helpers"},
 	{"frida", []string{"frida", "frida-ps", "frida-trace", "frida-ls-devices", "objection"}, nil, "dynamic instrumentation and mobile runtime inspection"},
+	{"angr", []string{"python3"}, []string{"angr", "claripy", "cle", "pyvex"}, "symbolic execution, CFG recovery, and path exploration"},
 	{"binary-utils", []string{"objdump", "readelf", "nm", "strings", "file"}, nil, "binutils and baseline native triage"},
 	{"python-re-libs", []string{"python3"}, []string{"unicorn", "capstone", "keystone", "lief", "angr", "androguard"}, "Python RE libraries for emulation, disassembly, lifting, and APK work"},
 	{"unidbg", []string{"java", "javac", "gradle", "mvn"}, nil, "Java Android native emulation harness ecosystem"},
@@ -41,12 +42,12 @@ var reverseToolProbes = []retoolProbe{
 func reverseToolkitTool() types.Tool {
 	return types.Tool{
 		Name:        "reverse_toolkit",
-		Description: "Use common external reverse-engineering tools through fixed safe actions: radare2/rizin, JADX, apktool, binwalk, YARA, Ghidra headless, gdb/lldb, APKID/AAPT, Frida inventory, plus Unicorn/unidbg harness templates.",
+		Description: "Use common external reverse-engineering tools through fixed safe actions: radare2/rizin, JADX, apktool, binwalk, YARA, Ghidra headless, gdb/lldb, APKID/AAPT, Frida inventory/templates, plus angr/Unicorn/unidbg harness templates.",
 		Risk:        types.RiskExecute,
 		Parameters: objectSchema(map[string]any{
 			"tool": map[string]any{
 				"type":        "string",
-				"description": "Tool family: inventory, radare2/r2, rizin, jadx, apktool, binwalk, yara, ghidra, gdb, lldb, objdump, readelf, nm, apkid, aapt, frida, unicorn, unidbg.",
+				"description": "Tool family: inventory, radare2/r2, rizin, jadx, apktool, binwalk, yara, ghidra, gdb, lldb, objdump, readelf, nm, apkid, aapt, frida, angr, unicorn, unidbg.",
 				"default":     "inventory",
 			},
 			"action": map[string]any{
@@ -54,6 +55,7 @@ func reverseToolkitTool() types.Tool {
 				"description": "Action for the tool family, for example info/functions/strings/decompile/scan/extract/template.",
 				"default":     "auto",
 			},
+			"template": map[string]any{"type": "string", "description": "Named Frida template when tool=frida action=template."},
 			"path":     map[string]any{"type": "string", "description": "Workspace-relative artifact path when the action needs one."},
 			"rules":    map[string]any{"type": "string", "description": "Workspace-relative YARA rules path."},
 			"address":  map[string]any{"type": "string", "description": "Address or symbol for focused disassembly/templates.", "default": ""},
@@ -106,6 +108,8 @@ func reverseToolkitTool() types.Tool {
 				return runAAPTAction(action, args, tc)
 			case "frida":
 				return runFridaAction(action, args, tc)
+			case "angr":
+				return textResult(angrTemplate(args), map[string]any{"tool": tool, "action": "template"}), nil
 			case "unicorn":
 				return textResult(unicornTemplate(args, tc), map[string]any{"tool": tool, "action": "template"}), nil
 			case "unidbg":
@@ -126,7 +130,10 @@ func normalizeRETool(tool string) string {
 		return "rizin"
 	case "ghidra", "analyzeheadless":
 		return "ghidra"
-	case "jadx", "apktool", "binwalk", "yara", "gdb", "lldb", "objdump", "readelf", "nm", "apkid", "aapt", "frida", "unicorn", "unidbg":
+	case "jadx", "apktool", "binwalk", "yara", "gdb", "lldb", "objdump", "readelf", "nm", "apkid", "aapt", "frida", "angr", "claripy", "unicorn", "unidbg":
+		if strings.EqualFold(strings.TrimSpace(tool), "claripy") {
+			return "angr"
+		}
 		return strings.ToLower(strings.TrimSpace(tool))
 	}
 	return strings.ToLower(strings.TrimSpace(tool))
@@ -142,7 +149,7 @@ func defaultREAction(tool string) string {
 		return "scan"
 	case "ghidra":
 		return "analyze"
-	case "unicorn", "unidbg":
+	case "angr", "unicorn", "unidbg":
 		return "template"
 	case "aapt":
 		return "badging"
@@ -202,7 +209,8 @@ func reverseToolkitInventory(tc types.ToolContext) string {
 		"- yara: scan with workspace-local rules",
 		"- ghidra: analyzeHeadless import into the session artifact directory",
 		"- gdb/lldb/objdump/readelf/nm/apkid/aapt/frida: fixed read-only/batch actions",
-		"- unicorn/unidbg: emit harness templates for local emulation work",
+		"- angr/unicorn/unidbg: emit harness templates for symbolic execution and local emulation work",
+		"- frida template: common Android SSL, crypto, root/debug, class-loader, and native trace scaffolds",
 	)
 	return strings.Join(lines, "\n")
 }
@@ -485,6 +493,17 @@ func runFridaAction(action string, args map[string]any, tc types.ToolContext) (t
 		return runRECommand("reverse_toolkit", []string{"frida-ls-devices"}, "frida-ls-devices", args, tc, "")
 	case "ps":
 		return runRECommand("reverse_toolkit", []string{"frida-ps", "-Uai"}, "frida-ps -Uai", args, tc, "")
+	case "template":
+		templateValue := util.AsString(args["template"])
+		if strings.TrimSpace(templateValue) == "" {
+			templateValue = util.AsString(args["path"], "catalog")
+		}
+		template := normalizeFridaTemplate(templateValue)
+		script, err := commonFridaTemplate(template, args)
+		if err != nil {
+			return types.ToolResult{}, err
+		}
+		return textResult(script, map[string]any{"tool": "frida", "action": "template", "template": template}), nil
 	}
 	return errorResult("unsupported frida action: " + action), nil
 }
@@ -579,6 +598,91 @@ func commandDisplay(command []string) string {
 		}
 	}
 	return strings.Join(parts, " ")
+}
+
+func angrTemplate(args map[string]any) string {
+	path := util.AsString(args["path"], "./chall")
+	find := strings.TrimSpace(util.AsString(args["address"]))
+	if find == "" {
+		find = "0x401000"
+	}
+	avoid := strings.TrimSpace(util.AsString(args["symbol"]))
+	template := `#!/usr/bin/env python3
+# angr symbolic exploration harness for local authorized RE/CTF work.
+# Install locally: python3 -m pip install angr
+# Usage:
+#   python3 solve_angr.py ./chall --find 0x401000 --avoid 0x402000 --stdin-len 64
+
+import argparse
+import angr
+import claripy
+
+DEFAULT_BINARY = __PATH__
+DEFAULT_FIND = __FIND__
+DEFAULT_AVOID = __AVOID__
+
+
+def parse_addr(value):
+    value = (value or "").strip()
+    return int(value, 0) if value else None
+
+
+def parse_addr_list(value):
+    return [parse_addr(item) for item in (value or "").split(",") if item.strip()]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("binary", nargs="?", default=DEFAULT_BINARY)
+    parser.add_argument("--find", default=DEFAULT_FIND, help="success address, for example 0x401234")
+    parser.add_argument("--avoid", default=DEFAULT_AVOID, help="comma-separated bad addresses")
+    parser.add_argument("--stdin-len", type=int, default=64)
+    parser.add_argument("--argv1", default="", help="optional symbolic argv[1] label when needed")
+    parser.add_argument("--cfg", action="store_true", help="print CFGFast summary before exploration")
+    args = parser.parse_args()
+
+    proj = angr.Project(args.binary, auto_load_libs=False)
+    if args.cfg:
+        cfg = proj.analyses.CFGFast(normalize=True)
+        print(f"cfg functions={len(cfg.kb.functions)}")
+        for addr, func in list(cfg.kb.functions.items())[:40]:
+            print(f"0x{addr:x} {func.name}")
+
+    stdin = claripy.BVS("stdin", args.stdin_len * 8)
+    state = proj.factory.full_init_state(args=[args.binary], stdin=stdin)
+    for byte in stdin.chop(8):
+        state.solver.add(byte >= 0x20)
+        state.solver.add(byte <= 0x7e)
+
+    simgr = proj.factory.simgr(state)
+    find = parse_addr(args.find)
+    avoid = parse_addr_list(args.avoid)
+    if find is None:
+        print("Set --find to a success address. Use --cfg or radare2/Ghidra to locate it.")
+        return
+
+    simgr.explore(find=find, avoid=avoid)
+    if not simgr.found:
+        print("no path found")
+        return
+
+    found = simgr.found[0]
+    data = found.solver.eval(stdin, cast_to=bytes)
+    print(data.rstrip(b"\x00"))
+
+
+if __name__ == "__main__":
+    main()
+`
+	replacements := map[string]string{
+		"__PATH__":  jsonString(path),
+		"__FIND__":  jsonString(find),
+		"__AVOID__": jsonString(avoid),
+	}
+	for key, value := range replacements {
+		template = strings.ReplaceAll(template, key, value)
+	}
+	return template
 }
 
 func unicornTemplate(args map[string]any, tc types.ToolContext) string {

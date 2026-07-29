@@ -182,7 +182,7 @@
           <tr><td>5</td><td>Encoded flag or token</td><td><code class="inline">/decode auto ZmxhZ3s...</code></td></tr>
           <tr><td>6</td><td>Android APK first pass</td><td><code class="inline">/apk ./app.apk</code></td></tr>
           <tr><td>7</td><td>Java or native hook scaffold</td><td><code class="inline">/hook java com.example.Crypto sign</code></td></tr>
-          <tr><td>8</td><td>radare2/JADX/Ghidra/Unicorn inventory</td><td><code class="inline">/retool inventory</code></td></tr>
+          <tr><td>8</td><td>radare2/JADX/Ghidra/angr/Unicorn inventory</td><td><code class="inline">/retool inventory</code></td></tr>
           <tr><td>9</td><td>Web/WASM crypto challenge</td><td><code class="inline">/skill web-wasm-crypto inspect ./dist/app.js and ./dist/module.wasm</code></td></tr>
           <tr><td>10</td><td>Background research with sources</td><td><code class="inline">0xaf --role researcher -p "Research this packer name and list safe local checks"</code></td></tr>
         </tbody>
@@ -630,7 +630,8 @@
 /findbytes ./chall flag{       <span class="c">offsets with hex+ascii context; hex needles too</span>
 /decode base64 ZmxhZ3s...      <span class="c">base64/hex/url/rot13/xor, or auto to try them all</span>
 /apk ./app.apk                 <span class="c">dex, native libs, packer and framework fingerprints</span>
-/retool inventory              <span class="c">check radare2, JADX, Ghidra, Unicorn, unidbg and friends</span>
+/retool inventory              <span class="c">check radare2, JADX, Ghidra, angr, Unicorn, unidbg and friends</span>
+/retool angr template ./chall  <span class="c">emit a symbolic execution harness</span>
 /retool radare2 info ./chall   <span class="c">fixed-action wrapper around deeper local RE tools</span>
 /hook java com.a.Crypto sign   <span class="c">a Frida hook scaffold for the method you name</span></pre>
 
@@ -778,7 +779,7 @@
       Project-local workflows live in <code class="inline">skills/&lt;name&gt;/SKILL.md</code>.
       They are loaded at startup, summarized into the system prompt, exposed as tools, and can
       be forced for a single turn. The checkout now ships a broader RE set: CTF first pass,
-      APK/Frida, native pwn/RE, web/WASM crypto, radare2, Ghidra, JADX, Unicorn, unidbg,
+      APK/Frida, native pwn/RE, web/WASM crypto, radare2, Ghidra, JADX, angr, Unicorn, unidbg,
       and imported local playbooks.
     </p>
     <pre class="block">/skills

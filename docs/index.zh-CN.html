@@ -121,7 +121,7 @@
           <tr><td>5</td><td>解可疑 flag/token</td><td><code class="inline">/decode auto ZmxhZ3s...</code></td></tr>
           <tr><td>6</td><td>APK 首轮分析</td><td><code class="inline">/apk ./app.apk</code></td></tr>
           <tr><td>7</td><td>生成 Java/native hook 脚手架</td><td><code class="inline">/hook java com.example.Crypto sign</code></td></tr>
-          <tr><td>8</td><td>检查 radare2/JADX/Ghidra/Unicorn 等工具</td><td><code class="inline">/retool inventory</code></td></tr>
+          <tr><td>8</td><td>检查 radare2/JADX/Ghidra/angr/Unicorn 等工具</td><td><code class="inline">/retool inventory</code></td></tr>
           <tr><td>9</td><td>Web/WASM 加密题</td><td><code class="inline">/skill web-wasm-crypto inspect ./dist/app.js and ./dist/module.wasm</code></td></tr>
           <tr><td>10</td><td>调研壳、算法或相似样本</td><td><code class="inline">0xaf --role researcher -p "调研这个壳名，并列出安全的本地检查步骤"</code></td></tr>
         </tbody>
@@ -204,7 +204,8 @@
     <h2>24 个本地工具，粗筛不必花 token。</h2>
     <pre class="block">/tools                         <span class="c">列出内置工具</span>
 /skills                        <span class="c">列出内置逆向 skill</span>
-/retool inventory              <span class="c">检查 radare2、JADX、Ghidra、Unicorn、unidbg</span>
+/retool inventory              <span class="c">检查 radare2、JADX、Ghidra、angr、Unicorn、unidbg</span>
+/retool angr template ./chall  <span class="c">生成符号执行 harness</span>
 /know frida ssl pinning        <span class="c">从本地知识库回答，带出处</span>
 !file ./chall &amp;&amp; strings -n 8 ./chall | head</pre>
     <figure class="capture">

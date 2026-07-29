@@ -186,7 +186,7 @@ session JSONL 是完整记录；发给 provider 的只是预算内视图。
 
 `reverse_toolkit` 包装常见外部工具的固定动作，例如 radare2/rizin、JADX、
 apktool、binwalk、YARA、Ghidra headless、gdb/lldb、objdump/readelf/nm、
-APKID/AAPT、Frida、Unicorn 和 unidbg 模板。
+APKID/AAPT、Frida 模板、angr、Unicorn 和 unidbg 模板。
 
 MCP server tools 会转成同样的 `types.Tool`，并复用相同的 spill budget 与审批闸门。
 
