@@ -13,12 +13,14 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 ## 目录
 
+- [为什么用 0xAF-Re](#为什么用-0xaf-re)
 - [概览](#概览)
 - [开发者亮点](#开发者亮点)
 - [项目动机](#项目动机)
 - [安装](#安装)
 - [快速开始](#快速开始)
 - [基础 Demos](#基础-demos)
+- [实战案例](#实战案例完整解一道题)
 - [Workflow 模式](#workflow-模式)
 - [Provider 与模型](#provider-与模型)
 - [Skills 与知识库](#skills-与知识库)
@@ -32,18 +34,46 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 | 中文 | English |
 | --- | --- |
+| [为什么用 0xAF-Re](#为什么用-0xaf-re) | [Why 0xAF-Re](README.md#why-0xaf-re) |
 | [概览](#概览) | [Overview](README.md#overview) |
 | [开发者亮点](#开发者亮点) | [Developer Highlights](README.md#developer-highlights) |
 | [项目动机](#项目动机) | [Project Motivation](README.md#project-motivation) |
 | [安装](#安装) | [Install](README.md#install) |
 | [快速开始](#快速开始) | [Quick Start](README.md#quick-start) |
 | [基础 Demos](#基础-demos) | [Basic Demos](README.md#basic-demos) |
+| [实战案例](#实战案例完整解一道题) | [Worked Case](README.md#worked-case-solve-a-challenge-end-to-end) |
 | [Workflow 模式](#workflow-模式) | [Workflow Modes](README.md#workflow-modes) |
 | [Provider 与模型](#provider-与模型) | [Providers and Models](README.md#providers-and-models) |
 | [Skills 与知识库](#skills-与知识库) | [Skills and Knowledge](README.md#skills-and-knowledge) |
 | [安全策略](#安全策略) | [Safety](README.md#safety) |
 | [常用命令](#常用命令) | [Common Commands](README.md#common-commands) |
 | [更多文档](#更多文档) | [More Docs](README.md#more-docs) |
+
+## 为什么用 0xAF-Re
+
+逆向本来就是一条流水线：`file`、`strings`、熵扫描、r2、JADX、Frida、一个临时脚本、
+一份不知道存哪了的笔记。慢的地方很少是某一个工具本身，而是在这些工具之间**接住那根线**，
+以及两小时后重新推导一遍你早就知道的东西。
+
+0xAF-Re 保留这条流水线，在它上面加一个规划者。相比"往终端里塞一个聊天框"，它多做五件事：
+
+1. **省钱的那条路依然免费。** `/scan`、`/hex`、`/entropy`、`/carve`、`/decode`、
+   `/mitigations`、`/apk` 都是直连本地工具。不过模型、不花 token、没有延迟。
+   只有你真的想要一个脑子的时候才付费。
+2. **两个座位，不是一个。** planner 模型写路线，executor 模型跑工具。
+   把规划交给强推理模型、把工具调用交给便宜快速的——或者干脆指向两个不同厂商，
+   运行中用 `/planner`、`/executor` 随时换。
+3. **谨慎的模型也能干活。** `caveman` 模式把一次请求拆成 planner 阶段和隔离的
+   executor 阶段，后者只看到一个有边界的本地证据包。那些一见逆向措辞就卡住的普通
+   provider，照样能继续收集文件事实。
+4. **过程可见，而且能中途改道。** plan 行、工具调用、推理、token、耗时全部实时渲染。
+   `/think expand`、`/tasks collapse`、`/queue edit`、`/model` 都能**在这一轮还在跑的时候**
+   生效——不需要杀掉当前 turn 才能调整方向。
+5. **没有东西会意外离开工作区。** 读操作限定在工作区内；写盘、联网、敏感路径默认关闭；
+   exec 级动作执行前先问。每一轮都落进 JSONL 记录，可 diff、可回放、可交给别人复核。
+
+而当接下来五分钟里 agent 反而是碍事的那个，`/r2 <file>` 直接把终端交给 radare2，
+你退出时再还回来。
 
 ## 概览
 
@@ -97,6 +127,28 @@ make build
 
 推荐固定安装 `@v0.1.5`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
+**需要 Go 1.21 或更新版本。** `go.mod` 声明的是 `go 1.22`；从 1.21 起工具链会自动拉取
+所需版本，所以有 1.21 就够开始了。
+
+<details>
+<summary>如果 <code>go install</code> 报 <code>//go:build comment without // +build comment</code></summary>
+
+```text
+.../re-agent@v0.1.5/internal/app/repl.go:22:2: //go:build comment without // +build comment
+.../re-agent@v0.1.5/internal/ui/live.go:23:2: //go:build comment without // +build comment
+```
+
+这两行本身没有问题——它们分别是 `golang.org/x/sys/unix` 和 `golang.org/x/term`
+的 import 行。低于 1.17 的 Go 工具链无法解析这两个依赖使用的裸 `//go:build`
+约束，而它会把失败报在 import 处而不是依赖内部。检查并升级：
+
+```bash
+go version          # 需要 go1.21+
+# 然后用包管理器或 https://go.dev/dl/ 重装
+```
+
+</details>
+
 ## 快速开始
 
 ```bash
@@ -146,6 +198,107 @@ claude auth status --text
 
 最快路径不需要模型：`/scan`、`/decode`、`/entropy`、`/mitigations`、`/carve`、`/apk`
 都是本地工具直出。
+
+## 实战案例：完整解一道题
+
+下面全部来自一次针对 `demos/welcome` 的真实运行，这个工作区随仓库一起发布。
+plan 文本、命令、耗时和答案都是从 session 记录里抄出来的——你用同样两行就能复现。
+
+### 案例 A —— 完全不用模型
+
+`demos/welcome/chall.js` 会把你的输入和它启动时构造的 token 做比较。
+在请任何人思考之前，先看文件：
+
+```bash
+0xaf --workspace ./demos/welcome
+```
+
+```text
+/read chall.js
+# const key = 0x2a;
+# const encoded = [26, 82, 75, 76, 81, 93, 75, 88, 71, 95, 90, 117, 78, 79, 73, 65, 87];
+
+!node -e 'const k=0x2a,e=[26,82,75,76,81,93,75,88,71,95,90,117,78,79,73,65,87];console.log(e.map(v=>String.fromCharCode(v^k)).join(""))'
+# 0xaf{warmup_deck}
+
+!node chall.js '0xaf{warmup_deck}'
+# accepted
+```
+
+整道题就解完了，token 成本为零。同样的套路直接搬到真实样本上：
+`/scan` 定性、`/hex <file> 0x20` 读你关心的那段头部、`/carve` 抠出内嵌载荷、
+想要反汇编器而不是答案时就 `/r2 <file>`。
+
+### 案例 B —— 让 agent 自己跑完
+
+同一个工作区，一句话，这次可以看着它规划：
+
+```bash
+0xaf --workspace ./demos/welcome
+```
+
+```text
+Recover the expected token from chall.js, verify it by actually running the
+checker, and explain how the check works.
+```
+
+**planner 先给出路线。** 任何工具跑起来之前，`codex` 写下四步，HUD 随着完成情况逐条更新：
+
+```text
+PLAN 0/4 · via codex
+  1  Locate chall.js and identify its runtime/checker interface
+  2  Reverse the validation logic and derive the expected token
+  3  Run the checker with the recovered token and capture the result
+  4  Explain the check in concise solve notes
+```
+
+**executor 逐步执行。** 每条命令都是针对工作区的真实工具调用，受策略约束、按顺序留痕：
+
+```text
+rg --files                              盘点工作区
+file chall.js                           判定目标类型
+node -v                                 确认运行时存在
+sed -n '1,240p' chall.js                读取校验逻辑
+sha256sum chall.js && wc -c chall.js    钉住本次检查的确切字节
+node chall.js '0xaf{warmup_deck}'       accepted · exit=0
+node chall.js 'wrong'                   rejected · exit=1
+```
+
+注意最后两行。它没有停在"token 解出来是 X"，而是**正例和反例各跑了一次**——
+结论建立在观察到的行为上，而不是"我源码读对了"这个假设上。
+
+**答案连同证据一起给出：**
+
+```text
+Recovered token:   0xaf{warmup_deck}
+Verification run:  node chall.js '0xaf{warmup_deck}'  → accepted, exit=0
+
+How it works: chall.js:3 stores an integer array and XORs each byte with 0x2a.
+Decoding that array gives 0xaf{warmup_deck}. The script then compares
+process.argv[2] directly against that decoded string; exact match prints
+accepted and exits 0, otherwise rejected and exit 1.
+
+╰─ via codex · role auto · turns 1 · took 1m34s · in 162k out 2.2k think 895 cache 122k
+```
+
+### 跑的过程中你能做什么
+
+这一轮不是一个只能干等的黑盒。运行期间随时可以：
+
+| 你想要 | 中途直接输入 |
+| --- | --- |
+| 看模型的完整推理，而不是三行尾巴 | `/think expand` |
+| 把推理收起来腾出屏幕 | `/think collapse` |
+| 展开全部 plan 步骤，含未开始的 | `/tasks expand` |
+| 不打断当前轮，先把下一个问题排上 | `/queue add <text>` |
+| 修改还没执行的排队任务 | `/queue edit <id> <text>` |
+| 换掉这个会话后续使用的模型 | `/model executor <name>` |
+
+跑完之后 `/session` 会打印 JSONL 路径。plan 快照、工具调用、结果和 token 计数
+全都按顺序在里面——这才是让一次运行**可审计**而不只是"看着挺唬人"的原因。
+
+> **关于复现：** 案例 B 需要真实的 planner 和 executor。`--smoke` 和 `mock`
+> provider 只用于离线验证线路，mock 不会规划也不调工具，跑不出上面这一轮。
 
 ## Workflow 模式
 
@@ -305,6 +458,8 @@ REPL 内：
 | --- | --- |
 | `/help` | 命令面板 |
 | `/scan <path>` | 本地 CTF/file 粗筛 |
+| `/hex <file> [offset] [len]` | 十六进制查看指定窗口，支持 `0x` 偏移 |
+| `/r2 <file> [-w]` | 把终端交给交互式 radare2 会话 |
 | `/decode auto <text>` | 尝试常见编码 |
 | `/mitigations <path>` | 查看二进制保护 |
 | `/retool inventory` | 检查 radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg 可用性 |
@@ -316,6 +471,7 @@ REPL 内：
 | `/queue edit <id> <text>` | 修改尚未执行的任务 |
 | `/queue cancel <id>` | 取消尚未执行的任务 |
 | `/tasks collapse` / `/tasks expand` | 折叠或展开 live 任务列表 |
+| `/think expand` / `/think collapse` | 折叠或展开流式推理，运行中可用 |
 | `/prompt edit <role>` | 编辑 system、planner、executor、researcher prompt |
 | `/sessions` / `/continue` / `/resume <id>` | 续接历史会话 |
 | `!<command>` | 在工作区内按当前策略跑 shell 命令 |
