@@ -28,7 +28,12 @@ var spinFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"
 const (
 	thinkSummaryGlyph = "✻"
 	thinkWindow       = 3
-	frameInterval     = 90 * time.Millisecond
+	// thinkBufferMax/Keep bound the retained reasoning tail. Keep has to cover
+	// an expanded window on a wide terminal (24 rows × ~200 cols) or `/think
+	// expand` would render fewer rows than it asked for.
+	thinkBufferMax  = 16000
+	thinkBufferKeep = 8000
+	frameInterval   = 90 * time.Millisecond
 	// heightMargin is the rows kept clear below the pane so the terminal never
 	// scrolls under it.
 	heightMargin = 2
@@ -58,6 +63,8 @@ type LivePaneOptions struct {
 	// PlanDisplay controls whether task rows start auto-sized, folded, or
 	// expanded. The terminal height budget still wins.
 	PlanDisplay PlanDisplayMode
+	// ThinkDisplay does the same for the streamed reasoning tail.
+	ThinkDisplay ThinkDisplayMode
 }
 
 type LivePane struct {
@@ -73,6 +80,7 @@ type LivePane struct {
 	phase      string
 	thinking   string
 	thinkChars int
+	thinkMode  ThinkDisplayMode
 	plan       *types.PlanSnapshot
 	planMode   PlanDisplayMode
 	queueDraft string
@@ -147,6 +155,7 @@ func NewLivePane(label string, options LivePaneOptions) *LivePane {
 		flow:        options.Flow,
 		onFrame:     options.OnFrame,
 		planMode:    options.PlanDisplay,
+		thinkMode:   options.ThinkDisplay,
 	}
 	if !pane.interactive {
 		// Non-TTY (pipes, --print, CI): emit one static line, no animation.
@@ -209,8 +218,10 @@ func (p *LivePane) PushThinking(delta string) {
 	p.mu.Lock()
 	p.thinkChars += len(delta)
 	p.thinking += delta
-	if len(p.thinking) > 4000 {
-		p.thinking = p.thinking[len(p.thinking)-2000:]
+	// Keep enough tail to fill an expanded window (24 wrapped rows) on a wide
+	// terminal; the HUD only ever renders the last few rows of this.
+	if len(p.thinking) > thinkBufferMax {
+		p.thinking = p.thinking[len(p.thinking)-thinkBufferKeep:]
 	}
 	p.mu.Unlock()
 	p.render()
@@ -226,6 +237,13 @@ func (p *LivePane) SetPlan(snapshot *types.PlanSnapshot) {
 func (p *LivePane) SetPlanDisplay(mode PlanDisplayMode) {
 	p.mu.Lock()
 	p.planMode = mode
+	p.mu.Unlock()
+	p.render()
+}
+
+func (p *LivePane) SetThinkDisplay(mode ThinkDisplayMode) {
+	p.mu.Lock()
+	p.thinkMode = mode
 	p.mu.Unlock()
 	p.render()
 }
@@ -274,13 +292,35 @@ func (p *LivePane) Commit(line string) {
 		fmt.Println(line)
 		return
 	}
+	lines := safeCommitLines(line, paneWidth())
 	p.mu.Lock()
 	p.clearLocked()
 	// CRLF, not Println: raw mode during a turn drops ONLCR, so a bare "\n"
 	// would leave the next redraw starting mid-row (see render).
-	fmt.Print(line + "\r\n")
+	for _, line := range lines {
+		fmt.Print(line + "\r\n")
+	}
 	p.mu.Unlock()
 	p.render()
+}
+
+func safeCommitLines(text string, width int) []string {
+	if width < 1 {
+		width = 1
+	}
+	raw := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	lines := make([]string, 0, len(raw))
+	for _, line := range raw {
+		line = strings.TrimRight(line, "\r")
+		if DisplayWidth(line) > width {
+			line = C.Faint(Truncate(line, width))
+		}
+		lines = append(lines, line)
+	}
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
 }
 
 // Pause stops drawing and gives the terminal back (cursor visible, no repaint),
@@ -484,6 +524,7 @@ func (p *LivePane) bodyLocked() []string {
 		QueueCount:     p.queueCount,
 		Thinking:       p.thinking,
 		ThinkingWindow: thinkWindow,
+		ThinkDisplay:   p.thinkMode,
 	})
 }
 

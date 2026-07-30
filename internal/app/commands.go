@@ -143,6 +143,10 @@ func handleCommand(line string, state *State) error {
 			return fmt.Errorf("usage: /carve <file>")
 		}
 		return runDirectTool("carve_artifacts", map[string]any{"path": arg}, state)
+	case "/hex":
+		return handleHexCommand(arg, state)
+	case "/r2":
+		return handleRadare2Command(arg, state)
 	case "/apk":
 		if arg == "" {
 			return fmt.Errorf("usage: /apk <apk>")
@@ -196,6 +200,8 @@ func handleCommand(line string, state *State) error {
 		return handleQueueCommand(arg, state, nil)
 	case "/tasks":
 		return handleTasksCommand(arg, state, nil)
+	case "/think":
+		return handleThinkCommand(arg, state, nil)
 	case "/context":
 		tokens := state.Loop.ContextTokens()
 		name := routeLabel(state)
@@ -548,6 +554,45 @@ func handleTasksCommand(arg string, state *State, pane *ui.LivePane) error {
 func planDisplayLabel(mode ui.PlanDisplayMode) string {
 	if mode == "" {
 		return string(ui.PlanDisplayAuto)
+	}
+	return string(mode)
+}
+
+// handleThinkCommand folds or opens the streamed reasoning in the HUD. It is
+// accepted mid-turn as well as at the prompt, because the moment you want to
+// read the model's reasoning is while it is still being written.
+func handleThinkCommand(arg string, state *State, pane *ui.LivePane) error {
+	mode := strings.TrimSpace(arg)
+	if mode == "" {
+		emitNotice(pane, fmt.Sprintf("think=%s — auto · collapse · expand · toggle", thinkDisplayLabel(state.ThinkDisplay)))
+		return nil
+	}
+	switch mode {
+	case "auto":
+		state.ThinkDisplay = ui.ThinkDisplayAuto
+	case "collapse", "collapsed", "off":
+		state.ThinkDisplay = ui.ThinkDisplayCollapsed
+	case "expand", "expanded", "on":
+		state.ThinkDisplay = ui.ThinkDisplayExpanded
+	case "toggle":
+		if state.ThinkDisplay == ui.ThinkDisplayExpanded {
+			state.ThinkDisplay = ui.ThinkDisplayCollapsed
+		} else {
+			state.ThinkDisplay = ui.ThinkDisplayExpanded
+		}
+	default:
+		return fmt.Errorf("usage: /think auto|collapse|expand|toggle")
+	}
+	if pane != nil {
+		pane.SetThinkDisplay(state.ThinkDisplay)
+	}
+	emitNotice(pane, "think="+thinkDisplayLabel(state.ThinkDisplay))
+	return nil
+}
+
+func thinkDisplayLabel(mode ui.ThinkDisplayMode) string {
+	if mode == "" {
+		return string(ui.ThinkDisplayAuto)
 	}
 	return string(mode)
 }

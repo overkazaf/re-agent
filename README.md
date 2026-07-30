@@ -101,7 +101,7 @@ roles and composing models.
 ## Install
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.4
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.5
 0xaf --version
 0xaf --welcome
 ```
@@ -115,7 +115,7 @@ make build
 ./bin/0xaf --version
 ```
 
-`go install ...@v0.1.4` is the recommended install path. `@main` can lag behind
+`go install ...@v0.1.5` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
 ## Quick Start
@@ -141,6 +141,9 @@ The default route uses local CLIs when available. Check what 0xAF-Re can see:
 codex login status
 claude auth status --text
 ```
+
+Inside the REPL, use `/auth` for the same check. Prefix raw CLI commands with
+`!`, for example `!codex login status`.
 
 ## Basic Demos
 

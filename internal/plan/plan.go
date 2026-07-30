@@ -3,8 +3,8 @@
 // Claude `TaskCreate`/`TaskUpdate`) and the host-side `update_plan` tool used by
 // the direct-API providers.
 //
-// The plan deliberately survives across turns: the CLI providers resume one
-// native session, so the next turn usually keeps editing the same list.
+// The app decides the lifetime: restored sessions can show the saved list, but
+// a new user task resets it before the live HUD starts.
 package plan
 
 import (

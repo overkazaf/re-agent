@@ -210,6 +210,29 @@ func TestRoutingPrefersExecutorForExecutionPrompts(t *testing.T) {
 	}
 }
 
+func TestResetPlanClearsLiveTaskListOnly(t *testing.T) {
+	provider := &scriptedProvider{
+		config:    &types.ProviderConfig{Type: types.KindMock, Model: "scripted"},
+		responses: []types.ProviderResponse{{Text: "ok"}},
+	}
+	loop, _ := newTestLoop(t, provider, nil)
+	loop.publishPlan([]types.PlanStep{{Text: "old task", Status: types.StepInProgress}},
+		types.PlanUpdateMeta{Source: "test"})
+	if loop.Plan() == nil {
+		t.Fatal("plan was not published")
+	}
+	loop.ResetPlan()
+	if loop.Plan() != nil {
+		t.Fatalf("plan should be cleared, got %+v", loop.Plan())
+	}
+	if _, err := loop.Run("new task", RunOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(loop.History()) == 0 {
+		t.Fatal("resetting the plan must not clear transcript history")
+	}
+}
+
 func TestRunAddsEffectiveRolePrompt(t *testing.T) {
 	provider := &scriptedProvider{
 		config:    &types.ProviderConfig{Type: types.KindMock, Model: "scripted"},

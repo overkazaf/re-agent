@@ -31,6 +31,7 @@ var SlashCommandSections = []HelpSection{
 		{"/flow", "[full|flow|trace|off]", "Live dataflow diagram and trace lines"},
 		{"/workflow", "[off|auto|specialist|caveman]", "Pick RE workflow mode"},
 		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
+		{"/think", "[auto|collapse|expand|toggle]", "Fold or expand the streamed reasoning"},
 		{"/queue", "[list|add|edit|cancel|clear|run]", "Manage queued prompts"},
 		{"/prompt", "[list|show|path|edit|set|reset|reload]", "Edit global and per-role system prompts"},
 		{"/context", "", "Show the context estimate against the budget"},
@@ -67,6 +68,8 @@ var SlashCommandSections = []HelpSection{
 		{"/entropy", "<file>", "Sliding-window entropy scan"},
 		{"/findbytes", "<file> <needle>", "Find text/hex offsets with context"},
 		{"/carve", "<file>", "Locate embedded file signatures"},
+		{"/hex", "<file> [offset] [len]", "Hex view of a file window (0x offsets welcome)"},
+		{"/r2", "<file> [-w]", "Hand the terminal to an interactive radare2 session"},
 		{"/apk", "<apk>", "Inspect APK structure and packer/framework hints"},
 		{"/retool", "[tool action path]", "Use common RE tools: radare2, JADX, Ghidra, Unicorn, unidbg"},
 		{"/decode", "[mode] <input>", "Decode base64/hex/url/rot13/xor candidates"},
@@ -153,6 +156,10 @@ var promptActions = []string{"list", "show", "path", "edit", "set", "reset", "re
 var workflowModes = []string{"off", "auto", "specialist", "caveman"}
 
 var taskModes = []string{"auto", "collapse", "expand", "toggle"}
+
+// thinkModes mirrors taskModes. /think also accepts off/on as aliases for
+// collapse/expand, but the completion offers the canonical four.
+var thinkModes = []string{"auto", "collapse", "expand", "toggle"}
 
 var queueActions = []string{"list", "add", "edit", "cancel", "clear", "run"}
 
@@ -274,6 +281,8 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 		return simple(workflowModes, "workflow mode")
 	case "/tasks":
 		return simple(taskModes, "task display")
+	case "/think":
+		return simple(thinkModes, "reasoning display")
 	case "/queue":
 		return simple(queueActions, "queue action")
 	case "/role":

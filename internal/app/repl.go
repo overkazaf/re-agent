@@ -80,6 +80,9 @@ func repl(state *State) error {
 		if line == "/exit" || line == "/quit" {
 			return nil
 		}
+		if handled := handleBareCLIAuthLine(line, state); handled {
+			continue
+		}
 		if core.IsShellEscape(line) {
 			// A failing or refused command is normal here; report and keep going.
 			if err := runShellEscape(state, line); err != nil {
@@ -103,6 +106,59 @@ func repl(state *State) error {
 			drainQueue(state)
 		}
 	}
+}
+
+type bareCLIAuthAction string
+
+const (
+	bareCLIAuthNone   bareCLIAuthAction = ""
+	bareCLIAuthStatus bareCLIAuthAction = "status"
+	bareCLIAuthLogin  bareCLIAuthAction = "login"
+)
+
+func handleBareCLIAuthLine(line string, state *State) bool {
+	action, command := classifyBareCLIAuthLine(line)
+	switch action {
+	case bareCLIAuthStatus:
+		fmt.Print(ui.FormatAuthStatus(auth.Statuses(state.Config)))
+		fmt.Println(ui.RenderNotice(fmt.Sprintf(
+			"`%s` was handled as /auth inside 0xAF-Re. Use `!%s` for raw CLI output.", command, command)))
+		return true
+	case bareCLIAuthLogin:
+		fmt.Println(ui.RenderNotice(fmt.Sprintf(
+			"Run `%s` in a normal terminal outside 0xAF-Re, then return and run /auth. CLI login cannot be completed through the model route.", command)))
+		return true
+	default:
+		return false
+	}
+}
+
+func classifyBareCLIAuthLine(line string) (bareCLIAuthAction, string) {
+	fields := strings.Fields(strings.TrimSpace(line))
+	if len(fields) < 2 {
+		return bareCLIAuthNone, ""
+	}
+	switch fields[0] {
+	case "codex":
+		if fields[1] != "login" {
+			return bareCLIAuthNone, ""
+		}
+		if len(fields) >= 3 && fields[2] == "status" {
+			return bareCLIAuthStatus, "codex login status"
+		}
+		return bareCLIAuthLogin, "codex login"
+	case "claude":
+		if len(fields) < 3 || fields[1] != "auth" {
+			return bareCLIAuthNone, ""
+		}
+		switch fields[2] {
+		case "status":
+			return bareCLIAuthStatus, "claude auth status --text"
+		case "login":
+			return bareCLIAuthLogin, "claude auth login"
+		}
+	}
+	return bareCLIAuthNone, ""
 }
 
 func providerNames(state *State) []string {
@@ -145,6 +201,9 @@ func runTurn(state *State, line string) bool {
 	if viz == "" {
 		viz = "full"
 	}
+	// A new prompt is a new operator task. Keep the transcript, but do not open
+	// the live HUD with the previous task's plan still attached.
+	state.Loop.ResetPlan()
 	// The dataflow model is mutated by events and read by the pane every frame.
 	flow := ui.NewFlowModel(routeLabel(state))
 	flow.Begin(routeLabel(state))
@@ -166,26 +225,20 @@ func runTurn(state *State, line string) bool {
 		Route: &ui.HudRoute{
 			Planner: state.Config.PlannerProvider, Executor: state.Config.ExecutorProvider, Active: active,
 		},
-		PlanDisplay: state.PlanDisplay,
+		PlanDisplay:  state.PlanDisplay,
+		ThinkDisplay: state.ThinkDisplay,
 	}
 	if viz == "full" || viz == "flow" {
 		paneOptions.Flow = flow
 		paneOptions.OnFrame = flow.Tick
 	}
 	pane := ui.NewLivePane(routeLabel(state), paneOptions)
-	// The task list survives across turns, so the pane and both visualization
-	// layers start from it — otherwise a turn that never re-sends an unchanged
-	// list shows an empty plan for its whole duration.
-	pane.SetPlan(state.Loop.Plan())
-	if plan := state.Loop.Plan(); plan != nil {
-		flow.SeedPlan(plan)
-	}
 
 	started := types.NowMs()
 	traceOn := viz == "full" || viz == "trace"
 	// One shared scale for the duration bars, widened as slower requests land.
 	var slowestMs int64
-	previousPlan := state.Loop.Plan()
+	var previousPlan *types.PlanSnapshot
 	var thinkStart int64
 	var thinkTokens float64
 	planTouched := false
@@ -349,9 +402,8 @@ func runTurn(state *State, line string) bool {
 			return
 		}
 		archived = true
-		// Only when this turn actually moved the list. The plan survives across
-		// turns, so archiving unconditionally would reprint the same box after
-		// every turn — the trace stays silent in exactly that case.
+		// Only when this turn actually moved the list. New prompts start with an
+		// empty live plan, so a final box here means the current task produced it.
 		if plan := state.Loop.Plan(); plan != nil && planTouched {
 			fmt.Println(strings.Join(ui.RenderPlan(plan, ui.RenderPlanOptions{}), "\n"))
 		}
@@ -668,13 +720,15 @@ func (c *liveInputController) handleLiveCommand(line string) error {
 		return handleQueueCommand(arg, c.state, c.pane)
 	case "/tasks":
 		return handleTasksCommand(arg, c.state, c.pane)
+	case "/think":
+		return handleThinkCommand(arg, c.state, c.pane)
 	case "/model":
 		return handleModelCommand(arg, c.state, c.pane)
 	case "/version":
 		emitNotice(c.pane, buildinfo.VersionReport())
 		return nil
 	default:
-		return fmt.Errorf("during a turn use /queue, /tasks, /model, or /version; other commands run at the normal prompt")
+		return fmt.Errorf("during a turn use /queue, /tasks, /think, /model, or /version; other commands run at the normal prompt")
 	}
 }
 

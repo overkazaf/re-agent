@@ -78,6 +78,9 @@ const (
 	barCells           = 8
 	defaultCollapse    = 8
 	defaultThinkWindow = 3
+	// expandedThinkWindow is what `/think expand` asks for. It is a ceiling, not
+	// a promise: the height budget still sheds it down to whatever fits.
+	expandedThinkWindow = 24
 	// telemetryFloor: `◷ elapsed` and `▸ phase` are never shed.
 	telemetryFloor = 2
 )
@@ -99,6 +102,17 @@ const (
 	PlanDisplayAuto      PlanDisplayMode = "auto"
 	PlanDisplayCollapsed PlanDisplayMode = "collapsed"
 	PlanDisplayExpanded  PlanDisplayMode = "expanded"
+)
+
+// ThinkDisplayMode controls how much of the streamed reasoning tail the HUD
+// shows. Collapsed hides the text but not the `think` token counter, so a
+// folded HUD still says that reasoning is happening — only the words go away.
+type ThinkDisplayMode string
+
+const (
+	ThinkDisplayAuto      ThinkDisplayMode = "auto"
+	ThinkDisplayCollapsed ThinkDisplayMode = "collapsed"
+	ThinkDisplayExpanded  ThinkDisplayMode = "expanded"
 )
 
 type HudModel struct {
@@ -124,6 +138,10 @@ type HudModel struct {
 	// Thinking is raw streamed reasoning; the HUD wraps and tails it.
 	Thinking       string
 	ThinkingWindow int
+	// ThinkDisplay lets the operator fold the reasoning away or open it up mid
+	// turn. Expanding also moves the tail to the back of the shed order below,
+	// since content you asked for should not be the first thing dropped.
+	ThinkDisplay ThinkDisplayMode
 	// MaxRows is a hard ceiling on returned lines. The HUD sheds content for it.
 	MaxRows int
 }
@@ -874,6 +892,12 @@ func RenderHud(model HudModel) []string {
 	if thinkWindow == 0 {
 		thinkWindow = defaultThinkWindow
 	}
+	switch model.ThinkDisplay {
+	case ThinkDisplayCollapsed:
+		thinkWindow = 0
+	case ThinkDisplayExpanded:
+		thinkWindow = expandedThinkWindow
+	}
 	options := buildOptions{
 		thinkWindow: thinkWindow, collapseAfter: defaultCollapse, telemetryLimit: 8, note: true,
 	}
@@ -884,21 +908,42 @@ func RenderHud(model HudModel) []string {
 		options.collapseAfter = math.MaxInt32 / 4
 	}
 	body := build(model, width, options)
-	for len(body) > maxRows && options.thinkWindow > 0 {
-		options.thinkWindow--
-		body = build(model, width, options)
+	shedThinking := func() {
+		for len(body) > maxRows && options.thinkWindow > 0 {
+			options.thinkWindow--
+			body = build(model, width, options)
+		}
 	}
-	if len(body) > maxRows && options.note {
-		options.note = false
-		body = build(model, width, options)
+	shedNote := func() {
+		if len(body) > maxRows && options.note {
+			options.note = false
+			body = build(model, width, options)
+		}
 	}
-	for len(body) > maxRows && options.collapseAfter > 1 {
-		options.collapseAfter--
-		body = build(model, width, options)
+	shedTasks := func() {
+		for len(body) > maxRows && options.collapseAfter > 1 {
+			options.collapseAfter--
+			body = build(model, width, options)
+		}
 	}
-	for len(body) > maxRows && options.telemetryLimit > telemetryFloor {
-		options.telemetryLimit--
-		body = build(model, width, options)
+	shedTelemetry := func() {
+		for len(body) > maxRows && options.telemetryLimit > telemetryFloor {
+			options.telemetryLimit--
+			body = build(model, width, options)
+		}
+	}
+	if model.ThinkDisplay == ThinkDisplayExpanded {
+		// Asked-for content sheds last: drop the state you can recover by
+		// scrolling before the narration the operator just opened up.
+		shedNote()
+		shedTasks()
+		shedTelemetry()
+		shedThinking()
+	} else {
+		shedThinking()
+		shedNote()
+		shedTasks()
+		shedTelemetry()
 	}
 	if len(body) > maxRows {
 		// A terminal too short even for the tightest box still keeps its head

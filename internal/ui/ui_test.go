@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -147,6 +148,66 @@ func TestHudPlanDisplayMode(t *testing.T) {
 	}
 }
 
+func TestHudThinkDisplayMode(t *testing.T) {
+	// Distinct markers per line so the test can tell how deep the tail runs.
+	var reasoning []string
+	for index := 0; index < 12; index++ {
+		reasoning = append(reasoning, fmt.Sprintf("reasoning-line-%02d padding padding padding padding", index))
+	}
+	base := HudModel{
+		Label: "codex", Phase: "thinking", Frame: "⠹", Width: 100, MaxRows: 24,
+		Thinking: strings.Join(reasoning, " "),
+	}
+
+	auto := strings.Join(hudFits(t, base), "\n")
+	if !strings.Contains(auto, "reasoning-line-11") {
+		t.Fatalf("auto should tail the newest reasoning:\n%s", auto)
+	}
+	if strings.Contains(auto, "reasoning-line-00") {
+		t.Fatalf("auto window is %d rows and should not reach the oldest line:\n%s", defaultThinkWindow, auto)
+	}
+
+	folded := base
+	folded.ThinkDisplay = ThinkDisplayCollapsed
+	collapsed := strings.Join(hudFits(t, folded), "\n")
+	if strings.Contains(collapsed, "reasoning-line-") {
+		t.Fatalf("collapsed should drop every reasoning row:\n%s", collapsed)
+	}
+
+	opened := base
+	opened.ThinkDisplay = ThinkDisplayExpanded
+	expandedThink := strings.Join(hudFits(t, opened), "\n")
+	if !strings.Contains(expandedThink, "reasoning-line-00") {
+		t.Fatalf("expanded should reach further back than auto:\n%s", expandedThink)
+	}
+}
+
+// Expanding is a request, not an override: the row budget still wins, and the
+// reasoning the operator asked for is the last thing shed rather than the first.
+func TestHudThinkExpandedShedsLast(t *testing.T) {
+	var steps []types.PlanStep
+	for index := 0; index < 8; index++ {
+		steps = append(steps, types.PlanStep{Text: fmt.Sprintf("step %d", index), Status: types.StepCompleted})
+	}
+	plan := &types.PlanSnapshot{Source: "test", Steps: steps, Note: "a note that can be shed"}
+	model := HudModel{
+		Label: "codex", Phase: "thinking", Frame: "⠹", Width: 100, MaxRows: 10,
+		Plan: plan, Thinking: "keep-this-reasoning-visible under pressure",
+	}
+
+	// Guard against the budget quietly going slack and making this test vacuous:
+	// at this height auto must genuinely lose the tail.
+	if strings.Contains(strings.Join(hudFits(t, model), "\n"), "keep-this-reasoning-visible") {
+		t.Fatal("budget is not tight enough for this test to mean anything")
+	}
+
+	model.ThinkDisplay = ThinkDisplayExpanded
+	lines := strings.Join(hudFits(t, model), "\n")
+	if !strings.Contains(lines, "keep-this-reasoning-visible") {
+		t.Fatalf("expanded reasoning should survive a tight budget:\n%s", lines)
+	}
+}
+
 func TestRenderPlanBoxIsBounded(t *testing.T) {
 	lines := RenderPlan(samplePlan(), RenderPlanOptions{Width: 60})
 	for _, line := range lines {
@@ -288,6 +349,11 @@ func TestComposePaneKeepsTheHudFloor(t *testing.T) {
 	if len(full) <= 5 {
 		t.Fatalf("expected diagram + HUD, got %d lines", len(full))
 	}
+	for _, line := range full {
+		if DisplayWidth(line) > 80 {
+			t.Fatalf("pane line overflowed: %q (%d columns)", line, DisplayWidth(line))
+		}
+	}
 	// Tight budget: the diagram is dropped whole rather than clipped.
 	tight := ComposePane(types.NowMs(), 80, 8, &state, hud)
 	if len(tight) > 8 {
@@ -295,6 +361,46 @@ func TestComposePaneKeepsTheHudFloor(t *testing.T) {
 	}
 	if strings.Contains(strings.Join(tight, "\n"), "[you]") {
 		t.Fatal("a partial diagram is worse than none")
+	}
+}
+
+func TestComposePaneBoundsLongToolRows(t *testing.T) {
+	model := NewFlowModel("codex")
+	model.Begin("codex")
+	model.Apply(core.LoopEvent{Type: "wire", Phase: "send", Provider: "codex", Tokens: 871000, Messages: 15})
+	model.Apply(core.LoopEvent{Type: "tool_start", Name: `shell: /bin/zsh -lc "python3 -c 'import json,struct,subprocess,bisect; path=\"libtb_crypto.so\"'"`})
+	for index := 0; index < 20; index++ {
+		model.Tick()
+	}
+	state := model.Snapshot()
+	hud := HudModel{
+		Label: "codex", Phase: `shell: /bin/zsh -lc "python3 -c 'import json,struct,subprocess,bisect'"`,
+		Frame: "⠹", Width: 72, MaxRows: 10, Now: types.NowMs(),
+		Stats: types.TokenUsage{Input: 871000},
+	}
+	lines := ComposePane(types.NowMs(), 72, 10, &state, hud)
+	if len(lines) > 10 {
+		t.Fatalf("pane overran its budget: %d lines", len(lines))
+	}
+	for _, line := range lines {
+		if DisplayWidth(line) > 72 {
+			t.Fatalf("pane line overflowed: %q (%d columns)", line, DisplayWidth(line))
+		}
+	}
+}
+
+func TestSafeCommitLinesTruncatesAndSplits(t *testing.T) {
+	lines := safeCommitLines("short\n"+strings.Repeat("x", 80), 24)
+	if len(lines) != 2 {
+		t.Fatalf("expected two lines, got %d", len(lines))
+	}
+	for _, line := range lines {
+		if DisplayWidth(line) > 24 {
+			t.Fatalf("commit line overflowed: %q (%d columns)", line, DisplayWidth(line))
+		}
+	}
+	if !strings.Contains(lines[1], "…") {
+		t.Fatalf("long commit line should be visibly truncated: %q", lines[1])
 	}
 }
 

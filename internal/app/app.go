@@ -27,22 +27,23 @@ import (
 // State is everything one session needs; the REPL mutates it in place as the
 // operator re-routes with /agent, /role, /planner, /executor, /researcher.
 type State struct {
-	Config      *types.AgentConfig
-	Loop        *core.AgentLoop
-	Session     *core.Session
-	Tools       []types.Tool
-	ToolContext *types.ToolContext
-	Role        types.AgentRole
-	Provider    string
-	Skills      []skills.Skill
-	MCP         []mcp.Connection
-	Flow        ui.VizMode
-	Splash      *ui.SplashContext
-	Providers   map[string]types.Provider
-	Workflow    workflow.Mode
-	Queue       *taskQueue
-	PlanDisplay ui.PlanDisplayMode
-	editor      *Editor
+	Config       *types.AgentConfig
+	Loop         *core.AgentLoop
+	Session      *core.Session
+	Tools        []types.Tool
+	ToolContext  *types.ToolContext
+	Role         types.AgentRole
+	Provider     string
+	Skills       []skills.Skill
+	MCP          []mcp.Connection
+	Flow         ui.VizMode
+	Splash       *ui.SplashContext
+	Providers    map[string]types.Provider
+	Workflow     workflow.Mode
+	Queue        *taskQueue
+	PlanDisplay  ui.PlanDisplayMode
+	ThinkDisplay ui.ThinkDisplayMode
+	editor       *Editor
 }
 
 func Run(argv []string) error {
@@ -228,7 +229,7 @@ func Run(argv []string) error {
 		ToolContext: toolContext, Role: orRole(args.Role, agentConfig.DefaultRole),
 		Provider: args.Provider, Skills: builtInSkills, MCP: connections,
 		Providers: providerMap, Workflow: args.Workflow, Queue: newTaskQueue(),
-		PlanDisplay: ui.PlanDisplayAuto,
+		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
 	}
 
 	if args.Smoke {
@@ -273,11 +274,12 @@ func approvalModeOr(mode types.ApprovalMode) types.ApprovalMode {
 // runOneShot executes a single prompt with no pane: the trace is exactly what
 // you want when piping a run into a log.
 func runOneShot(state *State, prompt string, viz ui.VizMode) error {
+	state.Loop.ResetPlan()
 	startedAt := types.NowMs()
 	var slowest int64
 	// Plan lines describe a transition, so they need the previous snapshot —
 	// without it every update re-reports the list as freshly opened.
-	previousPlan := state.Loop.Plan()
+	var previousPlan *types.PlanSnapshot
 
 	ctx, cancel := interruptContext()
 	defer cancel()

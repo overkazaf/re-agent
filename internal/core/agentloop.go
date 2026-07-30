@@ -70,8 +70,9 @@ type LoopOptions struct {
 type AgentLoop struct {
 	options  LoopOptions
 	messages []types.Message
-	// The task list survives across runs: the CLI providers resume one native
-	// session, so the next turn usually keeps editing the same list.
+	// The task list is scoped by the caller. Restored sessions can display the
+	// last saved list, but the app resets it at the start of a new user task so
+	// a fresh run never opens with stale steps.
 	planTracker plan.Tracker
 	emit        func(LoopEvent)
 	// lastProviderName is whoever answered last, so `/compact` defaults to the
@@ -92,6 +93,9 @@ func NewAgentLoop(options LoopOptions) *AgentLoop {
 func (l *AgentLoop) History() []types.Message { return l.messages }
 
 func (l *AgentLoop) Plan() *types.PlanSnapshot { return l.planTracker.Current() }
+
+// ResetPlan clears the live task list without touching transcript history.
+func (l *AgentLoop) ResetPlan() { l.planTracker.Reset() }
 
 // ContextTokens is the estimated size of the live transcript, for `/context`.
 func (l *AgentLoop) ContextTokens() int { return HistoryTokens(l.messages) }
