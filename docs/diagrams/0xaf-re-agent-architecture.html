@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>0xAF-Re Architecture Map</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { color-scheme: dark; }
+    body {
+      min-height: 100vh;
+      background: #020617;
+      color: #f8fafc;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      padding: 28px;
+      background-image:
+        linear-gradient(#0b1220 1px, transparent 1px),
+        linear-gradient(90deg, #0b1220 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .container { max-width: 1360px; margin: 0 auto; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+    .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #22d3ee;
+      box-shadow: 0 0 28px rgba(34, 211, 238, 0.75);
+      animation: pulse 2.4s ease-in-out infinite;
+      flex: 0 0 auto;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(0.85); }
+    }
+    h1 { font-size: 24px; line-height: 1.2; font-weight: 700; letter-spacing: 0; }
+    .subtitle {
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 92ch;
+      margin-left: 24px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .toolbar-actions { display: none; gap: 8px; }
+    .toolbar.expanded .toolbar-actions { display: flex; }
+    .toolbar button {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      padding: 7px 12px;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .toolbar button:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: #22d3ee;
+      color: #fff;
+    }
+    .toolbar-toggle { width: 38px; padding-inline: 0 !important; font-size: 18px !important; line-height: 1; }
+    .diagram-container {
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      background: rgba(2, 6, 23, 0.82);
+      overflow-x: auto;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+    }
+    svg { display: block; width: 100%; min-width: 1180px; height: auto; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .card {
+      min-height: 134px;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 14px;
+    }
+    .card h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f8fafc;
+      font-size: 13px;
+      line-height: 1.3;
+      margin-bottom: 9px;
+    }
+    .card-dot { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+    .cyan { background: #22d3ee; }
+    .emerald { background: #34d399; }
+    .amber { background: #fbbf24; }
+    .rose { background: #fb7185; }
+    .card p {
+      color: #94a3b8;
+      font-size: 11px;
+      line-height: 1.65;
+    }
+    .footer {
+      color: #475569;
+      font-size: 11px;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .footer a { color: #64748b; }
+    @media (max-width: 900px) {
+      body { padding: 18px; }
+      .header { display: block; }
+      .toolbar { margin-top: 14px; }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .cards { grid-template-columns: 1fr; }
+      .subtitle { margin-left: 0; }
+    }
+    @media print {
+      body { padding: 12px; background: #020617; }
+      .toolbar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="report-container">
+    <header class="header">
+      <div>
+        <div class="title-row">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <h1>0xAF-Re Architecture Map</h1>
+        </div>
+        <p class="subtitle">
+          A terminal-first RE agent: one Go host routes planning, execution, and research to different model seats,
+          narrows workflow context when needed, and keeps evidence collection inside local tools and auditable transcripts.
+        </p>
+      </div>
+      <div class="toolbar" data-export-ignore>
+        <div class="toolbar-actions">
+          <button onclick="copyAsImage(this)">Copy</button>
+          <button onclick="downloadPNG(this)">PNG</button>
+          <button onclick="downloadPDF(this)">PDF</button>
+        </div>
+        <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" title="Export options" aria-label="Export options">...</button>
+      </div>
+    </header>
+
+    <main class="diagram-container">
+      <svg viewBox="0 0 1280 860" role="img" aria-labelledby="diagram-title diagram-desc">
+        <title id="diagram-title">0xAF-Re architecture map</title>
+        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools.</desc>
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
+          </pattern>
+          <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+          <marker id="arrow-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee"/>
+          </marker>
+          <marker id="arrow-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399"/>
+          </marker>
+          <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+          </marker>
+          <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.28"/>
+          </filter>
+        </defs>
+
+        <rect width="1280" height="860" fill="#020617"/>
+        <rect width="1280" height="860" fill="url(#grid)"/>
+
+        <!-- Arrows are drawn first so boxes stay visually dominant. -->
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 205 360 L 350 360 L 350 272 L 496 272" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow-cyan)"/>
+          <path d="M 640 330 L 640 392" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 760 272 L 803 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 985 272 L 1036 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 1038 356 L 990 356 L 990 498 L 983 498" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+          <path d="M 805 494 L 740 494 L 740 637" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
+          <path d="M 634 650 L 634 548 L 642 548" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+          <path d="M 528 416 L 205 416" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 205 390 L 516 390" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
+          <path d="M 975 192 L 1036 192" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+          <path d="M 1036 450 L 985 450 L 985 214 L 759 214" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+        </g>
+
+        <!-- External operator -->
+        <rect x="36" y="278" width="170" height="184" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6" filter="url(#soft-shadow)"/>
+        <text x="121" y="306" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Operator Terminal</text>
+        <text x="121" y="331" fill="#94a3b8" font-size="10" text-anchor="middle">REPL / CLI / TTY</text>
+        <text x="62" y="361" fill="#cbd5e1" font-size="10">/scan /r2 /queue</text>
+        <text x="62" y="381" fill="#cbd5e1" font-size="10">/workflow /model</text>
+        <text x="62" y="401" fill="#cbd5e1" font-size="10">/prompt edit role</text>
+        <text x="62" y="431" fill="#22d3ee" font-size="9">mid-turn steering</text>
+
+        <!-- Host boundary -->
+        <rect x="250" y="60" width="760" height="560" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re host · static Go binary</text>
+        <text x="270" y="103" fill="#64748b" font-size="9">state machine, local policy, stream telemetry, embedded prompts and skills</text>
+
+        <rect x="290" y="132" width="205" height="116" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
+        <text x="392" y="159" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Prompt + Config</text>
+        <text x="312" y="185" fill="#cbd5e1" font-size="10">role system prompts</text>
+        <text x="312" y="204" fill="#cbd5e1" font-size="10">provider/model routing</text>
+        <text x="312" y="223" fill="#a78bfa" font-size="9">project or home overrides</text>
+
+        <rect x="518" y="204" width="242" height="126" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
+        <text x="639" y="232" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent Loop</text>
+        <text x="543" y="260" fill="#cbd5e1" font-size="10">route role -> provider -> model</text>
+        <text x="543" y="280" fill="#cbd5e1" font-size="10">compact context, stream events</text>
+        <text x="543" y="300" fill="#cbd5e1" font-size="10">merge tool results into next turn</text>
+
+        <rect x="286" y="376" width="220" height="126" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
+        <text x="396" y="405" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Live HUD</text>
+        <text x="310" y="432" fill="#cbd5e1" font-size="10">role/provider/model</text>
+        <text x="310" y="451" fill="#cbd5e1" font-size="10">plan rows and task state</text>
+        <text x="310" y="470" fill="#cbd5e1" font-size="10">tokens, timing, tool trace</text>
+
+        <rect x="536" y="392" width="224" height="136" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
+        <text x="648" y="421" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Queue + Editing</text>
+        <text x="562" y="449" fill="#cbd5e1" font-size="10">append work while running</text>
+        <text x="562" y="468" fill="#cbd5e1" font-size="10">edit/cancel before execution</text>
+        <text x="562" y="487" fill="#cbd5e1" font-size="10">expand/collapse task output</text>
+        <text x="562" y="509" fill="#22d3ee" font-size="9">no restart needed</text>
+
+        <rect x="804" y="130" width="182" height="148" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.7"/>
+        <text x="895" y="158" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Workflow Modes</text>
+        <text x="828" y="186" fill="#cbd5e1" font-size="10">off / auto</text>
+        <text x="828" y="205" fill="#cbd5e1" font-size="10">specialist route</text>
+        <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman packet</text>
+        <text x="828" y="246" fill="#fbbf24" font-size="9">plan -> isolated executor</text>
+
+        <rect x="805" y="426" width="178" height="136" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
+        <text x="894" y="455" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Policy Gate</text>
+        <text x="830" y="482" fill="#cbd5e1" font-size="10">workspace-scoped reads</text>
+        <text x="830" y="501" fill="#cbd5e1" font-size="10">write/network approvals</text>
+        <text x="830" y="520" fill="#cbd5e1" font-size="10">sensitive path checks</text>
+        <text x="830" y="542" fill="#fb7185" font-size="9">unsafe work is refused</text>
+
+        <!-- Provider seats -->
+        <rect x="1038" y="70" width="206" height="528" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <text x="1058" y="95" fill="#34d399" font-size="11" font-weight="700">Provider seats</text>
+        <text x="1058" y="114" fill="#64748b" font-size="9">runtime-selectable adapters</text>
+
+        <rect x="1060" y="144" width="162" height="92" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1141" y="170" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Planner</text>
+        <text x="1080" y="195" fill="#cbd5e1" font-size="10">Codex / GPT Cyber</text>
+        <text x="1080" y="214" fill="#cbd5e1" font-size="10">DeepSeek / custom</text>
+
+        <rect x="1060" y="272" width="162" height="100" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1141" y="298" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Executor</text>
+        <text x="1080" y="323" fill="#cbd5e1" font-size="10">Claude Code / CVP</text>
+        <text x="1080" y="342" fill="#cbd5e1" font-size="10">CLI/API providers</text>
+        <text x="1080" y="361" fill="#34d399" font-size="9">tool-call capable</text>
+
+        <rect x="1060" y="408" width="162" height="92" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="1141" y="434" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Researcher</text>
+        <text x="1080" y="459" fill="#cbd5e1" font-size="10">Grok / notes / docs</text>
+        <text x="1080" y="478" fill="#cbd5e1" font-size="10">background context</text>
+
+        <text x="1060" y="548" fill="#94a3b8" font-size="10">/planner /executor /researcher</text>
+        <text x="1060" y="570" fill="#94a3b8" font-size="10">/model role model-name</text>
+
+        <!-- Evidence layer -->
+        <rect x="180" y="650" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <text x="202" y="675" fill="#fbbf24" font-size="11" font-weight="700">Local evidence layer</text>
+        <text x="202" y="694" fill="#64748b" font-size="9">facts are gathered on disk first, then summarized back into the agent loop</text>
+
+        <rect x="216" y="716" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="314" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Fast local tools</text>
+        <text x="238" y="765" fill="#cbd5e1" font-size="9">scan, hex, entropy, carve, apk</text>
+
+        <rect x="442" y="716" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="545" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE toolchain</text>
+        <text x="464" y="765" fill="#cbd5e1" font-size="9">r2, Ghidra, JADX, angr, Frida</text>
+
+        <rect x="678" y="716" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="767" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Labs + traffic</text>
+        <text x="704" y="765" fill="#cbd5e1" font-size="9">Unicorn, unidbg, Burp, mitmproxy</text>
+
+        <rect x="884" y="716" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
+        <text x="973" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Memory</text>
+        <text x="910" y="765" fill="#cbd5e1" font-size="9">JSONL sessions, artifacts, skills</text>
+
+        <!-- Legend -->
+        <g transform="translate(36 48)">
+          <text x="0" y="0" fill="#f8fafc" font-size="11" font-weight="700">Legend</text>
+          <rect x="0" y="14" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee"/>
+          <text x="24" y="23" fill="#94a3b8" font-size="9">operator / interface</text>
+          <rect x="0" y="34" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399"/>
+          <text x="24" y="43" fill="#94a3b8" font-size="9">agent runtime / providers</text>
+          <rect x="0" y="54" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24"/>
+          <text x="24" y="63" fill="#94a3b8" font-size="9">workflow and local tools</text>
+          <rect x="0" y="74" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
+          <text x="24" y="83" fill="#94a3b8" font-size="9">policy and approvals</text>
+        </g>
+
+        <text x="42" y="828" fill="#475569" font-size="10">Design: split intent, execution, and evidence so RE work stays visible, local, and steerable.</text>
+      </svg>
+    </main>
+
+    <section class="cards" aria-label="architecture notes">
+      <article class="card">
+        <h2><span class="card-dot cyan"></span>Terminal-first loop</h2>
+        <p>The REPL is the product surface: prompt queueing, live task expansion, slash commands, and raw shell escapes share one workspace policy.</p>
+      </article>
+      <article class="card">
+        <h2><span class="card-dot emerald"></span>Composable model seats</h2>
+        <p>Planner, executor, and researcher are independent seats. Each can point at a different provider and model without rebuilding the binary.</p>
+      </article>
+      <article class="card">
+        <h2><span class="card-dot amber"></span>Workflow context shaping</h2>
+        <p>Specialist routes keep rich RE context. Caveman mode turns one task into a bounded planner packet plus an isolated read-only executor run.</p>
+      </article>
+      <article class="card">
+        <h2><span class="card-dot rose"></span>Local evidence governance</h2>
+        <p>File facts come from scoped local tools. Writes, network, sensitive paths, and destructive commands pass through explicit policy gates.</p>
+      </article>
+    </section>
+
+    <p class="footer">Built with the Cocoon AI architecture-diagram skill · 0xAF-Re design overview · <a href="0xaf-re-agent-architecture.zh-CN.html">中文版本</a> · export buttons render this page as PNG or PDF</p>
+  </div>
+
+  <script>
+    function captureOptions() {
+      const el = document.getElementById("report-container");
+      const r = el.getBoundingClientRect();
+      const pad = 32;
+      return {
+        backgroundColor: "#020617",
+        scale: 2,
+        useCORS: true,
+        ignoreElements: (node) => node.closest && node.closest("[data-export-ignore]"),
+        x: r.left + window.scrollX - pad,
+        y: r.top + window.scrollY - pad,
+        width: r.width + pad * 2,
+        height: r.height + pad * 2
+      };
+    }
+
+    async function copyAsImage(btn) {
+      const original = btn.textContent;
+      try {
+        const canvas = await html2canvas(document.body, captureOptions());
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        btn.textContent = "Copied";
+      } catch (err) {
+        btn.textContent = "Failed";
+      }
+      setTimeout(() => { btn.textContent = original; }, 1800);
+    }
+
+    async function downloadPNG(btn) {
+      const original = btn.textContent;
+      btn.textContent = "Rendering";
+      try {
+        const canvas = await html2canvas(document.body, captureOptions());
+        const link = document.createElement("a");
+        link.download = "0xaf-re-agent-architecture.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        btn.textContent = "Done";
+      } catch (err) {
+        btn.textContent = "Failed";
+      }
+      setTimeout(() => { btn.textContent = original; }, 1800);
+    }
+
+    async function downloadPDF(btn) {
+      const original = btn.textContent;
+      btn.textContent = "Rendering";
+      try {
+        const canvas = await html2canvas(document.body, captureOptions());
+        const imgData = canvas.toDataURL("image/png");
+        const orientation = canvas.width > canvas.height ? "landscape" : "portrait";
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation,
+          unit: "px",
+          format: [canvas.width, canvas.height],
+          hotfixes: ["px_scaling"]
+        });
+        pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+        pdf.save("0xaf-re-agent-architecture.pdf");
+        btn.textContent = "Done";
+      } catch (err) {
+        btn.textContent = "Failed";
+      }
+      setTimeout(() => { btn.textContent = original; }, 1800);
+    }
+  </script>
+</body>
+</html>

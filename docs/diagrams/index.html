@@ -48,6 +48,7 @@
     background: #020617; padding: 10px;
   }
   .frame img { display: block; width: 100%; height: auto; min-width: 720px; }
+  .frame iframe { display: block; width: 100%; height: 980px; min-width: 720px; border: 0; background: #020617; }
   .src { margin-top: 10px; font-size: 11.5px; }
   .src a { color: #64748b; text-decoration: none; }
   .src a:hover { color: #22d3ee; text-decoration: underline; }
@@ -65,10 +66,11 @@
   </div>
   <header>
     <h1>Architecture diagrams</h1>
-    <p class="sub">Five views of how 0xAF-Re actually runs — module layering, one full turn, the context budget, the approval gate, the live pane — then the harness it borrowed from, and where the two diverge.</p>
+    <p class="sub">Start with the design map, then use the focused views for module layering, one full turn, the context budget, the approval gate, the live pane, the harness it borrowed from, and where the two diverge.</p>
   </header>
 
   <nav>
+    <a href="#architecture-map">0 · Architecture map</a>
     <a href="#module-graph">1 · Module graph</a>
     <a href="#one-turn">2 · One turn</a>
     <a href="#context-budget">3 · Context budget</a>
@@ -77,6 +79,13 @@
     <a href="#oh-my-pi">6 · oh-my-pi</a>
     <a href="#comparison">7 · Comparison</a>
   </nav>
+
+  <figure id="architecture-map">
+    <div class="fig-head"><span class="num">00</span><h2>Architecture map</h2></div>
+    <figcaption>A Cocoon AI-style overview of the product design: terminal surface, agent loop, workflow modes, provider seats, policy gate, and local evidence layer.</figcaption>
+    <div class="frame"><iframe src="0xaf-re-agent-architecture.html" title="0xAF-Re architecture map"></iframe></div>
+    <p class="src"><a href="0xaf-re-agent-architecture.html">Open exportable HTML &rarr;</a></p>
+  </figure>
 
   <figure id="module-graph">
     <div class="fig-head"><span class="num">01</span><h2>Module dependency graph</h2></div>

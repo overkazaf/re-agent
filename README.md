@@ -6,7 +6,7 @@ and a live view of each turn in one static Go binary.
 
 **Language:** English | [中文](README.zh-CN.md)
 
-**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg)
+**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg)
 
 <p align="center">
   <img src="docs/shots/live.svg" alt="A live mid-turn frame with a dataflow diagram, a HUD, task progress, and token telemetry." width="900">
@@ -16,6 +16,7 @@ and a live view of each turn in one static Go binary.
 
 - [Why 0xAF-Re](#why-0xaf-re)
 - [Overview](#overview)
+- [Architecture](#architecture)
 - [Developer Highlights](#developer-highlights)
 - [Project Motivation](#project-motivation)
 - [Install](#install)
@@ -37,6 +38,7 @@ The English and Chinese READMEs keep the same structure for quick switching.
 | --- | --- |
 | [Why 0xAF-Re](#why-0xaf-re) | [为什么用 0xAF-Re](README.zh-CN.md#为什么用-0xaf-re) |
 | [Overview](#overview) | [概览](README.zh-CN.md#概览) |
+| [Architecture](#architecture) | [架构设计](README.zh-CN.md#架构设计) |
 | [Developer Highlights](#developer-highlights) | [开发者亮点](README.zh-CN.md#开发者亮点) |
 | [Project Motivation](#project-motivation) | [项目动机](README.zh-CN.md#项目动机) |
 | [Install](#install) | [安装](README.zh-CN.md#安装) |
@@ -97,7 +99,25 @@ hands the terminal straight to radare2 and takes it back when you quit.
   project-local files can override them when `OXAF_RE_HOME` points at a checkout.
 
 For the full design, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the
-visual overview, see [the architecture diagrams](docs/diagrams/).
+visual overview, start with the [Cocoon AI-style architecture map](docs/diagrams/0xaf-re-agent-architecture.html).
+
+## Architecture
+
+The core design is a small loop rather than a chatbot bolted onto a shell:
+terminal input enters a Go host, the host routes each turn by role/provider/model,
+workflow mode shapes the context, and local evidence tools feed facts back into
+the next turn.
+
+[Open the exportable architecture map](docs/diagrams/0xaf-re-agent-architecture.html)
+or browse the [full diagram index](docs/diagrams/).
+
+| Layer | Design Intent |
+| --- | --- |
+| Terminal surface | Keep queueing, slash commands, shell escapes, and live HUD in one workspace. |
+| Agent loop | Route planner/executor/researcher seats, compact context, stream events, and persist JSONL sessions. |
+| Workflow modes | Use specialist routes when available; otherwise split RE tasks into bounded local-evidence executor packets. |
+| Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
+| Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |
 
 ## Developer Highlights
 
@@ -526,6 +546,7 @@ Inside the REPL:
 
 ## More Docs
 
+- [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html): exportable Cocoon AI-style overview of the design.
 - [Architecture deep dive](docs/ARCHITECTURE.md): package map, turn sequence,
   context budget, approval gate, data formats, invariants, and extension points.
 - [Architecture diagrams](docs/diagrams/): visual index for the core runtime.

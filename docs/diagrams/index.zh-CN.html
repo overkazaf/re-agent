@@ -46,6 +46,7 @@
     background: #020617; padding: 10px;
   }
   .frame img { display: block; width: 100%; height: auto; min-width: 720px; }
+  .frame iframe { display: block; width: 100%; height: 980px; min-width: 720px; border: 0; background: #020617; }
   .src { margin-top: 10px; font-size: 11.5px; }
   .src a { color: #64748b; text-decoration: none; }
   .src a:hover { color: #22d3ee; text-decoration: underline; }
@@ -65,12 +66,13 @@
   <header>
     <h1>架构图</h1>
     <p class="sub">
-      七张图说明 0xAF-Re 的真实运行方式：包分层、单轮请求、上下文预算、审批闸门、
-      实时面板、oh-my-pi 参考结构，以及两者的取舍差异。
+      先看架构总图理解设计思路，再用七张细分图查看包分层、单轮请求、上下文预算、
+      审批闸门、实时面板、oh-my-pi 参考结构，以及两者的取舍差异。
     </p>
   </header>
 
   <nav>
+    <a href="#architecture-map">0 · 架构总图</a>
     <a href="#module-graph">1 · 模块图</a>
     <a href="#one-turn">2 · 单轮时序</a>
     <a href="#context-budget">3 · 上下文预算</a>
@@ -79,6 +81,13 @@
     <a href="#oh-my-pi">6 · oh-my-pi</a>
     <a href="#comparison">7 · 对比</a>
   </nav>
+
+  <figure id="architecture-map">
+    <div class="fig-head"><span class="num">00</span><h2>架构总图</h2></div>
+    <figcaption>Cocoon AI 风格总览：终端交互层、agent loop、workflow 模式、provider 座位、策略闸门和本地证据层。</figcaption>
+    <div class="frame"><iframe src="0xaf-re-agent-architecture.zh-CN.html" title="0xAF-Re 架构总图"></iframe></div>
+    <p class="src"><a href="0xaf-re-agent-architecture.zh-CN.html">打开可导出 HTML &rarr;</a></p>
+  </figure>
 
   <figure id="module-graph">
     <div class="fig-head"><span class="num">01</span><h2>模块依赖图</h2></div>

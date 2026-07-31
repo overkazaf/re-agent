@@ -5,7 +5,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 **语言:** [English](README.md) | 中文
 
-**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg)
+**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg)
 
 <p align="center">
   <img src="docs/shots/live.svg" alt="一轮运行中的实时画面：数据流图、HUD、任务进度和 token 遥测。" width="900">
@@ -15,6 +15,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 
 - [为什么用 0xAF-Re](#为什么用-0xaf-re)
 - [概览](#概览)
+- [架构设计](#架构设计)
 - [开发者亮点](#开发者亮点)
 - [项目动机](#项目动机)
 - [安装](#安装)
@@ -36,6 +37,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 | --- | --- |
 | [为什么用 0xAF-Re](#为什么用-0xaf-re) | [Why 0xAF-Re](README.md#why-0xaf-re) |
 | [概览](#概览) | [Overview](README.md#overview) |
+| [架构设计](#架构设计) | [Architecture](README.md#architecture) |
 | [开发者亮点](#开发者亮点) | [Developer Highlights](README.md#developer-highlights) |
 | [项目动机](#项目动机) | [Project Motivation](README.md#project-motivation) |
 | [安装](#安装) | [Install](README.md#install) |
@@ -83,8 +85,24 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 - **默认收敛:** 默认只能读工作区；写盘、联网和敏感操作都需要显式放开。
 - **单二进制:** prompt 和内置 skills 已嵌入；需要本地覆盖时，用 `OXAF_RE_HOME` 指向仓库目录。
 
-完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。图形化概览见
-[中文架构图](docs/diagrams/index.zh-CN.html)。
+完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。图形化概览先看
+[Cocoon AI 风格架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)。
+
+## 架构设计
+
+核心不是“终端里加一个聊天框”，而是一个很小的 agent loop：用户输入进入 Go 宿主，
+宿主按 role/provider/model 路由每一轮，workflow 模式负责收窄上下文，本地证据工具把事实回灌到下一轮。
+
+[打开可导出的架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)，或进入
+[完整架构图索引](docs/diagrams/index.zh-CN.html)。
+
+| 层 | 设计意图 |
+| --- | --- |
+| 终端交互层 | 把任务队列、斜杠命令、shell escape 和 live HUD 放在同一个工作区策略下。 |
+| Agent loop | 路由 planner/executor/researcher，压缩上下文，流式输出事件，并持久化 JSONL session。 |
+| Workflow 模式 | 有 specialist route 就直接用；没有时把 RE 任务拆成有边界的本地证据 executor packet。 |
+| 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
+| 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |
 
 ## 开发者亮点
 
@@ -478,6 +496,7 @@ REPL 内：
 
 ## 更多文档
 
+- [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)：可导出 PNG/PDF 的 Cocoon AI 风格设计概览。
 - [架构深挖](docs/ARCHITECTURE.zh-CN.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。
 - [架构图索引](docs/diagrams/index.zh-CN.html)：核心运行机制的图形化入口。
 - [模块图](docs/diagrams/01-module-graph.svg)
