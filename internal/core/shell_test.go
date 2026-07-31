@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -81,6 +83,29 @@ func TestRunShellCommandCapturesOutputAndStreams(t *testing.T) {
 		if !strings.Contains(message, want) {
 			t.Fatalf("transcript entry missing %q:\n%s", want, message)
 		}
+	}
+}
+
+func TestRunShellCommandSkipsBrokenPathBash(t *testing.T) {
+	dir := t.TempDir()
+	brokenBash := filepath.Join(dir, "bash")
+	if err := os.Symlink(filepath.Join(dir, "missing-bash"), brokenBash); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	t.Setenv("PATH", dir)
+	t.Setenv("SHELL", brokenBash)
+
+	policy := &types.ExecutionPolicy{
+		CommandTimeoutMs: 5000, ApprovalMode: types.ApprovalYolo, Approvals: map[string]string{},
+	}
+	result, err := RunShellCommand("printf ok", ShellRunOptions{
+		Workspace: t.TempDir(), Policy: policy, PreApproved: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 0 || strings.TrimSpace(result.Stdout) != "ok" {
+		t.Fatalf("command should run through a fallback shell: %+v", result)
 	}
 }
 

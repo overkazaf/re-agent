@@ -189,7 +189,11 @@ func runCommandTool() types.Tool {
 			if timeoutMs > tc.Policy.CommandTimeoutMs {
 				timeoutMs = tc.Policy.CommandTimeoutMs
 			}
-			result, err := Run([]string{"bash", "-c", command}, RunOptions{
+			argv, err := ShellCommand(command)
+			if err != nil {
+				return types.ToolResult{}, err
+			}
+			result, err := Run(argv, RunOptions{
 				Cwd: tc.Workspace, TimeoutMs: timeoutMs, Ctx: tc.Context(),
 			})
 			if err != nil {

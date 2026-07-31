@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -57,6 +58,94 @@ type StreamOptions struct {
 	OnChunk func(stream string, text string)
 }
 
+// ResolveShell returns a usable command shell for workspace shell escapes,
+// run_command, and CLI runner scripts. Prefer stable system locations before
+// PATH so a stale Homebrew-style bash symlink cannot shadow /bin/bash.
+func ResolveShell() (string, error) {
+	return resolveShellFrom(defaultShellCandidates())
+}
+
+func defaultShellCandidates() []string {
+	candidates := []string{}
+	if override := strings.TrimSpace(os.Getenv("OXAF_RE_SHELL")); override != "" {
+		candidates = append(candidates, override)
+	}
+	candidates = append(candidates,
+		"/bin/bash",
+		"/usr/bin/bash",
+		"/opt/homebrew/bin/bash",
+		"/usr/local/bin/bash",
+		"bash",
+	)
+	if shell := strings.TrimSpace(os.Getenv("SHELL")); shell != "" {
+		candidates = append(candidates, shell)
+	}
+	candidates = append(candidates,
+		"/bin/zsh",
+		"/usr/bin/zsh",
+		"zsh",
+		"/bin/sh",
+		"/usr/bin/sh",
+		"sh",
+	)
+	return candidates
+}
+
+func resolveShellFrom(candidates []string) (string, error) {
+	seen := map[string]bool{}
+	tried := []string{}
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		tried = append(tried, candidate)
+		path, ok := resolveExecutable(candidate)
+		if ok {
+			return path, nil
+		}
+	}
+	if len(tried) == 0 {
+		return "", fmt.Errorf("no usable shell found")
+	}
+	return "", fmt.Errorf("no usable shell found (tried %s)", strings.Join(tried, ", "))
+}
+
+func resolveExecutable(candidate string) (string, bool) {
+	if strings.Contains(candidate, "/") {
+		if isExecutableFile(candidate) {
+			return candidate, true
+		}
+		return "", false
+	}
+	path, err := exec.LookPath(candidate)
+	if err != nil {
+		return "", false
+	}
+	if isExecutableFile(path) {
+		return path, true
+	}
+	return "", false
+}
+
+func isExecutableFile(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return false
+	}
+	return info.Mode()&0o111 != 0
+}
+
+// ShellCommand builds argv for running a command through the resolved shell.
+func ShellCommand(command string) ([]string, error) {
+	shell, err := ResolveShell()
+	if err != nil {
+		return nil, err
+	}
+	return []string{shell, "-c", command}, nil
+}
+
 // Stream is Run with output handed to the caller as it arrives instead of only
 // at exit, so a long command narrates itself. The full text is still captured.
 func Stream(command []string, options StreamOptions) (StreamedResult, error) {
@@ -75,7 +164,7 @@ func Stream(command []string, options StreamOptions) (StreamedResult, error) {
 	if options.Env != nil {
 		cmd.Env = options.Env
 	}
-	// A process group lets a killed `bash -c` take its children with it.
+	// A process group lets a killed child shell take its children with it.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error {
 		if cmd.Process != nil {

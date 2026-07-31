@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/overkazaf/re-agent/internal/auth"
+	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/util"
 )
@@ -92,7 +93,11 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 		args[i] = replacePlaceholders(arg, paths, workspace, p.config.Model)
 	}
 	sessionName := tmuxSessionName(p.name)
-	script, err := runnerScript(command, args, paths, workspace, p.config.CLIUnsetEnv)
+	shellPath, err := tools.ResolveShell()
+	if err != nil {
+		return types.ProviderResponse{}, err
+	}
+	script, err := runnerScript(shellPath, command, args, paths, workspace, p.config.CLIUnsetEnv)
 	if err != nil {
 		return types.ProviderResponse{}, err
 	}
@@ -141,7 +146,7 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 	mode := "tmux"
 	tail.start()
 	runErr := func() error {
-		if err := startTmux(p.name, sessionName, paths); err == nil {
+		if err := startTmux(p.name, sessionName, paths, shellPath); err == nil {
 			if err := waitForCompletion(sessionName, paths, timeoutMs, input.Context()); err == nil {
 				return nil
 			} else if util.IsAbort(err) || input.Context().Err() != nil {
@@ -159,7 +164,7 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 			}
 		}
 		mode = "direct-fallback"
-		return runDirect(paths.runner, timeoutMs, input.Context())
+		return runDirect(paths.runner, shellPath, timeoutMs, input.Context())
 	}()
 	tail.stop()
 	if runErr != nil {
@@ -260,9 +265,9 @@ func deltaSince(messages []types.Message, providerName string) []types.Message {
 	return messages
 }
 
-func startTmux(providerName, sessionName string, paths cliPaths) error {
+func startTmux(providerName, sessionName string, paths cliPaths, shellPath string) error {
 	cmd := exec.Command("tmux", "-S", paths.socket, "new-session", "-d", "-s", sessionName,
-		"bash "+shellQuote(paths.runner))
+		shellQuote(shellPath)+" "+shellQuote(paths.runner))
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -276,10 +281,10 @@ func startTmux(providerName, sessionName string, paths cliPaths) error {
 	return nil
 }
 
-func runDirect(runner string, timeoutMs int, ctx context.Context) error {
+func runDirect(runner, shellPath string, timeoutMs int, ctx context.Context) error {
 	runCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMs)*time.Millisecond)
 	defer cancel()
-	cmd := exec.CommandContext(runCtx, "bash", runner)
+	cmd := exec.CommandContext(runCtx, shellPath, runner)
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() != nil {
 			return util.ErrInterrupted
@@ -465,13 +470,13 @@ func createRunPaths(providerName, sessionDir string) (cliPaths, error) {
 	}, nil
 }
 
-func runnerScript(command string, args []string, paths cliPaths, workspace string, unsetEnv []string) (string, error) {
+func runnerScript(shellPath, command string, args []string, paths cliPaths, workspace string, unsetEnv []string) (string, error) {
 	quoted := []string{shellQuote(command)}
 	for _, arg := range args {
 		quoted = append(quoted, shellQuote(arg))
 	}
 	lines := []string{
-		"#!/usr/bin/env bash",
+		"#!" + shellPath,
 		"set +e",
 		"cd " + shellQuote(workspace) + " || exit 97",
 	}

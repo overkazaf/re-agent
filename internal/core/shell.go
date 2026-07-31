@@ -72,11 +72,11 @@ func AssertShellCommandAllowed(
 }
 
 // IsChdir reports whether a shell escape is a standalone directory change.
-// Each `!` command runs in its own `bash -c`, so a `cd` inside one is discarded
+// Each `!` command runs in its own child shell, so a `cd` inside one is discarded
 // the instant the child exits; the REPL has to intercept the pure form and move
 // its own workspace instead. Anything that chains another command (`&&`, `;`,
-// `|`, a newline) is left to bash untouched — its side effects still matter and
-// only bash can run them — so just the plain `cd [dir]` shape is intercepted.
+// `|`, a newline) is left to the shell untouched, so just the plain `cd [dir]`
+// shape is intercepted.
 func IsChdir(command string) bool {
 	trimmed := strings.TrimSpace(command)
 	if trimmed != "cd" && !strings.HasPrefix(trimmed, "cd ") {
@@ -86,15 +86,19 @@ func IsChdir(command string) bool {
 }
 
 // ResolveChdir runs the `cd` against the current workspace and returns the
-// directory it lands in as an absolute path. Resolution is delegated to bash so
-// `~`, `$VARS`, relative paths, and symlinks behave exactly as they would for
-// any other command run in the workspace.
+// directory it lands in as an absolute path. Resolution is delegated to the
+// selected shell so `~`, `$VARS`, relative paths, and symlinks behave exactly as
+// they would for any other command run in the workspace.
 func ResolveChdir(workspace, command string, policy *types.ExecutionPolicy) (string, error) {
 	timeout := 0
 	if policy != nil {
 		timeout = policy.CommandTimeoutMs
 	}
-	result, err := tools.Stream([]string{"bash", "-c", command + " && pwd"}, tools.StreamOptions{
+	argv, err := tools.ShellCommand(command + " && pwd")
+	if err != nil {
+		return "", err
+	}
+	result, err := tools.Stream(argv, tools.StreamOptions{
 		Cwd:       workspace,
 		TimeoutMs: timeout,
 	})
@@ -121,9 +125,17 @@ func RunShellCommand(command string, options ShellRunOptions) (ShellRunResult, e
 		}
 	}
 	started := types.NowMs()
-	result, err := tools.Stream([]string{"bash", "-c", command}, tools.StreamOptions{
+	argv, err := tools.ShellCommand(command)
+	if err != nil {
+		return ShellRunResult{}, err
+	}
+	timeout := 0
+	if options.Policy != nil {
+		timeout = options.Policy.CommandTimeoutMs
+	}
+	result, err := tools.Stream(argv, tools.StreamOptions{
 		Cwd:       options.Workspace,
-		TimeoutMs: options.Policy.CommandTimeoutMs,
+		TimeoutMs: timeout,
 		Ctx:       options.Ctx,
 		OnChunk:   options.OnChunk,
 	})

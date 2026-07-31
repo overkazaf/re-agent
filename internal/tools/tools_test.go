@@ -21,6 +21,47 @@ func testContext(t *testing.T) types.ToolContext {
 	}
 }
 
+func TestResolveShellFromSkipsInvalidCandidates(t *testing.T) {
+	dir := t.TempDir()
+	broken := filepath.Join(dir, "broken-bash")
+	if err := os.Symlink(filepath.Join(dir, "missing-target"), broken); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	nonExec := filepath.Join(dir, "not-executable")
+	if err := os.WriteFile(nonExec, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	good := filepath.Join(dir, "good-sh")
+	if err := os.WriteFile(good, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := resolveShellFrom([]string{"", broken, nonExec, dir, good})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != good {
+		t.Fatalf("expected fallback to executable shell, got %q", got)
+	}
+}
+
+func TestResolveShellFromSearchesPathButValidatesResult(t *testing.T) {
+	dir := t.TempDir()
+	good := filepath.Join(dir, "my-shell")
+	if err := os.WriteFile(good, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+
+	got, err := resolveShellFrom([]string{"my-shell"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != good {
+		t.Fatalf("expected PATH shell %q, got %q", good, got)
+	}
+}
+
 func run(t *testing.T, name string, args map[string]any, tc types.ToolContext) types.ToolResult {
 	t.Helper()
 	tool := Find(CreateReverseTools(), name)
