@@ -1,0 +1,1587 @@
+<title>0xAF-Re · 逆向 / CTF Agent 技术分享</title>
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   0xAF-Re deck
+   Palette lifted from the tool's own default theme
+   (src/ui/theme.ts → "deck": cyan accent + violet secondary on slate-950).
+   Deliberately single-theme: this is a terminal cyberdeck, and a light
+   variant would break the one thing the design is quoting.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --ground:    #020617;
+  --ground-2:  #060d1c;
+  --panel:     #0b1424;
+  --panel-2:   #101c30;
+  --rule:      #1e293b;
+  --rule-soft: #16233a;
+
+  --text:      #e5e7eb;
+  --muted:     #94a3b8;
+  --dim:       #64748b;
+  --faint:     #475569;
+
+  --accent:    #22d3ee;
+  --accent-dim:#0e7490;
+  --violet:    #a78bfa;
+  --violet-dim:#5b479c;
+  --green:     #4ade80;
+  --amber:     #fbbf24;
+  --rose:      #fb7185;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+
+  /* 1u = 1% of the stage width. Every size derives from it, so the deck
+     scales as one piece instead of drifting between elements. */
+  --u: calc(min(100vw, 100vh * 16 / 9) / 100);
+
+  --fs-hero:    calc(var(--u) * 6.0);
+  --fs-title:   calc(var(--u) * 3.1);
+  --fs-h3:      calc(var(--u) * 1.62);
+  --fs-body:    calc(var(--u) * 1.26);
+  --fs-small:   calc(var(--u) * 1.06);
+  --fs-code:    calc(var(--u) * 0.92);
+  --fs-micro:   calc(var(--u) * 0.82);
+
+  --sp-1: calc(var(--u) * 0.6);
+  --sp-2: calc(var(--u) * 1.1);
+  --sp-3: calc(var(--u) * 1.8);
+  --sp-4: calc(var(--u) * 2.8);
+  --sp-5: calc(var(--u) * 4.2);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(115% 80% at 50% -10%, #0a1730 0%, var(--ground) 55%),
+    var(--ground);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── stage ─────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  width: min(100vw, 100vh * 16 / 9);
+  height: min(100vh, 100vw * 9 / 16);
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--u) * 5) calc(var(--u) * 6.5) calc(var(--u) * 6);
+  display: none;
+  flex-direction: column;
+  gap: var(--sp-3);
+  opacity: 0;
+  overflow: hidden;          /* the frame is the frame; nothing escapes it */
+  min-height: 0;
+}
+
+.slide.on {
+  display: flex;
+  opacity: 1;                /* never depend on the animation to be visible */
+  animation: slide-in 340ms cubic-bezier(.22,.68,.36,1);
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(calc(var(--u) * 0.9)); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── chrome: eyebrow, title, footer, progress ──────────────── */
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.eyebrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rule) 0%, transparent 100%);
+}
+
+h2.title {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+h2.title .hl { color: var(--accent); }
+h2.title small {
+  display: block;
+  margin-top: var(--sp-1);
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+.deck-foot {
+  position: absolute;
+  left: calc(var(--u) * 6.5);
+  right: calc(var(--u) * 14);
+  bottom: calc(var(--u) * 2.1);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  color: var(--faint);
+  letter-spacing: 0.14em;
+  pointer-events: none;
+  z-index: 5;
+}
+.deck-foot .bar { color: var(--accent-dim); letter-spacing: 0.05em; }
+.deck-foot .bar b { color: var(--accent); font-weight: 400; }
+.deck-foot .sec { color: var(--dim); }
+.deck-foot .idx { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* ── generic content blocks ────────────────────────────────── */
+
+.lead {
+  font-size: var(--fs-body);
+  line-height: 1.75;
+  color: var(--muted);
+  max-width: 62ch;
+}
+.lead strong { color: var(--text); font-weight: 600; }
+.lead code, .inline {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  color: var(--accent);
+  background: rgba(34, 211, 238, 0.07);
+  padding: 0.08em 0.35em;
+  border-radius: 2px;
+}
+
+.cols {
+  display: grid;
+  gap: var(--sp-3);
+  align-items: stretch;
+  min-height: 0;
+}
+/* Two levels of min-height:0, because a flex/grid item defaults to its
+   content size and would otherwise push past the slide frame. */
+.cols > *, .cols > * > * { min-height: 0; }
+/* Exactly one block per slide absorbs the leftover height. */
+.cols.grow {
+  flex: 1 1 auto;
+  grid-auto-rows: minmax(0, 1fr);
+}
+.slide > .cols { flex: 0 0 auto; }
+.slide > .cols.grow { flex: 1 1 auto; }
+.cols.two   { grid-template-columns: 1fr 1fr; }
+.cols.two-a { grid-template-columns: 1.15fr 0.85fr; }
+.cols.two-b { grid-template-columns: 0.85fr 1.15fr; }
+.cols.three { grid-template-columns: repeat(3, 1fr); }
+.cols.four  { grid-template-columns: repeat(4, 1fr); }
+
+.card {
+  background: linear-gradient(180deg, var(--panel) 0%, var(--ground-2) 100%);
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--u) * 0.5);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.card h3 {
+  margin: 0;
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u) * 0.8);
+}
+.card h3 .tag {
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: var(--accent-dim);
+  text-transform: uppercase;
+}
+.card p {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.7;
+  color: var(--muted);
+}
+.card p strong { color: var(--text); font-weight: 600; }
+.card.accent { border-color: var(--accent-dim); }
+.card.violet { border-color: var(--violet-dim); }
+
+/* dot markers encode layer identity, matching the architecture diagram */
+.dot {
+  width: calc(var(--u) * 0.7);
+  height: calc(var(--u) * 0.7);
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+.dot.cy { background: var(--accent); box-shadow: 0 0 calc(var(--u)*0.9) var(--accent-dim); }
+.dot.vi { background: var(--violet); }
+.dot.gr { background: var(--green); }
+.dot.am { background: var(--amber); }
+.dot.ro { background: var(--rose); }
+
+ul.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  line-height: 1.65;
+  color: var(--muted);
+}
+/* Hanging indent, not a two-column grid: the marker has to stay in the same
+   inline flow as the text, or every inline child becomes its own grid cell. */
+ul.list li {
+  display: block;
+  padding-left: calc(var(--u) * 1.9);
+  text-indent: calc(var(--u) * -1.9);
+}
+ul.list li::before {
+  content: "▸ ";
+  font-family: var(--mono);
+  color: var(--accent-dim);
+}
+ul.list li strong { color: var(--text); font-weight: 600; }
+ul.list li code { font-family: var(--mono); color: var(--violet); font-size: 0.94em; }
+ul.list.x li::before { content: "× "; color: var(--rose); }
+ul.list.ok li::before { content: "✔ "; color: var(--green); }
+
+/* ── terminal panes: the tool's native output, quoted verbatim ─ */
+
+.term {
+  background: #01060f;
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--u) * 0.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.7);
+  padding: calc(var(--u) * 0.7) var(--sp-2);
+  border-bottom: 1px solid var(--rule-soft);
+  background: rgba(255,255,255,0.015);
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.14em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.term-bar .lamp {
+  width: calc(var(--u) * 0.55);
+  height: calc(var(--u) * 0.55);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 calc(var(--u)*0.8) var(--accent);
+}
+.term-bar .right { margin-left: auto; color: var(--faint); letter-spacing: 0.1em; }
+
+.term pre {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  font-family: var(--mono);
+  font-size: var(--fs-code);
+  line-height: 1.55;
+  color: var(--muted);
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre;
+  font-variant-numeric: tabular-nums;
+  tab-size: 2;
+}
+.term.tight pre { font-size: calc(var(--u) * 0.80); line-height: 1.42; padding: var(--sp-1) var(--sp-3); }
+.term pre::-webkit-scrollbar { height: calc(var(--u)*0.5); width: calc(var(--u)*0.5); }
+.term pre::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 99px; }
+
+/* syntax tones used inside quoted terminal output */
+.t   { color: var(--faint); }        /* timestamps / gutter */
+.c   { color: var(--accent); }
+.v   { color: var(--violet); }
+.g   { color: var(--green); }
+.a   { color: var(--amber); }
+.r   { color: var(--rose); }
+.w   { color: var(--text); }
+.m   { color: var(--dim); }
+.cm  { color: var(--faint); font-style: italic; }
+.kw  { color: var(--violet); }
+.str { color: var(--green); }
+
+
+/* ── the architecture figure: real boxes, because a box-drawing diagram
+   with CJK inside it never stays aligned across fonts ─────────── */
+.arch {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  font-family: var(--mono);
+}
+.arch-bar {
+  border: 1px solid var(--rule);
+  border-left-width: calc(var(--u) * 0.28);
+  border-radius: calc(var(--u) * 0.35);
+  background: linear-gradient(90deg, rgba(255,255,255,0.035), transparent 60%);
+  padding: calc(var(--u) * 0.8) var(--sp-2);
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.arch-bar.cy { border-color: var(--rule); border-left-color: var(--accent); }
+.arch-bar.vi { border-color: var(--rule); border-left-color: var(--violet); }
+.arch-bar b, .arch-box b, .arch-foot b {
+  color: var(--accent);
+  font-weight: 400;
+  margin-right: calc(var(--u) * 0.3);
+}
+.arch-bar.vi b { color: var(--violet); }
+.arch-bar code, .arch-foot code { color: var(--dim); font-size: 0.9em; }
+.arch-bar em, .arch-foot em { font-style: normal; color: var(--muted); font-size: 0.9em; margin-left: auto; }
+.arch-link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-left: calc(var(--u) * 2.5);
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+.arch-link::before { content: "↓"; color: var(--accent-dim); }
+.arch-fan {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  height: calc(var(--u) * 1.4);
+}
+.arch-fan i {
+  border-left: 1px solid var(--rule);
+  margin-left: 12.5%;
+  position: relative;
+}
+.arch-fan i::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: calc(var(--u) * -0.25);
+  border: calc(var(--u) * 0.25) solid transparent;
+  border-top-color: var(--rule);
+}
+.arch-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.arch-box {
+  border: 1px solid var(--rule);
+  border-top-width: calc(var(--u) * 0.2);
+  border-radius: calc(var(--u) * 0.35);
+  padding: var(--sp-2);
+  background: rgba(255,255,255,0.015);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+}
+.arch-box.cy { border-top-color: var(--accent); }
+.arch-box.vi { border-top-color: var(--violet); }
+.arch-box.am { border-top-color: var(--amber); }
+.arch-box.gr { border-top-color: var(--green); }
+.arch-box h5 { margin: 0; font-size: var(--fs-small); font-weight: 500; color: var(--text); }
+.arch-box h5 span { color: var(--muted); font-weight: 400; }
+.arch-box.vi h5 b { color: var(--violet); }
+.arch-box.am h5 b { color: var(--amber); }
+.arch-box.gr h5 b { color: var(--green); }
+.arch-box p { margin: 0; font-size: var(--fs-micro); line-height: 1.65; color: var(--muted); }
+.arch-box p.note { margin-top: auto; padding-top: calc(var(--u) * 0.6); border-top: 1px solid var(--rule-soft); color: var(--faint); }
+.arch-rail {
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0 0 calc(var(--u) * 0.35) calc(var(--u) * 0.35);
+  height: calc(var(--u) * 1.9);
+  margin: calc(var(--u) * 0.4) calc(var(--u) * 4) calc(var(--u) * 1.1);
+  position: relative;
+}
+.arch-rail span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--u) * -0.75);
+  transform: translateX(-50%);
+  background: var(--ground);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-micro);
+  color: var(--faint);
+}
+.arch-foot {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--text);
+  padding-left: calc(var(--u) * 0.3);
+}
+.arch-foot b { color: var(--amber); }
+
+/* ── metrics ───────────────────────────────────────────────── */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+}
+.metric {
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--u) * 0.4);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(255,255,255,0.012);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.3);
+}
+.metric .n {
+  font-family: var(--mono);
+  font-size: calc(var(--u) * 3.1);
+  color: var(--accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.metric .n span { font-size: 0.45em; color: var(--dim); margin-left: 0.25em; }
+.metric .k {
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.metric.vi .n { color: var(--violet); }
+.metric.gr .n { color: var(--green); }
+
+/* ── tables ────────────────────────────────────────────────── */
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+table.grid th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  font-weight: 400;
+  padding: 0 var(--sp-2) var(--sp-1) 0;
+  border-bottom: 1px solid var(--rule);
+}
+table.grid td {
+  padding: calc(var(--u) * 0.85) var(--sp-2) calc(var(--u) * 0.85) 0;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--muted);
+  line-height: 1.5;
+  vertical-align: top;
+}
+table.grid td.k { color: var(--text); font-family: var(--mono); white-space: nowrap; }
+table.grid tr:last-child td { border-bottom: none; }
+
+/* ── the dataflow wire, redrawn from the tool's live diagram ── */
+
+.wire-rig {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.9);
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  color: var(--muted);
+  padding: var(--sp-2) 0;
+}
+.wire-node {
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--u) * 0.35);
+  padding: calc(var(--u) * 0.55) calc(var(--u) * 1.1);
+  background: var(--panel);
+  color: var(--text);
+  white-space: nowrap;
+}
+.wire-node.model {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+  box-shadow: inset 0 0 calc(var(--u)*2) rgba(34,211,238,0.06);
+}
+.wire-node.tools { border-color: var(--violet-dim); color: var(--violet); }
+.wire {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--rule) 0 calc(var(--u)*0.5), transparent calc(var(--u)*0.5) calc(var(--u)*0.85));
+}
+.wire i {
+  position: absolute;
+  top: calc(var(--u) * -0.3);
+  width: calc(var(--u) * 0.65);
+  height: calc(var(--u) * 0.65);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 calc(var(--u)*1.2) var(--accent);
+  animation: pkt 2.6s linear infinite;
+}
+.wire.back i { background: var(--violet); box-shadow: 0 0 calc(var(--u)*1.2) var(--violet); animation-direction: reverse; }
+.wire i:nth-child(2) { animation-delay: 1.3s; }
+@keyframes pkt { from { left: -1%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } to { left: 100%; opacity: 0; } }
+
+/* ── cover ─────────────────────────────────────────────────── */
+
+.cover {
+  justify-content: center;
+  padding-left: calc(var(--u) * 9);
+}
+.cover pre.logo {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: calc(var(--u) * 1.55);
+  line-height: 1.05;
+  color: var(--accent);
+  text-shadow: 0 0 calc(var(--u) * 2.2) rgba(34,211,238,0.35);
+  letter-spacing: -0.02em;
+}
+.cover h1 {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-hero);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.cover h1 em { font-style: normal; color: var(--accent); }
+.cover .sub {
+  font-family: var(--mono);
+  font-size: var(--fs-body);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  max-width: 60ch;
+  line-height: 1.7;
+}
+.cover .meta {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-top: var(--sp-2);
+}
+.cover .meta b { color: var(--accent-dim); font-weight: 400; }
+
+/* ── overview overlay ──────────────────────────────────────── */
+
+.overview {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.97);
+  z-index: 20;
+  padding: calc(var(--u) * 5) calc(var(--u) * 6);
+  display: none;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.overview.on { display: flex; }
+.overview h4 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+}
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: calc(var(--u) * 0.9);
+  overflow-y: auto;
+}
+.ov-item {
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--u) * 0.35);
+  padding: var(--sp-2);
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.35);
+}
+.ov-item span {
+  font-family: var(--mono);
+  color: var(--faint);
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+}
+.ov-item:hover, .ov-item:focus-visible { border-color: var(--accent-dim); color: var(--text); outline: none; }
+.ov-item.cur { border-color: var(--accent); color: var(--text); }
+
+/* ── nav buttons ───────────────────────────────────────────── */
+
+.nav {
+  position: absolute;
+  right: calc(var(--u) * 2);
+  bottom: calc(var(--u) * 1.6);
+  display: flex;
+  gap: calc(var(--u) * 0.5);
+  z-index: 10;
+}
+.nav button {
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: calc(var(--u) * 0.3);
+  padding: calc(var(--u) * 0.3) calc(var(--u) * 1);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.nav button:hover, .nav button:focus-visible { color: var(--accent); border-color: var(--accent-dim); outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide.on { animation: none; opacity: 1; }
+  .wire i { animation: none; left: 50%; }
+}
+</style>
+
+<div class="stage" id="stage">
+
+<!-- ═══ 00 · cover ═══════════════════════════════════════════ -->
+<section class="slide cover" data-sec="0xAF-Re" data-nav="封面">
+  <pre class="logo"> ██████ ██   ██  █████  ███████
+██  ██████ ██   ██   ██ ██
+██ ██ ██  ███   ███████ █████
+████  ██ ██ ██  ██   ██ ██
+ ██████ ██   ██ ██   ██ ██     ·RE</pre>
+  <h1>把逆向工作台<br>变成一个 <em>可观测</em> 的 Agent</h1>
+  <p class="sub">一个专注 逆向工程 / CTF 的终端 Agent：<br>双模型编排 · 23 个逆向工具 · 分级审批 · 全程可回放。</p>
+  <div class="meta">
+    <div><b>ROUTE</b> codex → claude</div>
+    <div><b>RUNTIME</b> bun + tmux</div>
+    <div><b>CODE</b> 10.8k lines TS</div>
+    <div><b>TESTS</b> 185 cases</div>
+  </div>
+</section>
+
+<!-- ═══ 01 · problem ═════════════════════════════════════════ -->
+<section class="slide" data-sec="为什么" data-nav="逆向工作流的四个断点">
+  <div class="eyebrow">为什么 / the gap</div>
+  <h2 class="title">逆向的瓶颈不是模型不够聪明，<br>是<span class="hl">工作流断在四个地方</span></h2>
+  <div class="cols four" style="margin-top:var(--sp-2)">
+    <div class="card">
+      <h3><span class="dot ro"></span>上下文</h3>
+      <p>一次 RE 任务的 <strong>strings / hexdump / 反编译输出</strong> 动辄几十万字符。塞进对话就爆窗口，不塞就等于没分析。</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot am"></span>工具</h3>
+      <p>file、strings、entropy、carve、apk、frida…… 每次都要人肉拼命令。模型知道该干什么，<strong>但手够不到</strong>。</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot vi"></span>信任</h3>
+      <p>把 shell 交给模型，要么全放开（<strong>rm -rf 就在一次 hallucination 之外</strong>），要么全关死，退化成聊天。</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot cy"></span>可复现</h3>
+      <p>解出来了，但<strong>过程留不下来</strong>。第二天问"当时怎么定位到那个校验函数的"，只能重来。</p>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:auto">这四条都不是"换个更强的模型"能解决的问题 —— 它们是<strong>宿主端的工程问题</strong>。</p>
+</section>
+
+<!-- ═══ 02 · what it is ══════════════════════════════════════ -->
+<section class="slide" data-sec="为什么" data-nav="它是什么 / 不是什么">
+  <div class="eyebrow">定位 / scope</div>
+  <h2 class="title">一个<span class="hl">小而完整</span>的逆向 Agent 宿主
+    <small>~11k 行 TypeScript · 38 个模块 · 0 运行时依赖（bun 原生）</small></h2>
+  <div class="cols two">
+    <div class="card accent">
+      <h3><span class="tag">it is</span>它是</h3>
+      <ul class="list ok">
+        <li>一个 <strong>Agent Loop</strong>：模型 → 工具 → 结果 → 继续，直到收敛</li>
+        <li>一层 <strong>Provider 适配</strong>：6 种 wire format 归一成一个接口</li>
+        <li>一套 <strong>逆向专用工具表</strong>：triage / entropy / carve / apk / frida 模板</li>
+        <li>一条 <strong>安全边界</strong>：分级审批 + 危险模式拦截</li>
+        <li>一份 <strong>append-only JSONL</strong>：每一步都能回放、续跑</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tag">it is not</span>它不是</h3>
+      <ul class="list x">
+        <li>不是 IDA / Ghidra 的替代 —— 它<strong>调度</strong>这些工具，不重写它们</li>
+        <li>不是通用编码 Agent —— 系统提示词、工具、技能全部围绕 RE 收敛</li>
+        <li>不是一个 TUI 框架 —— 刻意比 <code>oh-my-pi</code> 小一个量级</li>
+        <li>不是自动化攻击工具 —— 默认<strong>无网络、无写入</strong>，只服务授权场景</li>
+      </ul>
+    </div>
+  </div>
+  <p class="lead">设计取向：<strong>宿主端做重，模型端做薄</strong>。上下文治理、安全策略、可观测性、会话持久化都在本地代码里，换任何模型都成立。</p>
+</section>
+
+<!-- ═══ 03 · 60s proof ═══════════════════════════════════════ -->
+<section class="slide" data-sec="为什么" data-nav="35 秒实测">
+  <div class="eyebrow">先看结果 / proof</div>
+  <h2 class="title">35 秒，14 轮，<span class="hl">自己把 flag 解出来</span>
+    <small>demos/welcome · 未做任何提示工程，一句话任务</small></h2>
+  <div class="cols two-a grow">
+    <div class="term">
+      <div class="term-bar"><span class="lamp"></span>live trace<span class="right">deepseek · role=auto</span></div>
+<pre><span class="t">t+ 0.002</span> <span class="m">▏</span><span class="c">⇢ POST</span> <span class="w">…/v1/chat/completions</span>
+         <span class="m">▏  model=deepseek-chat in=37 msgs=1 tools=23</span>
+<span class="t">t+ 2.342</span> <span class="m">▏</span><span class="g">⇠ 200</span> <span class="m">out=</span><span class="w">72</span> <span class="m">cache=</span><span class="g">3.7k</span> <span class="m">calls=</span><span class="v">1</span> <span class="c">██████████</span> <span class="m">2.3s</span>
+<span class="t">t+ 2.343</span> <span class="m">▏</span> <span class="v">⚙ list_files</span> <span class="m">path=. recursive=true</span>
+<span class="t">t+ 2.345</span> <span class="m">▏</span> <span class="g">✓</span> <span class="m">2ms</span>  <span class="m">d artifacts</span>
+<span class="t">t+ 5.128</span> <span class="m">▏</span><span class="c">◇ plan</span> <span class="w">0/6</span> <span class="m">opened via update_plan</span>
+<span class="t">t+ 7.480</span> <span class="m">▏</span> <span class="v">⚙ read_file</span> <span class="m">path=README.md</span>
+<span class="t">t+ 7.484</span> <span class="m">▏</span> <span class="v">⚙ read_file</span> <span class="m">path=artifacts/operator-notes.txt</span>
+<span class="t">t+ 7.486</span> <span class="m">▏</span> <span class="v">⚙ read_file</span> <span class="m">path=artifacts/session.log</span>
+<span class="t">t+10.003</span> <span class="m">▏</span><span class="g">◇ plan</span> <span class="w">1/6</span> <span class="g">✔</span> <span class="w">Read README + operator-notes</span> <span class="m">4.9s</span>
+<span class="t">t+11.539</span> <span class="m">▏</span> <span class="v">⚙ ctf_triage</span> <span class="m">path=chall.js</span>
+<span class="t">t+13.034</span> <span class="m">▏</span> <span class="v">⚙ read_file</span> <span class="m">path=chall.js</span>
+<span class="t">t+18.575</span> <span class="m">▏</span><span class="g">◇ plan</span> <span class="w">3/6</span> <span class="g">✔</span> <span class="w">Analyze the token check logic</span> <span class="m">3.1s</span>
+<span class="t">t+20.518</span> <span class="m">▏</span> <span class="v">⚙ run_command</span> <span class="m">command=node -e "</span>
+         <span class="m">const key = 0x2a; const encoded = […</span>
+<span class="t">t+23.465</span> <span class="m">▏</span><span class="g">◇ plan</span> <span class="w">4/6</span> <span class="g">✔</span> <span class="w">Recover the expected token</span> <span class="m">4.9s</span>
+<span class="t">t+24.995</span> <span class="m">▏</span> <span class="v">⚙ run_command</span> <span class="m">command=node chall.js '</span><span class="g">0xaf{warmup_deck}</span><span class="m">'</span>
+<span class="t">t+25.092</span> <span class="m">▏</span> <span class="g">✓</span> <span class="m">97ms</span> <span class="g">accepted</span>
+<span class="t">t+32.927</span> <span class="m">▏</span><span class="g">◇ plan</span> <span class="w">6/6</span> <span class="g">✔</span> <span class="w">Summarize findings</span> <span class="m">5.5s</span>
+<span class="t">t+34.892</span> <span class="m">▏</span><span class="c">■ turn complete</span> <span class="m">via deepseek 34.9s</span></pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2);min-height:0">
+      <div class="term">
+        <div class="term-bar"><span class="lamp"></span>plan panel<span class="right">6/6 · 100%</span></div>
+<pre><span class="m">╭─</span> <span class="c">PLAN</span> <span class="g">6</span><span class="m">/</span><span class="w">6</span> <span class="c">▰▰▰▰▰▰▰▰</span> <span class="m">100%</span> <span class="m">──────────────╮</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">Read README.md and notes</span>     <span class="m">4.9s</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">Triage chall.js (ctf_triage)</span>  <span class="m">5.5s</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">Analyze token check logic</span>     <span class="m">3.1s</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">Recover the expected token</span>    <span class="m">4.9s</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">Verify with a local command</span>   <span class="m">4.0s</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">Explain how the check works</span>   <span class="m">5.5s</span> <span class="m">│</span>
+<span class="m">╰──────────────────────────────────────╯</span>
+<span class="w">▏ 17 字节 XOR，静态密钥 0x2a</span>
+<span class="w">▏ →</span> <span class="g">0xaf{warmup_deck}</span> <span class="m">已本地验证</span></pre>
+      </div>
+      <div class="metrics" style="grid-template-columns:repeat(2,1fr)">
+        <div class="metric"><div class="n">14<span>turns</span></div><div class="k">模型往返</div></div>
+        <div class="metric gr"><div class="n">8<span>calls</span></div><div class="k">工具调用</div></div>
+        <div class="metric vi"><div class="n">75k<span>tok</span></div><div class="k">缓存命中</div></div>
+        <div class="metric"><div class="n">2.2k<span>tok</span></div><div class="k">实际输出</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 04 · architecture ════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="分层总览">
+  <div class="eyebrow">架构 / layers</div>
+  <h2 class="title">八层，<span class="hl">每层只做一件事</span>
+    <small>src/ · 38 个模块 · 数据流自上而下，会话贯穿全程</small></h2>
+  <div class="arch">
+    <div class="arch-bar cy">
+      <b>1</b> CLI / REPL
+      <code>src/cli.ts · src/ui/*</code>
+      <em>斜杠命令 · HUD · Flow · 主题 · 审批交互</em>
+    </div>
+    <div class="arch-link"><span>prompt + role + policy flags</span></div>
+    <div class="arch-bar vi">
+      <b>2</b> AgentLoop
+      <code>src/core/agent-loop.ts</code>
+      <em>归一化历史 · 角色路由 · 轮次控制 · 上下文预算</em>
+    </div>
+    <div class="arch-fan"><i></i><i></i><i></i><i></i></div>
+    <div class="arch-row">
+      <div class="arch-box cy">
+        <h5><b>3</b> Providers</h5>
+        <p>cli-tmux · openai-responses<br>anthropic · openai-chat · mock</p><p class="note">每个适配器只做协议翻译，<br>不含任何业务逻辑</p>
+      </div>
+      <div class="arch-box vi">
+        <h5><b>5</b> Tools <span>+ <b>6</b> Skills / Knowledge</span></h5>
+        <p>23 个逆向工具 + MCP 工具<br>4 套技能 · 182 条知识索引</p><p class="note">data-in / data-out，<br>无全局状态，全部可单测</p>
+      </div>
+      <div class="arch-box am">
+        <h5><b>7</b> Policy</h5>
+        <p>tier: read / write / exec<br>destructive · network · secret</p><p class="note">tier × 审批模式 决定一次<br>调用能不能跑</p>
+      </div>
+      <div class="arch-box gr">
+        <h5><b>8</b> Session</h5>
+        <p>append-only JSONL<br>resume · continue · 自愈</p><p class="note">被打断的运行也留下<br>一段合法、可续跑的历史</p>
+      </div>
+    </div>
+    <div class="arch-rail"><span>每一条消息 / 事件 / 计划变更都落盘</span></div>
+    <div class="arch-foot">
+      <b>4</b> Auth<code>src/auth.ts</code>
+      <em>env → ./.env → ~/.0xaf-re-agent/.env → secrets.json（四级回退）</em>
+    </div>
+  </div>
+  <p class="lead">横切关注点（审批、预算、持久化）都收在 Loop 一侧，<strong>Provider 和 Tool 都保持无状态、可单测</strong>。</p>
+</section>
+
+<!-- ═══ 05 · agent loop ══════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心一 · Agent Loop">
+  <div class="eyebrow">核心 01 / the loop</div>
+  <h2 class="title">Agent Loop：<span class="hl">一个循环，四个不变量</span>
+    <small>src/core/agent-loop.ts · 494 行，是整个项目唯一的控制流</small></h2>
+  <div class="cols two-b grow">
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="wire-rig">
+        <span class="wire-node">prompt</span>
+        <span class="wire"><i></i><i></i></span>
+        <span class="wire-node">compact</span>
+        <span class="wire"><i></i></span>
+        <span class="wire-node model">provider</span>
+      </div>
+      <div class="wire-rig">
+        <span class="wire-node tools">tools</span>
+        <span class="wire back"><i></i><i></i></span>
+        <span class="wire-node">approval</span>
+        <span class="wire back"><i></i></span>
+        <span class="wire-node model">tool_calls</span>
+      </div>
+      <ul class="list" style="margin-top:var(--sp-1)">
+        <li><strong>不变量 1</strong>：每个 tool_call <em>一定</em>有对应的 result —— 包括被 ^C 打断的那次。否则严格的 chat API 会拒绝整段历史。</li>
+        <li><strong>不变量 2</strong>：磁盘上的 transcript 永远完整，<strong>被裁剪的只是发出去的那份视图</strong>。</li>
+        <li><strong>不变量 3</strong>：中断是一种<em>结果</em>，不是异常 —— 写入 <code>[interrupted by operator]</code> 后正常返回。</li>
+        <li><strong>不变量 4</strong>：计划面板<strong>纯观测</strong>，不参与调度，坏掉也不影响一次运行。</li>
+      </ul>
+    </div>
+    <div class="term tight" style="min-height:0">
+      <div class="term-bar"><span class="lamp"></span>agent-loop.ts<span class="right">删减后的主干</span></div>
+<pre><span class="kw">for</span> (; turns &lt; maxTurns; turns++) {
+  <span class="cm">// 只裁剪"发出去的视图"，磁盘不动</span>
+  <span class="kw">const</span> view = <span class="v">compactHistory</span>(messages, {
+    budgetTokens: provider.contextBudgetTokens
+  });
+
+  <span class="kw">const</span> res = <span class="kw">await</span> provider.<span class="v">complete</span>({
+    system, messages: view.messages, tools,
+    workspace, signal, onProgress
+  });
+
+  <span class="kw">if</span> (res.toolCalls.length === <span class="w">0</span>) <span class="kw">return</span> <span class="v">finish</span>(turns);
+
+  <span class="kw">for</span> (<span class="kw">const</span> call <span class="kw">of</span> res.toolCalls) {
+    <span class="cm">// 分级审批：tier 由工具声明，</span>
+    <span class="cm">// 命令级风险由工具内部再报一次</span>
+    <span class="kw">await</span> <span class="v">requestApproval</span>({
+      tool: call.name,
+      tier: <span class="v">tierForRisk</span>(tool.risk)
+    }, ctx);
+
+    <span class="kw">const</span> out = <span class="kw">await</span> tool.<span class="v">execute</span>(call.arguments, ctx);
+    <span class="kw">await</span> <span class="v">pushToolResult</span>(call, out.content);
+  }
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 06 · providers ═══════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心二 · Provider 适配">
+  <div class="eyebrow">核心 02 / providers</div>
+  <h2 class="title">6 种 wire format，<span class="hl">一个 complete() 接口</span></h2>
+  <div class="term" style="flex:0 0 auto">
+    <div class="term-bar"><span class="lamp"></span>src/providers/<span class="right">adapter 只做协议翻译，不含业务</span></div>
+<pre><span class="kw">interface</span> <span class="c">ChatProvider</span> { <span class="v">complete</span>(input: { system, messages, tools, workspace, signal, onProgress }): <span class="c">Promise</span>&lt;{ text, toolCalls, usage, reasoning }&gt; }</pre>
+  </div>
+  <table class="grid">
+    <thead><tr><th style="width:16%">适配器</th><th style="width:22%">协议</th><th style="width:26%">默认承载</th><th>为什么需要它</th></tr></thead>
+    <tbody>
+      <tr><td class="k">cli-tmux</td><td>本地 CLI 的 JSONL 事件流</td><td class="k">codex · claude · grok-cli</td><td>复用订阅制登录态，不消耗 API 额度；拿到 CLI 自己的工具与计划事件</td></tr>
+      <tr><td class="k">openai-responses</td><td>OpenAI Responses</td><td class="k">codex-api · grok</td><td>兜底路径；xAI 也走同一套 OpenAI 兼容协议</td></tr>
+      <tr><td class="k">anthropic</td><td>Anthropic Messages</td><td class="k">claude-api</td><td>需要长上下文与稳定工具调用时直连</td></tr>
+      <tr><td class="k">openai-chat</td><td>Chat Completions</td><td class="k">deepseek · glm</td><td>便宜的执行档 / 国内可用网关，同一个适配器覆盖</td></tr>
+      <tr><td class="k">mock</td><td>本地假响应</td><td class="k">mock</td><td>让 <code>--smoke</code> 与 185 个单测<strong>不依赖任何网络</strong></td></tr>
+    </tbody>
+  </table>
+  <p class="lead">凭据查找有四级回退：<strong>进程 env → ./.env → ~/.0xaf-re-agent/.env → secrets.json</strong>；<code>auth status</code> 一眼看清每个 provider 从哪拿到的票。</p>
+</section>
+
+<!-- ═══ 07 · cli-tmux ════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心三 · cli-tmux">
+  <div class="eyebrow">核心 03 / the unusual one</div>
+  <h2 class="title">把本地 <span class="hl">Codex / Claude CLI</span> 当成 provider 用
+    <small>src/providers/cli-tmux.ts · 546 行 —— 这是整个项目最"不常规"的一层</small></h2>
+  <div class="cols two-a grow">
+    <div class="term" style="min-height:0">
+      <div class="term-bar"><span class="lamp"></span>一次 turn 的生命周期</div>
+<pre><span class="c">1.</span> 预检登录态  <span class="m">codex login status / claude auth</span>
+   <span class="m">└ 先 unset OPENAI_API_KEY / ANTHROPIC_API_KEY，</span>
+   <span class="m">  免得过期的环境变量顶掉本地 CLI 的登录</span>
+
+<span class="c">2.</span> 落盘 prompt  <span class="m">runDir/prompt.txt（首轮全量，</span>
+   <span class="m">  后续只发 delta —— CLI 自己续同一个 session）</span>
+
+<span class="c">3.</span> 生成 runner.sh <span class="m">(mode 0700)，tmux 起一个</span>
+   <span class="m">  分离会话执行它 → stdout / stderr / exit 三个文件</span>
+
+<span class="c">4.</span> <span class="v">StdoutTail</span> 实时 tail JSONL：
+   <span class="m">  thinking · tool · usage · plan · final</span>
+   <span class="m">  → 直接喂给 HUD 和 trace，不用等命令结束</span>
+
+<span class="c">5.</span> 收敛：读 exit code，优先取解析出的 final message
+   <span class="m">  ^C → 杀掉 tmux 会话，且</span><span class="r">不</span><span class="m">回落成重跑一次</span>
+
+<span class="a">fallback</span> <span class="m">tmux 不可用时直接 spawn，同一份 runner.sh</span></pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card accent">
+        <h3><span class="tag">why</span>为什么值得这么绕</h3>
+        <ul class="list">
+          <li><strong>复用登录态</strong>：用你已经付过费的 Codex / Claude Code 订阅，而不是再烧一份 API token</li>
+          <li><strong>白拿子 Agent 的能力</strong>：CLI 自带的检索、编辑、沙箱在它自己那侧执行，宿主只负责编排</li>
+          <li><strong>拿到原生事件</strong>：Claude 的 <code>TaskCreate/TaskUpdate</code>、Codex 的 <code>plan_update</code> 都在这条流里，计划面板因此对默认配置就生效</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="tag">cost</span>代价，说清楚</h3>
+        <ul class="list x">
+          <li>这类 provider 恒定返回 <code>toolCalls: []</code> —— 工具调用发生在子 CLI 内部，宿主的 23 个工具此时只作为 prompt 里的能力说明</li>
+          <li>因此宿主端审批对它不生效，安全边界由子 CLI 的 sandbox 承担（codex 默认 <code>--sandbox read-only</code>）</li>
+          <li>要完整的宿主端管控，就走 <code>*-api</code> 直连档</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 08 · routing ═════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心四 · 角色路由">
+  <div class="eyebrow">核心 04 / routing</div>
+  <h2 class="title">planner 想，executor 做 —— <span class="hl">两个模型分工</span></h2>
+  <div class="cols two">
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="term">
+        <div class="term-bar"><span class="lamp"></span>routeProvider()</div>
+<pre>role=<span class="c">planner</span>   →  config.plannerProvider   <span class="m">默认</span> <span class="v">codex</span>
+role=<span class="c">executor</span>  →  config.executorProvider  <span class="m">默认</span> <span class="v">claude</span>
+role=<span class="c">auto</span>      →  提示词分类器
+                 <span class="m">命中"运行/读取/列出/grep/strings/</span>
+                 <span class="m">inspect ./…"等执行意图 → executor</span>
+                 <span class="m">否则 → planner（分析与规划）</span>
+
+<span class="m">显式覆盖：</span>/agent grok   <span class="m">→ 锁死到某个 provider</span>
+<span class="m">恢复路由：</span>/agent auto</pre>
+      </div>
+      <p class="lead">分类器同时匹配中英文关键词 —— 因为真实使用里，操作者会随手打"跑一下 ./chall"。</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card violet">
+        <h3><span class="dot vi"></span>planner · codex</h3>
+        <p>逆向推理、可利用性判断、解题路径规划。跑在 <strong><code>--sandbox read-only</code></strong> 下 —— 规划阶段本来就不该改任何东西。</p>
+      </div>
+      <div class="card accent">
+        <h3><span class="dot cy"></span>executor · claude</h3>
+        <p>低敏感度执行：文件检查、命令跑批、结果归纳。它的会话跨轮次<strong>持续复用</strong>（<code>cliResumeSession</code>），所以增量只发 delta。</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot am"></span>第三方视角</h3>
+        <p><code>/agent grok</code> 让另一个模型<strong>复核解题计划的盲点</strong>；<code>knowledgeProvider</code> 单独指派一个模型做知识检索归纳。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 09 · tools ═══════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心五 · 工具注册表">
+  <div class="eyebrow">核心 05 / tools</div>
+  <h2 class="title">23 个工具，<span class="hl">按逆向的实际动作切</span>
+    <small>src/tools/reverse-tools.ts · 1339 行 · data-in / data-out，全部可单测</small></h2>
+  <div class="cols four grow">
+    <div class="card">
+      <h3><span class="dot cy"></span>基础 IO<span class="tag">read</span></h3>
+      <ul class="list">
+        <li><code>list_files</code> / <code>read_file</code></li>
+        <li><code>grep</code> / <code>file_info</code></li>
+        <li><code>hash_file</code></li>
+        <li><code>write_file</code> <span style="color:var(--rose)">需 --write</span></li>
+        <li><code>run_command</code> <span style="color:var(--amber)">exec 级</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="dot vi"></span>静态分析<span class="tag">binary</span></h3>
+      <ul class="list">
+        <li><code>strings</code> / <code>hexdump</code></li>
+        <li><code>extract_symbols</code> 导入导出表</li>
+        <li><code>binary_mitigations</code> NX/PIE/RELRO/Canary</li>
+        <li><code>entropy_scan</code> 滑窗熵，找加密段</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="dot gr"></span>CTF 专用<span class="tag">ctf</span></h3>
+      <ul class="list">
+        <li><code>ctf_triage</code> 一次性分类指纹</li>
+        <li><code>ctf_decode</code> 多编码试解</li>
+        <li><code>find_bytes</code> 定位魔数 / flag 标记</li>
+        <li><code>carve_artifacts</code> 抠出内嵌文件</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="dot am"></span>移动 & 知识<span class="tag">domain</span></h3>
+      <ul class="list">
+        <li><code>apk_inspect</code> DEX/SO/壳/框架</li>
+        <li><code>frida_hook_template</code> 生成 hook 骨架</li>
+        <li><code>list_skills</code> / <code>read_skill</code></li>
+        <li><code>knowledge_search</code> / <code>knowledge_read</code></li>
+        <li><code>update_plan</code> 发布任务清单</li>
+      </ul>
+    </div>
+  </div>
+  <p class="lead">工具都是<strong>纯函数式</strong>的：接收参数与一个 <code>ToolContext</code>（工作区、策略、signal、审批回调），返回内容块。没有全局状态，所以 <code>reverse-tools.test.ts</code> 能直接对着临时目录跑。</p>
+</section>
+
+<!-- ═══ 10 · skills + knowledge ══════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心六 · 技能与知识库">
+  <div class="eyebrow">核心 06 / skills + knowledge</div>
+  <h2 class="title">把<span class="hl">经验</span>和<span class="hl">资料</span>也变成一等公民</h2>
+  <div class="cols two">
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card violet">
+        <h3><span class="tag">skills</span>4 个内置技能</h3>
+        <p><code>skills/*/SKILL.md</code> 在启动时加载、摘要进系统提示词、同时暴露成工具。模型知道<strong>什么时候该调哪套流程</strong>。</p>
+        <ul class="list">
+          <li><strong>ctf-first-pass</strong> —— 类型未知时的第一遍：分类 → 指纹 → strings → 熵 → carve → 下一个最小实验</li>
+          <li><strong>native-pwn-re</strong> —— ELF/Mach-O/PE：缓解措施 → 符号 → 交叉引用 → 可利用性假设</li>
+          <li><strong>android-apk-frida</strong> —— APK → 壳/框架识别 → 反调试检测 → hook 目标确定后才生成脚本</li>
+          <li><strong>web-wasm-crypto</strong> —— JS 混淆 / WASM / 动态签名参数 / 浏览器侧 hook</li>
+        </ul>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card accent">
+        <h3><span class="tag">knowledge</span>182 条本地逆向知识</h3>
+        <p>用 <code>scripts/import-knowledge.ts</code> 把本地 Frida / Android / Web 逆向手册索引成 <code>knowledge/reverse-index.json</code>，<strong>全程离线、带出处</strong>。</p>
+      </div>
+      <div class="term">
+        <div class="term-bar"><span class="lamp"></span>REPL<span class="right">检索 → 摘要 → 溯源</span></div>
+<pre><span class="c">/know</span> frida ssl pinning
+  <span class="m">→ 模型基于命中的条目作答，附来源路径</span>
+<span class="c">/know raw</span> frida ssl
+  <span class="m">→ 只出原始命中列表，</span><span class="g">零模型调用</span>
+<span class="c">/know read</span> &lt;entry-id&gt;
+  <span class="m">→ 读全文</span>
+
+<span class="m">索引结构：id · title · path · source ·</span>
+<span class="m">          kind · tags · summary · preview</span></pre>
+      </div>
+      <p class="lead">意义在于：<strong>团队的逆向沉淀直接进 Agent 的检索路径</strong>，而不是让模型凭记忆瞎猜 API。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 11 · policy ══════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心七 · 安全边界">
+  <div class="eyebrow">核心 07 / policy</div>
+  <h2 class="title">两个输入决定一次调用能不能跑
+    <small>工具的 tier（read / write / exec） × 会话的审批模式</small></h2>
+  <div class="cols two-a grow">
+    <table class="grid">
+      <thead><tr><th style="width:22%">模式</th><th style="width:34%">自动放行</th><th>需要确认</th></tr></thead>
+      <tbody>
+        <tr><td class="k" style="color:var(--rose)">yolo</td><td>全部</td><td>无 —— 只用于无人值守批跑</td></tr>
+        <tr><td class="k" style="color:var(--green)">safe <span style="color:var(--dim)">默认</span></td><td>各 tier 均放行</td><td>命中安全模式的命令</td></tr>
+        <tr><td class="k" style="color:var(--accent)">write</td><td>read + write</td><td>exec 类工具，以及安全模式</td></tr>
+        <tr><td class="k" style="color:var(--violet)">always-ask</td><td>只有 read</td><td>其余全部</td></tr>
+      </tbody>
+    </table>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card">
+        <h3><span class="dot ro"></span>安全模式优先于"总是允许"</h3>
+        <p>允许了 <code>run_command</code> <strong>不等于</strong>允许 <code>rm -rf /</code>。命令级检查在工具内部做 —— 那是唯一知道真实命令文本的地方。</p>
+      </div>
+      <div class="term tight">
+        <div class="term-bar"><span class="lamp"></span>src/security/policy.ts</div>
+<pre><span class="r">destructive</span>  <span class="m">rm -rf · dd if= · mkfs · diskutil erase</span>
+             <span class="m">shutdown · reboot · sudo · &gt; /dev/disk*</span>
+<span class="a">network</span>      <span class="m">curl wget nc nmap ssh scp rsync socat dig… 需</span> <span class="c">--allow-network</span>
+<span class="v">sensitive</span>    <span class="m">.ssh .aws .gnupg keychain id_rsa password</span>
+             <span class="m">secret token → 需</span> <span class="c">--allow-sensitive</span>
+<span class="m">默认策略：读只在 workspace 内 · 写需</span> <span class="c">--write</span>
+<span class="m">          网络关 · 敏感路径关 · 破坏性命令直接拦</span></pre>
+      </div>
+      <div class="card">
+        <h3><span class="dot am"></span>没人可问的时候</h3>
+        <p><code>--print</code>、管道、CI 里无法弹确认框 —— 此时"需要确认"<strong>降级为带原因的拒绝</strong>，而不是默默放行。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 12 · context ═════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心八 · 上下文预算">
+  <div class="eyebrow">核心 08 / context</div>
+  <h2 class="title">逆向输出巨大，<span class="hl">但窗口是固定的</span></h2>
+  <div class="cols three">
+    <div class="card accent">
+      <h3><span class="tag">pass 1</span>省略工具结果体</h3>
+      <p>旧的工具输出正文被折叠，<strong>只留第一行做指针</strong>：<br><code>[older strings result elided: 84213 chars. First line: …]</code></p>
+      <p>调用与参数完整保留 —— 模型仍然知道"我做过这件事"。</p>
+    </div>
+    <div class="card violet">
+      <h3><span class="tag">pass 2</span>丢弃最老的完整轮次</h3>
+      <p>从头开始整轮丢弃，替换成一条 <code>[context compacted]</code> 标记。<strong>一次工具调用永远不会和它的结果被拆散</strong>。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">/compact</span>模型级摘要</h3>
+      <p>前两遍是机械的、无损语义的。<code>/compact</code> 则请模型写一份简报并从简报重启 —— <strong>细节留在 JSONL 里</strong>，工作历史轻装上阵。</p>
+    </div>
+  </div>
+  <div class="cols two grow">
+    <div class="term">
+      <div class="term-bar"><span class="lamp"></span>预算与观测</div>
+<pre><span class="c">/context</span>   <span class="m">≈12400 tokens of 48000 budget (25%) · 42 msgs</span>
+<span class="c">/compact</span>   <span class="m">折叠成简报后重启</span>
+<span class="c">/compact codex</span>  <span class="m">指定用某个 provider 写摘要</span>
+
+<span class="m">默认预算 48k / provider 可配 contextBudgetTokens</span>
+<span class="m">token 估算：拉丁 ~4 字符 / CJK ~1.5 字符 一个 token</span>
+<span class="m">——刻意不引入分词器，够驱动预算就行</span></pre>
+    </div>
+    <div class="card">
+      <h3><span class="dot gr"></span>大输出不进上下文</h3>
+      <p>超过 <code>--max-output</code>（默认 24000 字符）的工具输出只保留<strong>头 + 尾</strong>，全文写进 <code>sessions/artifacts/</code>，并把路径交给模型 —— 它可以再用 <code>read_file</code> / <code>grep</code> 精确取需要的那段。</p>
+      <p>这一条对逆向尤其关键：一次 <code>strings</code> 就能顶掉整个窗口。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 13 · sessions ════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心九 · 会话与中断">
+  <div class="eyebrow">核心 09 / sessions</div>
+  <h2 class="title">每一次运行都是<span class="hl">可回放的</span></h2>
+  <div class="cols two-a grow">
+    <div class="term">
+      <div class="term-bar"><span class="lamp"></span>append-only JSONL<span class="right">sessions/*.jsonl</span></div>
+<pre><span class="m">{</span><span class="c">"type"</span><span class="m">:</span><span class="str">"message"</span><span class="m">,</span> <span class="c">"role"</span><span class="m">:</span><span class="str">"user"</span><span class="m">, …}</span>
+<span class="m">{</span><span class="c">"type"</span><span class="m">:</span><span class="str">"message"</span><span class="m">,</span> <span class="c">"role"</span><span class="m">:</span><span class="str">"assistant"</span><span class="m">,</span> <span class="c">"toolCalls"</span><span class="m">:[…]}</span>
+<span class="m">{</span><span class="c">"type"</span><span class="m">:</span><span class="str">"message"</span><span class="m">,</span> <span class="c">"role"</span><span class="m">:</span><span class="str">"toolResult"</span><span class="m">, …}</span>
+<span class="m">{</span><span class="c">"type"</span><span class="m">:</span><span class="str">"plan"</span><span class="m">,</span>    <span class="c">"source"</span><span class="m">:</span><span class="str">"claude"</span><span class="m">,</span> <span class="c">"steps"</span><span class="m">:[…]}</span>
+<span class="m">{</span><span class="c">"type"</span><span class="m">:</span><span class="str">"compaction"</span><span class="m">,</span> <span class="c">"tokensBefore"</span><span class="m">:…,</span> <span class="c">"dropped"</span><span class="m">:…}</span>
+<span class="m">{</span><span class="c">"type"</span><span class="m">:</span><span class="str">"interrupted"</span><span class="m">}</span>
+
+<span class="c">bun src/cli.ts --sessions</span>       <span class="m">列出最近会话</span>
+<span class="c">bun src/cli.ts --continue</span>       <span class="m">接着最近一次跑</span>
+<span class="c">bun src/cli.ts --resume 2026-07-26T17-35</span>  <span class="m">id / 前缀 / 路径</span></pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card accent">
+        <h3><span class="dot cy"></span>加载时自愈</h3>
+        <ul class="list">
+          <li>写到一半被杀掉的<strong>最后一行截断</strong> → 丢弃并继续</li>
+          <li>结果从未落地的<strong>悬空 tool_call</strong> → 补一条结果，让历史对严格 API 依然合法</li>
+        </ul>
+      </div>
+      <div class="card violet">
+        <h3><span class="dot vi"></span>^C 打断一次 turn</h3>
+        <ul class="list">
+          <li>取消 HTTP 请求</li>
+          <li>杀掉 tmux provider 的子会话</li>
+          <li>给正在跑的工具子进程发信号</li>
+          <li><strong>REPL 不退出</strong>，已完成的部分留在 transcript 里</li>
+          <li>批次里剩下的调用统一补"未执行"结果</li>
+        </ul>
+      </div>
+      <p class="lead">恢复出来的会话<strong>写进新的日志文件</strong>，所以它本身也可以再被 resume —— 链条不会断。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 14 · observability ═══════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="核心十 · 可观测性">
+  <div class="eyebrow">核心 10 / observability</div>
+  <h2 class="title">每一轮都<span class="hl">自己画自己</span>
+    <small>Flow 图 · Trace · HUD · PLAN —— 四层，全部默认开启，全部可降级</small></h2>
+  <div class="cols two grow">
+    <div class="term" style="min-height:0">
+      <div class="term-bar"><span class="lamp"></span>flow · 运行中在 HUD 上方动画</div>
+<pre> <span class="w">[you]</span><span class="c">═══════•═══════▶</span><span class="w">[ctx]</span><span class="c">══•══════•═══▶</span><span class="c">((deepseek))</span>
+  <span class="m">3msg                7tok                ⣻ waiting 718ms</span>
+                        <span class="c">▲</span>                    <span class="v">▼</span>
+                      <span class="v">[tools]◀══•══════•════[calls×1]</span>
+                      <span class="v">⣾ run_command 5.6s</span>
+
+<span class="m">任务清单以徽标形式挂在 [you] 上：</span> <span class="c">[plan 2/5]</span> <span class="c">▰▰▰▱▱</span>
+<span class="m">（只放计数 —— 步骤文本在下方框里，中文不会撑坏列宽）</span>
+
+<span class="c">/flow full</span>   <span class="m">图 + trace（默认）</span>
+<span class="c">/flow flow</span>   <span class="m">只要图</span>
+<span class="c">/flow trace</span>  <span class="m">只要 trace 行</span>
+<span class="c">/flow off</span>    <span class="m">回到朴素的工具树</span>
+<span class="m">选择存到 ~/.0xaf-re-agent/ui.json；&lt;46 列自动隐藏</span></pre>
+    </div>
+    <div class="term" style="min-height:0">
+      <div class="term-bar"><span class="lamp"></span>hud · 运行时替代 spinner</div>
+<pre><span class="m">╭─ ⠹</span> <span class="c">0xAF·RE</span> <span class="m">─────────────────────────────────╮</span>
+<span class="m">│</span> <span class="c">codex → claude</span>          <span class="c">▰▰▰</span><span class="m">▱▱▱▱▱ 40%  $0.71</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">triage: file/arch/packer   1.2s │ out ▁▂▅█▆▃▂▁</span> <span class="m">│</span>
+<span class="m">│</span> <span class="g">✔</span> <span class="m">strings + entropy sweep    3.1s │ think 105</span>    <span class="m">│</span>
+<span class="m">│</span> <span class="c">⠹</span> <span class="w">locate the check function</span> <span class="m">2m08s │ in 12k</span>       <span class="m">│</span>
+<span class="m">│</span> <span class="m">○ reproduce the flag path         │ cache 416k</span>   <span class="m">│</span>
+<span class="m">│</span> <span class="m">┊ 校验函数看着像 sub_401a20，改之前先看 xrefs</span>   <span class="m">│</span>
+<span class="m">╰────────────────────────────────────────────────╯</span>
+
+<span class="m">窄于 ~60 列折成单列；终端矮时依次舍弃推理行 →</span>
+<span class="m">折叠已完成步骤 → 裁剪遥测，永不超过终端高度</span>
+
+<span class="m">耗时条共享同一刻度（最慢的请求占满），</span>
+<span class="m">所以"时间花在哪、跑了几个来回"一眼可读</span></pre>
+    </div>
+  </div>
+  <p class="lead">Trace 是<strong>留在 scrollback 里的</strong>：一次跑完的 turn 读起来像一份抓包记录，而不是滚过去就没了的动画。</p>
+</section>
+
+<!-- ═══ 15 · mcp ═════════════════════════════════════════════ -->
+<section class="slide" data-sec="架构" data-nav="MCP 扩展">
+  <div class="eyebrow">扩展 / mcp</div>
+  <h2 class="title">任何 stdio MCP server 都能<span class="hl">并进同一张工具表</span></h2>
+  <div class="cols two-a">
+    <div class="term">
+      <div class="term-bar"><span class="lamp"></span>agent.config.json</div>
+<pre><span class="m">{</span>
+  <span class="c">"mcpServers"</span><span class="m">: {</span>
+    <span class="c">"ida"</span><span class="m">: {</span>
+      <span class="c">"command"</span><span class="m">:</span> <span class="str">"python3"</span><span class="m">,</span>
+      <span class="c">"args"</span><span class="m">: [</span><span class="str">"-m"</span><span class="m">,</span> <span class="str">"ida_pro_mcp.server"</span><span class="m">],</span>
+      <span class="c">"timeoutMs"</span><span class="m">:</span> <span class="w">120000</span>
+    <span class="m">}</span>
+  <span class="m">}</span>
+<span class="m">}</span>
+
+<span class="m">→ 工具以</span> <span class="v">mcp__ida__decompile_function</span> <span class="m">形式出现</span>
+<span class="m">→ 走完全相同的审批闸门与输出预算</span>
+<span class="m">→ 启动失败的 server 在 boot 时报出并跳过，</span><span class="g">永不致命</span>
+<span class="c">/mcp</span> <span class="m">查看每个 server 的状态与它贡献的工具</span></pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card accent">
+        <h3><span class="dot cy"></span>对逆向最直接的一个</h3>
+        <p><code>ida-pro-mcp</code> 把<strong>反编译、交叉引用、重命名、类型声明</strong>放进了 Agent 的手边 —— 相当于让模型能直接操作你已经打开的那个 IDB。</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot vi"></span>为什么不内建</h3>
+        <p>逆向工具链高度个人化：有人 IDA，有人 Ghidra / radare2 / Binary Ninja。<strong>宿主只负责统一的调用与管控语义</strong>，具体能力由 MCP 侧装配。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 16 · build process ═══════════════════════════════════ -->
+<section class="slide" data-sec="实现过程" data-nav="怎么造出来的">
+  <div class="eyebrow">实现过程 / how it was built</div>
+  <h2 class="title">从一个循环长成一个工作台
+    <small>会话日志显示：2026-07-26 15:34 → 2026-07-27 10:12，60+ 条 JSONL 记录了全过程</small></h2>
+  <div class="cols four grow">
+    <div class="card">
+      <h3><span class="tag">step 1</span>先立骨架</h3>
+      <p>从 <code>oh-my-pi</code> 里<strong>只提炼概念</strong>：一个 loop、可插拔 provider、单一工具表、append-only 会话。第一版跑通用 <code>mock</code> provider，不碰网络。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">step 2</span>再接真模型</h3>
+      <p>四个适配器逐个补齐。<code>cli-tmux</code> 最难 —— 它要处理登录预检、prompt 落盘、JSONL 实时 tail、tmux 不可用时的直跑回落。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">step 3</span>装工具与边界</h3>
+      <p>23 个逆向工具 + 策略层同期落地。<strong>先有边界再有能力</strong>：<code>write_file</code> 从第一天起就需要 <code>--write</code>。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">step 4</span>最后做可见</h3>
+      <p>Flow / Trace / HUD / PLAN 是最后一层，也是让工具"能用"变成"好用"的那一层 —— 见下一页的真实设计记录。</p>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><div class="n">10.8k<span>lines</span></div><div class="k">实现代码</div></div>
+    <div class="metric gr"><div class="n">3.0k<span>lines</span></div><div class="k">测试代码</div></div>
+    <div class="metric gr"><div class="n">185<span>cases</span></div><div class="k">测试用例 / 17 文件</div></div>
+    <div class="metric vi"><div class="n">38<span>files</span></div><div class="k">源码模块</div></div>
+  </div>
+  <p class="lead">测试比例接近 <strong>1 : 3.5</strong>，且全部离线（<code>mock</code> provider + 临时目录）—— 一个要给别人用的工具，不能靠"我这儿能跑"。</p>
+</section>
+
+<!-- ═══ 17 · a real decision ═════════════════════════════════ -->
+<section class="slide" data-sec="实现过程" data-nav="一个真实的设计决策">
+  <div class="eyebrow">实现过程 / one real decision</div>
+  <h2 class="title">PLAN 面板：<span class="hl">约束怎么倒逼出方案</span>
+    <small>docs/plans/2026-07-26-plan-panel-design.md · 原始设计文档节选</small></h2>
+  <div class="cols three grow">
+    <div class="card" style="border-color:var(--rose)">
+      <h3><span class="dot ro"></span>问题</h3>
+      <p>双模型分工，但<strong>操作者看不见模型在计划什么</strong>。终端里只有 spinner 和工具调用行 —— 一次多步 RE 任务跑到哪、还剩什么，全靠猜。</p>
+    </div>
+    <div class="card" style="border-color:var(--amber)">
+      <h3><span class="dot am"></span>约束（决定方案的关键事实）</h3>
+      <p>默认两个 provider 都是 <code>cli-tmux</code>，而它<strong>恒定返回 <code>toolCalls: []</code></strong> —— 宿主侧的 <code>update_plan</code> 在默认路径上<strong>永远不会被触发</strong>。</p>
+      <p>但两个 CLI 都会各自产出计划，而且都流经<strong>已经在 tail 的那条 JSONL</strong>。</p>
+    </div>
+    <div class="card accent">
+      <h3><span class="dot cy"></span>方案</h3>
+      <p>以 <strong>CLI 事件流采集为主</strong>（默认配置即生效，且能拿到执行中的实时状态变更），宿主侧 <code>update_plan</code> 为辅（覆盖真 API provider），两条路汇入同一个 <code>PlanTracker</code>。</p>
+      <p><strong>范围：纯可观测。</strong>不改 AgentLoop 控制流，计划不参与调度。</p>
+    </div>
+  </div>
+  <div class="term tight">
+    <div class="term-bar"><span class="lamp"></span>三条解析路径，一个 PlanTracker<span class="right">src/providers/stream.ts</span></div>
+<pre><span class="v">Claude · Task*</span>     <span class="m">TaskCreate{subject} + TaskUpdate{taskId,status}，id 由 tool_result 文本 "Task #N created successfully: X" 绑定</span>
+<span class="v">Claude · TodoWrite</span> <span class="m">type:"assistant" → content[] 中 tool_use && name==="TodoWrite" → input.todos[]（兼容旧壳）</span>
+<span class="c">Codex</span>              <span class="m">update_plan ×33 / plan_update ×7 / todo_list ×1 —— 新旧事件外壳都存在，必须都兼容</span>
+<span class="a">host</span>               <span class="m">update_plan 工具 → 覆盖 claude-api / codex-api / deepseek / glm 等直连 provider</span></pre>
+  </div>
+  <p class="lead">这页想说明的不是这个功能本身，而是这类项目的常态：<strong>真正决定方案的从来不是"想要什么"，而是"底层事实允许什么"</strong>。</p>
+</section>
+
+<!-- ═══ 18 · demo A ══════════════════════════════════════════ -->
+<section class="slide" data-sec="DEMO" data-nav="Demo A · 完整解题">
+  <div class="eyebrow">demo A / guided solve</div>
+  <h2 class="title">一句话任务，<span class="hl">全自动完成一次解题闭环</span></h2>
+  <div class="term" style="flex:0 0 auto">
+    <div class="term-bar"><span class="lamp"></span>复制即可运行</div>
+<pre><span class="c">$</span> bun src/cli.ts --workspace ./demos/welcome \
+    -p <span class="str">"Triage this workspace: list files, recover the expected token from chall.js,
+        verify it with a local command, and explain the check."</span></pre>
+  </div>
+  <div class="cols three grow">
+    <div class="card">
+      <h3><span class="tag">observe 1</span>它自己列了计划</h3>
+      <p>没有任何提示词工程，模型第 2 轮就调用 <code>update_plan</code> 开出 6 步清单，并在后续每一步完成时更新状态 —— <strong>面板上的 ✔ 是真实事件，不是动画</strong>。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">observe 2</span>它选对了工具</h3>
+      <p><code>list_files</code> → <code>read_file</code>×4 → <code>ctf_triage</code> → <code>run_command</code>。注意它先读 <code>operator-notes.txt</code> 才动手 —— <strong>先拿上下文，再做假设</strong>。</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">observe 3</span>它自己验证了</h3>
+      <p>推出 token 后没有直接下结论，而是跑 <code>node chall.js '0xaf{warmup_deck}'</code> 拿到 <span class="g">accepted</span> 才收工。<strong>可验证优先于自信</strong>。</p>
+    </div>
+  </div>
+  <div class="term">
+    <div class="term-bar"><span class="lamp"></span>结束行<span class="right">一次运行的全部账单</span></div>
+<pre><span class="m">╰─</span> <span class="m">via</span> <span class="c">deepseek</span> <span class="m">·</span> <span class="m">role</span> <span class="w">auto</span> <span class="m">·</span> <span class="m">turns</span> <span class="w">14</span> <span class="m">·</span> <span class="m">took</span> <span class="w">34.9s</span> <span class="m">·</span> <span class="m">in</span> <span class="w">78k</span> <span class="m">out</span> <span class="w">2.2k</span> <span class="m">cache</span> <span class="g">75k</span></pre>
+  </div>
+</section>
+
+<!-- ═══ 19 · demo B ══════════════════════════════════════════ -->
+<section class="slide" data-sec="DEMO" data-nav="Demo B · 不烧 token 的用法">
+  <div class="eyebrow">demo B / zero-model path</div>
+  <h2 class="title">一半的活儿，<span class="hl">根本不需要模型</span>
+    <small>斜杠命令直接调工具；<code>!</code> 前缀直接进 shell —— 都会写进 transcript</small></h2>
+  <div class="cols two grow">
+    <div class="term" style="min-height:0">
+      <div class="term-bar"><span class="lamp"></span>reverse-lab 工作区<span class="right">零模型调用</span></div>
+<pre><span class="c">/scan</span> artifact.txt            <span class="m">快速 CTF 分诊</span>
+<span class="c">/decode</span> base64 ZmxhZ3tkZW1v…   <span class="m">多编码试解</span>
+<span class="c">/findbytes</span> carrier.bin %PDF-  <span class="m">定位魔数偏移</span>
+<span class="c">/carve</span> carrier.bin           <span class="m">抠出内嵌文件</span>
+<span class="c">/entropy</span> ./chall             <span class="m">滑窗熵扫描</span>
+<span class="c">/mitigations</span> ./chall         <span class="m">NX/PIE/RELRO/Canary</span>
+<span class="c">/apk</span> ./app.apk              <span class="m">DEX / SO / 壳 / 框架</span>
+<span class="c">/hook</span> java com.a.Crypto sign <span class="m">生成 Frida 骨架</span>
+<span class="c">/know</span> frida ssl pinning      <span class="m">本地知识检索</span>
+
+<span class="a">!</span>file ./chall &amp;&amp; strings -n 8 ./chall | head
+<span class="m">└ 输出流式打印，^C 只杀命令不退 REPL</span>
+<span class="m">└ 命令 + 退出码 + 截断后的输出进 transcript，</span>
+<span class="m">  所以下一句 prompt 可以直接引用"你刚才跑的那个"</span></pre>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2)">
+      <div class="card accent">
+        <h3><span class="dot cy"></span>为什么这条路径重要</h3>
+        <ul class="list">
+          <li><strong>成本</strong>：分诊、解码、carve 这类确定性操作没有让模型参与的必要</li>
+          <li><strong>速度</strong>：本地工具是毫秒级的，模型往返是秒级的</li>
+          <li><strong>连续性</strong>：手动跑的结果<strong>同样进上下文</strong> —— 人和 Agent 共享同一份工作记录</li>
+        </ul>
+      </div>
+      <div class="term">
+        <div class="term-bar"><span class="lamp"></span>会话内随时切换</div>
+<pre><span class="c">/role</span> planner       <span class="m">路由到 codex 做规划</span>
+<span class="c">/agent</span> grok        <span class="m">锁定第三方模型复核</span>
+<span class="c">/approval</span> always-ask   <span class="m">收紧到每步确认</span>
+<span class="c">/approval</span> tool grep allow <span class="m">单工具放行（仅本会话）</span>
+<span class="c">/context</span>            <span class="m">看预算余量</span>
+<span class="c">/compact</span> codex      <span class="m">指定模型做摘要</span>
+<span class="c">/resume</span> &lt;id&gt;        <span class="m">载入历史会话</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 20 · getting started ═════════════════════════════════ -->
+<section class="slide" data-sec="上手" data-nav="三步上手">
+  <div class="eyebrow">上手 / start here</div>
+  <h2 class="title">三条命令，<span class="hl">从零到第一次真实运行</span></h2>
+  <div class="cols three" style="flex:0 0 auto">
+    <div class="card accent">
+      <h3><span class="tag">01</span>接线自检</h3>
+      <div class="term"><pre><span class="c">$</span> bun src/cli.ts <span class="c">--smoke</span></pre></div>
+      <p>用 <code>mock</code> provider 验证 CLI、配置、会话落盘、工具注册全部可用。<strong>不需要任何凭据、不联网。</strong></p>
+    </div>
+    <div class="card">
+      <h3><span class="tag">02</span>看导览</h3>
+      <div class="term"><pre><span class="c">$</span> bun src/cli.ts <span class="c">--welcome</span></pre></div>
+      <p>打印 6 个可直接复制的首跑 demo：只读分诊 → 引导解题 → 直连工具 → 开写入 → 逆向实验室。</p>
+    </div>
+    <div class="card violet">
+      <h3><span class="tag">03</span>真跑一次</h3>
+      <div class="term"><pre><span class="c">$</span> bun src/cli.ts --workspace ./demos/welcome</pre></div>
+      <p>默认<strong>只读、无网络、不写盘</strong>。想让它产出解题笔记时，再显式加 <code>--write</code>。</p>
+    </div>
+  </div>
+  <div class="cols two-b grow" style="margin-top:var(--sp-2)">
+    <div class="card">
+      <h3><span class="dot am"></span>使用边界，说在前面</h3>
+      <ul class="list">
+        <li>面向<strong>授权范围内</strong>的 CTF / 实验室 / 本地逆向：二进制分诊、静态检查、本地动态实验、解题规划与可复现笔记</li>
+        <li>默认策略即最小权限：读只在工作区内、写关、网络关、敏感路径关、破坏性命令拦</li>
+        <li>放宽任何一条都必须<strong>显式加 flag</strong> —— 让"我知道我在做什么"变成一个动作，而不是一个默认值</li>
+      </ul>
+    </div>
+    <div class="term">
+      <div class="term-bar"><span class="lamp"></span>可选：接上团队知识与 IDA</div>
+<pre><span class="c">$</span> bun scripts/import-knowledge.ts
+  <span class="m">→ 把本地逆向手册索引成 knowledge/reverse-index.json</span>
+
+<span class="m">在 agent.config.json 里加一个 mcpServers.ida</span>
+  <span class="m">→ 反编译 / 交叉引用 / 重命名 直接进工具表</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 21 · close ═══════════════════════════════════════════ -->
+<section class="slide cover" data-sec="0xAF-Re" data-nav="结束">
+  <div class="eyebrow">收束 / the point</div>
+  <h1 style="font-size:calc(var(--u)*4.6)">模型负责<em>想</em>，<br>宿主负责让它<em>可控、可见、可复现</em>。</h1>
+  <div class="cols three" style="margin-top:var(--sp-3);max-width:82%">
+    <div class="card"><h3><span class="dot cy"></span>可控</h3><p>tier × 模式的分级审批，安全模式优先于任何"总是允许"。</p></div>
+    <div class="card"><h3><span class="dot vi"></span>可见</h3><p>Flow / Trace / HUD / PLAN —— 一次 turn 读起来像一份抓包记录。</p></div>
+    <div class="card"><h3><span class="dot gr"></span>可复现</h3><p>append-only JSONL，能续跑、能自愈、能回放到任意一步。</p></div>
+  </div>
+  <div class="meta" style="margin-top:var(--sp-4)">
+    <div><b>TRY</b> bun src/cli.ts --welcome</div>
+    <div><b>DOCS</b> README.md · docs/ARCHITECTURE.md</div>
+    <div><b>SCOPE</b> authorized CTF / lab / local RE only</div>
+  </div>
+</section>
+
+<!-- ═══ overview overlay ═════════════════════════════════════ -->
+<div class="overview" id="overview" role="dialog" aria-label="幻灯片索引">
+  <h4>slide index — 点击跳转 · esc 关闭</h4>
+  <div class="ov-grid" id="ovGrid"></div>
+</div>
+
+<!-- ═══ chrome ═══════════════════════════════════════════════ -->
+<div class="deck-foot">
+  <span class="bar" id="bar"></span>
+  <span class="sec" id="sec"></span>
+  <span class="idx" id="idx"></span>
+</div>
+<div class="nav">
+  <button id="prev" aria-label="上一页">←</button>
+  <button id="grid" aria-label="索引">⊞</button>
+  <button id="next" aria-label="下一页">→</button>
+</div>
+
+</div>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var bar = document.getElementById('bar');
+  var sec = document.getElementById('sec');
+  var idx = document.getElementById('idx');
+  var overview = document.getElementById('overview');
+  var ovGrid = document.getElementById('ovGrid');
+  var cur = 0;
+
+  // Progress rendered with the tool's own plan-bar glyphs.
+  function progress(i) {
+    var cells = 14;
+    var filled = Math.round(((i + 1) / slides.length) * cells);
+    return '<b>' + '▰'.repeat(filled) + '</b>' + '▱'.repeat(cells - filled);
+  }
+
+  function show(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s) { s.classList.remove('on'); });
+    slides[i].classList.add('on');
+    cur = i;
+    bar.innerHTML = progress(i);
+    sec.textContent = slides[i].dataset.sec || '';
+    idx.textContent = String(i + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+    Array.prototype.forEach.call(ovGrid.children, function (el, n) {
+      el.classList.toggle('cur', n === i);
+    });
+    if (history.replaceState) history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  slides.forEach(function (s, i) {
+    var b = document.createElement('button');
+    b.className = 'ov-item';
+    b.innerHTML = '<span>' + String(i + 1).padStart(2, '0') + ' · ' + (s.dataset.sec || '') + '</span>' +
+                  (s.dataset.nav || '');
+    b.addEventListener('click', function () { overview.classList.remove('on'); show(i); });
+    ovGrid.appendChild(b);
+  });
+
+  function toggleGrid() { overview.classList.toggle('on'); }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { overview.classList.remove('on'); return; }
+    if (e.key === 'g' || e.key === 'G') { toggleGrid(); return; }
+    if (overview.classList.contains('on')) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'j') {
+      e.preventDefault(); show(cur + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'k') {
+      e.preventDefault(); show(cur - 1);
+    } else if (e.key === 'Home') { show(0); }
+    else if (e.key === 'End') { show(slides.length - 1); }
+  });
+
+  document.getElementById('next').addEventListener('click', function () { show(cur + 1); });
+  document.getElementById('prev').addEventListener('click', function () { show(cur - 1); });
+  document.getElementById('grid').addEventListener('click', toggleGrid);
+
+  var start = parseInt((location.hash || '#1').slice(1), 10);
+  show(isNaN(start) ? 0 : start - 1);
+})();
+</script>

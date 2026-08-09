@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>0xAF-Re Architecture Diagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1320px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1240px; display: block; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; line-height: 1.5; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+    .toolbar { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; align-items: center; }
+    .toolbar-toggle {
+      background: transparent; border: none; color: #475569; cursor: pointer;
+      font-size: 1.25rem; line-height: 1; padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem; transition: color 0.2s, background 0.2s;
+    }
+    .toolbar-toggle:hover { color: #94a3b8; background: rgba(30, 41, 59, 0.5); }
+    .toolbar-actions { display: none; gap: 0.5rem; }
+    .toolbar.expanded .toolbar-actions { display: flex; }
+    .toolbar-actions button {
+      background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; color: #94a3b8;
+      padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-family: inherit;
+      font-size: 0.75rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .toolbar-actions button:hover { background: rgba(51, 65, 85, 0.8); color: white; border-color: #475569; }
+    @media print { body { background: #020617; padding: 1rem; } .toolbar { display: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="container" id="report-container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>0xAF-Re Architecture</h1>
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button onclick="copyAsImage(this)">📋 Copy</button>
+            <button onclick="downloadPNG(this)">🖼️ PNG</button>
+            <button onclick="downloadPDF(this)">📄 PDF</button>
+          </div>
+          <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" title="Export options" aria-label="Export options">⋯</button>
+        </div>
+      </div>
+      <p class="subtitle">逆向 / CTF 双模型 Agent · planner (codex) + executor (claude) · 本地 CLI 驱动 · append-only 会话</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1240 720" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+          <marker id="arrowrose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185"/>
+          </marker>
+          <marker id="arrowamber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
+          </marker>
+        </defs>
+
+        <rect width="1240" height="720" fill="url(#grid)"/>
+
+        <!-- ============ arrows first: painted behind the boxes ============ -->
+        <g fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)">
+          <path d="M 155 145 V 180"/>
+          <path d="M 260 212 H 296 V 120 H 326"/>
+          <path d="M 400 155 V 191"/>
+          <path d="M 550 155 V 191"/>
+          <path d="M 620 105 H 655 V 112 H 686"/>
+          <path d="M 620 138 H 662 V 302 H 686"/>
+          <path d="M 330 140 H 302 V 440 H 326"/>
+          <path d="M 330 112 H 282 V 452 H 256"/>
+          <path d="M 330 245 H 292 V 476 H 256"/>
+          <path d="M 155 495 V 516"/>
+          <path d="M 852 425 V 370 H 400 V 289"/>
+        </g>
+        <g fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowamber)">
+          <path d="M 950 112 H 984 V 150 H 1014"/>
+          <path d="M 950 132 H 1000 V 280 H 1014"/>
+          <path d="M 1105 195 V 212 H 954"/>
+          <path d="M 1018 300 H 984 V 232 H 954"/>
+          <path d="M 820 185 V 149"/>
+        </g>
+        <g fill="none" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,4" marker-end="url(#arrowrose)">
+          <path d="M 430 495 V 521"/>
+          <path d="M 642 495 V 521"/>
+          <path d="M 852 495 V 521"/>
+        </g>
+
+        <!-- ============ region boundaries ============ -->
+        <rect x="30" y="50" width="250" height="200" rx="12" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+        <text x="44" y="70" fill="#22d3ee" font-size="10" font-weight="600">入口 · ENTRY</text>
+
+        <rect x="310" y="50" width="330" height="300" rx="12" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+        <text x="324" y="70" fill="#34d399" font-size="10" font-weight="600">核心 · CORE</text>
+
+        <rect x="670" y="50" width="300" height="300" rx="12" fill="none" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+        <text x="684" y="70" fill="#a78bfa" font-size="10" font-weight="600">PROVIDER 适配层</text>
+
+        <rect x="1000" y="50" width="210" height="300" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+        <text x="1014" y="70" fill="#fbbf24" font-size="10" font-weight="600">本地 CLI 子进程</text>
+
+        <rect x="30" y="390" width="250" height="230" rx="12" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+        <text x="44" y="410" fill="#22d3ee" font-size="10" font-weight="600">终端 UI</text>
+
+        <rect x="310" y="390" width="660" height="230" rx="12" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+        <text x="324" y="410" fill="#94a3b8" font-size="10" font-weight="600">工具注册表 · 14 TOOLS</text>
+
+        <!-- ============ ENTRY ============ -->
+        <rect x="50" y="85" width="210" height="60" rx="6" fill="#0f172a"/>
+        <rect x="50" y="85" width="210" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="155" y="108" fill="white" font-size="12" font-weight="600" text-anchor="middle">config.ts / auth.ts</text>
+        <text x="155" y="124" fill="#94a3b8" font-size="9" text-anchor="middle">agent.config.json</text>
+        <text x="155" y="137" fill="#94a3b8" font-size="9" text-anchor="middle">env → .env → secrets.json</text>
+
+        <rect x="50" y="180" width="210" height="60" rx="6" fill="#0f172a"/>
+        <rect x="50" y="180" width="210" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="155" y="203" fill="white" font-size="12" font-weight="600" text-anchor="middle">cli.ts</text>
+        <text x="155" y="219" fill="#94a3b8" font-size="9" text-anchor="middle">REPL · 斜杠命令 · 回合编排</text>
+        <text x="155" y="232" fill="#94a3b8" font-size="9" text-anchor="middle">角色路由标签</text>
+
+        <!-- ============ CORE ============ -->
+        <rect x="330" y="85" width="290" height="70" rx="6" fill="#0f172a"/>
+        <rect x="330" y="85" width="290" height="70" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="475" y="108" fill="white" font-size="12" font-weight="600" text-anchor="middle">AgentLoop</text>
+        <text x="475" y="124" fill="#94a3b8" font-size="9" text-anchor="middle">多轮循环 · 角色路由 · toolCall 执行</text>
+        <text x="475" y="137" fill="#94a3b8" font-size="9" text-anchor="middle">LoopEvent 广播 · maxTurns 上限</text>
+        <text x="475" y="149" fill="#64748b" font-size="8" text-anchor="middle">planner / executor / auto</text>
+
+        <rect x="330" y="195" width="140" height="94" rx="6" fill="#0f172a"/>
+        <rect x="330" y="195" width="140" height="94" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="400" y="218" fill="white" font-size="12" font-weight="600" text-anchor="middle">PlanTracker</text>
+        <text x="400" y="234" fill="#94a3b8" font-size="9" text-anchor="middle">任务表去抖</text>
+        <text x="400" y="247" fill="#94a3b8" font-size="9" text-anchor="middle">整表替换</text>
+        <text x="400" y="262" fill="#94a3b8" font-size="9" text-anchor="middle">startedAt /</text>
+        <text x="400" y="275" fill="#94a3b8" font-size="9" text-anchor="middle">completedAt 打戳</text>
+
+        <rect x="485" y="195" width="135" height="94" rx="6" fill="#0f172a"/>
+        <rect x="485" y="195" width="135" height="94" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="552" y="218" fill="white" font-size="12" font-weight="600" text-anchor="middle">JsonlSession</text>
+        <text x="552" y="234" fill="#94a3b8" font-size="9" text-anchor="middle">append-only</text>
+        <text x="552" y="249" fill="#94a3b8" font-size="9" text-anchor="middle">session</text>
+        <text x="552" y="262" fill="#94a3b8" font-size="9" text-anchor="middle">message</text>
+        <text x="552" y="275" fill="#94a3b8" font-size="9" text-anchor="middle">event / plan</text>
+
+        <!-- ============ PROVIDER ============ -->
+        <rect x="690" y="85" width="260" height="60" rx="6" fill="#0f172a"/>
+        <rect x="690" y="85" width="260" height="60" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="820" y="108" fill="white" font-size="12" font-weight="600" text-anchor="middle">CliTmuxProvider</text>
+        <text x="820" y="124" fill="#94a3b8" font-size="9" text-anchor="middle">tmux 起本地 CLI · 写 prompt 文件</text>
+        <text x="820" y="137" fill="#64748b" font-size="8" text-anchor="middle">恒返回 toolCalls: [] — 外部 CLI 自己调工具</text>
+
+        <rect x="690" y="185" width="260" height="60" rx="6" fill="#0f172a"/>
+        <rect x="690" y="185" width="260" height="60" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="820" y="208" fill="white" font-size="12" font-weight="600" text-anchor="middle">StreamParser</text>
+        <text x="820" y="224" fill="#94a3b8" font-size="9" text-anchor="middle">claude-json / codex-json 归一化</text>
+        <text x="820" y="237" fill="#64748b" font-size="8" text-anchor="middle">thinking · text · tool · usage · plan</text>
+
+        <rect x="690" y="285" width="260" height="45" rx="6" fill="#0f172a"/>
+        <rect x="690" y="285" width="260" height="45" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="820" y="305" fill="white" font-size="12" font-weight="600" text-anchor="middle">直连 API Provider</text>
+        <text x="820" y="321" fill="#94a3b8" font-size="9" text-anchor="middle">Anthropic · OpenAI · Mock — 真发 toolCall</text>
+
+        <!-- ============ LOCAL CLI PROCESSES ============ -->
+        <rect x="1014" y="110" width="180" height="85" rx="6" fill="#0f172a"/>
+        <rect x="1014" y="110" width="180" height="85" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="1104" y="133" fill="white" font-size="12" font-weight="600" text-anchor="middle">codex</text>
+        <text x="1104" y="149" fill="#94a3b8" font-size="9" text-anchor="middle">codex exec --json</text>
+        <text x="1104" y="164" fill="#fbbf24" font-size="9" text-anchor="middle">planner 默认</text>
+        <text x="1104" y="180" fill="#64748b" font-size="8" text-anchor="middle">plan_update / todo_list</text>
+
+        <rect x="1014" y="235" width="180" height="95" rx="6" fill="#0f172a"/>
+        <rect x="1014" y="235" width="180" height="95" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="1104" y="258" fill="white" font-size="12" font-weight="600" text-anchor="middle">claude</text>
+        <text x="1104" y="274" fill="#94a3b8" font-size="9" text-anchor="middle">claude -p stream-json</text>
+        <text x="1104" y="289" fill="#fbbf24" font-size="9" text-anchor="middle">executor 默认 · resume</text>
+        <text x="1104" y="305" fill="#64748b" font-size="8" text-anchor="middle">TaskCreate / TaskUpdate</text>
+        <text x="1104" y="319" fill="#64748b" font-size="8" text-anchor="middle">id ← tool_use_result</text>
+
+        <!-- ============ TERMINAL UI ============ -->
+        <rect x="46" y="425" width="210" height="70" rx="6" fill="#0f172a"/>
+        <rect x="46" y="425" width="210" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="151" y="448" fill="white" font-size="12" font-weight="600" text-anchor="middle">LivePane</text>
+        <text x="151" y="464" fill="#94a3b8" font-size="9" text-anchor="middle">90ms 帧 · 原地擦除重绘</text>
+        <text x="151" y="477" fill="#94a3b8" font-size="9" text-anchor="middle">400ms 吞吐采样</text>
+        <text x="151" y="489" fill="#64748b" font-size="8" text-anchor="middle">高度自适应 · 超高则主动瘦身</text>
+
+        <rect x="46" y="516" width="210" height="70" rx="6" fill="#0f172a"/>
+        <rect x="46" y="516" width="210" height="70" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="151" y="539" fill="white" font-size="12" font-weight="600" text-anchor="middle">hud.ts</text>
+        <text x="151" y="555" fill="#94a3b8" font-size="9" text-anchor="middle">纯函数 HudModel → string[]</text>
+        <text x="151" y="568" fill="#94a3b8" font-size="9" text-anchor="middle">任务列 · 遥测列 · 路由链</text>
+        <text x="151" y="580" fill="#64748b" font-size="8" text-anchor="middle">进度条 · sparkline · CJK 宽度感知</text>
+
+        <!-- ============ TOOLS ============ -->
+        <rect x="330" y="425" width="200" height="70" rx="6" fill="#0f172a"/>
+        <rect x="330" y="425" width="200" height="70" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="430" y="448" fill="white" font-size="12" font-weight="600" text-anchor="middle">读取类 · 8</text>
+        <text x="430" y="464" fill="#94a3b8" font-size="9" text-anchor="middle">list_files · read_file · grep</text>
+        <text x="430" y="477" fill="#94a3b8" font-size="9" text-anchor="middle">file_info · strings · hexdump</text>
+        <text x="430" y="489" fill="#94a3b8" font-size="9" text-anchor="middle">hash_file · extract_symbols</text>
+
+        <rect x="545" y="425" width="195" height="70" rx="6" fill="#0f172a"/>
+        <rect x="545" y="425" width="195" height="70" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="642" y="448" fill="white" font-size="12" font-weight="600" text-anchor="middle">CTF 类 · 3</text>
+        <text x="642" y="466" fill="#94a3b8" font-size="9" text-anchor="middle">ctf_triage · ctf_decode</text>
+        <text x="642" y="481" fill="#94a3b8" font-size="9" text-anchor="middle">entropy_scan</text>
+
+        <rect x="755" y="425" width="195" height="70" rx="6" fill="#0f172a"/>
+        <rect x="755" y="425" width="195" height="70" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="852" y="448" fill="white" font-size="12" font-weight="600" text-anchor="middle">写 / 执行 / 计划 · 3</text>
+        <text x="852" y="466" fill="#94a3b8" font-size="9" text-anchor="middle">write_file · run_command</text>
+        <text x="852" y="481" fill="#fb923c" font-size="9" text-anchor="middle">update_plan → onPlan</text>
+
+        <rect x="330" y="521" width="620" height="70" rx="6" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4"/>
+        <text x="640" y="545" fill="#fb7185" font-size="12" font-weight="600" text-anchor="middle">ExecutionPolicy · 沙箱边界</text>
+        <text x="640" y="563" fill="#94a3b8" font-size="9" text-anchor="middle">读取限制在 workspace 内 · 危险 shell 模式拦截 · 单次读取上限 · 命令超时</text>
+        <text x="640" y="579" fill="#94a3b8" font-size="9" text-anchor="middle">默认全部关闭：写入需 --write · 网络需 --allow-network · 敏感路径需 --allow-sensitive</text>
+
+        <!-- ============ legend (below every boundary) ============ -->
+        <g transform="translate(30, 650)">
+          <rect x="0" y="0" width="14" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.2"/>
+          <text x="22" y="9" fill="#94a3b8" font-size="9">入口 / 终端 UI</text>
+          <rect x="130" y="0" width="14" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.2"/>
+          <text x="152" y="9" fill="#94a3b8" font-size="9">核心循环</text>
+          <rect x="240" y="0" width="14" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.2"/>
+          <text x="262" y="9" fill="#94a3b8" font-size="9">Provider / 持久化</text>
+          <rect x="392" y="0" width="14" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.2"/>
+          <text x="414" y="9" fill="#94a3b8" font-size="9">本地 CLI 子进程</text>
+          <rect x="540" y="0" width="14" height="10" rx="2" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.2"/>
+          <text x="562" y="9" fill="#94a3b8" font-size="9">有副作用的工具</text>
+          <rect x="700" y="0" width="14" height="10" rx="2" fill="none" stroke="#fb7185" stroke-width="1.2" stroke-dasharray="3,3"/>
+          <text x="722" y="9" fill="#94a3b8" font-size="9">安全策略校验</text>
+          <path d="M 850 5 H 878" stroke="#fbbf24" stroke-width="1.5" fill="none" marker-end="url(#arrowamber)"/>
+          <text x="890" y="9" fill="#94a3b8" font-size="9">JSONL 事件流</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header"><div class="card-dot emerald"></div><h3>双模型分工</h3></div>
+        <ul>
+          <li>• planner = codex，负责高敏感逆向分析、可利用性推理、解题策略</li>
+          <li>• executor = claude，负责本地命令执行、文件检查、例行总结</li>
+          <li>• auto 模式按提示词关键词（执行/运行/读取/grep…）落到执行侧</li>
+          <li>• 两者都是 cli-tmux 类型：0xAF-Re 只做编排，工具调用在子 CLI 内完成</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot violet"></div><h3>计划事件的三种来源</h3></div>
+        <ul>
+          <li>• Claude：TaskCreate / TaskUpdate，id 由 tool_use_result 结构化绑定</li>
+          <li>• Codex：plan_update（旧壳）/ todo_list（item 新壳）</li>
+          <li>• 兼容：TodoWrite（本机 2.1.220 已无此工具，保留给其他版本）</li>
+          <li>• 子代理事件按 parent_tool_use_id 过滤，不污染操作者的任务表</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot rose"></div><h3>安全与可观测</h3></div>
+        <ul>
+          <li>• 默认只读：写入 / 网络 / 敏感路径均需显式开关</li>
+          <li>• 每次工具调用前过 ExecutionPolicy，路径越界与危险命令直接拒绝</li>
+          <li>• 会话 append-only 落 JSONL，plan 变更逐条记录、可完整回放</li>
+          <li>• HUD 纯观测层，任何解析或渲染异常都不会让一次 run 失败</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">0xAF-Re v0.1.0 · Bun + TypeScript · 14 tools · 53 tests</div>
+  </div>
+
+  <script>
+    async function capture() {
+      const el = document.getElementById('report-container');
+      const r = el.getBoundingClientRect();
+      const pad = 32;
+      return html2canvas(document.body, {
+        backgroundColor: '#020617',
+        scale: 2,
+        x: r.left - pad + window.scrollX,
+        y: r.top - pad + window.scrollY,
+        width: r.width + pad * 2,
+        height: r.height + pad * 2,
+        ignoreElements: (node) => node.classList && node.classList.contains('toolbar'),
+      });
+    }
+    async function copyAsImage(btn) {
+      const canvas = await capture();
+      canvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          btn.textContent = '✅ Copied';
+          setTimeout(() => (btn.textContent = '📋 Copy'), 1500);
+        } catch (e) {
+          btn.textContent = '❌ Failed';
+          setTimeout(() => (btn.textContent = '📋 Copy'), 1500);
+        }
+      });
+    }
+    async function downloadPNG() {
+      const canvas = await capture();
+      const link = document.createElement('a');
+      link.download = '0xaf-re-architecture.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    async function downloadPDF() {
+      const canvas = await capture();
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save('0xaf-re-architecture.pdf');
+    }
+  </script>
+</body>
+</html>
