@@ -1,0 +1,53 @@
+README.md
+  538cb91f46975005 1-529
+tsconfig.json
+  538cb91f46975005 1-11
+package.json
+  538cb91f46975005 1-21
+.gitignore
+  538cb91f46975005 1-7
+config.example.json
+  538cb91f46975005 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "9442ff0b9a5b85900134c7f9216a73f1689379a2",
+  "prompts": {
+    "538cb91f46975005": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe77e-773c-7e02-9197-c6286b3cedaf",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 678,
+      "total_deletions": 0,
+      "accepted_lines": 678,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "package.json": {
+          "additions": 21,
+          "accepted_lines": 21
+        },
+        "tsconfig.json": {
+          "additions": 11,
+          "accepted_lines": 11
+        },
+        ".gitignore": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "config.example.json": {
+          "additions": 110,
+          "accepted_lines": 110
+        },
+        "README.md": {
+          "additions": 529,
+          "accepted_lines": 529
+        }
+      }
+    }
+  }
+}
