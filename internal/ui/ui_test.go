@@ -397,6 +397,69 @@ func TestDashboardSplitsLiveStateIntoWindows(t *testing.T) {
 	}
 }
 
+func TestFlowTracksToolRunSnapshots(t *testing.T) {
+	model := NewFlowModel("codex")
+	model.Begin("codex")
+	model.Apply(core.LoopEvent{
+		Type: "tool_start", Name: "run_command",
+		Args: map[string]any{"command": "python3 solve.py", "timeout": 30},
+	})
+	state := model.Snapshot()
+	if len(state.ToolRuns) != 1 {
+		t.Fatalf("expected one running tool, got %d", len(state.ToolRuns))
+	}
+	if state.ToolRuns[0].Status != ToolRunRunning {
+		t.Fatalf("tool should be running: %+v", state.ToolRuns[0])
+	}
+	if !strings.Contains(state.ToolRuns[0].ArgsText, "command=python3 solve.py") {
+		t.Fatalf("args summary missing command: %q", state.ToolRuns[0].ArgsText)
+	}
+
+	model.Apply(core.LoopEvent{Type: "tool_end", Name: "run_command", OK: true, Ms: 1250, Preview: "flag path found"})
+	state = model.Snapshot()
+	if state.ToolRuns[0].Status != ToolRunDone || !state.ToolRuns[0].OK {
+		t.Fatalf("tool should be completed: %+v", state.ToolRuns[0])
+	}
+	if state.ToolRuns[0].Preview != "flag path found" || state.ToolRuns[0].Ms != 1250 {
+		t.Fatalf("completion details not retained: %+v", state.ToolRuns[0])
+	}
+}
+
+func TestDashboardToolsPaneShowsToolCards(t *testing.T) {
+	model := NewFlowModel("codex")
+	model.Begin("codex")
+	model.Apply(core.LoopEvent{Type: "wire", Phase: "send", Provider: "codex", Model: "gpt-5-codex"})
+	model.Apply(core.LoopEvent{
+		Type: "tool_start", Name: "read_file",
+		Args: map[string]any{"path": "libtb_crypto.so"},
+	})
+	model.Apply(core.LoopEvent{Type: "tool_end", Name: "read_file", OK: true, Ms: 42, Preview: "ELF 64-bit LSB shared object"})
+	model.Apply(core.LoopEvent{
+		Type: "tool_start", Name: "run_command",
+		Args: map[string]any{"command": "strings libtb_crypto.so | head"},
+	})
+	state := model.Snapshot()
+	hud := HudModel{
+		Label: "codex", Phase: "working", Frame: "⠹", Width: 120, MaxRows: 26,
+		Now: types.NowMs() + 1500,
+	}
+	lines := RenderDashboard(&state, hud)
+	if len(lines) > hud.MaxRows {
+		t.Fatalf("dashboard overran budget: %d > %d", len(lines), hud.MaxRows)
+	}
+	for _, line := range lines {
+		if DisplayWidth(line) > hud.Width {
+			t.Fatalf("dashboard line overflowed: %q (%d)", line, DisplayWidth(line))
+		}
+	}
+	plain := StripAnsi(strings.Join(lines, "\n"))
+	for _, want := range []string{"TOOLS", "run_command", "read_file", "args:", "out:", "ELF 64-bit"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("tool dashboard missing %q:\n%s", want, plain)
+		}
+	}
+}
+
 func TestDashboardFallsBackToHudWhenTight(t *testing.T) {
 	model := NewFlowModel("codex")
 	model.Begin("codex")

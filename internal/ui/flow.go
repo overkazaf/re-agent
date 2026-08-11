@@ -70,11 +70,32 @@ const packetGlyph = "•"
 // spawnEvery is the frames between packets: wide enough that packets read as
 // moving objects, not as a dashed line.
 const spawnEvery = 7
+const toolRunKeep = 6
+
+type ToolRunStatus string
+
+const (
+	ToolRunRunning ToolRunStatus = "running"
+	ToolRunDone    ToolRunStatus = "done"
+	ToolRunFailed  ToolRunStatus = "failed"
+)
 
 type planBadge struct {
 	Done   int
 	Total  int
 	Source string
+}
+
+type ToolRunSnapshot struct {
+	ID         int
+	Name       string
+	ArgsText   string
+	Preview    string
+	Status     ToolRunStatus
+	StartedAt  int64
+	FinishedAt int64
+	Ms         int64
+	OK         bool
 }
 
 type FlowState struct {
@@ -93,6 +114,8 @@ type FlowState struct {
 	ToolMs         int64
 	ToolsOK        int
 	ToolsFailed    int
+	ToolRuns       []ToolRunSnapshot
+	NextToolRunID  int
 	ReplyChars     int
 	CompactedDrop  int
 	CompactedElide int
@@ -129,6 +152,7 @@ func (m *FlowModel) Snapshot() FlowState {
 	for index := range clone.Packets {
 		clone.Packets[index] = append([]int{}, m.state.Packets[index]...)
 	}
+	clone.ToolRuns = append([]ToolRunSnapshot{}, m.state.ToolRuns...)
 	return clone
 }
 
@@ -231,8 +255,11 @@ func (m *FlowModel) Apply(event core.LoopEvent) {
 		case "tool":
 			if event.Progress.Tool != "" {
 				state.Stage = stageTool
+				if state.ActiveTool != event.Progress.Tool || state.ToolStartedAt == 0 {
+					state.ToolStartedAt = now
+				}
 				state.ActiveTool = event.Progress.Tool
-				state.ToolStartedAt = now
+				ensureToolRunRunning(state, event.Progress.Tool, "", now)
 			}
 		}
 		if event.Progress.Usage != nil {
@@ -244,9 +271,11 @@ func (m *FlowModel) Apply(event core.LoopEvent) {
 		state.ToolStartedAt = now
 		state.ToolMs = 0
 		state.Packets[edgeModelToCalls] = nil
+		appendToolRun(state, event.Name, summarizeToolArgs(event.Args), now)
 	case "tool_end":
 		state.ToolMs = event.Ms
 		state.ToolStartedAt = 0
+		finishToolRun(state, event.Name, event.OK, event.Ms, event.Preview, now)
 		if event.OK {
 			state.ToolsOK++
 		} else {
@@ -289,6 +318,78 @@ func (m *FlowModel) Apply(event core.LoopEvent) {
 			state.Usage = state.Usage.Merge(*event.Usage)
 		}
 	}
+}
+
+func ensureToolRunRunning(state *FlowState, name, argsText string, now int64) {
+	if name == "" || name == planTool {
+		return
+	}
+	for index := len(state.ToolRuns) - 1; index >= 0; index-- {
+		run := state.ToolRuns[index]
+		if run.Name == name && run.Status == ToolRunRunning {
+			return
+		}
+	}
+	appendToolRun(state, name, argsText, now)
+}
+
+func appendToolRun(state *FlowState, name, argsText string, now int64) {
+	if name == "" || name == planTool {
+		return
+	}
+	state.NextToolRunID++
+	state.ToolRuns = append(state.ToolRuns, ToolRunSnapshot{
+		ID:        state.NextToolRunID,
+		Name:      name,
+		ArgsText:  argsText,
+		Status:    ToolRunRunning,
+		StartedAt: now,
+	})
+	trimToolRuns(state)
+}
+
+func finishToolRun(state *FlowState, name string, ok bool, ms int64, preview string, now int64) {
+	if name == "" || name == planTool {
+		return
+	}
+	for index := len(state.ToolRuns) - 1; index >= 0; index-- {
+		run := &state.ToolRuns[index]
+		if run.Name == name && run.Status == ToolRunRunning {
+			run.OK = ok
+			run.Ms = ms
+			run.Preview = preview
+			run.FinishedAt = now
+			if ok {
+				run.Status = ToolRunDone
+			} else {
+				run.Status = ToolRunFailed
+			}
+			return
+		}
+	}
+	state.NextToolRunID++
+	status := ToolRunFailed
+	if ok {
+		status = ToolRunDone
+	}
+	state.ToolRuns = append(state.ToolRuns, ToolRunSnapshot{
+		ID:         state.NextToolRunID,
+		Name:       name,
+		Preview:    preview,
+		Status:     status,
+		StartedAt:  now,
+		FinishedAt: now,
+		Ms:         ms,
+		OK:         ok,
+	})
+	trimToolRuns(state)
+}
+
+func trimToolRuns(state *FlowState) {
+	if len(state.ToolRuns) <= toolRunKeep {
+		return
+	}
+	state.ToolRuns = append([]ToolRunSnapshot{}, state.ToolRuns[len(state.ToolRuns)-toolRunKeep:]...)
 }
 
 // Tick advances the animation one frame.

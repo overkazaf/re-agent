@@ -73,7 +73,7 @@ func RenderDashboard(flow *FlowState, model HudModel) []string {
 	})
 	toolsPane := renderDashboardPanel(dashboardPanel{
 		Title: "TOOLS", Width: toolW, Rows: topRows,
-		Body: dashboardToolRows(flow, model.Now, BoxInner(toolW)),
+		Body: dashboardToolRows(flow, model, BoxInner(toolW), topRows-2),
 	})
 	planPane := renderDashboardPanel(dashboardPanel{
 		Title: "PLAN", Width: planW, Rows: bottomRows,
@@ -184,39 +184,119 @@ func dashboardFlowRows(flow *FlowState, inner int, now int64) []string {
 	return lines
 }
 
-func dashboardToolRows(flow *FlowState, now int64, inner int) []string {
+func dashboardToolRows(flow *FlowState, model HudModel, inner, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
 	if flow == nil {
 		return []string{C.Faint("no tool activity yet")}
 	}
 	rows := []string{
 		dashboardKV("stage", string(flow.Stage), C.Violet, inner),
 	}
-	if model := flowModelLabel(flow); model != "" {
-		rows = append(rows, dashboardKV("agent", model, C.Text, inner))
+	if agent := flowModelLabel(flow); agent != "" && len(rows) < limit {
+		rows = append(rows, dashboardKV("agent", agent, C.Text, inner))
 	}
-	if flow.ActiveTool != "" {
-		rows = append(rows, dashboardKV("tool", flow.ActiveTool, C.Accent, inner))
-	}
-	if flow.PendingCalls > 0 || flow.ToolsOK > 0 || flow.ToolsFailed > 0 {
+	if (flow.PendingCalls > 0 || flow.ToolsOK > 0 || flow.ToolsFailed > 0) && len(rows) < limit {
 		value := fmt.Sprintf("pending %d  ok %d  fail %d", flow.PendingCalls, flow.ToolsOK, flow.ToolsFailed)
 		rows = append(rows, dashboardKV("calls", value, C.Text, inner))
 	}
-	if flow.ToolStartedAt != 0 && now > flow.ToolStartedAt {
-		rows = append(rows, dashboardKV("tool time", FormatDuration(now-flow.ToolStartedAt), C.OK, inner))
-	} else if flow.ToolMs != 0 {
-		rows = append(rows, dashboardKV("last tool", FormatDuration(flow.ToolMs), C.OK, inner))
+
+	if len(flow.ToolRuns) > 0 {
+		for index := len(flow.ToolRuns) - 1; index >= 0 && len(rows) < limit; index-- {
+			rows = append(rows, dashboardToolRunRows(flow.ToolRuns[index], model, inner, limit-len(rows))...)
+		}
+	} else if flow.ActiveTool != "" && len(rows) < limit {
+		rows = append(rows, dashboardKV("tool", flow.ActiveTool, C.Accent, inner))
+		if flow.ToolStartedAt != 0 && model.Now > flow.ToolStartedAt && len(rows) < limit {
+			rows = append(rows, dashboardKV("tool time", FormatDuration(model.Now-flow.ToolStartedAt), C.OK, inner))
+		} else if flow.ToolMs != 0 && len(rows) < limit {
+			rows = append(rows, dashboardKV("last tool", FormatDuration(flow.ToolMs), C.OK, inner))
+		}
 	}
-	if flow.ReplyChars > 0 {
+	if flow.ReplyChars > 0 && len(rows) < limit {
 		rows = append(rows, dashboardKV("reply", fmt.Sprintf("%d chars", flow.ReplyChars), C.Text, inner))
 	}
-	if flow.HasCompacted {
+	if flow.HasCompacted && len(rows) < limit {
 		value := fmt.Sprintf("%d dropped  %d elided", flow.CompactedDrop, flow.CompactedElide)
 		rows = append(rows, dashboardKV("ctx", value, C.Warn, inner))
 	}
-	if flow.Error != "" {
+	if flow.Error != "" && len(rows) < limit {
 		rows = append(rows, dashboardKV("error", flow.Error, C.Err, inner))
 	}
 	return rows
+}
+
+func dashboardToolRunRows(run ToolRunSnapshot, model HudModel, inner, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	rows := []string{dashboardToolRunHeader(run, model, inner)}
+	if run.ArgsText != "" && len(rows) < limit {
+		rows = append(rows, dashboardToolDetail("args", run.ArgsText, inner))
+	}
+	if run.Preview != "" && len(rows) < limit {
+		rows = append(rows, dashboardToolDetail("out", run.Preview, inner))
+	}
+	return rows
+}
+
+func dashboardToolRunHeader(run ToolRunSnapshot, model HudModel, inner int) string {
+	glyphPlain, glyphPaint, paint := dashboardToolGlyph(run, model.Frame)
+	duration := dashboardToolDuration(run, model.Now)
+	suffixWidth := 0
+	if duration != "" {
+		suffixWidth = 1 + DisplayWidth(duration)
+	}
+	room := inner - DisplayWidth(glyphPlain) - 1 - suffixWidth
+	if room < 1 {
+		return C.Faint(Truncate(glyphPlain+" "+run.Name, inner))
+	}
+	name := Truncate(run.Name, room)
+	line := glyphPaint + " " + paint(name)
+	if duration != "" {
+		line += " " + C.Faint(duration)
+	}
+	return line
+}
+
+func dashboardToolGlyph(run ToolRunSnapshot, frame string) (string, string, Painter) {
+	switch run.Status {
+	case ToolRunDone:
+		return doneGlyph, C.OK(doneGlyph), C.Text
+	case ToolRunFailed:
+		return "✗", C.Err("✗"), C.Err
+	default:
+		if frame == "" {
+			frame = spinGlyph
+		}
+		return frame, C.Accent(frame), C.Accent
+	}
+}
+
+func dashboardToolDuration(run ToolRunSnapshot, now int64) string {
+	if run.Status == ToolRunRunning {
+		if run.StartedAt == 0 || now <= run.StartedAt {
+			return "running"
+		}
+		return FormatDuration(now - run.StartedAt)
+	}
+	if run.Ms != 0 {
+		return FormatDuration(run.Ms)
+	}
+	if run.FinishedAt > run.StartedAt && run.StartedAt != 0 {
+		return FormatDuration(run.FinishedAt - run.StartedAt)
+	}
+	return ""
+}
+
+func dashboardToolDetail(label, value string, inner int) string {
+	text := label + ": " + value
+	room := inner - 2
+	if room < 1 {
+		return C.Faint(Truncate(text, inner))
+	}
+	return C.Faint("  " + Truncate(text, room))
 }
 
 func dashboardPlanRows(model HudModel, inner, bodyRows int) []string {
