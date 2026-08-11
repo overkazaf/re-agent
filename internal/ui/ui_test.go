@@ -415,6 +415,36 @@ func TestDashboardFallsBackToHudWhenTight(t *testing.T) {
 	}
 }
 
+func TestDashboardUsesFullWideTerminal(t *testing.T) {
+	model := NewFlowModel("codex")
+	model.Begin("codex")
+	state := model.Snapshot()
+	hud := HudModel{
+		Label: "codex", Phase: "working", Frame: "⠹", Width: 180, MaxRows: 24,
+		Plan: samplePlan(), Now: types.NowMs(),
+	}
+	lines := RenderDashboard(&state, hud)
+	if len(lines) == 0 {
+		t.Fatal("dashboard rendered no lines")
+	}
+	if got := DisplayWidth(lines[0]); got != 180 {
+		t.Fatalf("wide dashboard should occupy the requested width, got %d", got)
+	}
+}
+
+func TestDashboardFallbackCapsOldHudWidth(t *testing.T) {
+	hud := HudModel{Label: "codex", Phase: "working", Frame: "⠹", Width: 180, MaxRows: 6, Now: types.NowMs()}
+	lines := RenderDashboard(nil, hud)
+	if len(lines) == 0 {
+		t.Fatal("fallback rendered no lines")
+	}
+	for _, line := range lines {
+		if DisplayWidth(line) > HudMaxWidth {
+			t.Fatalf("fallback HUD should stay capped, got %d columns: %q", DisplayWidth(line), line)
+		}
+	}
+}
+
 func TestComposePaneBoundsLongToolRows(t *testing.T) {
 	model := NewFlowModel("codex")
 	model.Begin("codex")

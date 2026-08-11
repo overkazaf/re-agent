@@ -30,10 +30,10 @@ func RenderDashboard(flow *FlowState, model HudModel) []string {
 	}
 	maxRows := model.MaxRows
 	if maxRows <= 0 {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 	if width < dashboardMinWidth || maxRows < dashboardMinRows {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 
 	statusBody := dashboardStatusRows(model, BoxInner(width))
@@ -46,7 +46,7 @@ func RenderDashboard(flow *FlowState, model HudModel) []string {
 	})
 	remaining := maxRows - len(status)
 	if remaining < 8 {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 
 	topRows := remaining / 2
@@ -55,16 +55,16 @@ func RenderDashboard(flow *FlowState, model HudModel) []string {
 	}
 	bottomRows := remaining - topRows
 	if bottomRows < 4 {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 
 	flowW, toolW, ok := splitDashboardWidths(width, 44, 24, 62)
 	if !ok {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 	planW, thinkW, ok := splitDashboardWidths(width, 40, 28, 58)
 	if !ok {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 
 	flowPane := renderDashboardPanel(dashboardPanel{
@@ -88,14 +88,21 @@ func RenderDashboard(flow *FlowState, model HudModel) []string {
 	out = append(out, joinDashboardPanels(flowPane, toolsPane)...)
 	out = append(out, joinDashboardPanels(planPane, thinkPane)...)
 	if len(out) > maxRows {
-		return RenderHud(model)
+		return renderDashboardFallback(model)
 	}
 	for _, line := range out {
 		if DisplayWidth(line) > width {
-			return RenderHud(model)
+			return renderDashboardFallback(model)
 		}
 	}
 	return out
+}
+
+func renderDashboardFallback(model HudModel) []string {
+	if model.Width > HudMaxWidth {
+		model.Width = HudMaxWidth
+	}
+	return RenderHud(model)
 }
 
 func splitDashboardWidths(total, leftMin, rightMin, leftPercent int) (int, int, bool) {

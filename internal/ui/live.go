@@ -369,14 +369,10 @@ func (p *LivePane) stopTimer() {
 }
 
 // width leaves the last column empty: writing into it makes some terminals wrap
-// eagerly, which would desynchronise the erase walk. There is no lower clamp for
-// the same reason — a terminal narrower than the HUD's box gets a status line
-// from RenderHud, never a box that wraps.
+// eagerly, which would desynchronise the erase walk. Dashboard rendering may use
+// the full terminal; the compact HUD fallback caps itself separately.
 func paneWidth() int {
 	width := TerminalColumns(80) - 1
-	if width > HudMaxWidth {
-		width = HudMaxWidth
-	}
 	if width < 1 {
 		width = 1
 	}
