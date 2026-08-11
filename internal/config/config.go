@@ -363,6 +363,29 @@ type ModelChange struct {
 	Detail      string
 }
 
+// ValidateProviderModel catches the common mistake of assigning a model from
+// one backend family to another provider, e.g. `/model executor glm-5.2` while
+// the executor is still `claude`.
+func ValidateProviderModel(providerName string, provider *types.ProviderConfig, model string) error {
+	if provider == nil {
+		return nil
+	}
+	model = strings.TrimSpace(model)
+	modelFamily := knownModelFamily(model)
+	if modelFamily == "" {
+		return nil
+	}
+	providerFamily := providerModelFamily(providerName, provider)
+	if providerFamily == "" || providerFamily == modelFamily {
+		return nil
+	}
+	return fmt.Errorf(
+		"model %q looks like a %s model, but provider %q is %s; switch to %s or choose a %s-compatible model",
+		model, familyLabel(modelFamily), providerName, familyLabel(providerFamily),
+		familyRouteHint(modelFamily), familyLabel(providerFamily),
+	)
+}
+
 // SetProviderModel applies a session-local model override. HTTP providers carry
 // the model in their request body. CLI providers need argv help: custom CLI
 // configs can use {model}, and the built-in codex/claude routes get a --model
@@ -427,6 +450,120 @@ func updatedModelFlag(args []string, model string) ([]string, bool) {
 		}
 	}
 	return args, false
+}
+
+func providerModelFamily(providerName string, provider *types.ProviderConfig) string {
+	name := strings.ToLower(strings.TrimSpace(providerName))
+	switch {
+	case name == "claude" || strings.HasPrefix(name, "claude-"):
+		return "claude"
+	case name == "codex" || strings.HasPrefix(name, "codex-"):
+		return "openai"
+	case name == "glm" || strings.HasPrefix(name, "glm-"):
+		return "glm"
+	case name == "deepseek" || strings.HasPrefix(name, "deepseek-"):
+		return "deepseek"
+	case name == "grok" || strings.HasPrefix(name, "grok-"):
+		return "grok"
+	}
+	switch strings.ToLower(strings.TrimSpace(provider.CLICommand)) {
+	case "claude":
+		return "claude"
+	case "codex":
+		return "openai"
+	case "grok":
+		return "grok"
+	}
+	switch provider.Type {
+	case types.KindAnthropic:
+		return "claude"
+	}
+	base := strings.ToLower(provider.BaseURL)
+	switch {
+	case strings.Contains(base, "anthropic"):
+		return "claude"
+	case strings.Contains(base, "bigmodel") || strings.Contains(base, "z.ai"):
+		return "glm"
+	case strings.Contains(base, "deepseek"):
+		return "deepseek"
+	case strings.Contains(base, "x.ai"):
+		return "grok"
+	case strings.Contains(base, "openai"):
+		return "openai"
+	}
+	return ""
+}
+
+func knownModelFamily(model string) string {
+	model = strings.ToLower(strings.TrimSpace(model))
+	switch {
+	case model == "":
+		return ""
+	case strings.HasPrefix(model, "claude") || strings.Contains(model, "sonnet") ||
+		strings.Contains(model, "opus") || strings.Contains(model, "haiku"):
+		return "claude"
+	case strings.HasPrefix(model, "glm-") || strings.HasPrefix(model, "glm_"):
+		return "glm"
+	case strings.HasPrefix(model, "deepseek"):
+		return "deepseek"
+	case strings.HasPrefix(model, "grok"):
+		return "grok"
+	case strings.HasPrefix(model, "gpt-") || strings.HasPrefix(model, "o1") ||
+		strings.HasPrefix(model, "o3") || strings.HasPrefix(model, "o4") ||
+		strings.HasPrefix(model, "o5") || strings.Contains(model, "codex"):
+		return "openai"
+	case strings.HasPrefix(model, "gemini"):
+		return "gemini"
+	case strings.HasPrefix(model, "qwen"):
+		return "qwen"
+	case strings.HasPrefix(model, "llama"):
+		return "llama"
+	case strings.HasPrefix(model, "mistral"):
+		return "mistral"
+	}
+	return ""
+}
+
+func familyLabel(family string) string {
+	switch family {
+	case "openai":
+		return "OpenAI/Codex"
+	case "claude":
+		return "Claude"
+	case "glm":
+		return "GLM"
+	case "deepseek":
+		return "DeepSeek"
+	case "grok":
+		return "Grok"
+	case "gemini":
+		return "Gemini"
+	case "qwen":
+		return "Qwen"
+	case "llama":
+		return "Llama"
+	case "mistral":
+		return "Mistral"
+	default:
+		return family
+	}
+}
+
+func familyRouteHint(family string) string {
+	switch family {
+	case "openai":
+		return "a Codex/OpenAI provider such as codex or codex-api"
+	case "claude":
+		return "a Claude provider such as claude or claude-api"
+	case "glm":
+		return "/executor glm"
+	case "deepseek":
+		return "/executor deepseek"
+	case "grok":
+		return "/executor grok"
+	default:
+		return "a matching provider"
+	}
 }
 
 func indexOf(list []string, value string) int {

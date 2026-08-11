@@ -94,6 +94,9 @@ func Run(argv []string) error {
 		if !ok {
 			return fmt.Errorf("unknown provider for --model: %s", override.Provider)
 		}
+		if err := config.ValidateProviderModel(override.Provider, provider, override.Model); err != nil {
+			return err
+		}
 		config.SetProviderModel(provider, override.Model)
 	}
 

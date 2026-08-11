@@ -425,6 +425,9 @@ func handleModelCommand(arg string, state *State, pane *ui.LivePane) error {
 		if !ok {
 			return fmt.Errorf("unknown provider: %s", name)
 		}
+		if err := config.ValidateProviderModel(name, provider, model); err != nil {
+			return err
+		}
 		change := config.SetProviderModel(provider, model)
 		notices = append(notices, fmt.Sprintf("%s model=%s (%s)", name, model, change.Detail))
 	}

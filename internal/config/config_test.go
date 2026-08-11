@@ -132,6 +132,27 @@ func TestSetProviderModelSupportsPlaceholderAndHTTP(t *testing.T) {
 	}
 }
 
+func TestValidateProviderModelRejectsWrongFamily(t *testing.T) {
+	defaults := Defaults()
+	if err := ValidateProviderModel("claude", defaults.Providers["claude"], "glm-5.2"); err == nil {
+		t.Fatal("GLM model should not be accepted by the Claude CLI provider")
+	} else if !strings.Contains(err.Error(), "/executor glm") {
+		t.Fatalf("error should point at the matching provider: %v", err)
+	}
+
+	if err := ValidateProviderModel("claude", defaults.Providers["claude"], "sonnet"); err != nil {
+		t.Fatalf("Claude model alias should be allowed: %v", err)
+	}
+	if err := ValidateProviderModel("glm", defaults.Providers["glm"], "glm-5.2"); err != nil {
+		t.Fatalf("GLM model should be allowed on GLM provider: %v", err)
+	}
+
+	local := &types.ProviderConfig{Type: types.KindOpenAIChat, Model: "llama", BaseURL: "http://localhost:1234/v1"}
+	if err := ValidateProviderModel("local", local, "qwen-max"); err != nil {
+		t.Fatalf("custom OpenAI-compatible providers should not be over-classified: %v", err)
+	}
+}
+
 func TestResolveAPIKeyPrefersConfigThenEnv(t *testing.T) {
 	provider := &types.ProviderConfig{APIKeyEnv: []string{"TEST_0XAF_KEY"}}
 	t.Setenv("TEST_0XAF_KEY", "from-env")

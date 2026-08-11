@@ -593,9 +593,16 @@ func failureCause(stdout string) string {
 	stop := str(result["stop_reason"])
 	subtype := str(result["subtype"])
 	message := strings.TrimSpace(str(result["result"]))
+	messageLower := strings.ToLower(message)
+	isError := truthy(result["is_error"])
 	var lines []string
 
 	switch {
+	case isError && strings.Contains(messageLower, "selected model"):
+		lines = append(lines,
+			"The CLI rejected the configured model before answering.",
+			"If this came from `/model executor ...`, route to the provider that owns that model instead, or set a model compatible with this CLI.",
+		)
 	case stop == "refusal":
 		lines = append(lines,
 			"The upstream model refused this request (stop_reason=refusal). This is not an auth or config problem.",
@@ -604,7 +611,9 @@ func failureCause(stdout string) string {
 		)
 	case subtype == "error_max_turns":
 		lines = append(lines, "The CLI stopped at its own max-turn limit before finishing.")
-	case stop != "":
+	case isError && stop == "stop_sequence":
+		lines = append(lines, "The CLI returned an error result before producing a final answer.")
+	case stop != "" && stop != "stop_sequence":
 		lines = append(lines, "The CLI ended with stop_reason="+stop+".")
 	case subtype != "":
 		lines = append(lines, "The CLI ended with subtype="+subtype+".")
@@ -619,6 +628,17 @@ func failureCause(stdout string) string {
 		lines = append(lines, "CLI message: "+util.Truncate(stripAnsi(util.FirstLine(message)), 300))
 	}
 	return strings.Join(lines, "\n")
+}
+
+func truthy(value any) bool {
+	switch v := value.(type) {
+	case bool:
+		return v
+	case string:
+		return strings.EqualFold(strings.TrimSpace(v), "true")
+	default:
+		return false
+	}
 }
 
 func cliAuthIssue(command string, unsetEnv []string) string {
