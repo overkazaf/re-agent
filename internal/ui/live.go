@@ -1,9 +1,9 @@
 package ui
 
-// A live, in-place terminal HUD: one box carrying the routing chain, task list,
-// streamed reasoning, and token telemetry. Lines printed while the pane is
-// active are "committed" above it, so tool activity and thinking stay readable
-// without the dashboard scrolling away.
+// A live, in-place terminal dashboard: small panes carrying the routing chain,
+// flow, tool state, task list, streamed reasoning, and token telemetry. Lines
+// printed while the pane is active are "committed" above it, so tool activity
+// and thinking stay readable without the dashboard scrolling away.
 //
 // This file owns the redraw and the state; hud.go owns the pixels. The redraw is
 // a cursor walk back over exactly the number of lines last written, so the one
@@ -42,13 +42,6 @@ const (
 	sparkSamples = 16
 	sampleMs     = 400
 )
-
-// hudFloorRows is the smallest HUD that still shows the *in-progress* task.
-// Measured, not guessed: RenderHud collapses to a one-liner below 4 rows, shows
-// only a completed step at 4, adds a "… N more" marker at 5, and first reveals
-// the active step at 6. The task list is the point of the box, so 6 is the floor
-// the diagram has to leave behind.
-const hudFloorRows = 6
 
 type LivePaneOptions struct {
 	// Route is the dual-model chain shown in the header. Active names the side
@@ -108,41 +101,21 @@ type paneTimer struct {
 	wg   sync.WaitGroup
 }
 
-// ComposePane composes one frame: the dataflow diagram on top, the HUD box
-// below, inside a single height budget.
+// ComposePane composes one frame inside a single height budget. Wide terminals
+// get a Herdr-inspired dashboard split into status/flow/tools/plan/think panes;
+// tight terminals fall back to the compact HUD.
 //
 // The budget is the invariant this whole file rests on — clear() walks back
 // exactly as many lines as were drawn, so drawing more than the terminal can
-// hold desynchronises the erase. The diagram is therefore clipped to whatever is
-// left after the HUD's floor, rather than being allowed to push the box out.
+// hold desynchronises the erase.
 func ComposePane(now int64, width, budget int, flow *FlowState, hud HudModel) []string {
-	var raw []string
-	if flow != nil {
-		raw = RenderFlow(*flow, width, now)
+	if hud.Now == 0 {
+		hud.Now = now
 	}
-	affordable := len(raw)
 	if budget > 0 {
-		affordable = budget - hudFloorRows
-		if affordable < 0 {
-			affordable = 0
-		}
+		hud.MaxRows = budget
 	}
-	// All of the diagram or none of it: half a diagram is worse than no diagram.
-	var flowLines []string
-	if len(raw) <= affordable {
-		flowLines = raw
-	}
-	// The floor is spent above, on deciding whether the diagram fits at all — it
-	// is not imposed here, because a terminal with 3 usable rows must still get
-	// RenderHud's one-line fallback rather than a 4-row box it cannot hold.
-	if budget > 0 {
-		rows := budget - len(flowLines)
-		if rows < 1 {
-			rows = 1
-		}
-		hud.MaxRows = rows
-	}
-	return append(flowLines, RenderHud(hud)...)
+	return RenderDashboard(flow, hud)
 }
 
 func NewLivePane(label string, options LivePaneOptions) *LivePane {

@@ -364,6 +364,57 @@ func TestComposePaneKeepsTheHudFloor(t *testing.T) {
 	}
 }
 
+func TestDashboardSplitsLiveStateIntoWindows(t *testing.T) {
+	model := NewFlowModel("codex")
+	model.Begin("codex")
+	model.Apply(core.LoopEvent{
+		Type: "wire", Phase: "send", Provider: "codex", Model: "gpt-5-codex",
+		Messages: 5, Tokens: 42000, Tools: 24,
+	})
+	model.Apply(core.LoopEvent{Type: "tool_start", Name: "run_command"})
+	state := model.Snapshot()
+	hud := HudModel{
+		Label: "codex", Phase: "working", Frame: "⠹", Width: 108, MaxRows: 22,
+		ElapsedMs: 91_000, Now: types.NowMs(),
+		Stats: types.TokenUsage{Input: 42_000, Output: 1200, Thinking: 300},
+		Route: &HudRoute{Planner: "codex", Executor: "claude", Active: "codex"},
+		Plan:  samplePlan(), Thinking: "checking tool output and planning the next local evidence step",
+	}
+	lines := RenderDashboard(&state, hud)
+	if len(lines) > hud.MaxRows {
+		t.Fatalf("dashboard overran budget: %d > %d", len(lines), hud.MaxRows)
+	}
+	for _, line := range lines {
+		if DisplayWidth(line) > hud.Width {
+			t.Fatalf("dashboard line overflowed: %q (%d)", line, DisplayWidth(line))
+		}
+	}
+	plain := StripAnsi(strings.Join(lines, "\n"))
+	for _, want := range []string{"STATUS", "FLOW", "TOOLS", "PLAN", "THINK", "run_command", "定位校验函数并复现"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("dashboard missing %q:\n%s", want, plain)
+		}
+	}
+}
+
+func TestDashboardFallsBackToHudWhenTight(t *testing.T) {
+	model := NewFlowModel("codex")
+	model.Begin("codex")
+	state := model.Snapshot()
+	hud := HudModel{
+		Label: "codex", Phase: "working", Frame: "⠹", Width: 80, MaxRows: 8,
+		Plan: samplePlan(), Now: types.NowMs(),
+	}
+	lines := RenderDashboard(&state, hud)
+	plain := StripAnsi(strings.Join(lines, "\n"))
+	if strings.Contains(plain, "FLOW") || strings.Contains(plain, "TOOLS") {
+		t.Fatalf("tight dashboard should fall back to compact HUD:\n%s", plain)
+	}
+	if len(lines) > hud.MaxRows {
+		t.Fatalf("fallback overran budget: %d > %d", len(lines), hud.MaxRows)
+	}
+}
+
 func TestComposePaneBoundsLongToolRows(t *testing.T) {
 	model := NewFlowModel("codex")
 	model.Begin("codex")
