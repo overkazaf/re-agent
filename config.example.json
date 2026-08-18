@@ -23,7 +23,7 @@
         "-"
       ],
       "cliTimeoutMs": 600000,
-      "cliUnsetEnv": ["OPENAI_API_KEY", "OPENAI_CODEX_OAUTH_TOKEN"]
+      "cliUnsetEnv": ["OPENAI_API_KEY"]
     },
     "claude": {
       "type": "cli-tmux",

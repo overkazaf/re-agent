@@ -34,7 +34,7 @@ func Defaults() *types.AgentConfig {
 					"--output-last-message", "{output}", "-",
 				},
 				CLITimeoutMs: 10 * 60_000,
-				CLIUnsetEnv:  []string{"OPENAI_API_KEY", "OPENAI_CODEX_OAUTH_TOKEN"},
+				CLIUnsetEnv:  []string{"OPENAI_API_KEY"},
 			},
 			"claude": {
 				Type:       types.KindCLITmux,

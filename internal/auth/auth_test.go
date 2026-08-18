@@ -45,6 +45,24 @@ func TestVerifiesLoginOnlyWhereTheProbeChecksALogin(t *testing.T) {
 	}
 }
 
+func TestEffectiveCLIUnsetEnvPreservesCodexHostOAuthToken(t *testing.T) {
+	unset := []string{"OPENAI_API_KEY", "OPENAI_CODEX_OAUTH_TOKEN", "OTHER"}
+	got := EffectiveCLIUnsetEnv("codex", unset)
+	for _, name := range got {
+		if name == "OPENAI_CODEX_OAUTH_TOKEN" {
+			t.Fatalf("codex host OAuth token must survive unset filtering: %v", got)
+		}
+	}
+	if len(got) != 2 || got[0] != "OPENAI_API_KEY" || got[1] != "OTHER" {
+		t.Fatalf("unexpected codex unset list: %v", got)
+	}
+
+	claude := EffectiveCLIUnsetEnv("claude", unset)
+	if len(claude) != len(unset) {
+		t.Fatalf("non-codex unset list should be unchanged: %v", claude)
+	}
+}
+
 // stateFor being right is not enough — Statuses has to actually set the field.
 // It once did not, and every provider silently rendered as "missing".
 func TestStatusesPopulatesStateAndConfigured(t *testing.T) {

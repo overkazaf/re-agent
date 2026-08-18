@@ -53,7 +53,8 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 	if command == "" {
 		return types.ProviderResponse{}, fmt.Errorf("provider '%s' is missing cliCommand", p.name)
 	}
-	if issue := cliAuthIssue(command, p.config.CLIUnsetEnv); issue != "" {
+	unsetEnv := auth.EffectiveCLIUnsetEnv(command, p.config.CLIUnsetEnv)
+	if issue := cliAuthIssue(command, unsetEnv); issue != "" {
 		return types.ProviderResponse{}, fmt.Errorf("%s", formatCLIAuthIssue(p.name, command, issue))
 	}
 
@@ -97,7 +98,7 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 	if err != nil {
 		return types.ProviderResponse{}, err
 	}
-	script, err := runnerScript(shellPath, command, args, paths, workspace, p.config.CLIUnsetEnv)
+	script, err := runnerScript(shellPath, command, args, paths, workspace, unsetEnv)
 	if err != nil {
 		return types.ProviderResponse{}, err
 	}

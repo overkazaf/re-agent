@@ -296,7 +296,7 @@ func cliCredentialSource(provider *types.ProviderConfig) string {
 	if !ok {
 		return "cli:" + command
 	}
-	result := RunCLIStatus(command, args, provider.CLIUnsetEnv)
+	result := RunCLIStatus(command, args, EffectiveCLIUnsetEnv(command, provider.CLIUnsetEnv))
 	if result.OK {
 		if !verifiesLogin(command) {
 			// All this proved is that the binary runs.
@@ -334,6 +334,24 @@ func CLIAuthStatusArgs(command string) ([]string, bool) {
 // this CLI, rather than merely proving the binary exists.
 func verifiesLogin(command string) bool {
 	return command == "claude" || command == "codex"
+}
+
+// EffectiveCLIUnsetEnv keeps the stale-key protection for CLI providers while
+// preserving host-provided CLI login state. Codex can receive the outer Codex
+// OAuth token through OPENAI_CODEX_OAUTH_TOKEN on fresh machines; stripping it
+// forces the child CLI to behave like a brand-new, unauthenticated install.
+func EffectiveCLIUnsetEnv(command string, unsetEnv []string) []string {
+	if command != "codex" {
+		return unsetEnv
+	}
+	out := make([]string, 0, len(unsetEnv))
+	for _, name := range unsetEnv {
+		if name == "OPENAI_CODEX_OAUTH_TOKEN" {
+			continue
+		}
+		out = append(out, name)
+	}
+	return out
 }
 
 type CLIStatusResult struct {

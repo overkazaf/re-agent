@@ -59,6 +59,18 @@ func TestLoadWithoutAFileUsesDefaults(t *testing.T) {
 	}
 }
 
+func TestDefaultsDoNotStripCodexHostOAuthToken(t *testing.T) {
+	codex := Defaults().Providers["codex"]
+	for _, name := range codex.CLIUnsetEnv {
+		if name == "OPENAI_CODEX_OAUTH_TOKEN" {
+			t.Fatalf("codex host OAuth token must remain available to the child CLI: %v", codex.CLIUnsetEnv)
+		}
+	}
+	if len(codex.CLIUnsetEnv) != 1 || codex.CLIUnsetEnv[0] != "OPENAI_API_KEY" {
+		t.Fatalf("codex should only unset stale API keys by default: %v", codex.CLIUnsetEnv)
+	}
+}
+
 func TestSetReasoningEffortRewritesCLIArgs(t *testing.T) {
 	codex := &types.ProviderConfig{
 		Type: types.KindCLITmux, CLICommand: "codex",
