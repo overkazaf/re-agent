@@ -1235,15 +1235,13 @@ role=<span class="c">auto</span>      →  提示词分类器
     <small>Flow 图 · Trace · HUD · PLAN —— 四层，全部默认开启，全部可降级</small></h2>
   <div class="cols two grow">
     <div class="term" style="min-height:0">
-      <div class="term-bar"><span class="lamp"></span>flow · 运行中在 HUD 上方动画</div>
-<pre> <span class="w">[you]</span><span class="c">═══════•═══════▶</span><span class="w">[ctx]</span><span class="c">══•══════•═══▶</span><span class="c">((deepseek))</span>
-  <span class="m">3msg                7tok                ⣻ waiting 718ms</span>
-                        <span class="c">▲</span>                    <span class="v">▼</span>
-                      <span class="v">[tools]◀══•══════•════[calls×1]</span>
-                      <span class="v">⣾ run_command 5.6s</span>
+      <div class="term-bar"><span class="lamp"></span>flow · HUD 内的两行数据流条</div>
+<pre><span class="w">[you]</span><span class="c">═══════•═══════▶</span><span class="w">[ctx]</span><span class="c">▲══•══════•═══▶</span><span class="c">((deepseek))</span>  <span class="v">⣻ waiting 718ms</span>
+<span class="v">[tools]◀══•══════•════[calls×1]</span>   <span class="c">⣾ run_command 5.6s</span>  <span class="g">✓2</span>
 
-<span class="m">任务清单以徽标形式挂在 [you] 上：</span> <span class="c">[plan 2/5]</span> <span class="c">▰▰▰▱▱</span>
-<span class="m">（只放计数 —— 步骤文本在下方框里，中文不会撑坏列宽）</span>
+<span class="m">两条线合成 FLOW / TOOLS 段：请求路径（左→右）</span>
+<span class="m">+ 工具回路。▲ 表示工具结果回流进上下文。</span>
+<span class="m">计划不再占图——计数和进度条都在 PLAN 段。</span>
 
 <span class="c">/flow full</span>   <span class="m">图 + trace（默认）</span>
 <span class="c">/flow flow</span>   <span class="m">只要图</span>
@@ -1252,21 +1250,23 @@ role=<span class="c">auto</span>      →  提示词分类器
 <span class="m">选择存到 ~/.0xaf-re-agent/ui.json；&lt;46 列自动隐藏</span></pre>
     </div>
     <div class="term" style="min-height:0">
-      <div class="term-bar"><span class="lamp"></span>hud · 运行时替代 spinner</div>
-<pre><span class="m">╭─ ⠹</span> <span class="c">0xAF·RE</span> <span class="m">─────────────────────────────────╮</span>
-<span class="m">│</span> <span class="c">codex → claude</span>          <span class="c">▰▰▰</span><span class="m">▱▱▱▱▱ 40%  $0.71</span> <span class="m">│</span>
-<span class="m">│</span> <span class="g">✔</span> <span class="m">triage: file/arch/packer   1.2s │ out ▁▂▅█▆▃▂▁</span> <span class="m">│</span>
-<span class="m">│</span> <span class="g">✔</span> <span class="m">strings + entropy sweep    3.1s │ think 105</span>    <span class="m">│</span>
-<span class="m">│</span> <span class="c">⠹</span> <span class="w">locate the check function</span> <span class="m">2m08s │ in 12k</span>       <span class="m">│</span>
-<span class="m">│</span> <span class="m">○ reproduce the flag path         │ cache 416k</span>   <span class="m">│</span>
-<span class="m">│</span> <span class="m">┊ 校验函数看着像 sub_401a20，改之前先看 xrefs</span>   <span class="m">│</span>
-<span class="m">╰────────────────────────────────────────────────╯</span>
+      <div class="term-bar"><span class="lamp"></span>hud · 一个框，四段全在里面</div>
+<pre><span class="m">╭─ ⠹</span> <span class="c">0xAF·RE</span> <span class="m">────────────────────────────────────╮</span>
+<span class="m">│</span> <span class="c">codex → claude</span>          <span class="c">▰▰▰▰</span><span class="m">▱▱▱▱ 50%  $0.71</span> <span class="m">│</span>
+<span class="m">│</span> <span class="m">FLOW</span>  <span class="w">[you]</span><span class="c">═•═▶</span><span class="w">[ctx]</span><span class="c">▲═•═▶</span><span class="c">((deepseek))</span> <span class="v">⣻ thinking 2.1s</span> <span class="m">│</span>
+<span class="m">│</span> <span class="m">TOOLS</span> <span class="v">[tools]◀═•═[calls×1]</span> <span class="c">⣾ run_command 5.6s</span> <span class="g">✓2</span> <span class="m">│</span>
+<span class="m">│</span> <span class="m">PLAN</span>  <span class="g">1</span><span class="m">/</span><span class="w">5</span> <span class="c">▰▰▰▰</span><span class="m">▱▱▱▱ 50%</span> <span class="m">│</span>
+<span class="m">│</span>   <span class="g">✔</span> <span class="m">triage: file/arch/packer   1.2s</span> <span class="m">│</span>
+<span class="m">│</span>   <span class="g">✔</span> <span class="m">strings + entropy sweep    3.1s</span> <span class="m">│</span>
+<span class="m">│</span>   <span class="c">⠹</span> <span class="w">locate the check function</span> <span class="m">2m08s</span> <span class="m">│</span>
+<span class="m">│</span>   <span class="m">○ reproduce the flag path</span> <span class="m">│</span>
+<span class="m">│</span> <span class="m">THINK</span> <span class="m">┊ 校验函数看着像 sub_401a20，改之前先看 xrefs</span> <span class="m">│</span>
+<span class="m">│</span> <span class="m">TELE</span>  <span class="m">out ▁▂▅█▆▃▂▁ 1.2k · think 105 · ◷ 4m12s</span> <span class="m">│</span>
+<span class="m">╰──────────────────────────────────────────────────╯</span>
 
-<span class="m">窄于 ~60 列折成单列；终端矮时依次舍弃推理行 →</span>
-<span class="m">折叠已完成步骤 → 裁剪遥测，永不超过终端高度</span>
-
-<span class="m">耗时条共享同一刻度（最慢的请求占满），</span>
-<span class="m">所以"时间花在哪、跑了几个来回"一眼可读</span></pre>
+<span class="m">四段在一个框里：FLOW / TOOLS / PLAN / THINK，TELE 收尾。</span>
+<span class="m">终端矮时依次舍弃 FLOW→THINK→TELE，最后才折叠任务清单——</span>
+<span class="m">当前步骤永远可见，永不超过终端高度</span></pre>
     </div>
   </div>
   <p class="lead">Trace 是<strong>留在 scrollback 里的</strong>：一次跑完的 turn 读起来像一份抓包记录，而不是滚过去就没了的动画。</p>

@@ -1,7 +1,7 @@
-// A live, in-place terminal HUD: one box carrying the routing chain, task
-// list, streamed reasoning, and token telemetry. Lines printed while the pane
-// is active are "committed" above it, so tool activity and thinking stay
-// readable without the dashboard scrolling away.
+// A live, in-place terminal HUD: one box carrying the dataflow strip, the
+// routing chain, task list, streamed reasoning, and token telemetry. Lines
+// printed while the pane is active are "committed" above it, so tool activity
+// and thinking stay readable without the dashboard scrolling away.
 //
 // This file owns the redraw and the state; ./hud owns the pixels. The redraw is
 // a cursor walk back over exactly the number of lines last written, so the one
@@ -37,9 +37,9 @@ export interface LivePaneOptions {
    */
   route?: { planner: string; executor: string; active?: string };
   /**
-   * Live dataflow diagram drawn above the HUD. The pane reads this object every
-   * frame, so the caller mutates it through the flow model instead of pushing
-   * updates here.
+   * Live dataflow state rendered as the FLOW / TOOLS sections inside the HUD.
+   * The pane reads this object every frame, so the caller mutates it through
+   * the flow model instead of pushing updates here.
    */
   flow?: FlowState;
   /** Called once per animation frame, before the redraw (advances `flow`). */
@@ -75,23 +75,21 @@ export interface LivePane {
 }
 
 /**
- * Smallest HUD that still shows the *in-progress* task. Measured, not guessed:
- * renderHud collapses to a one-liner below 4 rows, shows only a completed step
- * at 4, adds a "… N more" marker at 5, and first reveals the active step at 6.
- * The task list is the point of the box, so 6 is the floor the diagram has to
- * leave behind.
+ * Columns the flow strip reserves for the HUD's box borders and its widest
+ * section label ("TOOLS" plus its gap). The strip is pre-sized to this so it
+ * never pushes a wrapped line into the box.
  */
-const HUD_FLOOR_ROWS = 6;
+const FLOW_SECTION_ROOM = 12;
 
 /**
- * Composes one frame: the dataflow diagram on top, the HUD box below, inside a
- * single height budget.
+ * Composes one frame: the dataflow strip rendered as FLOW / TOOLS section
+ * lines, embedded in the HUD box inside a single height budget.
  *
  * The budget is the invariant this whole file rests on — `clear()` walks back
  * exactly as many lines as were drawn, so drawing more than the terminal can
- * hold desynchronises the erase. The diagram is therefore clipped to whatever
- * is left after the HUD's floor, rather than being allowed to push the box out.
- * Exported so the arithmetic can be tested without a terminal.
+ * hold desynchronises the erase. renderHud sheds the transient sections (flow,
+ * thinking, telemetry) before the task list, so the box always fits. Exported
+ * so the arithmetic can be tested without a terminal.
  */
 export function composePane(input: {
   now: number;
@@ -100,17 +98,13 @@ export function composePane(input: {
   flow?: FlowState;
   hud: Omit<HudModel, "maxRows"> & { maxRows: number };
 }): string[] {
-  const raw = input.flow ? renderFlow(input.flow, input.width, input.now) : [];
-  const affordable = Number.isFinite(input.budget) ? Math.max(0, input.budget - HUD_FLOOR_ROWS) : raw.length;
-  // All of the diagram or none of it: half a diagram is worse than no diagram.
-  const flowLines = raw.length <= affordable ? raw : [];
-  // The floor is spent above, on deciding whether the diagram fits at all — it
-  // is not imposed here, because a terminal with 3 usable rows must still get
-  // renderHud's one-line fallback rather than a 4-row box it cannot hold.
-  const hudRows = Number.isFinite(input.budget)
-    ? Math.max(1, input.budget - flowLines.length)
+  const flowLines = input.flow
+    ? renderFlow(input.flow, Math.max(0, input.width - FLOW_SECTION_ROOM), input.now)
+    : [];
+  const maxRows = Number.isFinite(input.budget)
+    ? Math.max(1, Math.floor(input.budget))
     : input.hud.maxRows || Number.POSITIVE_INFINITY;
-  return [...flowLines, ...renderHud({ ...input.hud, maxRows: hudRows })];
+  return renderHud({ ...input.hud, width: input.width, flowLines, maxRows });
 }
 
 export function createLivePane(label: string, options?: LivePaneOptions): LivePane {

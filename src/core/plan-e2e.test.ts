@@ -137,11 +137,12 @@ describe("plan subsystem end to end", () => {
       },
     });
 
-    // Diagram: counts only, and the node is drawn.
+    // Diagram: the request path is drawn; plan counts live in the HUD (the ui
+    // tests cover that section), so the strip stays diagram-only.
     expect(flow.state.plan).toEqual({ done: 1, total: 3, source: "update_plan" });
     const rows = renderFlowPlain(flow.state, 100);
-    expect(rows[3]).toContain("[plan 1/3]");
-    expect(rows[4]).toMatch(/[▰▱]/);
+    expect(rows[0]).toContain("((mock))");
+    expect(rows.join("")).not.toContain("[plan");
 
     // Trace: one line per transition, no dump of the list.
     const planLines = traced.map(strip).filter(line => line.includes("◇"));
@@ -197,7 +198,8 @@ describe("plan subsystem end to end", () => {
     });
 
     expect(traced.map(strip).some(line => line.includes("opened via"))).toBe(false);
-    expect(renderFlowPlain(flow.state, 100)[3]).toContain("[plan 1/3]");
+    // The strip still draws the loop; the plan itself is carried in state.
+    expect(renderFlowPlain(flow.state, 100)[0]).toContain("((mock))");
   });
 
 

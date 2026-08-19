@@ -100,4 +100,62 @@ describe("composePane height budget", () => {
     expect(rows.length).toBeLessThanOrEqual(12);
     expect(hasPlanRow(rows)).toBe(true);
   });
+
+  test("labels the dashboard sections FLOW / TOOLS / PLAN / THINK / TELE", () => {
+    const flow = createFlowModel("deepseek");
+    flow.begin("deepseek", 1_000_000);
+    flow.apply(
+      {
+        type: "wire",
+        phase: "send",
+        provider: "deepseek",
+        model: "deepseek-chat",
+        endpoint: "https://api.deepseek.com/v1/chat/completions",
+        messages: 1,
+        tokens: 10,
+        tools: 3,
+      },
+      1_000_000,
+    );
+    flow.apply(
+      { type: "wire", phase: "recv", provider: "deepseek", ms: 10, ok: true, usage: {}, toolCalls: 1, textChars: 0 },
+      1_000_000,
+    );
+    flow.apply({ type: "tool_start", name: "run_command", args: { command: "strings ./chall" } }, 1_000_000);
+    const rows = composePane({
+      now: 1_000_000,
+      width: 100,
+      budget: 30,
+      flow: flow.state,
+      hud: hud({ thinking: "working through the key schedule" }),
+    });
+    const text = rows.map(strip).join("\n");
+    expect(text).toContain("FLOW");
+    expect(text).toContain("TOOLS");
+    expect(text).toContain("PLAN");
+    expect(text).toContain("THINK");
+    expect(text).toContain("TELE");
+  });
+
+  test("omits the TOOLS section until a tool is actually in play", () => {
+    const flow = createFlowModel("deepseek");
+    flow.begin("deepseek", 1_000_000);
+    flow.apply(
+      {
+        type: "wire",
+        phase: "send",
+        provider: "deepseek",
+        model: "deepseek-chat",
+        endpoint: "https://api.deepseek.com/v1/chat/completions",
+        messages: 1,
+        tokens: 10,
+        tools: 3,
+      },
+      1_000_000,
+    );
+    const rows = composePane({ now: 1_000_000, width: 100, budget: 30, flow: flow.state, hud: hud() });
+    const text = rows.map(strip).join("\n");
+    expect(text).toContain("FLOW");
+    expect(text).not.toContain("TOOLS");
+  });
 });

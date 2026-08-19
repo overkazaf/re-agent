@@ -1,20 +1,19 @@
-// The live dataflow diagram: where the turn currently is, drawn as nodes with
-// packets moving along the wires between them.
+// The live dataflow strip: where the turn currently is, drawn as a compact
+// two-line pipeline that lives inside the HUD box. The request path is one
+// line, the tool path a second line that only appears when tools are in play.
 //
-//   [you]══•══▶[ctx]══•══▶((deepseek))
-//    42tok       ▲            ║ thinking 2.1s
-//                ║            ▼
-//             [tools]◀══•══[calls×1]
-//             ⚙ run_command ●●●○
+//   [you]═•═▶[ctx]▲═•═▶((deepseek))     ⣻ thinking 2.1s
+//   [tools]◀═•═[calls×1]   ⚙ run_command 0.2s  ✓3 ✗1
 //
-// The loop stays the point: tool results flow back up into the context that
-// feeds the next request. State comes from LoopEvents; motion comes from
-// `tick()`, driven by the pane's frame timer, so this file has no timers of
-// its own and renders deterministically for a given state.
+// The loop stays the point: the ▲ on the ctx end of the model wire marks tool
+// results flowing back into the context that feeds the next request. State
+// comes from LoopEvents; motion comes from `tick()`, driven by the pane's
+// frame timer, so this file has no timers of its own and renders
+// deterministically for a given state.
 
 import { Canvas } from "./canvas";
 import type { CanvasStyle } from "./canvas";
-import { compactNumber, formatDuration } from "./theme";
+import { compactNumber, displayWidth, formatDuration } from "./theme";
 import type { LoopEvent } from "../core/agent-loop";
 import type { TokenUsage } from "../types";
 
@@ -266,39 +265,50 @@ function blankState(provider: string): FlowState {
   };
 }
 
+/** Narrower than this the strip cannot be honest about the flow. */
 const MIN_WIDTH = 46;
 
-/** Five rows of diagram. Returns [] when the terminal is too narrow to be honest about it. */
+/**
+ * One or two lines of diagram. The caller (the HUD) labels the lines FLOW /
+ * TOOLS, so this renders the bare strip and returns [] when the terminal is
+ * too narrow to be honest about it.
+ */
 export function renderFlow(state: FlowState, width: number, now = Date.now()): string[] {
   const canvas = paintFlow(state, width, now);
-  return canvas ? canvas.render() : [];
+  if (!canvas) return [];
+  const rows = canvas.render();
+  while (rows.length > 0 && rows[rows.length - 1].trim() === "") rows.pop();
+  return rows;
 }
 
 /** Same layout, without the escape sequences — used by the tests. */
 export function renderFlowPlain(state: FlowState, width: number, now = Date.now()): string[] {
   const canvas = paintFlow(state, width, now);
-  return canvas ? canvas.plain() : [];
+  if (!canvas) return [];
+  const rows = canvas.plain();
+  while (rows.length > 0 && rows[rows.length - 1].trim() === "") rows.pop();
+  return rows;
 }
 
 function paintFlow(state: FlowState, width: number, now: number): Canvas | undefined {
   if (width < MIN_WIDTH || state.stage === "idle") return undefined;
 
-  const modelName = state.provider;
   const youBox = "[you]";
   const ctxBox = "[ctx]";
-  const modelBox = `((${modelName}))`;
+  const modelBox = `((${state.provider}))`;
   const toolsBox = "[tools]";
 
   // Wires take whatever is left after the boxes, split evenly and clamped so a
-  // wide terminal does not turn into a mostly-empty diagram.
+  // wide terminal does not turn into a mostly-empty strip — the HUD owns the
+  // rest of the row.
   const fixed = youBox.length + ctxBox.length + modelBox.length;
-  const wire = Math.max(3, Math.min(16, Math.floor((width - fixed - 4) / 2)));
-  const colYou = 1;
+  const wire = Math.max(2, Math.min(14, Math.floor((width - fixed - 3) / 2)));
+  const colYou = 0;
   const colCtx = colYou + youBox.length + wire;
   const colModel = colCtx + ctxBox.length + wire;
-  const canvas = new Canvas(width, 5);
+  const canvas = new Canvas(width, 2);
 
-  const active = (stage: FlowStage[]) => stage.includes(state.stage);
+  const active = (stages: FlowStage[]) => stages.includes(state.stage);
   const nodeStyle = (on: boolean): CanvasStyle => (on ? "accent" : "faint");
 
   // --- row 0: the request path ----------------------------------------------
@@ -306,100 +316,51 @@ function paintFlow(state: FlowState, width: number, now: number): Canvas | undef
   drawWire(canvas, 0, colYou + youBox.length, wire, state.packets.youToCtx, "right", "accent");
   canvas.put(0, colCtx, ctxBox, nodeStyle(active(["send"])), active(["send"]));
   drawWire(canvas, 0, colCtx + ctxBox.length, wire, state.packets.ctxToModel, "right", "accent");
+  // Tool results flow back into the context: a lit ▲ on the ctx end of the
+  // model wire once any tool has returned.
+  const toolsRan = state.toolsOk + state.toolsFailed > 0;
+  if (toolsRan) canvas.put(0, colCtx + ctxBox.length, "▲", "ok", true);
   const modelHot = active(["send", "wait", "think", "write", "calls"]);
   canvas.put(0, colModel, modelBox, modelHot ? "violet" : "faint", modelHot);
+  const phase = phaseLabel(state, now);
+  const phaseStyle = state.stage === "error" ? "err" : "violet";
+  // The phase label rides the right edge when there is room, so the strip
+  // reads as a dashboard instead of a left-heavy diagram with dead space.
+  const phaseRoom = width - (colModel + modelBox.length + 2);
+  const phaseCol = phaseRoom >= displayWidth(phase) + 1 ? width - displayWidth(phase) - 1 : colModel + modelBox.length + 2;
+  canvas.put(0, phaseCol, phase, phaseStyle);
 
-  // --- row 1: what each node is carrying ------------------------------------
-  canvas.put(1, colYou + 1, `${state.messages}msg`, "faint");
-  const ctxLabel = `${compactNumber(state.sentTokens)}tok`;
-  canvas.put(1, colCtx, ctxLabel, "muted");
-  if (state.compacted) {
-    canvas.put(1, colCtx + ctxLabel.length + 1, `⇣${state.compacted.dropped}`, "warn");
-  }
-  canvas.put(1, colModel + 1, phaseLabel(state, now), state.stage === "error" ? "err" : "violet");
-
-  // --- the plan node ---------------------------------------------------------
-  // It lives in the left gutter (rows 2-4, left of colCtx) — the only region
-  // that is free at every width — and is painted outside the tool block, since
-  // a plan is routinely published before any tool runs.
-  paintPlan(canvas, state, colYou, colCtx);
-
-  // --- row 2: the vertical legs ----------------------------------------------
-  // Row 1 belongs to the labels; the verticals get row 2 to themselves so an
-  // arrowhead never lands on top of a token count.
-  const feedbackCol = colCtx + 2;
-  const returnCol = colModel + 2;
-  const bottomActive = active(["calls", "tool", "write"]);
-  const toolsRan = state.toolsOk + state.toolsFailed > 0;
+  // --- row 1: the tool path --------------------------------------------------
+  const bottomActive = active(["calls", "tool"]);
   if (bottomActive || toolsRan) {
-    canvas.put(2, returnCol, "▼", bottomActive ? "violet" : "faint", bottomActive);
-    canvas.put(2, feedbackCol, "▲", toolsRan ? "ok" : "faint", toolsRan);
-
-    // --- row 3: the return path ---------------------------------------------
     const rightBox =
       state.stage === "write" || (state.pendingCalls === 0 && state.replyChars > 0)
         ? `[reply ${compactNumber(state.usage.output ?? 0)}tok]`
         : `[calls×${Math.max(state.pendingCalls, 1)}]`;
-    // Hang the box off the model's vertical, and never let it collide with the
-    // tools box on a narrow terminal.
-    const colRight = Math.max(returnCol - 1, colCtx + toolsBox.length + 3);
-    canvas.put(3, colCtx, toolsBox, active(["tool"]) ? "ok" : "faint", active(["tool"]));
-    const gap = colRight - (colCtx + toolsBox.length);
-    if (gap > 2) {
-      drawWire(canvas, 3, colCtx + toolsBox.length, gap, state.packets.callsToTools, "left", "violet");
+    canvas.put(1, 0, toolsBox, active(["tool"]) ? "ok" : "faint", active(["tool"]));
+    if (wire > 1) {
+      drawWire(canvas, 1, toolsBox.length, wire, state.packets.callsToTools, "left", "violet");
     }
-    canvas.put(3, colRight, rightBox, bottomActive ? "violet" : "faint");
+    canvas.put(1, toolsBox.length + wire, rightBox, bottomActive ? "violet" : "faint");
 
-    // --- row 4: the tool currently doing the work ---------------------------
     if (state.activeTool) {
       const elapsed = state.toolStartedAt ? now - state.toolStartedAt : state.toolMs ?? 0;
       const mark = state.toolStartedAt ? SPINNER[state.frame % SPINNER.length] : state.toolsFailed > 0 ? "✗" : "✓";
-      const label = `${mark} ${state.activeTool}`;
-      canvas.put(4, colCtx, label, state.toolStartedAt ? "ok" : state.toolsFailed > 0 ? "err" : "faint");
-      const timing = formatDuration(elapsed);
-      canvas.put(4, colCtx + label.length + 1, timing, "faint");
-      if (toolsRan) {
-        const tally = `✓${state.toolsOk}${state.toolsFailed ? ` ✗${state.toolsFailed}` : ""}`;
-        canvas.put(4, colCtx + label.length + timing.length + 3, tally, state.toolsFailed ? "err" : "faint");
-      }
+      const label = `${mark} ${state.activeTool} ${formatDuration(elapsed)}`;
+      const tally = toolsRan ? `✓${state.toolsOk}${state.toolsFailed ? ` ✗${state.toolsFailed}` : ""}` : "";
+      const block = tally ? `${label}  ${tally}` : label;
+      const blockWidth = displayWidth(block);
+      const leftCol = toolsBox.length + wire + rightBox.length + 2;
+      const toolStyle = state.toolStartedAt ? "ok" : state.toolsFailed > 0 ? "err" : "faint";
+      // Same right-edge treatment as the phase label; only falls back to
+      // left-adjacent when the block would not fit on its own.
+      const col = width - leftCol >= blockWidth + 1 ? width - blockWidth - 1 : leftCol;
+      canvas.put(1, col, label, toolStyle);
+      if (tally) canvas.put(1, col + displayWidth(label) + 2, tally, state.toolsFailed ? "err" : "faint");
     }
   }
 
   return canvas;
-}
-
-/** How long the plan node stays lit after an update: ~1.3s at a 90ms frame. */
-const PLAN_FLASH_FRAMES = 14;
-const PLAN_BAR_CELLS = 7;
-
-/**
- * The task list as a badge plus a progress bar, hung under `[you]`: the plan is
- * the operator's view of the work, so it belongs on the operator's side of the
- * diagram. Only counts — the steps themselves are in the HUD box below.
- */
-function paintPlan(canvas: Canvas, state: FlowState, colYou: number, colCtx: number): void {
-  const plan = state.plan;
-  if (!plan || plan.total === 0) return;
-  const gutter = colCtx - colYou - 1; // columns available before the ctx column
-  if (gutter < 7) return;
-
-  const fresh = state.planFrame !== undefined && state.frame - state.planFrame < PLAN_FLASH_FRAMES;
-  const complete = plan.done >= plan.total;
-  const style: CanvasStyle = complete ? "ok" : fresh && state.planKind === "step" ? "ok" : fresh ? "accent" : "faint";
-
-  // The leg ties the plan to the operator: a packet while it is being written,
-  // an arrowhead when a step just closed, a quiet tie otherwise.
-  const leg = !fresh ? "║" : state.planKind === "step" ? "▲" : (state.frame - (state.planFrame ?? 0)) % SPAWN_EVERY < 4 ? PACKET : "║";
-  canvas.put(2, colYou + 2, leg, style, fresh);
-
-  const label = gutter >= 12 ? `[plan ${plan.done}/${plan.total}]` : `[${plan.done}/${plan.total}]`;
-  canvas.put(3, colYou, label, style, fresh || complete);
-
-  if (gutter >= 8) {
-    const filled = Math.round((plan.done / plan.total) * PLAN_BAR_CELLS);
-    canvas.put(4, colYou, "▰".repeat(filled), complete ? "ok" : "accentDim");
-    canvas.put(4, colYou + filled, "▱".repeat(PLAN_BAR_CELLS - filled), "rule");
-  }
 }
 
 function phaseLabel(state: FlowState, now: number): string {

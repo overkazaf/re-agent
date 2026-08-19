@@ -1,5 +1,6 @@
 // The HUD: one boxed dashboard that carries the whole live pane — routing,
-// progress, the task list, and telemetry — instead of three loose stripes.
+// progress, the dataflow strip, the task list, streamed reasoning, and
+// telemetry — as labeled sections instead of loose stripes.
 //
 // Everything here is pure composition: a `HudModel` in, `string[]` out, with no
 // timers, no cursor moves, and no I/O. The caller (live.ts) owns the redraw, so
@@ -38,7 +39,6 @@ const SPIN_GLYPH = "⠿";
 const MORE_GLYPH = "…";
 const THINK_GLYPH = "┊";
 const CLOCK_GLYPH = "◷";
-const ACTIVE_GLYPH = "▸";
 const ARROW = "→";
 
 /**
@@ -48,8 +48,6 @@ const ARROW = "→";
  */
 export const HUD_TITLE = "0xAF·RE";
 
-/** Below this many columns the two-column layout stops being readable. */
-export const NARROW_COLUMNS = 60;
 /**
  * Past this the box stops being a dashboard and becomes a wall: the task column
  * fills with whitespace and the eye has to travel to reach the telemetry. Also
@@ -63,15 +61,10 @@ export const HUD_MAX_WIDTH = 120;
  * the caller's erase walk for the rest of the session.
  */
 export const MIN_BOX_WIDTH = 20;
-const RIGHT_MIN = 18;
-const RIGHT_MAX = 32;
-const LEFT_MIN = 14;
 const SPARK_MAX = 16;
 const BAR_CELLS = 8;
 const DEFAULT_COLLAPSE = 8;
 const DEFAULT_THINK_WINDOW = 3;
-/** `◷ elapsed` and `▸ phase` are the two telemetry rows never shed. */
-const TELEMETRY_FLOOR = 2;
 
 // --- model -------------------------------------------------------------------
 
@@ -105,6 +98,11 @@ export interface HudModel {
   stats: HudStats;
   /** Output-token deltas sampled on a fixed cadence, oldest first. */
   spark: readonly number[];
+  /**
+   * Rendered dataflow lines from ./flow — the request path and, when tools are
+   * in play, the tool path. Drawn as the FLOW / TOOLS sections.
+   */
+  flowLines?: string[];
   route?: HudRoute;
   plan?: PlanSnapshot;
   /** Raw streamed reasoning; the HUD wraps and tails it to the box width. */
@@ -351,61 +349,38 @@ function costChip(costUsd?: number): Chip | undefined {
   return chip(`$${value}`, `${c.faint("$")}${c.warn(value)}`);
 }
 
-// --- telemetry ---------------------------------------------------------------
+// --- sections ----------------------------------------------------------------
 
-interface Cell {
-  chip: Chip;
-  /** Lower survives shedding longer. */
-  priority: number;
+/** Columns taken by a section label plus its gap, for continuation alignment. */
+const SECTION_GAP = 2;
+
+function sectionLabel(name: string): string {
+  return `${c.faint(name)}${" ".repeat(SECTION_GAP)}`;
 }
 
 /**
- * The right-hand column. Ordered for reading (throughput, counters, clock,
- * activity) but shed by priority, so a short terminal loses token counters
- * before it loses what the agent is doing right now.
+ * One-line telemetry: throughput with its sparkline, token counters, and the
+ * running clock. Everything fits a single section row instead of a side column.
  */
-function telemetryCells(model: HudModel, width: number, limit: number): Chip[] {
-  const cells: Cell[] = [];
+function telemetryLine(model: HudModel, inner: number): Chip | undefined {
   const stats = model.stats;
-
+  const chips: Chip[] = [];
   if (typeof stats.output === "number") {
     const value = compactNumber(stats.output);
-    const room = width - displayWidth(`out  ${value}`);
-    const spark = sparkline(model.spark, Math.min(SPARK_MAX, room));
-    cells.push({
-      priority: 2,
-      chip: spark
+    const spark = sparkline(model.spark, Math.min(SPARK_MAX, inner));
+    chips.push(
+      spark
         ? chip(`out ${spark} ${value}`, `${c.faint("out")} ${c.accent(spark)} ${c.text(value)}`)
         : chip(`out ${value}`, `${c.faint("out")} ${c.text(value)}`),
-    });
+    );
   }
-
-  for (const line of packChips(counterChips(stats), width)) {
-    cells.push({ priority: 3, chip: line });
-  }
-
+  chips.push(...counterChips(stats));
   const elapsed = formatDuration(model.elapsedMs);
-  cells.push({
-    priority: 0,
-    chip: chip(`${CLOCK_GLYPH} ${elapsed}`, `${c.faint(CLOCK_GLYPH)} ${c.ok(elapsed)}`),
-  });
-
-  const phase = truncate(model.phase, Math.max(1, width - 2));
-  cells.push({
-    priority: 1,
-    chip: chip(`${ACTIVE_GLYPH} ${phase}`, `${c.violetDim(ACTIVE_GLYPH)} ${c.violet(phase)}`),
-  });
-
-  if (cells.length <= limit) return cells.map(cell => cell.chip);
-  // Drop the least important cells while keeping the reading order intact.
-  const doomed = new Set(
-    [...cells]
-      .map((cell, index) => ({ cell, index }))
-      .sort((a, b) => b.cell.priority - a.cell.priority || b.index - a.index)
-      .slice(0, cells.length - limit)
-      .map(entry => entry.index),
-  );
-  return cells.filter((_, index) => !doomed.has(index)).map(cell => cell.chip);
+  chips.push(chip(`${CLOCK_GLYPH} ${elapsed}`, `${c.faint(CLOCK_GLYPH)} ${c.ok(elapsed)}`));
+  if (chips.length === 0) return undefined;
+  const limit = Math.max(20, inner - displayWidth("TELE") - SECTION_GAP);
+  const packed = packChips(chips, limit, " · ");
+  return packed[0];
 }
 
 function counterChips(stats: HudStats): Chip[] {
@@ -444,25 +419,6 @@ export function packChips(chips: Chip[], width: number, gap = "  "): Chip[] {
 
 // --- layout ------------------------------------------------------------------
 
-type Layout = "columns" | "stacked" | "compact";
-
-interface Frame {
-  layout: Layout;
-  leftWidth: number;
-  rightWidth: number;
-}
-
-function chooseLayout(width: number, hasPlanRows: boolean): Frame {
-  const inner = boxInner(width);
-  if (width < NARROW_COLUMNS) return { layout: "compact", leftWidth: inner, rightWidth: 0 };
-  if (!hasPlanRows) return { layout: "stacked", leftWidth: inner, rightWidth: inner };
-  for (const right of [RIGHT_MAX, 28, 24, RIGHT_MIN]) {
-    const left = inner - right - 3;
-    if (left >= LEFT_MIN) return { layout: "columns", leftWidth: left, rightWidth: Math.min(right, inner) };
-  }
-  return { layout: "compact", leftWidth: inner, rightWidth: 0 };
-}
-
 /** Row 1: routing on the left, progress and spend pushed to the right edge. */
 function statusRow(model: HudModel, inner: number): string {
   const route = routeChip(model);
@@ -485,34 +441,11 @@ function statusRow(model: HudModel, inner: number): string {
   return c.bold(c.accent(truncate(route.plain, inner)));
 }
 
-/**
- * Narrow fallback: the whole right column squeezed onto one line, in the same
- * order the column uses. The clock is laid down first and the phase label is
- * sized from what is left, so a long tool invocation cannot crowd out the
- * elapsed time — a runaway step is exactly when you most want to see it.
- */
-function compactStatusRow(model: HudModel, inner: number): string {
-  const elapsed = formatDuration(model.elapsedMs);
-  const chips: Chip[] = [chip(`${CLOCK_GLYPH} ${elapsed}`, `${c.faint(CLOCK_GLYPH)} ${c.ok(elapsed)}`)];
-  const room = inner - displayWidth(chips[0].plain) - 4;
-  if (room >= 4) {
-    const phase = truncate(model.phase, room);
-    chips.push(chip(`${ACTIVE_GLYPH} ${phase}`, `${c.violetDim(ACTIVE_GLYPH)} ${c.violet(phase)}`));
-  }
-  if (typeof model.stats.output === "number") {
-    const value = compactNumber(model.stats.output);
-    chips.push(chip(`out ${value}`, `${c.faint("out")} ${c.text(value)}`));
-  }
-  chips.push(...counterChips(model.stats));
-  const packed = packChips(chips, inner);
-  return packed[0]?.painted ?? "";
-}
-
-function thinkingRows(model: HudModel, inner: number, window: number): string[] {
+function thinkingRows(model: HudModel, inner: number, window: number, prefix = 0): string[] {
   if (window <= 0) return [];
   const raw = model.thinking?.replace(/\s+/g, " ").trim();
   if (!raw) return [];
-  const textWidth = Math.max(4, inner - 2);
+  const textWidth = Math.max(4, inner - 2 - prefix);
   const wrapped = wrapAnsi(raw, textWidth).filter(line => line.trim().length > 0);
   return wrapped
     .slice(-window)
@@ -520,10 +453,11 @@ function thinkingRows(model: HudModel, inner: number, window: number): string[] 
 }
 
 interface BuildOptions {
+  showFlow: boolean;
   thinkWindow: number;
   collapseAfter: number;
-  telemetryLimit: number;
   note: boolean;
+  showTele: boolean;
 }
 
 function build(model: HudModel, width: number, options: BuildOptions): string[] {
@@ -532,7 +466,6 @@ function build(model: HudModel, width: number, options: BuildOptions): string[] 
   const rows = steps.length > 0
     ? planRows(steps, { collapseAfter: options.collapseAfter, frame: model.frame, now: model.now })
     : [];
-  const frame = chooseLayout(width, rows.length > 0);
 
   const head: Chip[] = [];
   if (model.frame) head.push(chip(model.frame, c.accent(model.frame)));
@@ -540,40 +473,54 @@ function build(model: HudModel, width: number, options: BuildOptions): string[] 
 
   const lines = [boxTop(width, head), boxRow(statusRow(model, inner), width)];
 
+  // FLOW / TOOLS: the dataflow strip, labelled by which half of the loop it is.
+  if (options.showFlow && model.flowLines) {
+    const request = model.flowLines[0];
+    if (request) lines.push(boxRow(`${sectionLabel("FLOW")}${request}`, width));
+    const tools = model.flowLines[1];
+    if (tools) lines.push(boxRow(`${sectionLabel("TOOLS")}${tools}`, width));
+  }
+
+  // PLAN: one header row (counts + progress bar), then the indented task list.
+  if (rows.length > 0) {
+    const counts = planCounts(model.plan);
+    const chips: Chip[] = [
+      chip(`${counts.done}/${counts.total}`, `${c.ok(String(counts.done))}${c.faint("/")}${c.text(String(counts.total))}`),
+    ];
+    const progress = progressChip(counts.done, counts.total);
+    if (progress) chips.push(progress);
+    lines.push(boxRow(`${sectionLabel("PLAN")}${chips.map(item => item.painted).join("  ")}`, width));
+    for (const row of rows) lines.push(boxRow(`  ${paintPlanRow(row, inner - 2)}`, width));
+  }
   if (options.note && model.plan?.note) {
     lines.push(boxRow(c.faint(truncate(model.plan.note, inner)), width));
   }
 
-  if (frame.layout === "columns") {
-    const cells = telemetryCells(model, frame.rightWidth, options.telemetryLimit);
-    const height = Math.max(rows.length, cells.length);
-    for (let index = 0; index < height; index++) {
-      const row = rows[index];
-      const left = row ? paintPlanRow(row, frame.leftWidth) : " ".repeat(frame.leftWidth);
-      const cell = cells[index];
-      const right = cell ? padEnd(cell.painted, frame.rightWidth) : " ".repeat(frame.rightWidth);
-      lines.push(boxRow(`${left} ${c.rule(BOX.v)} ${right}`, width));
-    }
-  } else if (frame.layout === "stacked") {
-    for (const row of rows) lines.push(boxRow(paintPlanRow(row, inner), width));
-    for (const cell of telemetryCells(model, inner, options.telemetryLimit)) {
-      lines.push(boxRow(cell.painted, width));
-    }
-  } else {
-    for (const row of rows) lines.push(boxRow(paintPlanRow(row, inner), width));
-    lines.push(boxRow(compactStatusRow(model, inner), width));
+  // THINK: the label rides on the first wrapped line so the section costs no
+  // extra rows; continuation lines align under it.
+  const thinkLabel = displayWidth("THINK") + SECTION_GAP;
+  const thinking = thinkingRows(model, inner, options.thinkWindow, thinkLabel);
+  if (thinking.length > 0) {
+    lines.push(boxRow(`${sectionLabel("THINK")}${thinking[0]}`, width));
+    for (const tail of thinking.slice(1)) lines.push(boxRow(`${" ".repeat(thinkLabel)}${tail}`, width));
   }
 
-  for (const line of thinkingRows(model, inner, options.thinkWindow)) lines.push(boxRow(line, width));
+  // TELE: one compact row of counters, last so the box always closes on data.
+  if (options.showTele) {
+    const tele = telemetryLine(model, inner);
+    if (tele) lines.push(boxRow(`${sectionLabel("TELE")}${tele.painted}`, width));
+  }
+
   lines.push(boxBottom(width));
   return lines;
 }
 
 /**
- * Renders the HUD, shedding content until it fits `maxRows`. The order is
- * reasoning tail, then the plan note, then the task list collapses, then
- * telemetry rows — transient narration goes before state you cannot recover by
- * scrolling. Returns at most `maxRows` lines, each at most `width` columns.
+ * Renders the HUD, shedding content until it fits `maxRows`. The order is the
+ * dataflow strip, then the reasoning tail, then telemetry, then the plan note,
+ * then the task list collapses — transient narration goes before state you
+ * cannot recover by scrolling. Returns at most `maxRows` lines, each at most
+ * `width` columns.
  */
 export function renderHud(model: HudModel): string[] {
   // The requested width is honoured exactly — capping is the caller's job, so
@@ -583,14 +530,23 @@ export function renderHud(model: HudModel): string[] {
   if (width < MIN_BOX_WIDTH || maxRows < 4) return [oneLiner(model, width)];
 
   const options: BuildOptions = {
+    showFlow: true,
     thinkWindow: model.thinkingWindow ?? DEFAULT_THINK_WINDOW,
     collapseAfter: DEFAULT_COLLAPSE,
-    telemetryLimit: 8,
     note: true,
+    showTele: true,
   };
   let body = build(model, width, options);
+  while (body.length > maxRows && options.showFlow) {
+    options.showFlow = false;
+    body = build(model, width, options);
+  }
   while (body.length > maxRows && options.thinkWindow > 0) {
     options.thinkWindow--;
+    body = build(model, width, options);
+  }
+  while (body.length > maxRows && options.showTele) {
+    options.showTele = false;
     body = build(model, width, options);
   }
   if (body.length > maxRows && options.note) {
@@ -599,10 +555,6 @@ export function renderHud(model: HudModel): string[] {
   }
   while (body.length > maxRows && options.collapseAfter > 1) {
     options.collapseAfter--;
-    body = build(model, width, options);
-  }
-  while (body.length > maxRows && options.telemetryLimit > TELEMETRY_FLOOR) {
-    options.telemetryLimit--;
     body = build(model, width, options);
   }
   if (body.length > maxRows) {

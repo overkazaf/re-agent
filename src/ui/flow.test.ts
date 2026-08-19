@@ -62,11 +62,9 @@ describe("flow model", () => {
     expect(rows[0]).toContain("[you]");
     expect(rows[0]).toContain("[ctx]");
     expect(rows[0]).toContain("((deepseek))");
-    expect(rows[1]).toContain("3msg");
-    expect(rows[1]).toContain("3.6ktok");
-    expect(rows[1]).toContain("sending");
-    // No tools have happened yet, so the lower half is not drawn.
-    expect(rows.slice(2).join("")).toBe("");
+    expect(rows[0]).toContain("sending");
+    // No tools have happened yet, so the tool path row is not drawn.
+    expect(rows).toHaveLength(1);
   });
 
   test("opens the tool path when the model asks for calls", () => {
@@ -77,10 +75,10 @@ describe("flow model", () => {
     flow.apply({ type: "tool_start", name: "run_command", args: { command: "strings ./chall" } });
     const rows = renderFlowPlain(flow.state, WIDTH);
 
-    expect(rows[2]).toContain("▼");
-    expect(rows[3]).toContain("[tools]");
-    expect(rows[3]).toContain("[calls×1]");
-    expect(rows[4]).toContain("run_command");
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toContain("[tools]");
+    expect(rows[1]).toContain("[calls×1]");
+    expect(rows[1]).toContain("run_command");
   });
 
   test("marks the feedback leg once a tool result comes back", () => {
@@ -96,8 +94,11 @@ describe("flow model", () => {
     // Results feed the next request, so the loop is back at "send".
     expect(flow.state.stage).toBe("send");
     const rows = renderFlowPlain(flow.state, WIDTH);
-    expect(rows[2]).toContain("▲");
-    expect(rows[4]).toContain("✓1");
+    // The ▲ sits on the ctx end of the model wire; the tool row keeps the
+    // completed tool and its tally.
+    expect(rows[0]).toContain("▲");
+    expect(rows[1]).toContain("[tools]");
+    expect(rows[1]).toContain("✓1");
   });
 
   test("packets advance on tick and are cleared when the leg goes quiet", () => {
@@ -128,7 +129,7 @@ describe("flow model", () => {
     flow.apply(send);
     flow.apply({ type: "wire", phase: "recv", provider: "deepseek", ms: 300, ok: false, toolCalls: 0, textChars: 0, error: "401" });
     expect(flow.state.stage).toBe("error");
-    expect(renderFlowPlain(flow.state, WIDTH)[1]).toContain("401");
+    expect(renderFlowPlain(flow.state, WIDTH)[0]).toContain("401");
   });
 
   test("hides itself on a terminal too narrow for the diagram", () => {
@@ -147,25 +148,27 @@ describe("flow model", () => {
 });
 
 
-describe("plan node", () => {
+describe("plan stays out of the diagram", () => {
   const snapshot = (statuses: Array<"pending" | "in_progress" | "completed">) => ({
     source: "update_plan",
     updatedAt: 0,
     steps: statuses.map((status, index) => ({ text: `step ${index}`, status })),
   });
 
-  test("shows counts and a bar, never step text", () => {
+  test("counts and the bar live in the HUD, not the strip", () => {
     const flow = createFlowModel("deepseek");
     flow.begin("deepseek");
     flow.apply(send);
     flow.apply({ type: "plan", snapshot: snapshot(["completed", "in_progress", "pending"]) });
     const rows = renderFlowPlain(flow.state, WIDTH);
-    expect(rows[3]).toContain("[plan 1/3]");
-    expect(rows[4].trim()).toMatch(/^[▰▱]+$/);
+    // The strip is diagram-only: no plan counts, no progress glyphs, no step
+    // text. The PLAN section of the HUD owns all of that.
+    expect(rows.join("")).not.toContain("[plan");
+    expect(rows.join("")).not.toMatch(/[▰▱]/);
     expect(rows.join("")).not.toContain("step 0");
   });
 
-  test("never collides with the tools box at the narrowest supported width", () => {
+  test("every row stays within the requested width, at every supported width", () => {
     for (const provider of ["p", "deepseek", "claude-code-cli-long"]) {
       for (const width of [46, 47, 60, 80, 100, 120]) {
         const flow = createFlowModel(provider);
@@ -175,13 +178,11 @@ describe("plan node", () => {
         flow.apply({ type: "tool_start", name: "run_command", args: {} });
         const rows = renderFlowPlain(flow.state, width);
         for (const row of rows) {
-          expect({ provider, width, len: row.length }).toEqual({ provider, width, len: Math.min(row.length, width) });
-        }
-        // The plan label must end before the tools box starts.
-        const tools = rows[3].indexOf("[tools]");
-        const plan = rows[3].indexOf("[", 0);
-        if (tools > 0 && plan >= 0 && plan < tools) {
-          expect(rows[3].slice(0, tools)).toMatch(/\]\s*$/);
+          expect({ provider, width, len: displayWidth(row) }).toEqual({
+            provider,
+            width,
+            len: Math.min(displayWidth(row), width),
+          });
         }
       }
     }

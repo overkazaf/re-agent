@@ -233,25 +233,39 @@ A line starting with `!` runs in the workspace shell instead of going to a model
   blocked, and network/sensitive commands need `--allow-network` /
   `--allow-sensitive`. Commands are also capped by the policy timeout (30s).
 
-## Live Dataflow Visualization
+## Live Dashboard
 
-Every turn draws itself. Two layers, both on by default:
-
-**The diagram** animates above the HUD while the turn runs — packets move along
-the wires, nodes light up as they take part, and the loop closes back into the
-context that feeds the next request:
+Every turn draws itself inside one boxed dashboard. The dataflow strip and the
+HUD are both on by default, and the box sheds the transient sections before
+anything important when the terminal is short:
 
 ```text
- [you]═══════•═══════▶[ctx]══•══════•═══▶((deepseek))
-  3msg                7tok                ⣻ waiting 718ms
-                        ▲                    ▼
-                      [tools]◀══•══════•════[calls×1]
-                      ⣾ run_command 5.6s
+╭─ ⠹ 0xAF·RE ──────────────────────────────────────────╮
+│ codex → claude                  ▰▰▰▱▱▱▱▱ 40%  $0.71 │
+│ FLOW  [you]═•═▶[ctx]▲═•═▶((deepseek))   ⣻ waiting     │
+│ TOOLS  [tools]◀═•═[calls×1]   ⣾ run_command 5.6s     │
+│ PLAN  1/5  ▰▰▱▱▱▱▱▱ 20%                               │
+│   ✔ triage: file/arch/packer                  1.2s    │
+│   ⠿ locate the check function                2m08s    │
+│   ○ reproduce the flag path                           │
+│ THINK  ┊ 校验函数看着像 sub_401a20，改之前先看 xrefs   │
+│ TELE  out ▁▂▅█▆▃▂▁ 1.2k · think 105 · ◷ 4m12s         │
+╰───────────────────────────────────────────────────────╯
 ```
 
-The task list is part of it: a `[plan 2/5]` badge with a progress bar hangs off
-`[you]` (counts only — step text lives in the box below, where it can be CJK
-without breaking the diagram's column math).
+- **FLOW** is a compact strip: `[you] → [ctx] → ((model))` with packets moving
+  along the wires, nodes lighting up as they take part. The `▲` on the ctx end
+  of the model wire marks tool results flowing back into the context that feeds
+  the next request.
+- **TOOLS** appears only when tools are in play: the return leg, the active
+  tool with its running time, and a `✓/✗` tally.
+- **PLAN** owns the whole task list — counts, progress bar, and every step,
+  CJK included — so the strip stays diagram-only.
+- **THINK** tails the streamed reasoning; **TELE** carries throughput,
+  token counters, and the running clock.
+
+On a short terminal the box drops FLOW/TOOLS first, then THINK, then TELE,
+before folding the task list, so the step being worked on always stays visible.
 
 **The trace** lands in the scrollback and stays there, stamped from the start of
 the turn, so a finished run reads like a packet capture:
@@ -278,15 +292,15 @@ the shape of a turn is readable at a glance: where the time went, how many round
 trips it took, which tool was slow.
 
 ```text
-/flow full     diagram + trace (default)
-/flow flow     diagram only
+/flow full     dashboard + trace (default)
+/flow flow     dashboard only
 /flow trace    trace lines only
 /flow off      neither — the plain tool tree comes back
 ```
 
 The choice is saved to `~/.0xaf-re-agent/ui.json`; `--flow <mode>` overrides it
-for one run. The diagram hides itself below 46 columns and in non-TTY output;
-the trace degrades to plain text without escape sequences.
+for one run. The strip hides itself below 46 columns and in non-TTY output; the
+trace degrades to plain text without escape sequences.
 
 ## Task List
 
@@ -297,9 +311,9 @@ Multi-step work gets a visible task list. Two sources feed one tracker:
 - the CLI providers' own native task tools — Claude Code's `TaskCreate`/`TaskUpdate`
   and codex's `plan_update` are parsed straight out of their JSONL streams.
 
-The list survives across turns and across `--resume`, and it is shown in three
-places: the badge in the dataflow diagram, `◇` transition lines in the trace, and
-the box the live pane keeps at the top. `/plan` reprints it on demand.
+The list survives across turns and across `--resume`, and it is shown in two
+places: the PLAN section of the live dashboard, and `◇` transition lines in the
+trace. `/plan` reprints it on demand.
 
 ## Interrupting A Turn
 
