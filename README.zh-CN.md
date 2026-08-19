@@ -129,7 +129,7 @@ workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二�
 ## 安装
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.5
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.11
 0xaf --version
 0xaf --welcome
 ```
@@ -143,7 +143,7 @@ make build
 ./bin/0xaf --version
 ```
 
-推荐固定安装 `@v0.1.5`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
+推荐固定安装 `@v0.1.11`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
 **需要 Go 1.21 或更新版本。** `go.mod` 声明的是 `go 1.22`；从 1.21 起工具链会自动拉取
 所需版本，所以有 1.21 就够开始了。
@@ -152,8 +152,8 @@ make build
 <summary>如果 <code>go install</code> 报 <code>//go:build comment without // +build comment</code></summary>
 
 ```text
-.../re-agent@v0.1.5/internal/app/repl.go:22:2: //go:build comment without // +build comment
-.../re-agent@v0.1.5/internal/ui/live.go:23:2: //go:build comment without // +build comment
+.../re-agent@v0.1.11/internal/app/repl.go:22:2: //go:build comment without // +build comment
+.../re-agent@v0.1.11/internal/ui/live.go:23:2: //go:build comment without // +build comment
 ```
 
 这两行本身没有问题——它们分别是 `golang.org/x/sys/unix` 和 `golang.org/x/term`

@@ -158,7 +158,7 @@ roles and composing models.
 ## Install
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.5
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.11
 0xaf --version
 0xaf --welcome
 ```
@@ -172,7 +172,7 @@ make build
 ./bin/0xaf --version
 ```
 
-`go install ...@v0.1.5` is the recommended install path. `@main` can lag behind
+`go install ...@v0.1.11` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
 **Requires Go 1.21 or newer.** `go.mod` declares `go 1.22`; from 1.21 the
@@ -182,8 +182,8 @@ toolchain fetches the right version itself, so 1.21 is enough to start.
 <summary>If <code>go install</code> fails with <code>//go:build comment without // +build comment</code></summary>
 
 ```text
-.../re-agent@v0.1.5/internal/app/repl.go:22:2: //go:build comment without // +build comment
-.../re-agent@v0.1.5/internal/ui/live.go:23:2: //go:build comment without // +build comment
+.../re-agent@v0.1.11/internal/app/repl.go:22:2: //go:build comment without // +build comment
+.../re-agent@v0.1.11/internal/ui/live.go:23:2: //go:build comment without // +build comment
 ```
 
 Nothing is wrong with those two lines — they are the imports of
