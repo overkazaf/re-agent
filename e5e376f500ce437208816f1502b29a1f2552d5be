@@ -1,0 +1,44 @@
+internal/buildinfo/buildinfo.go
+  37aaf2a74230c902 8
+README.zh-CN.md
+  37aaf2a74230c902 132,146,155-156
+README.md
+  37aaf2a74230c902 161,175,185-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "e5e376f500ce437208816f1502b29a1f2552d5be",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 9,
+      "accepted_lines": 9,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "README.md": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        },
+        "README.zh-CN.md": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 4
+        },
+        "internal/buildinfo/buildinfo.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
