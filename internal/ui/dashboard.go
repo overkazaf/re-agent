@@ -1,101 +1,121 @@
 package ui
 
-// A Herdr-inspired live dashboard: the same turn state as the HUD, split into
-// small panes so the operator can scan status, flow, tools, plan, and reasoning
-// independently. It deliberately stays inside the existing redraw contract:
-// every line is bounded, and tight terminals fall back to the compact HUD.
+// A unified live dashboard: one box with labeled FLOW / TOOLS / PLAN / THINK /
+// TELE sections, replacing the side-by-side panes. It deliberately stays inside
+// the existing redraw contract — every line is bounded, and tight terminals
+// fall back to the compact HUD (hud.go).
 
 import (
 	"fmt"
+	"math"
 	"strings"
+
+	"github.com/overkazaf/re-agent/internal/plan"
+	"github.com/overkazaf/re-agent/internal/types"
 )
 
 const (
-	dashboardMinWidth = 72
-	dashboardMinRows  = 14
-	dashboardGap      = " "
+	// dashboardMinWidth/Rows are the floor under which the sectioned box stops
+	// being an improvement over the compact HUD fallback.
+	dashboardMinWidth = 60
+	dashboardMinRows  = 9
+	// flowSectionRoom leaves room inside the box for the section label plus the
+	// box borders, so the flow strip never pushes a wrapped line into the box.
+	flowSectionRoom = 12
+	sectionGap      = 2
+	// toolCardRows caps the recent tool runs the TOOLS section shows.
+	toolCardRows = 2
 )
 
-type dashboardPanel struct {
-	Title string
-	Width int
-	Rows  int
-	Body  []string
+func sectionLabel(name string) string {
+	return C.Faint(name) + strings.Repeat(" ", sectionGap)
 }
 
+// RenderDashboard renders one frame as a single box with labeled sections.
+// Wide, tall terminals get the full dashboard; anything else falls back to the
+// compact HUD.
 func RenderDashboard(flow *FlowState, model HudModel) []string {
 	width := model.Width
 	if width < 1 {
 		width = 1
 	}
 	maxRows := model.MaxRows
-	if maxRows <= 0 {
-		return renderDashboardFallback(model)
-	}
-	if width < dashboardMinWidth || maxRows < dashboardMinRows {
+	if maxRows <= 0 || width < dashboardMinWidth || maxRows < dashboardMinRows {
 		return renderDashboardFallback(model)
 	}
 
-	statusBody := dashboardStatusRows(model, BoxInner(width))
-	statusRows := 4
-	if len(statusBody) > 2 && maxRows >= dashboardMinRows+1 {
-		statusRows = 5
-	}
-	status := renderDashboardPanel(dashboardPanel{
-		Title: "STATUS", Width: width, Rows: statusRows, Body: statusBody,
-	})
-	remaining := maxRows - len(status)
-	if remaining < 8 {
-		return renderDashboardFallback(model)
-	}
+	options := dashboardOptionsFor(model)
+	body := dashboardBuild(flow, model, width, options)
 
-	topRows := remaining / 2
-	if topRows < 4 {
-		topRows = 4
-	}
-	bottomRows := remaining - topRows
-	if bottomRows < 4 {
-		return renderDashboardFallback(model)
-	}
-
-	flowW, toolW, ok := splitDashboardWidths(width, 44, 24, 62)
-	if !ok {
-		return renderDashboardFallback(model)
-	}
-	planW, thinkW, ok := splitDashboardWidths(width, 40, 28, 58)
-	if !ok {
-		return renderDashboardFallback(model)
-	}
-
-	flowPane := renderDashboardPanel(dashboardPanel{
-		Title: "FLOW", Width: flowW, Rows: topRows,
-		Body: dashboardFlowRows(flow, BoxInner(flowW), model.Now),
-	})
-	toolsPane := renderDashboardPanel(dashboardPanel{
-		Title: "TOOLS", Width: toolW, Rows: topRows,
-		Body: dashboardToolRows(flow, model, BoxInner(toolW), topRows-2),
-	})
-	planPane := renderDashboardPanel(dashboardPanel{
-		Title: "PLAN", Width: planW, Rows: bottomRows,
-		Body: dashboardPlanRows(model, BoxInner(planW), bottomRows-2),
-	})
-	thinkPane := renderDashboardPanel(dashboardPanel{
-		Title: "THINK", Width: thinkW, Rows: bottomRows,
-		Body: dashboardThinkRows(model, BoxInner(thinkW), bottomRows-2),
-	})
-
-	out := append([]string{}, status...)
-	out = append(out, joinDashboardPanels(flowPane, toolsPane)...)
-	out = append(out, joinDashboardPanels(planPane, thinkPane)...)
-	if len(out) > maxRows {
-		return renderDashboardFallback(model)
-	}
-	for _, line := range out {
-		if DisplayWidth(line) > width {
-			return renderDashboardFallback(model)
+	// Transient narration goes before state you cannot recover by scrolling:
+	// flow strip, tool cards, reasoning tail, telemetry, then the plan note and
+	// the task list collapse. The plan itself is the last thing to go. Asked-for
+	// content (`/think expand`) sheds last instead.
+	shed := func(cond func() bool, apply func()) {
+		for len(body) > maxRows && cond() {
+			apply()
+			body = dashboardBuild(flow, model, width, options)
 		}
 	}
-	return out
+	if model.ThinkDisplay == ThinkDisplayExpanded {
+		shed(func() bool { return options.note }, func() { options.note = false })
+		shed(func() bool { return options.collapseAfter > 1 }, func() { options.collapseAfter-- })
+		shed(func() bool { return options.showTele }, func() { options.showTele = false })
+		shed(func() bool { return options.showToolCards }, func() { options.showToolCards = false })
+		shed(func() bool { return options.showFlow }, func() { options.showFlow = false })
+		shed(func() bool { return options.thinkWindow > 0 }, func() { options.thinkWindow-- })
+	} else {
+		shed(func() bool { return options.showFlow }, func() { options.showFlow = false })
+		shed(func() bool { return options.showToolCards }, func() { options.showToolCards = false })
+		shed(func() bool { return options.thinkWindow > 0 }, func() { options.thinkWindow-- })
+		shed(func() bool { return options.showTele }, func() { options.showTele = false })
+		shed(func() bool { return options.note }, func() { options.note = false })
+		shed(func() bool { return options.collapseAfter > 1 }, func() { options.collapseAfter-- })
+	}
+	if len(body) > maxRows {
+		// A terminal too short even for the tightest box still keeps its head
+		// and its closing edge, so the box never reads as truncated mid-draw.
+		trimmed := append([]string{}, body[:maxRows-1]...)
+		body = append(trimmed, body[len(body)-1])
+	}
+	return body
+}
+
+type dashboardOptions struct {
+	showFlow      bool
+	showToolCards bool
+	thinkWindow   int
+	showTele      bool
+	note          bool
+	collapseAfter int
+}
+
+func dashboardOptionsFor(model HudModel) dashboardOptions {
+	thinkWindow := defaultThinkWindow
+	if model.ThinkingWindow > 0 {
+		thinkWindow = model.ThinkingWindow
+	}
+	switch model.ThinkDisplay {
+	case ThinkDisplayCollapsed:
+		thinkWindow = 0
+	case ThinkDisplayExpanded:
+		thinkWindow = expandedThinkWindow
+	}
+	collapseAfter := defaultCollapse
+	switch model.PlanDisplay {
+	case PlanDisplayCollapsed:
+		collapseAfter = 1
+	case PlanDisplayExpanded:
+		collapseAfter = math.MaxInt32 / 4
+	}
+	return dashboardOptions{
+		showFlow:      true,
+		showToolCards: true,
+		thinkWindow:   thinkWindow,
+		showTele:      true,
+		note:          true,
+		collapseAfter: collapseAfter,
+	}
 }
 
 func renderDashboardFallback(model HudModel) []string {
@@ -105,142 +125,107 @@ func renderDashboardFallback(model HudModel) []string {
 	return RenderHud(model)
 }
 
-func splitDashboardWidths(total, leftMin, rightMin, leftPercent int) (int, int, bool) {
-	if total < leftMin+rightMin+DisplayWidth(dashboardGap) {
-		return 0, 0, false
-	}
-	usable := total - DisplayWidth(dashboardGap)
-	left := usable * leftPercent / 100
-	if left < leftMin {
-		left = leftMin
-	}
-	right := usable - left
-	if right < rightMin {
-		right = rightMin
-		left = usable - right
-	}
-	if left < leftMin || right < rightMin {
-		return 0, 0, false
-	}
-	return left, right, true
-}
+func dashboardBuild(flow *FlowState, model HudModel, width int, options dashboardOptions) []string {
+	inner := BoxInner(width)
 
-func renderDashboardPanel(panel dashboardPanel) []string {
-	if panel.Rows < 3 {
-		panel.Rows = 3
+	var head []Chip
+	if model.Frame != "" {
+		head = append(head, chip(model.Frame, C.Accent(model.Frame)))
 	}
-	head := []Chip{chip(panel.Title, C.Bold(C.Accent(panel.Title)))}
-	lines := []string{BoxTop(panel.Width, head)}
-	bodyRows := panel.Rows - 2
-	for index := 0; index < bodyRows; index++ {
-		line := ""
-		if index < len(panel.Body) {
-			line = panel.Body[index]
-		}
-		lines = append(lines, BoxRow(line, panel.Width))
-	}
-	return append(lines, BoxBottom(panel.Width))
-}
+	head = append(head, chip(HudTitle, C.Bold(C.Accent(HudTitle))))
 
-func joinDashboardPanels(left, right []string) []string {
-	height := len(left)
-	if len(right) > height {
-		height = len(right)
-	}
-	out := make([]string, 0, height)
-	for index := 0; index < height; index++ {
-		l := ""
-		if index < len(left) {
-			l = left[index]
-		}
-		r := ""
-		if index < len(right) {
-			r = right[index]
-		}
-		out = append(out, l+dashboardGap+r)
-	}
-	return out
-}
-
-func dashboardStatusRows(model HudModel, inner int) []string {
-	rows := []string{statusRow(model, inner), compactStatusRow(model, inner)}
+	lines := []string{BoxTop(width, head), BoxRow(statusRow(model, inner), width)}
 	if row := queueRow(model, inner); row != "" {
-		rows = append(rows, row)
+		lines = append(lines, BoxRow(row, width))
 	}
-	return rows
-}
 
-func dashboardFlowRows(flow *FlowState, inner int, now int64) []string {
-	if flow == nil {
-		return []string{C.Faint("waiting for turn events")}
-	}
-	lines := RenderFlow(*flow, inner, now)
-	if len(lines) == 0 {
-		return []string{
-			dashboardKV("stage", string(flow.Stage), C.Violet, inner),
-			dashboardKV("provider", firstNonEmpty(flow.Provider, flow.Model), C.Text, inner),
+	// FLOW / TOOLS: the dataflow strip, labelled by which half of the loop it is.
+	if options.showFlow {
+		if flow == nil {
+			lines = append(lines, BoxRow(sectionLabel("FLOW")+C.Faint("waiting for turn events"), width))
+		} else if flowLines := RenderFlow(*flow, inner-flowSectionRoom, model.Now); len(flowLines) > 0 {
+			lines = append(lines, BoxRow(sectionLabel("FLOW")+flowLines[0], width))
+			if len(flowLines) > 1 {
+				lines = append(lines, BoxRow(sectionLabel("TOOLS")+flowLines[1], width))
+			}
 		}
 	}
-	return lines
-}
 
-func dashboardToolRows(flow *FlowState, model HudModel, inner, limit int) []string {
-	if limit <= 0 {
-		return nil
-	}
-	if flow == nil {
-		return []string{C.Faint("no tool activity yet")}
-	}
-	rows := []string{
-		dashboardKV("stage", string(flow.Stage), C.Violet, inner),
-	}
-	if agent := flowModelLabel(flow); agent != "" && len(rows) < limit {
-		rows = append(rows, dashboardKV("agent", agent, C.Text, inner))
-	}
-	if (flow.PendingCalls > 0 || flow.ToolsOK > 0 || flow.ToolsFailed > 0) && len(rows) < limit {
-		value := fmt.Sprintf("pending %d  ok %d  fail %d", flow.PendingCalls, flow.ToolsOK, flow.ToolsFailed)
-		rows = append(rows, dashboardKV("calls", value, C.Text, inner))
-	}
-
-	if len(flow.ToolRuns) > 0 {
-		for index := len(flow.ToolRuns) - 1; index >= 0 && len(rows) < limit; index-- {
-			rows = append(rows, dashboardToolRunRows(flow.ToolRuns[index], model, inner, limit-len(rows))...)
+	// TOOLS: recent tool runs as compact cards, indented under the strip.
+	if options.showToolCards && flow != nil && len(flow.ToolRuns) > 0 {
+		start := 0
+		if len(flow.ToolRuns) > toolCardRows {
+			start = len(flow.ToolRuns) - toolCardRows
 		}
-	} else if flow.ActiveTool != "" && len(rows) < limit {
-		rows = append(rows, dashboardKV("tool", flow.ActiveTool, C.Accent, inner))
-		if flow.ToolStartedAt != 0 && model.Now > flow.ToolStartedAt && len(rows) < limit {
-			rows = append(rows, dashboardKV("tool time", FormatDuration(model.Now-flow.ToolStartedAt), C.OK, inner))
-		} else if flow.ToolMs != 0 && len(rows) < limit {
-			rows = append(rows, dashboardKV("last tool", FormatDuration(flow.ToolMs), C.OK, inner))
+		for _, run := range flow.ToolRuns[start:] {
+			lines = append(lines, BoxRow("  "+dashboardToolRunHeader(run, model, inner-2), width))
+			if run.ArgsText != "" {
+				lines = append(lines, BoxRow("  "+dashboardToolDetail("args", run.ArgsText, inner-2), width))
+			}
+			if run.Preview != "" {
+				lines = append(lines, BoxRow("  "+dashboardToolDetail("out", run.Preview, inner-2), width))
+			}
 		}
 	}
-	if flow.ReplyChars > 0 && len(rows) < limit {
-		rows = append(rows, dashboardKV("reply", fmt.Sprintf("%d chars", flow.ReplyChars), C.Text, inner))
+
+	// PLAN: one header row (counts + progress bar), then the indented task list.
+	var steps []types.PlanStep
+	if model.Plan != nil {
+		steps = model.Plan.Steps
 	}
-	if flow.HasCompacted && len(rows) < limit {
-		value := fmt.Sprintf("%d dropped  %d elided", flow.CompactedDrop, flow.CompactedElide)
-		rows = append(rows, dashboardKV("ctx", value, C.Warn, inner))
+	if len(steps) > 0 {
+		done, total := plan.Counts(model.Plan)
+		chips := []Chip{
+			chip(fmt.Sprintf("%d/%d", done, total),
+				C.OK(fmt.Sprintf("%d", done))+C.Faint("/")+C.Text(fmt.Sprintf("%d", total))),
+		}
+		if progress, ok := ProgressChip(done, total, barCells); ok {
+			chips = append(chips, progress)
+		}
+		lines = append(lines, BoxRow(sectionLabel("PLAN")+joinChips(chips, "  "), width))
+		if options.note && model.Plan.Note != "" {
+			lines = append(lines, BoxRow(C.Faint(Truncate(model.Plan.Note, inner)), width))
+		}
+		rows := PlanRows(steps, PlanRowOptions{
+			CollapseAfter: options.collapseAfter, Frame: model.Frame, Now: model.Now, Live: true,
+		})
+		for _, row := range rows {
+			lines = append(lines, BoxRow("  "+PaintPlanRow(row, inner-2), width))
+		}
+	} else if options.note && model.Plan != nil && model.Plan.Note != "" {
+		lines = append(lines, BoxRow(C.Faint(Truncate(model.Plan.Note, inner)), width))
 	}
-	if flow.Error != "" && len(rows) < limit {
-		rows = append(rows, dashboardKV("error", flow.Error, C.Err, inner))
+
+	// THINK: the label rides the first wrapped line so the section costs no
+	// extra rows; continuation lines align under it.
+	thinkLabel := DisplayWidth("THINK") + sectionGap
+	thinking := thinkingRows(model, inner, options.thinkWindow, thinkLabel)
+	if len(thinking) > 0 {
+		lines = append(lines, BoxRow(sectionLabel("THINK")+thinking[0], width))
+		for _, tail := range thinking[1:] {
+			lines = append(lines, BoxRow(strings.Repeat(" ", thinkLabel)+tail, width))
+		}
 	}
-	return rows
+
+	// TELE: one compact row of counters, last so the box closes on data.
+	if options.showTele {
+		if tele := telemetryLine(model, inner); tele != nil {
+			lines = append(lines, BoxRow(sectionLabel("TELE")+tele.Painted, width))
+		}
+	}
+
+	return append(lines, BoxBottom(width))
 }
 
-func dashboardToolRunRows(run ToolRunSnapshot, model HudModel, inner, limit int) []string {
-	if limit <= 0 {
-		return nil
+func joinChips(chips []Chip, gap string) string {
+	var painteds []string
+	for _, item := range chips {
+		painteds = append(painteds, item.Painted)
 	}
-	rows := []string{dashboardToolRunHeader(run, model, inner)}
-	if run.ArgsText != "" && len(rows) < limit {
-		rows = append(rows, dashboardToolDetail("args", run.ArgsText, inner))
-	}
-	if run.Preview != "" && len(rows) < limit {
-		rows = append(rows, dashboardToolDetail("out", run.Preview, inner))
-	}
-	return rows
+	return strings.Join(painteds, gap)
 }
 
+// dashboardToolRunHeader renders one tool run card header (glyph, name, time).
 func dashboardToolRunHeader(run ToolRunSnapshot, model HudModel, inner int) string {
 	glyphPlain, glyphPaint, paint := dashboardToolGlyph(run, model.Frame)
 	duration := dashboardToolDuration(run, model.Now)
@@ -297,97 +282,4 @@ func dashboardToolDetail(label, value string, inner int) string {
 		return C.Faint(Truncate(text, inner))
 	}
 	return C.Faint("  " + Truncate(text, room))
-}
-
-func dashboardPlanRows(model HudModel, inner, bodyRows int) []string {
-	if bodyRows <= 0 {
-		return nil
-	}
-	if model.Plan == nil || len(model.Plan.Steps) == 0 {
-		return []string{C.Faint("waiting for plan updates")}
-	}
-	rows := make([]string, 0, bodyRows)
-	if model.Plan.Note != "" && bodyRows > 2 && model.PlanDisplay != PlanDisplayCollapsed {
-		rows = append(rows, C.Faint(Truncate(model.Plan.Note, inner)))
-	}
-	collapseAfter := bodyRows - len(rows)
-	if collapseAfter < 1 {
-		collapseAfter = 1
-	}
-	switch model.PlanDisplay {
-	case PlanDisplayCollapsed:
-		collapseAfter = 1
-	case PlanDisplayExpanded:
-		collapseAfter = len(model.Plan.Steps)
-	}
-	planRows := PlanRows(model.Plan.Steps, PlanRowOptions{
-		CollapseAfter: collapseAfter,
-		Frame:         model.Frame,
-		Now:           model.Now,
-		Live:          true,
-	})
-	for _, row := range planRows {
-		if len(rows) >= bodyRows {
-			break
-		}
-		rows = append(rows, PaintPlanRow(row, inner))
-	}
-	return rows
-}
-
-func dashboardThinkRows(model HudModel, inner, bodyRows int) []string {
-	if bodyRows <= 0 {
-		return nil
-	}
-	if model.ThinkDisplay == ThinkDisplayCollapsed {
-		return []string{C.Faint("folded · /think expand")}
-	}
-	window := defaultThinkWindow
-	if model.ThinkingWindow > 0 {
-		window = model.ThinkingWindow
-	}
-	if model.ThinkDisplay == ThinkDisplayExpanded {
-		window = bodyRows
-	}
-	if window > bodyRows {
-		window = bodyRows
-	}
-	rows := thinkingRows(model, inner, window)
-	if len(rows) == 0 {
-		return []string{C.Faint("waiting for reasoning stream")}
-	}
-	return rows
-}
-
-func dashboardKV(key, value string, paint Painter, inner int) string {
-	keyText := key + ":"
-	room := inner - DisplayWidth(keyText) - 1
-	if room < 1 {
-		return C.Faint(Truncate(keyText, inner))
-	}
-	value = Truncate(value, room)
-	return C.Faint(keyText) + " " + paint(value)
-}
-
-func flowModelLabel(flow *FlowState) string {
-	if flow == nil {
-		return ""
-	}
-	parts := []string{}
-	if flow.Provider != "" {
-		parts = append(parts, flow.Provider)
-	}
-	if flow.Model != "" && flow.Model != flow.Provider {
-		parts = append(parts, flow.Model)
-	}
-	return strings.Join(parts, " · ")
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
 }

@@ -1,18 +1,18 @@
 package ui
 
-// The live dataflow diagram: where the turn currently is, drawn as nodes with
-// packets moving along the wires between them.
+// The live dataflow strip: where the turn currently is, drawn as a compact
+// two-line pipeline that lives inside the dashboard box. The request path is
+// one line, the tool path a second line that only appears when tools are in
+// play.
 //
-//	[you]══•══▶[ctx]══•══▶((deepseek))
-//	 42tok       ▲            ║ thinking 2.1s
-//	             ║            ▼
-//	          [tools]◀══•══[calls×1]
-//	          ⚙ run_command ●●●○
+//	[you]═•═▶[ctx]▲═•═▶((deepseek))     ⣻ thinking 2.1s
+//	[tools]◀═•═[calls×1]   ⚙ run_command 0.2s  ✓3 ✗1
 //
-// The loop stays the point: tool results flow back up into the context that
-// feeds the next request. State comes from LoopEvents; motion comes from Tick(),
-// driven by the pane's frame timer, so this file has no timers of its own and
-// renders deterministically for a given state.
+// The loop stays the point: the ▲ on the ctx end of the model wire marks tool
+// results flowing back into the context that feeds the next request. State
+// comes from LoopEvents; motion comes from Tick(), driven by the pane's frame
+// timer, so this file has no timers of its own and renders deterministically
+// for a given state.
 
 import (
 	"fmt"
@@ -440,14 +440,14 @@ func blankState(provider string) FlowState {
 
 const flowMinWidth = 46
 
-// RenderFlow draws five rows of diagram. It returns nothing when the terminal is
-// too narrow to be honest about it.
+// RenderFlow draws a compact one- or two-line strip. It returns nothing when
+// the terminal is too narrow to be honest about it.
 func RenderFlow(state FlowState, width int, now int64) []string {
 	canvas := paintFlow(state, width, now)
 	if canvas == nil {
 		return nil
 	}
-	return canvas.Render()
+	return trimFlowRows(canvas.Render())
 }
 
 // RenderFlowPlain is the same layout without escape sequences — used by tests.
@@ -456,7 +456,14 @@ func RenderFlowPlain(state FlowState, width int, now int64) []string {
 	if canvas == nil {
 		return nil
 	}
-	return canvas.Plain()
+	return trimFlowRows(canvas.Plain())
+}
+
+func trimFlowRows(rows []string) []string {
+	for len(rows) > 0 && strings.TrimSpace(rows[len(rows)-1]) == "" {
+		rows = rows[:len(rows)-1]
+	}
+	return rows
 }
 
 func paintFlow(state FlowState, width int, now int64) *Canvas {
@@ -474,21 +481,23 @@ func paintFlow(state FlowState, width int, now int64) *Canvas {
 	youWidth := DisplayWidth(youBox)
 	ctxWidth := DisplayWidth(ctxBox)
 	toolsWidth := DisplayWidth(toolsBox)
+	modelWidth := DisplayWidth(modelBox)
 
 	// Wires take whatever is left after the boxes, split evenly and clamped so a
-	// wide terminal does not turn into a mostly-empty diagram.
-	fixed := youWidth + ctxWidth + DisplayWidth(modelBox)
-	wire := (width - fixed - 4) / 2
-	if wire < 3 {
-		wire = 3
+	// wide terminal does not turn into a mostly-empty strip — the dashboard owns
+	// the rest of the row.
+	fixed := youWidth + ctxWidth + modelWidth
+	wire := (width - fixed - 3) / 2
+	if wire < 2 {
+		wire = 2
 	}
-	if wire > 16 {
-		wire = 16
+	if wire > 14 {
+		wire = 14
 	}
-	colYou := 1
+	colYou := 0
 	colCtx := colYou + youWidth + wire
 	colModel := colCtx + ctxWidth + wire
-	canvas := NewCanvas(width, 5)
+	canvas := NewCanvas(width, 2)
 
 	active := func(stages ...FlowStage) bool {
 		for _, stage := range stages {
@@ -511,75 +520,53 @@ func paintFlow(state FlowState, width int, now int64) *Canvas {
 	drawWire(canvas, 0, colYou+youWidth, wire, state.Packets[edgeYouToCtx], "right", "accent")
 	canvas.Put(0, colCtx, ctxBox, nodeStyle(sending), sending)
 	drawWire(canvas, 0, colCtx+ctxWidth, wire, state.Packets[edgeCtxToModel], "right", "accent")
+	// Tool results flow back into the context: a lit ▲ on the ctx end of the
+	// model wire once any tool has returned.
+	toolsRan := state.ToolsOK+state.ToolsFailed > 0
+	if toolsRan {
+		canvas.Put(0, colCtx+ctxWidth, "▲", "ok", true)
+	}
 	modelHot := active(stageSend, stageWait, stageThink, stageWrite, stageCalls)
 	modelStyle := "faint"
 	if modelHot {
 		modelStyle = "violet"
 	}
 	canvas.Put(0, colModel, modelBox, modelStyle, modelHot)
-
-	// --- row 1: what each node is carrying ------------------------------------
-	canvas.Put(1, colYou+1, fmt.Sprintf("%dmsg", state.Messages), "faint", false)
-	ctxLabel := CompactNumber(float64(state.SentTokens)) + "tok"
-	canvas.Put(1, colCtx, ctxLabel, "muted", false)
-	if state.HasCompacted {
-		canvas.Put(1, colCtx+DisplayWidth(ctxLabel)+1, fmt.Sprintf("⇣%d", state.CompactedDrop), "warn", false)
-	}
+	// The phase label rides the right edge when there is room, so the strip
+	// reads as a dashboard instead of a left-heavy diagram with dead space.
+	phase := phaseLabel(state, now)
 	phaseStyle := "violet"
 	if state.Stage == stageError {
 		phaseStyle = "err"
 	}
-	canvas.Put(1, colModel+1, phaseLabel(state, now), phaseStyle, false)
+	phaseRoom := width - (colModel + modelWidth + 2)
+	phaseCol := colModel + modelWidth + 2
+	if phaseRoom >= DisplayWidth(phase)+1 {
+		phaseCol = width - DisplayWidth(phase) - 1
+	}
+	canvas.Put(0, phaseCol, phase, phaseStyle, false)
 
-	// --- the plan node ---------------------------------------------------------
-	// It lives in the left gutter (rows 2-4, left of colCtx) — the only region
-	// free at every width — and is painted outside the tool block, since a plan
-	// is routinely published before any tool runs.
-	paintPlanBadge(canvas, state, colYou, colCtx)
-
-	// --- row 2: the vertical legs ----------------------------------------------
-	// Row 1 belongs to the labels; the verticals get row 2 to themselves so an
-	// arrowhead never lands on top of a token count.
-	feedbackCol := colCtx + 2
-	returnCol := colModel + 2
-	bottomActive := active(stageCalls, stageTool, stageWrite)
-	toolsRan := state.ToolsOK+state.ToolsFailed > 0
+	// --- row 1: the tool path --------------------------------------------------
+	bottomActive := active(stageCalls, stageTool)
 	if bottomActive || toolsRan {
-		downStyle := "faint"
-		if bottomActive {
-			downStyle = "violet"
-		}
-		canvas.Put(2, returnCol, "▼", downStyle, bottomActive)
-		upStyle := "faint"
-		if toolsRan {
-			upStyle = "ok"
-		}
-		canvas.Put(2, feedbackCol, "▲", upStyle, toolsRan)
-
-		// --- row 3: the return path ---------------------------------------------
 		rightBox := fmt.Sprintf("[calls×%d]", maxOf(state.PendingCalls, 1))
 		if state.Stage == stageWrite || (state.PendingCalls == 0 && state.ReplyChars > 0) {
 			rightBox = "[reply " + CompactNumber(state.Usage.Output) + "tok]"
 		}
-		// Hang the box off the model's vertical, and never let it collide with
-		// the tools box on a narrow terminal.
-		colRight := maxOf(returnCol-1, colCtx+toolsWidth+3)
 		toolStyle := "faint"
 		if active(stageTool) {
 			toolStyle = "ok"
 		}
-		canvas.Put(3, colCtx, toolsBox, toolStyle, active(stageTool))
-		gap := colRight - (colCtx + toolsWidth)
-		if gap > 2 {
-			drawWire(canvas, 3, colCtx+len(toolsBox), gap, state.Packets[edgeCallsToTools], "left", "violet")
+		canvas.Put(1, 0, toolsBox, toolStyle, active(stageTool))
+		if wire > 1 {
+			drawWire(canvas, 1, toolsWidth, wire, state.Packets[edgeCallsToTools], "left", "violet")
 		}
 		rightStyle := "faint"
 		if bottomActive {
 			rightStyle = "violet"
 		}
-		canvas.Put(3, colRight, rightBox, rightStyle, false)
+		canvas.Put(1, toolsWidth+wire, rightBox, rightStyle, false)
 
-		// --- row 4: the tool currently doing the work ---------------------------
 		if state.ActiveTool != "" {
 			elapsed := state.ToolMs
 			if state.ToolStartedAt != 0 {
@@ -596,88 +583,35 @@ func paintFlow(state FlowState, width int, now int64) *Canvas {
 			}
 			// A tool name can be anything the provider streams, including a
 			// shell command with CJK in it, so measure it in columns too.
-			label := mark + " " + state.ActiveTool
-			labelWidth := DisplayWidth(label)
-			canvas.Put(4, colCtx, label, style, false)
-			timing := FormatDuration(elapsed)
-			canvas.Put(4, colCtx+labelWidth+1, timing, "faint", false)
+			label := mark + " " + state.ActiveTool + " " + FormatDuration(elapsed)
+			tally := ""
+			tallyStyle := "faint"
 			if toolsRan {
-				tally := fmt.Sprintf("✓%d", state.ToolsOK)
-				tallyStyle := "faint"
+				tally = fmt.Sprintf("✓%d", state.ToolsOK)
 				if state.ToolsFailed > 0 {
 					tally += fmt.Sprintf(" ✗%d", state.ToolsFailed)
 					tallyStyle = "err"
 				}
-				canvas.Put(4, colCtx+labelWidth+DisplayWidth(timing)+3, tally, tallyStyle, false)
+			}
+			block := label
+			if tally != "" {
+				block += "  " + tally
+			}
+			blockWidth := DisplayWidth(block)
+			leftCol := toolsWidth + wire + DisplayWidth(rightBox) + 2
+			// Same right-edge treatment as the phase label; only falls back to
+			// left-adjacent when the block would not fit on its own.
+			col := leftCol
+			if width-leftCol >= blockWidth+1 {
+				col = width - blockWidth - 1
+			}
+			canvas.Put(1, col, label, style, false)
+			if tally != "" {
+				canvas.Put(1, col+DisplayWidth(label)+2, tally, tallyStyle, false)
 			}
 		}
 	}
 	return canvas
-}
-
-// planFlashFrames is how long the plan node stays lit after an update: ~1.3s at
-// a 90ms frame.
-const planFlashFrames = 14
-
-const planBarCells = 7
-
-// paintPlanBadge draws the task list as a badge plus a progress bar, hung under
-// `[you]`: the plan is the operator's view of the work, so it belongs on the
-// operator's side of the diagram. Only counts — the steps themselves are in the
-// HUD box below, because Canvas addresses columns and plan steps are routinely
-// CJK.
-func paintPlanBadge(canvas *Canvas, state FlowState, colYou, colCtx int) {
-	badge := state.Plan
-	if badge == nil || badge.Total == 0 {
-		return
-	}
-	gutter := colCtx - colYou - 1 // columns available before the ctx column
-	if gutter < 7 {
-		return
-	}
-
-	fresh := state.HasPlanFrame && state.Frame-state.PlanFrame < planFlashFrames
-	complete := badge.Done >= badge.Total
-	style := "faint"
-	switch {
-	case complete:
-		style = "ok"
-	case fresh && state.PlanKind == "step":
-		style = "ok"
-	case fresh:
-		style = "accent"
-	}
-
-	// The leg ties the plan to the operator: a packet while it is being written,
-	// an arrowhead when a step just closed, a quiet tie otherwise.
-	leg := "║"
-	if fresh {
-		if state.PlanKind == "step" {
-			leg = "▲"
-		} else if (state.Frame-state.PlanFrame)%spawnEvery < 4 {
-			leg = packetGlyph
-		}
-	}
-	canvas.Put(2, colYou+2, leg, style, fresh)
-
-	label := fmt.Sprintf("[%d/%d]", badge.Done, badge.Total)
-	if gutter >= 12 {
-		label = fmt.Sprintf("[plan %d/%d]", badge.Done, badge.Total)
-	}
-	canvas.Put(3, colYou, label, style, fresh || complete)
-
-	if gutter >= 8 {
-		filled := int(float64(badge.Done)/float64(badge.Total)*planBarCells + 0.5)
-		if filled > planBarCells {
-			filled = planBarCells
-		}
-		barStyle := "accentDim"
-		if complete {
-			barStyle = "ok"
-		}
-		canvas.Put(4, colYou, strings.Repeat("▰", filled), barStyle, false)
-		canvas.Put(4, colYou+filled, strings.Repeat("▱", planBarCells-filled), "rule", false)
-	}
 }
 
 func phaseLabel(state FlowState, now int64) string {

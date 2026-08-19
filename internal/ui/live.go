@@ -1,6 +1,6 @@
 package ui
 
-// A live, in-place terminal dashboard: small panes carrying the routing chain,
+// A live, in-place terminal dashboard: one box carrying the routing chain,
 // flow, tool state, task list, streamed reasoning, and token telemetry. Lines
 // printed while the pane is active are "committed" above it, so tool activity
 // and thinking stay readable without the dashboard scrolling away.
@@ -47,9 +47,9 @@ type LivePaneOptions struct {
 	// Route is the dual-model chain shown in the header. Active names the side
 	// currently answering; leave empty to show the chain without highlighting.
 	Route *HudRoute
-	// Flow is the live dataflow diagram drawn above the HUD. The pane reads this
-	// model every frame, so the caller mutates it through the model rather than
-	// pushing updates here.
+	// Flow is the live dataflow state rendered as the FLOW / TOOLS sections of
+	// the dashboard. The pane reads this model every frame, so the caller
+	// mutates it through the model rather than pushing updates here.
 	Flow *FlowModel
 	// OnFrame is called once per animation frame, before the redraw.
 	OnFrame func()
@@ -102,8 +102,8 @@ type paneTimer struct {
 }
 
 // ComposePane composes one frame inside a single height budget. Wide terminals
-// get a Herdr-inspired dashboard split into status/flow/tools/plan/think panes;
-// tight terminals fall back to the compact HUD.
+// get the sectioned dashboard (one box with FLOW / TOOLS / PLAN / THINK / TELE
+// sections); tight terminals fall back to the compact HUD.
 //
 // The budget is the invariant this whole file rests on — clear() walks back
 // exactly as many lines as were drawn, so drawing more than the terminal can

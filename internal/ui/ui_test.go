@@ -301,8 +301,8 @@ func TestFlowDiagramFitsAndReactsToEvents(t *testing.T) {
 	}
 	state := model.Snapshot()
 	lines := RenderFlowPlain(state, 80, types.NowMs())
-	if len(lines) != 5 {
-		t.Fatalf("expected five diagram rows, got %d", len(lines))
+	if len(lines) != 1 {
+		t.Fatalf("expected the request-path row, got %d", len(lines))
 	}
 	for _, line := range lines {
 		if DisplayWidth(line) > 80 {
@@ -313,8 +313,8 @@ func TestFlowDiagramFitsAndReactsToEvents(t *testing.T) {
 	if !strings.Contains(joined, "[you]") || !strings.Contains(joined, "((deepseek))") {
 		t.Fatalf("diagram missing its nodes:\n%s", joined)
 	}
-	if !strings.Contains(joined, "7.0ktok") {
-		t.Fatalf("context token count missing:\n%s", joined)
+	if !strings.Contains(joined, "sending") {
+		t.Fatalf("phase label missing:\n%s", joined)
 	}
 	// Too narrow to be honest about: draw nothing rather than a broken diagram.
 	if lines := RenderFlowPlain(state, 30, types.NowMs()); lines != nil {
@@ -322,15 +322,15 @@ func TestFlowDiagramFitsAndReactsToEvents(t *testing.T) {
 	}
 }
 
-func TestFlowPlanBadgeUsesCountsOnly(t *testing.T) {
+func TestFlowKeepsThePlanOutOfTheStrip(t *testing.T) {
 	model := NewFlowModel("codex")
 	model.Begin("codex")
 	model.Apply(core.LoopEvent{Type: "wire", Phase: "send", Provider: "codex"})
 	model.Apply(core.LoopEvent{Type: "plan", Snapshot: samplePlan()})
 	lines := RenderFlowPlain(model.Snapshot(), 100, types.NowMs())
 	joined := strings.Join(lines, "\n")
-	if !strings.Contains(joined, "[plan 1/3]") {
-		t.Fatalf("plan badge missing:\n%s", joined)
+	if strings.Contains(joined, "[plan") {
+		t.Fatalf("plan counts must live in the dashboard, not the strip:\n%s", joined)
 	}
 	if strings.Contains(joined, "定位校验函数") {
 		t.Fatal("step text must stay out of the diagram")
@@ -390,7 +390,7 @@ func TestDashboardSplitsLiveStateIntoWindows(t *testing.T) {
 		}
 	}
 	plain := StripAnsi(strings.Join(lines, "\n"))
-	for _, want := range []string{"STATUS", "FLOW", "TOOLS", "PLAN", "THINK", "run_command", "定位校验函数并复现"} {
+	for _, want := range []string{"FLOW", "TOOLS", "PLAN", "THINK", "TELE", "run_command", "定位校验函数并复现"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("dashboard missing %q:\n%s", want, plain)
 		}
@@ -425,7 +425,7 @@ func TestFlowTracksToolRunSnapshots(t *testing.T) {
 	}
 }
 
-func TestDashboardToolsPaneShowsToolCards(t *testing.T) {
+func TestDashboardToolsSectionShowsToolCards(t *testing.T) {
 	model := NewFlowModel("codex")
 	model.Begin("codex")
 	model.Apply(core.LoopEvent{Type: "wire", Phase: "send", Provider: "codex", Model: "gpt-5-codex"})
@@ -650,8 +650,8 @@ func TestFlowDiagramSurvivesAWideProviderName(t *testing.T) {
 		model.Tick()
 	}
 	lines := RenderFlowPlain(model.Snapshot(), 80, types.NowMs())
-	if len(lines) != 5 {
-		t.Fatalf("expected five rows, got %d", len(lines))
+	if len(lines) != 2 {
+		t.Fatalf("expected the request and tool rows, got %d", len(lines))
 	}
 	for _, line := range lines {
 		if DisplayWidth(line) > 80 {
@@ -662,9 +662,8 @@ func TestFlowDiagramSurvivesAWideProviderName(t *testing.T) {
 	if !strings.Contains(joined, "((模型))") {
 		t.Fatalf("the model node lost its name:\n%s", joined)
 	}
-	// The token label must not be overwritten by the node that follows it.
-	if !strings.Contains(joined, "7.0ktok") {
-		t.Fatalf("the context label was clobbered:\n%s", joined)
+	if !strings.Contains(joined, "反编译 sub_401a20") {
+		t.Fatalf("the tool label was lost:\n%s", joined)
 	}
 }
 

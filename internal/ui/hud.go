@@ -1,7 +1,9 @@
 package ui
 
-// The HUD: one boxed dashboard that carries the whole live pane — routing,
-// progress, the task list, and telemetry — instead of three loose stripes.
+// The HUD: the compact boxed dashboard used as the fallback when the terminal
+// is too narrow or too short for the sectioned dashboard (dashboard.go), and by
+// archived snapshots. It carries routing, progress, the task list, streamed
+// reasoning, and telemetry in one box.
 //
 // Everything here is pure composition: a HudModel in, []string out, with no
 // timers, no cursor moves, and no I/O. The caller (live.go) owns the redraw, so
@@ -765,7 +767,7 @@ func compactStatusRow(model HudModel, inner int) string {
 	return packed[0].Painted
 }
 
-func thinkingRows(model HudModel, inner, window int) []string {
+func thinkingRows(model HudModel, inner, window, prefix int) []string {
 	if window <= 0 {
 		return nil
 	}
@@ -773,7 +775,7 @@ func thinkingRows(model HudModel, inner, window int) []string {
 	if raw == "" {
 		return nil
 	}
-	textWidth := inner - 2
+	textWidth := inner - 2 - prefix
 	if textWidth < 4 {
 		textWidth = 4
 	}
@@ -791,6 +793,39 @@ func thinkingRows(model HudModel, inner, window int) []string {
 		out = append(out, C.VioletDim(thinkGlyph)+" "+C.Faint(Truncate(line, textWidth)))
 	}
 	return out
+}
+
+// telemetryLine packs throughput, token counters, and the running clock into
+// one TELE section row.
+func telemetryLine(model HudModel, inner int) *Chip {
+	var chips []Chip
+	stats := model.Stats
+	if stats.Output != 0 {
+		value := CompactNumber(stats.Output)
+		room := inner
+		if room > sparkMax {
+			room = sparkMax
+		}
+		spark := Sparkline(model.Spark, room)
+		if spark != "" {
+			chips = append(chips, chip("out "+spark+" "+value,
+				C.Faint("out")+" "+C.Accent(spark)+" "+C.Text(value)))
+		} else {
+			chips = append(chips, chip("out "+value, C.Faint("out")+" "+C.Text(value)))
+		}
+	}
+	chips = append(chips, counterChips(stats)...)
+	elapsed := FormatDuration(model.ElapsedMs)
+	chips = append(chips, chip(clockGlyph+" "+elapsed, C.Faint(clockGlyph)+" "+C.OK(elapsed)))
+	limit := inner - DisplayWidth("TELE") - sectionGap
+	if limit < 20 {
+		limit = 20
+	}
+	packed := PackChips(chips, limit, " · ")
+	if len(packed) == 0 {
+		return nil
+	}
+	return &packed[0]
 }
 
 var spaceCollapseRE = mustCompile(`\s+`)
@@ -863,7 +898,7 @@ func build(model HudModel, width int, options buildOptions) []string {
 		lines = append(lines, BoxRow(compactStatusRow(model, inner), width))
 	}
 
-	for _, line := range thinkingRows(model, inner, options.thinkWindow) {
+	for _, line := range thinkingRows(model, inner, options.thinkWindow, 0) {
 		lines = append(lines, BoxRow(line, width))
 	}
 	return append(lines, BoxBottom(width))
