@@ -1,0 +1,65 @@
+internal/ui/ui_test.go
+  37aaf2a74230c902 304-305,316-317,325,332-333,393,428,653-654,665-666
+internal/ui/hud.go
+  37aaf2a74230c902 3-6,770,778,798-830,901
+internal/ui/flow.go
+  37aaf2a74230c902 3-6,8-9,11-15,443-444,450,459,462-466,484,487-492,494-495,497,500,523-528,535-537,542-547,549-550,560-562,568,586-588,590,595-598,600-610
+internal/ui/live.go
+  37aaf2a74230c902 3,50-52,105-106
+internal/buildinfo/buildinfo.go
+  37aaf2a74230c902 8
+internal/ui/dashboard.go
+  37aaf2a74230c902 3-6,10,12-14,18-27,30-31,34-36,43,47-48,50-58,60-82,84-96,98-102,104-109,111-117,128-133,135,137-139,141-150,154-158,160-167,171-174,176-180,182-183,185-187,189-193,195-196,199-207,210-213,216-217,220-223,225,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "00ac77e5eb77b40ef344c694c8258bd132333976",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 311,
+      "total_deletions": 451,
+      "accepted_lines": 311,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/ui/flow.go": {
+          "additions": 77,
+          "deletions": 143,
+          "accepted_lines": 77
+        },
+        "internal/ui/dashboard.go": {
+          "additions": 174,
+          "deletions": 282,
+          "accepted_lines": 174
+        },
+        "internal/ui/live.go": {
+          "additions": 6,
+          "deletions": 6,
+          "accepted_lines": 6
+        },
+        "internal/buildinfo/buildinfo.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/ui/hud.go": {
+          "additions": 40,
+          "deletions": 5,
+          "accepted_lines": 40
+        },
+        "internal/ui/ui_test.go": {
+          "additions": 13,
+          "deletions": 14,
+          "accepted_lines": 13
+        }
+      }
+    }
+  }
+}
