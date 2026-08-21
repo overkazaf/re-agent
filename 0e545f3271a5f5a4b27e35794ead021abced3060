@@ -1,0 +1,122 @@
+internal/ui/help.go
+  37aaf2a74230c902 30,33
+internal/types/types.go
+  37aaf2a74230c902 98-108,120-122,151-156
+internal/app/commands.go
+  37aaf2a74230c902 62-63,398-416
+internal/snapcompact/snapcompact.go
+  37aaf2a74230c902 1-393
+internal/app/app.go
+  37aaf2a74230c902 34-36,194,202-204,252
+internal/app/session_new_test.go
+  37aaf2a74230c902 1-73
+internal/core/compaction.go
+  37aaf2a74230c902 16,22,34-36,167-171,182-189,191-207,210-218
+internal/core/agentloop.go
+  37aaf2a74230c902 100-109,164-188,221-237,399-402
+README.md
+  37aaf2a74230c902 410-425,569
+README.zh-CN.md
+  37aaf2a74230c902 363-375,516
+internal/config/config.go
+  37aaf2a74230c902 26
+internal/snapcompact/snapcompact_test.go
+  37aaf2a74230c902 1-109
+internal/providers/http_test.go
+  37aaf2a74230c902 96-163
+internal/core/compaction_test.go
+  37aaf2a74230c902 97-151
+internal/providers/http.go
+  37aaf2a74230c902 167-170,172,200-213,299-302,304,332-345,440-446,481-494,498-517
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "0e545f3271a5f5a4b27e35794ead021abced3060",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1026,
+      "total_deletions": 17,
+      "accepted_lines": 983,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/core/compaction_test.go": {
+          "additions": 55,
+          "accepted_lines": 55
+        },
+        "README.md": {
+          "additions": 17,
+          "accepted_lines": 17
+        },
+        "internal/core/compaction.go": {
+          "additions": 47,
+          "deletions": 1,
+          "accepted_lines": 47
+        },
+        "internal/config/config.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/app/session_new_test.go": {
+          "additions": 73,
+          "accepted_lines": 73
+        },
+        "README.zh-CN.md": {
+          "additions": 14,
+          "accepted_lines": 14
+        },
+        "internal/snapcompact/diag_test.go": {
+          "additions": 37
+        },
+        "internal/types/types.go": {
+          "additions": 20,
+          "accepted_lines": 20
+        },
+        "internal/snapcompact/snapcompact_test.go": {
+          "additions": 109,
+          "accepted_lines": 109
+        },
+        "internal/snapcompact/snapcompact.go": {
+          "additions": 399,
+          "deletions": 6,
+          "accepted_lines": 393
+        },
+        "internal/core/agentloop.go": {
+          "additions": 58,
+          "deletions": 1,
+          "accepted_lines": 58
+        },
+        "internal/app/commands.go": {
+          "additions": 24,
+          "accepted_lines": 24
+        },
+        "internal/providers/http.go": {
+          "additions": 94,
+          "deletions": 5,
+          "accepted_lines": 94
+        },
+        "internal/app/app.go": {
+          "additions": 8,
+          "deletions": 3,
+          "accepted_lines": 8
+        },
+        "internal/providers/http_test.go": {
+          "additions": 68,
+          "accepted_lines": 68
+        },
+        "internal/ui/help.go": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        }
+      }
+    }
+  }
+}
