@@ -93,6 +93,74 @@ func TestAnthropicMessagesShape(t *testing.T) {
 	}
 }
 
+func imageUserMessage() types.Message {
+	return types.Message{
+		Role: types.MessageUser,
+		Blocks: []types.ContentBlock{
+			types.TextBlock("see the frames below"),
+			types.ImageBlock("aGVsbG8=", "image/png"),
+		},
+	}
+}
+
+func TestChatMessagesIncludeImageBlocks(t *testing.T) {
+	out := ToChatMessages("s", []types.Message{imageUserMessage()})
+	user := out[1].(map[string]any)
+	content, ok := user["content"].([]any)
+	if !ok {
+		t.Fatalf("user content should be an array when images are present: %s", encode(t, user))
+	}
+	if len(content) != 2 {
+		t.Fatalf("expected text + image parts, got %d", len(content))
+	}
+	image := content[1].(map[string]any)
+	url := image["image_url"].(map[string]any)["url"].(string)
+	if image["type"] != "image_url" || url != "data:image/png;base64,aGVsbG8=" {
+		t.Fatalf("chat image part wrong: %s", encode(t, image))
+	}
+}
+
+func TestResponsesInputIncludesImageBlocks(t *testing.T) {
+	out := ToResponsesInput([]types.Message{imageUserMessage()})
+	user := out[0].(map[string]any)
+	content := user["content"].([]any)
+	if len(content) != 2 {
+		t.Fatalf("expected text + image parts, got %d", len(content))
+	}
+	image := content[1].(map[string]any)
+	if image["type"] != "input_image" || image["image_url"] != "data:image/png;base64,aGVsbG8=" {
+		t.Fatalf("responses image part wrong: %s", encode(t, image))
+	}
+}
+
+func TestAnthropicMessagesIncludeImageBlocks(t *testing.T) {
+	out := toAnthropicMessages([]types.Message{imageUserMessage()})
+	user := out[0].(map[string]any)
+	content := user["content"].([]any)
+	if len(content) != 2 {
+		t.Fatalf("expected text + image parts, got %d", len(content))
+	}
+	image := content[1].(map[string]any)
+	source := image["source"].(map[string]any)
+	if image["type"] != "image" || source["type"] != "base64" ||
+		source["media_type"] != "image/png" || source["data"] != "aGVsbG8=" {
+		t.Fatalf("anthropic image part wrong: %s", encode(t, image))
+	}
+}
+
+func TestProviderConfigSupportsImages(t *testing.T) {
+	for _, kind := range []types.ProviderKind{types.KindAnthropic, types.KindOpenAIResponses, types.KindOpenAIChat} {
+		if !(&types.ProviderConfig{Type: kind}).SupportsImages() {
+			t.Fatalf("provider kind %s should support images", kind)
+		}
+	}
+	for _, kind := range []types.ProviderKind{types.KindCLITmux, types.KindMock} {
+		if (&types.ProviderConfig{Type: kind}).SupportsImages() {
+			t.Fatalf("provider kind %s must not claim image support", kind)
+		}
+	}
+}
+
 func TestParseAnthropicResponse(t *testing.T) {
 	raw := map[string]any{
 		"content": []any{

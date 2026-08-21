@@ -28,9 +28,12 @@ import (
 // State is everything one session needs; the REPL mutates it in place as the
 // operator re-routes with /agent, /role, /planner, /executor, /researcher.
 type State struct {
-	Config       *types.AgentConfig
-	Loop         *core.AgentLoop
-	Session      *core.Session
+	Config  *types.AgentConfig
+	Loop    *core.AgentLoop
+	Session *core.Session
+	// SessionMeta is replayed into every new session file (`/new`), so the
+	// transcript header carries the same agent/workspace/policy context.
+	SessionMeta  map[string]any
 	Tools        []types.Tool
 	ToolContext  *types.ToolContext
 	Role         types.AgentRole
@@ -188,8 +191,7 @@ func Run(argv []string) error {
 		resumeTarget = core.ResolveSession(sessionDir, args.Resume)
 	}
 
-	session := core.NewSession(sessionDir, "0xaf")
-	if err := session.Init(map[string]any{
+	sessionMeta := map[string]any{
 		"agent": agentConfig.Name, "version": build.Version, "commit": build.Commit,
 		"moduleVersion": build.ModuleVersion, "workspace": workspace,
 		"configPath": configPath, "plannerProvider": agentConfig.PlannerProvider,
@@ -197,7 +199,9 @@ func Run(argv []string) error {
 		"workflow":         workflow.Status(args.Workflow, agentConfig, args.Provider),
 		"policy":           policy,
 		"referenceContext": referenceContext,
-	}); err != nil {
+	}
+	session := core.NewSession(sessionDir, "0xaf")
+	if err := session.Init(sessionMeta); err != nil {
 		return err
 	}
 
@@ -245,6 +249,7 @@ func Run(argv []string) error {
 		Provider: args.Provider, Skills: builtInSkills, MCP: connections,
 		Providers: providerMap, Workflow: args.Workflow, Queue: newTaskQueue(),
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
+		SessionMeta: sessionMeta,
 	}
 
 	if args.Smoke {

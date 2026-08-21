@@ -360,6 +360,19 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 caveman 不是翻译、暗语、编码或 prompt laundering。它让普通 executor 专注本地文件事实；
 遇到 live target、凭据、持久化、部署或网络动作会拒绝，不会隐藏成其它说法。
 
+## 上下文压缩（Context Compaction）
+
+长会话保持在 provider 预算内靠两条路：
+
+- **机械裁剪**（每次请求）：旧工具结果正文被 elide，最旧的整段对话替换成压缩标记。
+- **`/compact [provider]`**：把会话折成一份密集简报。
+
+在 `agent.config.json` 里设 `"compactionStrategy": "snapcompact"`，被丢弃的历史会
+渲染成 PNG 快照帧而不是文本标记——思路与 oh-my-pi 的 snapcompact 相同。支持视觉的
+provider（Anthropic、OpenAI Responses、OpenAI 兼容 chat）会直接读图恢复细节，而不是
+被总结掉。CLI provider 和 `mock` 不能附带图片，会自动回退到文本标记 / LLM 摘要。
+归档过程完全本地、确定性：不需要模型调用、API key 或网络。
+
 关于模型风控和标记：0xAF-Re 不绕过 provider 的策略检查，也不保证某一轮不会被 provider
 分类。它做的是降低授权本地 RE 被误伤的概率，让每个角色只看到自己确实需要的内容：
 
@@ -500,6 +513,7 @@ REPL 内：
 | `/tasks collapse` / `/tasks expand` | 折叠或展开 live 任务列表 |
 | `/think expand` / `/think collapse` | 折叠或展开流式推理，运行中可用 |
 | `/prompt edit <role>` | 编辑 system、planner、executor、researcher prompt |
+| `/new` | 清掉当前会话，开新会话做任务（旧 transcript 仍留在磁盘上） |
 | `/sessions` / `/continue` / `/resume <id>` | 续接历史会话 |
 | `!<command>` | 在工作区内按当前策略跑 shell 命令 |
 

@@ -23,6 +23,7 @@ func Defaults() *types.AgentConfig {
 		ResearcherProvider: "codex",
 		DefaultRole:        types.RoleAuto,
 		MaxTurns:           8,
+		CompactionStrategy: "summary",
 		Providers: map[string]*types.ProviderConfig{
 			"codex": {
 				Type:       types.KindCLITmux,

@@ -97,6 +97,16 @@ func (l *AgentLoop) Plan() *types.PlanSnapshot { return l.planTracker.Current() 
 // ResetPlan clears the live task list without touching transcript history.
 func (l *AgentLoop) ResetPlan() { l.planTracker.Reset() }
 
+// NewSession switches the live transcript to a fresh session file and clears
+// the working history, task list, and last-provider pointer. The old transcript
+// stays on disk and can be resumed later; only the live context restarts.
+func (l *AgentLoop) NewSession(session *Session) {
+	l.options.Session = session
+	l.messages = nil
+	l.planTracker.Reset()
+	l.lastProviderName = ""
+}
+
 // ContextTokens is the estimated size of the live transcript, for `/context`.
 func (l *AgentLoop) ContextTokens() int { return HistoryTokens(l.messages) }
 
@@ -151,6 +161,31 @@ func (l *AgentLoop) Compact(providerName string, ctx context.Context) (CompactRe
 	}
 
 	tokensBefore := HistoryTokens(l.messages)
+	// snapcompact strategy archives the history as PNG frames instead of asking
+	// the model to summarize: local and lossless, the vision model reads them
+	// back. Only when the provider accepts images; otherwise the text summary.
+	if l.compactionUsesSnapcompact(provider.Config()) {
+		replacement := SnapcompactMarker(l.messages)
+		if hasImageBlock(replacement.Blocks) {
+			l.messages = []types.Message{replacement}
+			if err := l.options.Session.AppendMessage(replacement); err != nil {
+				return CompactResult{}, err
+			}
+			tokensAfter := HistoryTokens(l.messages)
+			_ = l.options.Session.AppendEvent(map[string]any{
+				"type": "compaction", "mode": "snapcompact", "provider": providerName,
+				"tokensBefore": tokensBefore, "tokensAfter": tokensAfter,
+			})
+			summary := fmt.Sprintf("archived %d messages as %d snapcompact frame(s)",
+				len(l.messages), countImageBlocks(replacement.Blocks))
+			return CompactResult{
+				Provider: providerName, TokensBefore: tokensBefore,
+				TokensAfter: tokensAfter, Summary: summary,
+			}, nil
+		}
+		// Rendering failed (no font, archive too large): fall through to the
+		// regular LLM summary so the session still compacts.
+	}
 	request := types.UserMessage(SummarizationPrompt())
 	view := CompactHistory(append(append([]types.Message{}, l.messages...), request), CompactionOptions{
 		BudgetTokens: budgetFor(provider.Config()),
@@ -181,6 +216,25 @@ func (l *AgentLoop) Compact(providerName string, ctx context.Context) (CompactRe
 		"tokensBefore": tokensBefore, "tokensAfter": tokensAfter,
 	})
 	return CompactResult{Provider: providerName, TokensBefore: tokensBefore, TokensAfter: tokensAfter, Summary: summary}, nil
+}
+
+// compactionUsesSnapcompact reports whether the configured strategy archives
+// history as images for this provider (strategy=snapcompact + image support).
+func (l *AgentLoop) compactionUsesSnapcompact(provider *types.ProviderConfig) bool {
+	if l.options.Config == nil || l.options.Config.CompactionStrategy != "snapcompact" {
+		return false
+	}
+	return provider != nil && provider.SupportsImages()
+}
+
+func countImageBlocks(blocks []types.ContentBlock) int {
+	count := 0
+	for _, block := range blocks {
+		if block.Type == "image" {
+			count++
+		}
+	}
+	return count
 }
 
 // pushToolResult appends a tool result, keeping the in-memory history and the
@@ -342,7 +396,10 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 		if options.Isolated {
 			viewMessages = runMessages
 		}
-		view := CompactHistory(viewMessages, CompactionOptions{BudgetTokens: budgetFor(provider.Config())})
+		view := CompactHistory(viewMessages, CompactionOptions{
+			BudgetTokens: budgetFor(provider.Config()),
+			Snapcompact:  l.compactionUsesSnapcompact(provider.Config()),
+		})
 		if view.DroppedMessages > 0 || view.ElidedToolResults > 0 {
 			emit(LoopEvent{
 				Type: "compaction", TokensBefore: view.TokensBefore, TokensAfter: view.TokensAfter,

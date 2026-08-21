@@ -407,6 +407,22 @@ Caveman mode is not translation, ciphering, or prompt laundering. It keeps the
 ordinary executor focused on workspace-local file facts and refuses unsafe live
 target, credential, persistence, deployment, or network work.
 
+## Context Compaction
+
+Long sessions stay inside the provider budget two ways:
+
+- **Mechanical pass** (every request): old tool-result bodies are elided and
+  whole oldest exchanges are replaced by a compaction marker.
+- **`/compact [provider]`**: folds the session into a dense briefing.
+
+Set `"compactionStrategy": "snapcompact"` in `agent.config.json` to archive the
+dropped history as PNG snapshot frames instead of a text marker — the same idea
+as oh-my-pi's snapcompact. A vision-capable provider (Anthropic, OpenAI
+Responses, OpenAI-compatible chat) reads the frames back, so the detail is
+preserved rather than summarized. CLI providers and `mock` cannot attach
+images and fall back to the text marker / LLM summary automatically. Archiving
+is local and deterministic: no model call, no API key, no network.
+
 About provider safety systems: 0xAF-Re does not bypass model policy checks or
 guarantee that a provider will not classify a turn. It reduces false positives
 for authorized local RE by changing what each role legitimately needs to see:
@@ -550,6 +566,7 @@ Inside the REPL:
 | `/tasks collapse` / `/tasks expand` | fold or expand the live task list |
 | `/think expand` / `/think collapse` | fold or expand streamed reasoning, mid-turn |
 | `/prompt edit <role>` | edit system, planner, executor, or researcher prompts |
+| `/new` | clear the live session and start a fresh one (old transcript stays on disk) |
 | `/sessions` / `/continue` / `/resume <id>` | resume prior work |
 | `!<command>` | run a workspace shell command under policy |
 

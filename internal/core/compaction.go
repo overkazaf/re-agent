@@ -13,11 +13,13 @@ package core
 // with tool calls is never separated from its tool results.
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 
+	"github.com/overkazaf/re-agent/internal/snapcompact"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/util"
 )
@@ -29,6 +31,9 @@ type CompactionOptions struct {
 	KeepRecentMessages int
 	// ElideToolResultsOver: tool results longer than this are elision candidates.
 	ElideToolResultsOver int
+	// Snapcompact archives the dropped exchanges as PNG frames a vision model
+	// reads back, instead of a text marker. Requires a vision-capable provider.
+	Snapcompact bool
 }
 
 type CompactionResult struct {
@@ -159,7 +164,11 @@ func CompactHistory(messages []types.Message, options CompactionOptions) Compact
 	kept := working[cursor:]
 	out := kept
 	if dropped > 0 {
-		out = append([]types.Message{CompactionMarker(messages[:dropped])}, kept...)
+		marker := CompactionMarker(messages[:dropped])
+		if options.Snapcompact {
+			marker = SnapcompactMarker(messages[:dropped])
+		}
+		out = append([]types.Message{marker}, kept...)
 	}
 	return CompactionResult{
 		Messages:          out,
@@ -168,6 +177,43 @@ func CompactHistory(messages []types.Message, options CompactionOptions) Compact
 		ElidedToolResults: elided,
 		DroppedMessages:   dropped,
 	}
+}
+
+// SnapcompactMarker archives dropped messages as a text lead-in plus PNG frames
+// of the full serialized transcript. A vision-capable model reads the frames
+// back, so nothing is reduced to a summary. Falls back to the text marker when
+// rendering fails or the archive would exceed the frame cap.
+func SnapcompactMarker(dropped []types.Message) types.Message {
+	archive := snapcompact.Serialize(dropped, snapcompact.SerializeOptions{})
+	if strings.TrimSpace(archive) == "" {
+		return CompactionMarker(dropped)
+	}
+	frames, err := snapcompact.Render(archive, snapcompact.RenderOptions{})
+	if err != nil || len(frames) == 0 {
+		return CompactionMarker(dropped)
+	}
+	blocks := []types.ContentBlock{types.TextBlock(snapcompactLeadIn(len(dropped), len(frames)))}
+	for _, frame := range frames {
+		blocks = append(blocks, types.ImageBlock(base64.StdEncoding.EncodeToString(frame), "image/png"))
+	}
+	return types.Message{Role: types.MessageUser, Blocks: blocks, Timestamp: types.NowMs()}
+}
+
+func snapcompactLeadIn(dropped, frames int) string {
+	return fmt.Sprintf(
+		"[context compacted as snapshots] %d earlier messages were archived into %d image frame(s). "+
+			"Read the frames to recover the full history. The complete transcript is also on disk in the session JSONL.",
+		dropped, frames,
+	)
+}
+
+func hasImageBlock(blocks []types.ContentBlock) bool {
+	for _, block := range blocks {
+		if block.Type == "image" && block.Data != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // nextBoundary advances past one whole exchange: a message plus, when it is an

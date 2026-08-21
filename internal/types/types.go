@@ -95,6 +95,17 @@ type ProviderConfig struct {
 	Headers         map[string]string `json:"headers,omitempty"`
 }
 
+// SupportsImages reports whether this provider can accept image content blocks
+// (needed for snapcompact-style snapshot compaction). CLI providers and the
+// offline mock cannot attach images, so they fall back to text compaction.
+func (c *ProviderConfig) SupportsImages() bool {
+	switch c.Type {
+	case KindAnthropic, KindOpenAIResponses, KindOpenAIChat:
+		return true
+	}
+	return false
+}
+
 type AgentConfig struct {
 	Name               string `json:"name"`
 	PlannerProvider    string `json:"plannerProvider"`
@@ -106,6 +117,9 @@ type AgentConfig struct {
 	MaxTurns          int                         `json:"maxTurns"`
 	Providers         map[string]*ProviderConfig  `json:"providers"`
 	MCPServers        map[string]*MCPServerConfig `json:"mcpServers,omitempty"`
+	// CompactionStrategy: "summary" (default) folds history through an LLM;
+	// "snapcompact" archives dropped history as PNG frames a vision model reads.
+	CompactionStrategy string `json:"compactionStrategy,omitempty"`
 }
 
 // MCPServerConfig describes one stdio MCP server whose tools join the registry.
@@ -132,6 +146,12 @@ type ContentBlock struct {
 
 func TextBlock(text string) ContentBlock {
 	return ContentBlock{Type: "text", Text: text}
+}
+
+// ImageBlock is a base64-encoded image (for example a snapcompact PNG frame)
+// that vision-capable providers attach to a user message.
+func ImageBlock(data, mimeType string) ContentBlock {
+	return ContentBlock{Type: "image", Data: data, MimeType: mimeType}
 }
 
 func TextFromBlocks(blocks []ContentBlock) string {

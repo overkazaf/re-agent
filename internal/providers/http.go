@@ -164,9 +164,12 @@ func toAnthropicMessages(messages []types.Message) []any {
 		case types.MessageSystem:
 			continue
 		case types.MessageUser:
+			content := contentToAnthropic(message.Blocks)
+			if len(content) == 0 {
+				content = []any{map[string]any{"type": "text", "text": ""}}
+			}
 			out = append(out, map[string]any{
-				"role":    "user",
-				"content": []any{map[string]any{"type": "text", "text": message.Text()}},
+				"role": "user", "content": content,
 			})
 		case types.MessageAssistant:
 			var content []any
@@ -189,6 +192,25 @@ func toAnthropicMessages(messages []types.Message) []any {
 					"content": message.Text(), "is_error": message.IsError,
 				}},
 			})
+		}
+	}
+	return out
+}
+
+func contentToAnthropic(blocks []types.ContentBlock) []any {
+	var out []any
+	for _, block := range blocks {
+		switch block.Type {
+		case "text":
+			if block.Text != "" {
+				out = append(out, map[string]any{"type": "text", "text": block.Text})
+			}
+		case "image":
+			if block.Data != "" {
+				out = append(out, map[string]any{"type": "image", "source": map[string]any{
+					"type": "base64", "media_type": imageMime(block.MimeType), "data": block.Data,
+				}})
+			}
 		}
 	}
 	return out
@@ -274,9 +296,12 @@ func ToResponsesInput(messages []types.Message) []any {
 		case types.MessageSystem:
 			continue
 		case types.MessageUser:
+			content := contentToResponses(message.Blocks)
+			if len(content) == 0 {
+				content = []any{map[string]any{"type": "input_text", "text": ""}}
+			}
 			out = append(out, map[string]any{
-				"role":    "user",
-				"content": []any{map[string]any{"type": "input_text", "text": message.Text()}},
+				"role": "user", "content": content,
 			})
 		case types.MessageAssistant:
 			if text := message.Text(); text != "" {
@@ -299,6 +324,25 @@ func ToResponsesInput(messages []types.Message) []any {
 			out = append(out, map[string]any{
 				"type": "function_call_output", "call_id": message.ToolCallID, "output": message.Text(),
 			})
+		}
+	}
+	return out
+}
+
+func contentToResponses(blocks []types.ContentBlock) []any {
+	var out []any
+	for _, block := range blocks {
+		switch block.Type {
+		case "text":
+			if block.Text != "" {
+				out = append(out, map[string]any{"type": "input_text", "text": block.Text})
+			}
+		case "image":
+			if block.Data != "" {
+				out = append(out, map[string]any{
+					"type": "input_image", "image_url": imageDataURI(block),
+				})
+			}
 		}
 	}
 	return out
@@ -393,7 +437,13 @@ func ToChatMessages(system string, messages []types.Message) []any {
 		case types.MessageSystem:
 			continue
 		case types.MessageUser:
-			out = append(out, map[string]any{"role": "user", "content": message.Text()})
+			entry := map[string]any{"role": "user"}
+			if hasImages(message.Blocks) {
+				entry["content"] = contentToChat(message.Blocks)
+			} else {
+				entry["content"] = message.Text()
+			}
+			out = append(out, entry)
 		case types.MessageAssistant:
 			var toolCalls []any
 			for _, call := range message.ToolCalls {
@@ -426,6 +476,45 @@ func ToChatMessages(system string, messages []types.Message) []any {
 		}
 	}
 	return out
+}
+
+func contentToChat(blocks []types.ContentBlock) []any {
+	var out []any
+	for _, block := range blocks {
+		switch block.Type {
+		case "text":
+			if block.Text != "" {
+				out = append(out, map[string]any{"type": "text", "text": block.Text})
+			}
+		case "image":
+			if block.Data != "" {
+				out = append(out, map[string]any{"type": "image_url", "image_url": map[string]any{
+					"url": imageDataURI(block),
+				}})
+			}
+		}
+	}
+	return out
+}
+
+func hasImages(blocks []types.ContentBlock) bool {
+	for _, block := range blocks {
+		if block.Type == "image" && block.Data != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func imageDataURI(block types.ContentBlock) string {
+	return "data:" + imageMime(block.MimeType) + ";base64," + block.Data
+}
+
+func imageMime(mime string) string {
+	if mime == "" {
+		return "image/png"
+	}
+	return mime
 }
 
 func toChatTools(list []types.Tool) []any {

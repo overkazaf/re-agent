@@ -59,6 +59,8 @@ func handleCommand(line string, state *State) error {
 		fmt.Print("\x1b[2J\x1b[H")
 		fmt.Print(redrawSplash(state))
 		return nil
+	case "/new":
+		return handleNewSession(state)
 	case "/effort":
 		fields := strings.Fields(arg)
 		if len(fields) == 0 {
@@ -390,6 +392,28 @@ func handleApproval(arg string, state *State) error {
 	}
 	policy.ApprovalMode = types.ApprovalMode(fields[0])
 	fmt.Println(ui.RenderNotice("approval=" + fields[0]))
+	return nil
+}
+
+// handleNewSession clears the live conversation and starts a fresh session
+// file. The old transcript stays on disk and remains resumable via /sessions
+// and /resume; only the in-memory context and task list restart, which is what
+// "start a new task" wants. Routing and workflow choices are kept.
+func handleNewSession(state *State) error {
+	session := core.NewSession(state.ToolContext.SessionDir, "0xaf")
+	if err := session.Init(state.SessionMeta); err != nil {
+		return err
+	}
+	state.Session = session
+	state.Loop.NewSession(session)
+	state.Queue.Clear()
+
+	fmt.Print("\x1b[2J\x1b[H")
+	fmt.Print(redrawSplash(state))
+	fmt.Println(ui.RenderNotice(fmt.Sprintf(
+		"new session: %s — the previous transcript is still on disk; /sessions to list, /resume <id> to reopen it",
+		session.File,
+	)))
 	return nil
 }
 

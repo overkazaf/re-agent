@@ -94,3 +94,58 @@ func TestCompactionMarkerListsPromptsAndTools(t *testing.T) {
 		t.Fatalf("marker lost its content: %q", text)
 	}
 }
+
+func TestSnapcompactMarkerProducesImageFrames(t *testing.T) {
+	marker := SnapcompactMarker([]types.Message{
+		userMessage("triage the binary"),
+		assistantWithCall("1", "run_command"),
+		toolResult("1", "run_command", "strings output line one\nstrings output line two"),
+	})
+	images := 0
+	text := ""
+	for _, block := range marker.Blocks {
+		switch block.Type {
+		case "text":
+			text += block.Text
+		case "image":
+			images++
+			if block.MimeType != "image/png" || block.Data == "" {
+				t.Fatalf("bad image block: mime=%q data=%d chars", block.MimeType, len(block.Data))
+			}
+		}
+	}
+	if images == 0 {
+		t.Fatalf("snapcompact marker produced no image frames: %q", text)
+	}
+	if !strings.Contains(text, "context compacted as snapshots") {
+		t.Fatalf("lead-in missing: %q", text)
+	}
+}
+
+func TestCompactHistoryUsesSnapcompactMarkerWhenAsked(t *testing.T) {
+	var messages []types.Message
+	for i := 0; i < 40; i++ {
+		messages = append(messages, userMessage(strings.Repeat("old ", 200)))
+	}
+	messages = append(messages, userMessage("the question that matters"))
+
+	textResult := CompactHistory(messages, CompactionOptions{BudgetTokens: 300})
+	if textResult.DroppedMessages == 0 || textResult.Messages[0].Blocks[0].Type != "text" {
+		t.Fatalf("text marker expected, got %d dropped / first block %s", textResult.DroppedMessages, textResult.Messages[0].Blocks[0].Type)
+	}
+
+	snapResult := CompactHistory(messages, CompactionOptions{BudgetTokens: 300, Snapcompact: true})
+	if snapResult.DroppedMessages == 0 {
+		t.Fatal("expected messages to be dropped")
+	}
+	if !hasImageBlock(snapResult.Messages[0].Blocks) {
+		t.Fatal("snapcompact marker expected an image block")
+	}
+}
+
+func TestSnapcompactMarkerFallsBackOnEmptyArchive(t *testing.T) {
+	marker := SnapcompactMarker([]types.Message{})
+	if hasImageBlock(marker.Blocks) {
+		t.Fatal("empty archive should fall back to the text marker")
+	}
+}
