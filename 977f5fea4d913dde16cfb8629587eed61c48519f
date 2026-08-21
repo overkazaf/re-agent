@@ -1,0 +1,78 @@
+internal/workflow/workflow_test.go
+  37aaf2a74230c902 74-109
+internal/app/args_test.go
+  37aaf2a74230c902 42-67
+internal/app/context_test.go
+  37aaf2a74230c902 1-78
+internal/app/context.go
+  37aaf2a74230c902 1-107
+internal/app/app.go
+  37aaf2a74230c902 25,146-155,199,292-300
+README.zh-CN.md
+  37aaf2a74230c902 331-335,340-342,344
+internal/app/args.go
+  37aaf2a74230c902 42-45,124-130
+internal/workflow/workflow.go
+  37aaf2a74230c902 16-24,27,119-128,184-293
+README.md
+  37aaf2a74230c902 370-374,379-381,383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "977f5fea4d913dde16cfb8629587eed61c48519f",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 433,
+      "total_deletions": 5,
+      "accepted_lines": 433,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/app/context.go": {
+          "additions": 107,
+          "accepted_lines": 107
+        },
+        "README.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        },
+        "README.zh-CN.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        },
+        "internal/workflow/workflow_test.go": {
+          "additions": 36,
+          "accepted_lines": 36
+        },
+        "internal/app/args_test.go": {
+          "additions": 26,
+          "accepted_lines": 26
+        },
+        "internal/app/app.go": {
+          "additions": 21,
+          "accepted_lines": 21
+        },
+        "internal/app/args.go": {
+          "additions": 11,
+          "accepted_lines": 11
+        },
+        "internal/app/context_test.go": {
+          "additions": 78,
+          "accepted_lines": 78
+        },
+        "internal/workflow/workflow.go": {
+          "additions": 136,
+          "deletions": 5,
+          "accepted_lines": 136
+        }
+      }
+    }
+  }
+}
