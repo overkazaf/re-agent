@@ -29,16 +29,20 @@ type modelOverride struct {
 }
 
 type Args struct {
-	Config      string
-	Workspace   string
-	SessionDir  string
-	Role        types.AgentRole
-	Provider    string
-	Planner     string
-	Executor    string
-	Researcher  string
-	Prompt      string
-	Print       bool
+	Config     string
+	Workspace  string
+	SessionDir string
+	Role       types.AgentRole
+	Provider   string
+	Planner    string
+	Executor   string
+	Researcher string
+	Prompt     string
+	Print      bool
+	// Contexts seed the session with operator-provided reference material:
+	// `know:<query>` searches the knowledge base, `file:<path>` reads a
+	// workspace file, anything else is passed through as raw notes.
+	Contexts    []string
 	Smoke       bool
 	Welcome     bool
 	ShowVersion bool
@@ -117,6 +121,13 @@ func ParseArgs(argv []string) (Args, error) {
 		case "--prompt":
 			index++
 			args.Prompt, err = requireValue(index, item)
+		case "--context", "-C":
+			index++
+			var value string
+			value, err = requireValue(index, item)
+			if err == nil {
+				args.Contexts = append(args.Contexts, value)
+			}
 		case "--theme":
 			index++
 			var theme string

@@ -22,6 +22,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
 	"github.com/overkazaf/re-agent/internal/workflow"
+	"golang.org/x/term"
 )
 
 // State is everything one session needs; the REPL mutates it in place as the
@@ -142,6 +143,16 @@ func Run(argv []string) error {
 		policy.MaxToolOutputChars = args.MaxOutputChars
 	}
 
+	// Operator-provided `--context` material becomes part of the system prompt
+	// for the whole session: knowledge base hits, reference files, raw notes.
+	referenceContext, err := buildReferenceContext(args.Contexts, workspace, sessionDir, policy)
+	if err != nil {
+		return err
+	}
+	if referenceContext != "" {
+		systemPrompt += "\n\n" + referenceContext + "\n"
+	}
+
 	providerMap := map[string]types.Provider{}
 	for name, providerConfig := range agentConfig.Providers {
 		provider, err := providers.Create(name, providerConfig)
@@ -183,8 +194,9 @@ func Run(argv []string) error {
 		"moduleVersion": build.ModuleVersion, "workspace": workspace,
 		"configPath": configPath, "plannerProvider": agentConfig.PlannerProvider,
 		"executorProvider": agentConfig.ExecutorProvider, "researcherProvider": agentConfig.ResearcherProvider,
-		"workflow": workflow.Status(args.Workflow, agentConfig, args.Provider),
-		"policy":   policy,
+		"workflow":         workflow.Status(args.Workflow, agentConfig, args.Provider),
+		"policy":           policy,
+		"referenceContext": referenceContext,
 	}); err != nil {
 		return err
 	}
@@ -277,6 +289,15 @@ func approvalModeOr(mode types.ApprovalMode) types.ApprovalMode {
 // runOneShot executes a single prompt with no pane: the trace is exactly what
 // you want when piping a run into a log.
 func runOneShot(state *State, prompt string, viz ui.VizMode) error {
+	// An attended one-shot run can still hit a permission gate (a command with
+	// safety concerns, a write under always-ask, …). Restarting with a new
+	// approval mode is unfriendly, so when the terminal is interactive we attach
+	// the same y/a/d/n prompt the REPL uses. Piped runs stay non-interactive and
+	// keep refusing.
+	if term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd())) {
+		state.editor = NewEditor()
+		state.ToolContext.Confirm = createApprover(state, nil, nil)
+	}
 	state.Loop.ResetPlan()
 	startedAt := types.NowMs()
 	var slowest int64

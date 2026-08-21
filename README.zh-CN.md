@@ -328,11 +328,20 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 | `auto` | 混合机器 | 检测到 GPT Cyber / CC CVP 类 route 就走 specialist，否则走 caveman |
 | `specialist` | 授权 cyber/CVP 类 provider | 先计划，再用 skills 和本地工具推进，保留证据 |
 | `caveman` | 普通 provider | planner 写本地证据包；executor 开新会话，只拿收窄后的只读证据工具 |
+| `research` | 调研类任务 | 调研公开资源（web / GitHub / arXiv）并产出带出处的报告 |
+| `writeup` | 写总结报告 | 只基于会话内已有证据，整理成结构化的总结报告 |
+| `ctf` | 处理单个具体目标 | 先粗筛再计划，解出并验证精确 flag |
+| `reverse` | 目标导向逆向 | 静态 + 动态分析，最后写并验证核心 PoC |
+| `engineering` | 接口工程化还原 | 还原目标协议/结构，产出数据模型、客户端 stub 和测试 |
 
 ```text
 /workflow auto
 /workflow caveman
+/workflow research
+/workflow reverse
+/workflow engineering
 0xaf --workflow specialist -p "triage ./app.apk"
+0xaf --workflow research -p "调研 arXiv 上的混淆论文"
 ```
 
 “跑隔离本地证据模式”指的就是 `caveman` workflow。它不是单纯改写 prompt，

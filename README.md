@@ -367,11 +367,20 @@ Workflow mode is explicit. Default `off` sends prompts unchanged.
 | `auto` | mixed machines | use specialist if a GPT Cyber / CC CVP-style route is configured, otherwise caveman |
 | `specialist` | authorized cyber/CVP-style provider | plan, use skills and local tools, preserve evidence |
 | `caveman` | ordinary providers | planner writes a bounded packet; executor starts fresh with a narrow read-only evidence toolset |
+| `research` | survey work | survey public resources (web, GitHub, arXiv) and produce a sourced report |
+| `writeup` | reporting | turn existing session evidence into a clean structured summary report |
+| `ctf` | one concrete challenge | triage, plan, solve, and verify the exact flag on a single target |
+| `reverse` | goal-driven RE | static + dynamic analysis toward the goal, ending with a verified core PoC |
+| `engineering` | interface reconstruction | recover a target's protocol/schema into models, client stubs, and tests |
 
 ```text
 /workflow auto
 /workflow caveman
+/workflow research
+/workflow reverse
+/workflow engineering
 0xaf --workflow specialist -p "triage ./app.apk"
+0xaf --workflow research -p "survey obfuscation papers on arXiv"
 ```
 
 The "delegated local evidence mode" demo is the `caveman` workflow. It means the

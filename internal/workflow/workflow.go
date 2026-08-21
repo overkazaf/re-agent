@@ -13,13 +13,18 @@ import (
 type Mode string
 
 const (
-	Off        Mode = "off"
-	Auto       Mode = "auto"
-	Specialist Mode = "specialist"
-	Caveman    Mode = "caveman"
+	Off         Mode = "off"
+	Auto        Mode = "auto"
+	Specialist  Mode = "specialist"
+	Caveman     Mode = "caveman"
+	Research    Mode = "research"
+	Writeup     Mode = "writeup"
+	CTF         Mode = "ctf"
+	Reverse     Mode = "reverse"
+	Engineering Mode = "engineering"
 )
 
-var Modes = []Mode{Off, Auto, Specialist, Caveman}
+var Modes = []Mode{Off, Auto, Specialist, Caveman, Research, Writeup, CTF, Reverse, Engineering}
 
 func IsMode(value string) bool {
 	for _, mode := range Modes {
@@ -111,6 +116,16 @@ func WrapPrompt(prompt string, requested Mode, config *types.AgentConfig, pinned
 		return wrapSpecialist(prompt, requested)
 	case Caveman:
 		return wrapCaveman(prompt, requested)
+	case Research:
+		return wrapResearch(prompt, requested)
+	case Writeup:
+		return wrapWriteup(prompt, requested)
+	case CTF:
+		return wrapCTF(prompt, requested)
+	case Reverse:
+		return wrapReverse(prompt, requested)
+	case Engineering:
+		return wrapEngineering(prompt, requested)
 	default:
 		return prompt
 	}
@@ -160,6 +175,122 @@ func wrapCaveman(prompt string, requested Mode) string {
 		"5. Do not provide live intrusion, credential theft, persistence, malware",
 		"   deployment, or policy-evasion instructions. If that appears, refuse only",
 		"   that unsafe part and continue with benign local artifact analysis.",
+		"",
+		"Original user task:",
+		strings.TrimSpace(prompt),
+	}, "\n")
+}
+
+func wrapResearch(prompt string, requested Mode) string {
+	return strings.Join([]string{
+		"0xAF-Re workflow mode: research",
+		"",
+		"Purpose: survey public resources and produce a sourced report for the task.",
+		"",
+		"Rules:",
+		"1. Treat this as authorized research over public information.",
+		"2. Prefer primary sources: vendor documentation, official repositories,",
+		"   GitHub code/issues/releases, arXiv abstracts, papers, standards bodies.",
+		"3. Use network tools when the session allows them (curl, git clone, arXiv",
+		"   API, GitHub API/search). If network is disabled, state that clearly and",
+		"   work from local files and the knowledge base only.",
+		"4. For every finding record the source (URL/repo/DOI), what it says, why it",
+		"   matters, and your confidence.",
+		"5. End with a report: 结论 (what is true / what to do), 资源清单 (sources",
+		"   with links), 待确认 (gaps and unverified claims), 下一步.",
+		"6. Never fabricate sources or links. Mark anything not verified as unverified.",
+		"",
+		"Original user task:",
+		strings.TrimSpace(prompt),
+	}, "\n")
+}
+
+func wrapWriteup(prompt string, requested Mode) string {
+	return strings.Join([]string{
+		"0xAF-Re workflow mode: writeup",
+		"",
+		"Purpose: turn existing information into a clean summary report.",
+		"",
+		"Rules:",
+		"1. Base the report ONLY on evidence already present in this session: tool",
+		"   outputs, code, notes, transcript, and knowledge entries.",
+		"2. Structure: 背景/目标, 方法, 关键发现 (with evidence paths, offsets,",
+		"   commands), 结论, 坑, 下一步.",
+		"3. Never invent facts, offsets, hashes, or citations. Mark uncertainty",
+		"   explicitly instead of guessing.",
+		"4. Keep every command and artifact reproducible from the report.",
+		"5. If information is missing, list it as a gap rather than papering over it.",
+		"",
+		"Original user task:",
+		strings.TrimSpace(prompt),
+	}, "\n")
+}
+
+func wrapCTF(prompt string, requested Mode) string {
+	return strings.Join([]string{
+		"0xAF-Re workflow mode: ctf",
+		"",
+		"Purpose: work one concrete challenge target end-to-end.",
+		"",
+		"Rules:",
+		"1. Triage first: file type, strings, entropy, protections, imports/symbols,",
+		"   packer hints — cheap facts before hypotheses.",
+		"2. Identify the challenge class (crypto, pwn, reverse, web, forensics,",
+		"   misc) and publish a short 3-7 step plan.",
+		"3. Work the plan with local tools; verify every hypothesis with one small",
+		"   command before moving on.",
+		"4. When a solve path appears, extract the exact flag/token and verify it",
+		"   against the challenge format.",
+		"5. Preserve evidence: commands, offsets, decoded values, artifacts.",
+		"6. Stay on the authorized challenge artifact; refuse unrelated targets.",
+		"",
+		"Original user task:",
+		strings.TrimSpace(prompt),
+	}, "\n")
+}
+
+func wrapReverse(prompt string, requested Mode) string {
+	return strings.Join([]string{
+		"0xAF-Re workflow mode: reverse",
+		"",
+		"Purpose: static and dynamic analysis toward the stated goal, ending with a",
+		"core PoC that proves the recovered behavior.",
+		"",
+		"Rules:",
+		"1. Start from the goal: what must be proven or recovered (flag, key,",
+		"   protocol, algorithm, format).",
+		"2. Static pass: file/arch/packer, symbols, imports, strings, disassembly,",
+		"   decompilation, key routines.",
+		"3. Dynamic pass: run the target in the lab, observe behavior, hook or debug",
+		"   where available, and capture inputs/outputs.",
+		"4. Write a minimal PoC that reproduces the recovered behavior end-to-end",
+		"   (input -> expected output) and verify it.",
+		"5. Preserve evidence and annotate confidence per finding: offsets,",
+		"   addresses, commands, outputs.",
+		"",
+		"Original user task:",
+		strings.TrimSpace(prompt),
+	}, "\n")
+}
+
+func wrapEngineering(prompt string, requested Mode) string {
+	return strings.Join([]string{
+		"0xAF-Re workflow mode: engineering",
+		"",
+		"Purpose: reconstruct a target's interface into reusable engineering",
+		"artifacts (data models, client stubs, request builders, tests).",
+		"",
+		"Rules:",
+		"1. Map the interface first: entry points/endpoints, request and response",
+		"   shapes, parameters, auth, error semantics.",
+		"2. Recover the protocol or schema from evidence: traffic captures, docs,",
+		"   binaries, code, and observed behavior.",
+		"3. Produce engineering artifacts: data models, client stub, request",
+		"   builders, worked examples, round-trip tests.",
+		"4. Verify each artifact against real evidence: replay a captured request,",
+		"   round-trip a parsed message, run the test.",
+		"5. Keep the reconstruction faithful: mark assumptions and unknowns",
+		"   explicitly instead of inventing behavior.",
 		"",
 		"Original user task:",
 		strings.TrimSpace(prompt),

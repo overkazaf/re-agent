@@ -71,6 +71,42 @@ func TestWrapSpecialistPlansThenExecutes(t *testing.T) {
 	}
 }
 
+func TestNewWorkflowModesWrapPrompt(t *testing.T) {
+	cases := []struct {
+		mode   Mode
+		marker string
+	}{
+		{Research, "workflow mode: research"},
+		{Writeup, "workflow mode: writeup"},
+		{CTF, "workflow mode: ctf"},
+		{Reverse, "workflow mode: reverse"},
+		{Engineering, "workflow mode: engineering"},
+	}
+	for _, tc := range cases {
+		wrapped := WrapPrompt("task", tc.mode, nil, "")
+		if !strings.Contains(wrapped, tc.marker) || !strings.Contains(wrapped, "Original user task:") {
+			t.Fatalf("mode %s missing %q:\n%s", tc.mode, tc.marker, wrapped)
+		}
+	}
+}
+
+func TestNewWorkflowModesPassThroughAndList(t *testing.T) {
+	for _, mode := range []Mode{Research, Writeup, CTF, Reverse, Engineering} {
+		if !IsMode(string(mode)) {
+			t.Fatalf("mode %s missing from IsMode", mode)
+		}
+		if got := Effective(mode, nil, ""); got != mode {
+			t.Fatalf("effective %s should pass through, got %s", mode, got)
+		}
+	}
+	list := List()
+	for _, mode := range []Mode{Research, Writeup, CTF, Reverse, Engineering} {
+		if !strings.Contains(list, string(mode)) {
+			t.Fatalf("List missing %s: %s", mode, list)
+		}
+	}
+}
+
 func TestShouldDelegateOnlyForImplicitCavemanRoute(t *testing.T) {
 	config := &types.AgentConfig{
 		PlannerProvider:  "codex",

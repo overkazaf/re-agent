@@ -39,6 +39,32 @@ func TestParseArgsModelOverride(t *testing.T) {
 	}
 }
 
+func TestParseArgsContextSpecs(t *testing.T) {
+	args, err := ParseArgs([]string{
+		"--context", "know:apk packer",
+		"-C", "file:notes/plan.md",
+		"--context", "remember the flag format",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"know:apk packer", "file:notes/plan.md", "remember the flag format"}
+	if len(args.Contexts) != len(want) {
+		t.Fatalf("contexts not parsed: %+v", args.Contexts)
+	}
+	for index, expected := range want {
+		if args.Contexts[index] != expected {
+			t.Fatalf("context[%d] = %q, want %q", index, args.Contexts[index], expected)
+		}
+	}
+}
+
+func TestParseArgsContextRequiresValue(t *testing.T) {
+	if _, err := ParseArgs([]string{"--context"}); err == nil {
+		t.Fatal("--context without a value should be rejected")
+	}
+}
+
 func TestParseArgsVersion(t *testing.T) {
 	args, err := ParseArgs([]string{"--version"})
 	if err != nil {
