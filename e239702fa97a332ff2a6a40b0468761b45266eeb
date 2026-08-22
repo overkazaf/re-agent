@@ -1,0 +1,43 @@
+README.md
+  37aaf2a74230c902 178-193
+README.zh-CN.md
+  37aaf2a74230c902 148-161
+.github/workflows/release.yml
+  37aaf2a74230c902 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "e239702fa97a332ff2a6a40b0468761b45266eeb",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 80,
+      "total_deletions": 4,
+      "accepted_lines": 80,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "README.md": {
+          "additions": 16,
+          "deletions": 2,
+          "accepted_lines": 16
+        },
+        "README.zh-CN.md": {
+          "additions": 14,
+          "deletions": 2,
+          "accepted_lines": 14
+        },
+        ".github/workflows/release.yml": {
+          "additions": 50,
+          "accepted_lines": 50
+        }
+      }
+    }
+  }
+}
