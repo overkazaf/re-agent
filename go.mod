@@ -1,6 +1,6 @@
 module github.com/overkazaf/re-agent
 
-go 1.22
+go 1.21
 
 require (
 	golang.org/x/sys v0.18.0

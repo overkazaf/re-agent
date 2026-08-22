@@ -175,8 +175,22 @@ make build
 `go install ...@v0.1.11` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
-**Requires Go 1.21 or newer.** `go.mod` declares `go 1.22`; from 1.21 the
-toolchain fetches the right version itself, so 1.21 is enough to start.
+**Requires Go 1.21 or newer** (`go.mod` declares `go 1.21`, so no toolchain
+download is triggered). On macOS, older Go toolchains (1.21.x on macOS 26+)
+cannot produce runnable binaries because the system linker requires an
+`LC_UUID` load command — upgrade to Go 1.22 or newer if `dyld: missing LC_UUID`
+appears, or download the prebuilt binaries from GitHub Releases.
+
+Prebuilt binaries are attached to every release tag by
+`.github/workflows/release.yml` (darwin/linux, amd64/arm64) — no Go toolchain
+needed:
+
+```bash
+# example: download and run the darwin-arm64 build of v0.1.14
+curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.14/0xaf-darwin-arm64 -o 0xaf
+chmod +x 0xaf
+./0xaf --version
+```
 
 <details>
 <summary>If <code>go install</code> fails with <code>//go:build comment without // +build comment</code></summary>

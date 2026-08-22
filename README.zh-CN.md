@@ -145,8 +145,20 @@ make build
 
 推荐固定安装 `@v0.1.11`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
-**需要 Go 1.21 或更新版本。** `go.mod` 声明的是 `go 1.22`；从 1.21 起工具链会自动拉取
-所需版本，所以有 1.21 就够开始了。
+**需要 Go 1.21 或更新版本**（`go.mod` 声明 `go 1.21`，不会触发工具链下载）。macOS 上
+较老的 Go（如 macOS 26+ 上的 1.21.x）编译出的二进制会因缺少 `LC_UUID` 被系统 dyld 拒绝；
+如果遇到 `dyld: missing LC_UUID`，请升级到 Go 1.22+，或直接下载 GitHub Releases 里的
+预编译二进制。
+
+每个 release tag 都会由 `.github/workflows/release.yml` 附加预编译二进制
+（darwin/linux × amd64/arm64），不需要本机 Go 工具链：
+
+```bash
+# 示例：下载 darwin-arm64 版 v0.1.14
+curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.14/0xaf-darwin-arm64 -o 0xaf
+chmod +x 0xaf
+./0xaf --version
+```
 
 <details>
 <summary>如果 <code>go install</code> 报 <code>//go:build comment without // +build comment</code></summary>
