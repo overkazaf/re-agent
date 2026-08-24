@@ -54,7 +54,6 @@ const (
 	moreGlyph    = "…"
 	thinkGlyph   = "┊"
 	clockGlyph   = "◷"
-	activeGlyph  = "▸"
 	arrowGlyph   = "→"
 )
 
@@ -64,8 +63,6 @@ const (
 const HudTitle = "0xAF·RE"
 
 const (
-	// NarrowColumns is where the two-column layout stops being readable.
-	NarrowColumns = 60
 	// HudMaxWidth: past this the box stops being a dashboard and becomes a wall.
 	HudMaxWidth = 120
 	// MinBoxWidth: narrower than this and the box costs more columns than it
@@ -73,9 +70,6 @@ const (
 	// *up* to reach it: a box wider than the terminal soft-wraps.
 	MinBoxWidth = 20
 
-	rightMin           = 18
-	rightMax           = 32
-	leftMin            = 14
 	sparkMax           = 16
 	barCells           = 8
 	defaultCollapse    = 8
@@ -83,8 +77,9 @@ const (
 	// expandedThinkWindow is what `/think expand` asks for. It is a ceiling, not
 	// a promise: the height budget still sheds it down to whatever fits.
 	expandedThinkWindow = 24
-	// telemetryFloor: `◷ elapsed` and `▸ phase` are never shed.
-	telemetryFloor = 2
+	// sectionRailWidth is the fixed label column for every section, so all
+	// content starts on the same column — the left rail is the visual anchor.
+	sectionRailWidth = 6
 )
 
 type HudStats = types.TokenUsage
@@ -535,88 +530,24 @@ func costChip(costUsd float64) (Chip, bool) {
 	return chip("$"+value, C.Faint("$")+C.Warn(value)), true
 }
 
-// --- telemetry ---------------------------------------------------------------
+// --- sections ----------------------------------------------------------------
 
-type telemetryCell struct {
-	chip Chip
-	// priority: lower survives shedding longer.
-	priority int
+// sectionLabel paints a section name into a fixed-width rail so every section's
+// content starts on the same column: FLOW, TOOLS, PLAN, THINK, TELE all line up.
+func sectionLabel(name string) string {
+	padding := sectionRailWidth - DisplayWidth(name)
+	if padding < 1 {
+		padding = 1
+	}
+	return C.Faint(name) + strings.Repeat(" ", padding)
 }
 
-// telemetryCells builds the right-hand column. Ordered for reading (throughput,
-// counters, clock, activity) but shed by priority, so a short terminal loses
-// token counters before it loses what the agent is doing right now.
-func telemetryCells(model HudModel, width, limit int) []Chip {
-	var cells []telemetryCell
-	stats := model.Stats
-
-	if stats.Output != 0 {
-		value := CompactNumber(stats.Output)
-		room := width - DisplayWidth("out  "+value)
-		if room > sparkMax {
-			room = sparkMax
-		}
-		spark := Sparkline(model.Spark, room)
-		if spark != "" {
-			cells = append(cells, telemetryCell{chip: chip("out "+spark+" "+value,
-				C.Faint("out")+" "+C.Accent(spark)+" "+C.Text(value)), priority: 2})
-		} else {
-			cells = append(cells, telemetryCell{chip: chip("out "+value,
-				C.Faint("out")+" "+C.Text(value)), priority: 2})
-		}
+func joinChips(chips []Chip, gap string) string {
+	var painteds []string
+	for _, item := range chips {
+		painteds = append(painteds, item.Painted)
 	}
-
-	for _, line := range PackChips(counterChips(stats), width, "  ") {
-		cells = append(cells, telemetryCell{chip: line, priority: 3})
-	}
-
-	elapsed := FormatDuration(model.ElapsedMs)
-	cells = append(cells, telemetryCell{
-		chip: chip(clockGlyph+" "+elapsed, C.Faint(clockGlyph)+" "+C.OK(elapsed)), priority: 0,
-	})
-
-	phaseRoom := width - 2
-	if phaseRoom < 1 {
-		phaseRoom = 1
-	}
-	phase := Truncate(model.Phase, phaseRoom)
-	cells = append(cells, telemetryCell{
-		chip: chip(activeGlyph+" "+phase, C.VioletDim(activeGlyph)+" "+C.Violet(phase)), priority: 1,
-	})
-
-	if len(cells) <= limit {
-		out := make([]Chip, 0, len(cells))
-		for _, cell := range cells {
-			out = append(out, cell.chip)
-		}
-		return out
-	}
-	// Drop the least important cells while keeping the reading order intact.
-	type indexed struct {
-		cell  telemetryCell
-		index int
-	}
-	ranked := make([]indexed, 0, len(cells))
-	for index, cell := range cells {
-		ranked = append(ranked, indexed{cell, index})
-	}
-	sort.SliceStable(ranked, func(a, b int) bool {
-		if ranked[a].cell.priority != ranked[b].cell.priority {
-			return ranked[a].cell.priority > ranked[b].cell.priority
-		}
-		return ranked[a].index > ranked[b].index
-	})
-	doomed := map[int]bool{}
-	for _, entry := range ranked[:len(cells)-limit] {
-		doomed[entry.index] = true
-	}
-	var out []Chip
-	for index, cell := range cells {
-		if !doomed[index] {
-			out = append(out, cell.chip)
-		}
-	}
-	return out
+	return strings.Join(painteds, gap)
 }
 
 func counterChips(stats HudStats) []Chip {
@@ -662,32 +593,6 @@ func PackChips(chips []Chip, width int, gap string) []Chip {
 }
 
 // --- layout ------------------------------------------------------------------
-
-type frameLayout struct {
-	layout     string // columns | stacked | compact
-	leftWidth  int
-	rightWidth int
-}
-
-func chooseLayout(width int, hasPlanRows bool) frameLayout {
-	inner := BoxInner(width)
-	if width < NarrowColumns {
-		return frameLayout{"compact", inner, 0}
-	}
-	if !hasPlanRows {
-		return frameLayout{"stacked", inner, inner}
-	}
-	for _, right := range []int{rightMax, 28, 24, rightMin} {
-		left := inner - right - 3
-		if left >= leftMin {
-			if right > inner {
-				right = inner
-			}
-			return frameLayout{"columns", left, right}
-		}
-	}
-	return frameLayout{"compact", inner, 0}
-}
 
 // statusRow is row 1: routing on the left, progress and spend pushed right.
 func statusRow(model HudModel, inner int) string {
@@ -743,30 +648,6 @@ func queueRow(model HudModel, inner int) string {
 	return C.Faint(Truncate(StripAnsi(joined), inner))
 }
 
-// compactStatusRow is the narrow fallback: the whole right column on one line,
-// in the same order. The clock is laid down first and the phase label is sized
-// from what is left, so a long tool invocation cannot crowd out the elapsed
-// time — a runaway step is exactly when you most want to see it.
-func compactStatusRow(model HudModel, inner int) string {
-	elapsed := FormatDuration(model.ElapsedMs)
-	chips := []Chip{chip(clockGlyph+" "+elapsed, C.Faint(clockGlyph)+" "+C.OK(elapsed))}
-	room := inner - DisplayWidth(chips[0].Plain) - 4
-	if room >= 4 {
-		phase := Truncate(model.Phase, room)
-		chips = append(chips, chip(activeGlyph+" "+phase, C.VioletDim(activeGlyph)+" "+C.Violet(phase)))
-	}
-	if model.Stats.Output != 0 {
-		value := CompactNumber(model.Stats.Output)
-		chips = append(chips, chip("out "+value, C.Faint("out")+" "+C.Text(value)))
-	}
-	chips = append(chips, counterChips(model.Stats)...)
-	packed := PackChips(chips, inner, "  ")
-	if len(packed) == 0 {
-		return ""
-	}
-	return packed[0].Painted
-}
-
 func thinkingRows(model HudModel, inner, window, prefix int) []string {
 	if window <= 0 {
 		return nil
@@ -817,7 +698,7 @@ func telemetryLine(model HudModel, inner int) *Chip {
 	chips = append(chips, counterChips(stats)...)
 	elapsed := FormatDuration(model.ElapsedMs)
 	chips = append(chips, chip(clockGlyph+" "+elapsed, C.Faint(clockGlyph)+" "+C.OK(elapsed)))
-	limit := inner - DisplayWidth("TELE") - sectionGap
+	limit := inner - sectionRailWidth
 	if limit < 20 {
 		limit = 20
 	}
@@ -833,8 +714,10 @@ var spaceCollapseRE = mustCompile(`\s+`)
 type buildOptions struct {
 	thinkWindow    int
 	collapseAfter  int
-	telemetryLimit int
 	note           bool
+	showTele       bool
+	showPlanEmpty  bool
+	showPlanHeader bool
 }
 
 func build(model HudModel, width int, options buildOptions) []string {
@@ -843,13 +726,6 @@ func build(model HudModel, width int, options buildOptions) []string {
 	if model.Plan != nil {
 		steps = model.Plan.Steps
 	}
-	var rows []PlanRow
-	if len(steps) > 0 {
-		rows = PlanRows(steps, PlanRowOptions{
-			CollapseAfter: options.collapseAfter, Frame: model.Frame, Now: model.Now, Live: true,
-		})
-	}
-	layout := chooseLayout(width, len(rows) > 0)
 
 	var head []Chip
 	if model.Frame != "" {
@@ -862,52 +738,58 @@ func build(model HudModel, width int, options buildOptions) []string {
 		lines = append(lines, BoxRow(row, width))
 	}
 
-	if options.note && model.Plan != nil && model.Plan.Note != "" {
-		lines = append(lines, BoxRow(C.Faint(Truncate(model.Plan.Note, inner)), width))
+	// PLAN: header row (counts + progress bar) then the indented task list. The
+	// section is always drawn so the rail stays stable even before a plan.
+	if len(steps) > 0 {
+		if options.showPlanHeader {
+			done, total := plan.Counts(model.Plan)
+			chips := []Chip{
+				chip(fmt.Sprintf("%d/%d", done, total),
+					C.OK(fmt.Sprintf("%d", done))+C.Faint("/")+C.Text(fmt.Sprintf("%d", total))),
+			}
+			if progress, ok := ProgressChip(done, total, barCells); ok {
+				chips = append(chips, progress)
+			}
+			lines = append(lines, BoxRow(sectionLabel("PLAN")+joinChips(chips, "  "), width))
+		}
+		if options.note && model.Plan.Note != "" {
+			lines = append(lines, BoxRow(C.Faint(Truncate(model.Plan.Note, inner)), width))
+		}
+		rows := PlanRows(steps, PlanRowOptions{
+			CollapseAfter: options.collapseAfter, Frame: model.Frame, Now: model.Now, Live: true,
+		})
+		for _, row := range rows {
+			lines = append(lines, BoxRow("  "+PaintPlanRow(row, inner-2), width))
+		}
+	} else if options.showPlanEmpty {
+		lines = append(lines, BoxRow(sectionLabel("PLAN")+C.Faint("(no task list yet)"), width))
 	}
 
-	switch layout.layout {
-	case "columns":
-		cells := telemetryCells(model, layout.rightWidth, options.telemetryLimit)
-		height := len(rows)
-		if len(cells) > height {
-			height = len(cells)
+	// THINK: the label rides the first wrapped line; continuations align under
+	// the rail so the reasoning column lines up with every other section.
+	thinking := thinkingRows(model, inner, options.thinkWindow, sectionRailWidth)
+	if len(thinking) > 0 {
+		lines = append(lines, BoxRow(sectionLabel("THINK")+thinking[0], width))
+		for _, tail := range thinking[1:] {
+			lines = append(lines, BoxRow(strings.Repeat(" ", sectionRailWidth)+tail, width))
 		}
-		for index := 0; index < height; index++ {
-			left := strings.Repeat(" ", layout.leftWidth)
-			if index < len(rows) {
-				left = PaintPlanRow(rows[index], layout.leftWidth)
-			}
-			right := strings.Repeat(" ", layout.rightWidth)
-			if index < len(cells) {
-				right = PadEnd(cells[index].Painted, layout.rightWidth)
-			}
-			lines = append(lines, BoxRow(left+" "+C.Rule(boxV)+" "+right, width))
-		}
-	case "stacked":
-		for _, row := range rows {
-			lines = append(lines, BoxRow(PaintPlanRow(row, inner), width))
-		}
-		for _, cell := range telemetryCells(model, inner, options.telemetryLimit) {
-			lines = append(lines, BoxRow(cell.Painted, width))
-		}
-	default:
-		for _, row := range rows {
-			lines = append(lines, BoxRow(PaintPlanRow(row, inner), width))
-		}
-		lines = append(lines, BoxRow(compactStatusRow(model, inner), width))
 	}
 
-	for _, line := range thinkingRows(model, inner, options.thinkWindow, 0) {
-		lines = append(lines, BoxRow(line, width))
+	// TELE: one compact row of counters, last so the box closes on data.
+	if options.showTele {
+		if tele := telemetryLine(model, inner); tele != nil {
+			lines = append(lines, BoxRow(sectionLabel("TELE")+tele.Painted, width))
+		}
 	}
+
 	return append(lines, BoxBottom(width))
 }
 
 // RenderHud renders the HUD, shedding content until it fits MaxRows. The order
-// is reasoning tail, then the plan note, then the task list collapses, then
-// telemetry rows — transient narration goes before state you cannot recover by
-// scrolling. Returns at most MaxRows lines, each at most Width columns.
+// is the empty-plan placeholder, then the reasoning tail, then telemetry, then
+// the plan note, then the task list collapses — transient narration goes before
+// state you cannot recover by scrolling. Returns at most MaxRows lines, each at
+// most Width columns.
 func RenderHud(model HudModel) []string {
 	// The requested width is honoured exactly — capping is the caller's job, so
 	// an explicit width (an archived snapshot, a test) renders at that width.
@@ -934,7 +816,8 @@ func RenderHud(model HudModel) []string {
 		thinkWindow = expandedThinkWindow
 	}
 	options := buildOptions{
-		thinkWindow: thinkWindow, collapseAfter: defaultCollapse, telemetryLimit: 8, note: true,
+		thinkWindow: thinkWindow, collapseAfter: defaultCollapse, note: true,
+		showTele: true, showPlanEmpty: true, showPlanHeader: true,
 	}
 	switch model.PlanDisplay {
 	case PlanDisplayCollapsed:
@@ -961,9 +844,21 @@ func RenderHud(model HudModel) []string {
 			body = build(model, width, options)
 		}
 	}
-	shedTelemetry := func() {
-		for len(body) > maxRows && options.telemetryLimit > telemetryFloor {
-			options.telemetryLimit--
+	shedTele := func() {
+		if len(body) > maxRows && options.showTele {
+			options.showTele = false
+			body = build(model, width, options)
+		}
+	}
+	shedPlanEmpty := func() {
+		if len(body) > maxRows && options.showPlanEmpty {
+			options.showPlanEmpty = false
+			body = build(model, width, options)
+		}
+	}
+	shedPlanHeader := func() {
+		if len(body) > maxRows && options.showPlanHeader {
+			options.showPlanHeader = false
 			body = build(model, width, options)
 		}
 	}
@@ -972,13 +867,17 @@ func RenderHud(model HudModel) []string {
 		// scrolling before the narration the operator just opened up.
 		shedNote()
 		shedTasks()
-		shedTelemetry()
+		shedTele()
+		shedPlanEmpty()
+		shedPlanHeader()
 		shedThinking()
 	} else {
+		shedPlanEmpty()
+		shedPlanHeader()
 		shedThinking()
+		shedTele()
 		shedNote()
 		shedTasks()
-		shedTelemetry()
 	}
 	if len(body) > maxRows {
 		// A terminal too short even for the tightest box still keeps its head

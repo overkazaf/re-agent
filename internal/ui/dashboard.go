@@ -22,14 +22,9 @@ const (
 	// flowSectionRoom leaves room inside the box for the section label plus the
 	// box borders, so the flow strip never pushes a wrapped line into the box.
 	flowSectionRoom = 12
-	sectionGap      = 2
 	// toolCardRows caps the recent tool runs the TOOLS section shows.
 	toolCardRows = 2
 )
-
-func sectionLabel(name string) string {
-	return C.Faint(name) + strings.Repeat(" ", sectionGap)
-}
 
 // RenderDashboard renders one frame as a single box with labeled sections.
 // Wide, tall terminals get the full dashboard; anything else falls back to the
@@ -63,8 +58,10 @@ func RenderDashboard(flow *FlowState, model HudModel) []string {
 		shed(func() bool { return options.showTele }, func() { options.showTele = false })
 		shed(func() bool { return options.showToolCards }, func() { options.showToolCards = false })
 		shed(func() bool { return options.showFlow }, func() { options.showFlow = false })
+		shed(func() bool { return options.showPlanEmpty }, func() { options.showPlanEmpty = false })
 		shed(func() bool { return options.thinkWindow > 0 }, func() { options.thinkWindow-- })
 	} else {
+		shed(func() bool { return options.showPlanEmpty }, func() { options.showPlanEmpty = false })
 		shed(func() bool { return options.showFlow }, func() { options.showFlow = false })
 		shed(func() bool { return options.showToolCards }, func() { options.showToolCards = false })
 		shed(func() bool { return options.thinkWindow > 0 }, func() { options.thinkWindow-- })
@@ -88,6 +85,7 @@ type dashboardOptions struct {
 	showTele      bool
 	note          bool
 	collapseAfter int
+	showPlanEmpty bool
 }
 
 func dashboardOptionsFor(model HudModel) dashboardOptions {
@@ -115,6 +113,7 @@ func dashboardOptionsFor(model HudModel) dashboardOptions {
 		showTele:      true,
 		note:          true,
 		collapseAfter: collapseAfter,
+		showPlanEmpty: true,
 	}
 }
 
@@ -159,11 +158,8 @@ func dashboardBuild(flow *FlowState, model HudModel, width int, options dashboar
 		}
 		for _, run := range flow.ToolRuns[start:] {
 			lines = append(lines, BoxRow("  "+dashboardToolRunHeader(run, model, inner-2), width))
-			if run.ArgsText != "" {
-				lines = append(lines, BoxRow("  "+dashboardToolDetail("args", run.ArgsText, inner-2), width))
-			}
-			if run.Preview != "" {
-				lines = append(lines, BoxRow("  "+dashboardToolDetail("out", run.Preview, inner-2), width))
+			for _, detail := range dashboardToolDetails(run, inner) {
+				lines = append(lines, BoxRow(detail, width))
 			}
 		}
 	}
@@ -194,16 +190,17 @@ func dashboardBuild(flow *FlowState, model HudModel, width int, options dashboar
 		}
 	} else if options.note && model.Plan != nil && model.Plan.Note != "" {
 		lines = append(lines, BoxRow(C.Faint(Truncate(model.Plan.Note, inner)), width))
+	} else if options.showPlanEmpty {
+		lines = append(lines, BoxRow(sectionLabel("PLAN")+C.Faint("(no task list yet)"), width))
 	}
 
 	// THINK: the label rides the first wrapped line so the section costs no
 	// extra rows; continuation lines align under it.
-	thinkLabel := DisplayWidth("THINK") + sectionGap
-	thinking := thinkingRows(model, inner, options.thinkWindow, thinkLabel)
+	thinking := thinkingRows(model, inner, options.thinkWindow, sectionRailWidth)
 	if len(thinking) > 0 {
 		lines = append(lines, BoxRow(sectionLabel("THINK")+thinking[0], width))
 		for _, tail := range thinking[1:] {
-			lines = append(lines, BoxRow(strings.Repeat(" ", thinkLabel)+tail, width))
+			lines = append(lines, BoxRow(strings.Repeat(" ", sectionRailWidth)+tail, width))
 		}
 	}
 
@@ -215,14 +212,6 @@ func dashboardBuild(flow *FlowState, model HudModel, width int, options dashboar
 	}
 
 	return append(lines, BoxBottom(width))
-}
-
-func joinChips(chips []Chip, gap string) string {
-	var painteds []string
-	for _, item := range chips {
-		painteds = append(painteds, item.Painted)
-	}
-	return strings.Join(painteds, gap)
 }
 
 // dashboardToolRunHeader renders one tool run card header (glyph, name, time).
@@ -275,11 +264,32 @@ func dashboardToolDuration(run ToolRunSnapshot, now int64) string {
 	return ""
 }
 
-func dashboardToolDetail(label, value string, inner int) string {
-	text := label + ": " + value
-	room := inner - 2
-	if room < 1 {
-		return C.Faint(Truncate(text, inner))
+// dashboardToolDetails renders a tool card's detail lines as a small tree:
+// `├─ args: …` / `└─ out: …`, so repeated cards read as a hierarchy instead of
+// a flat list. Returns nil when the card has no details.
+func dashboardToolDetails(run ToolRunSnapshot, inner int) []string {
+	var details []string
+	if run.ArgsText != "" {
+		details = append(details, "args: "+run.ArgsText)
 	}
-	return C.Faint("  " + Truncate(text, room))
+	if run.Preview != "" {
+		details = append(details, "out: "+run.Preview)
+	}
+	if len(details) == 0 {
+		return nil
+	}
+	// 4-space indent + `├─`/`└─` marker + space leaves this much for the text.
+	room := inner - 9
+	if room < 4 {
+		room = 4
+	}
+	out := make([]string, 0, len(details))
+	for index, detail := range details {
+		marker := "├─"
+		if index == len(details)-1 {
+			marker = "└─"
+		}
+		out = append(out, "    "+C.Faint(marker)+" "+C.Muted(Truncate(detail, room)))
+	}
+	return out
 }

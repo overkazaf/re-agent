@@ -458,7 +458,7 @@ func FormatSessions(sessions []SessionRow, now time.Time) string {
 			C.Muted(Truncate(opened, 52)),
 		})
 	}
-	return table("SESSIONS", []string{"id", "age", "msgs", "opened with"}, rows) +
+	return table("SESSIONS", []string{"hash", "age", "msgs", "opened with"}, rows) +
 		C.Faint("  resume with") + " " + C.Accent("/resume <hash>") + " " +
 		C.Faint("or") + " " + C.Accent("--resume <hash>") + " " +
 		C.Faint("(timestamp id/prefix still works)") + "\n\n"
