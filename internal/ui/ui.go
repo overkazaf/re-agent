@@ -427,6 +427,7 @@ func FormatTools(tools []types.Tool) string {
 
 type SessionRow struct {
 	ID          string
+	Hash        string
 	UpdatedAt   time.Time
 	Messages    int
 	Workspace   string
@@ -446,16 +447,21 @@ func FormatSessions(sessions []SessionRow, now time.Time) string {
 		if opened == "" {
 			opened = "–"
 		}
+		id := session.Hash
+		if id == "" {
+			id = strings.TrimSuffix(session.ID, "-0xaf")
+		}
 		rows = append(rows, []string{
-			C.Text(strings.TrimSuffix(session.ID, "-0xaf")),
+			C.Text(id),
 			C.Faint(ago(now.Sub(session.UpdatedAt).Milliseconds())),
 			C.Violet(fmt.Sprintf("%d", session.Messages)),
 			C.Muted(Truncate(opened, 52)),
 		})
 	}
 	return table("SESSIONS", []string{"id", "age", "msgs", "opened with"}, rows) +
-		C.Faint("  resume with") + " " + C.Accent("/resume <id>") + " " +
-		C.Faint("or") + " " + C.Accent("--resume <id>") + "\n\n"
+		C.Faint("  resume with") + " " + C.Accent("/resume <hash>") + " " +
+		C.Faint("or") + " " + C.Accent("--resume <hash>") + " " +
+		C.Faint("(timestamp id/prefix still works)") + "\n\n"
 }
 
 func ago(ms int64) string {

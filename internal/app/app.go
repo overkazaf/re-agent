@@ -382,7 +382,7 @@ func sessionRows(sessions []core.Summary) []ui.SessionRow {
 	rows := make([]ui.SessionRow, 0, len(sessions))
 	for _, session := range sessions {
 		rows = append(rows, ui.SessionRow{
-			ID: session.ID, UpdatedAt: session.UpdatedAt, Messages: session.Messages,
+			ID: session.ID, Hash: session.Hash, UpdatedAt: session.UpdatedAt, Messages: session.Messages,
 			Workspace: session.Workspace, FirstPrompt: session.FirstPrompt,
 		})
 	}

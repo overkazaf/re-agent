@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const Version = "0.1.14"
+const Version = "0.1.15"
 
 // Commit can be set by release builds with:
 //

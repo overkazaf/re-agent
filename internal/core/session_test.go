@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -59,6 +60,15 @@ func TestSessionRoundTrip(t *testing.T) {
 	}
 	if ResolveSession(dir, summaries[0].ID[:8]) == nil {
 		t.Fatal("id prefix did not resolve")
+	}
+	if !regexp.MustCompile(`^[0-9a-f]{10}$`).MatchString(summaries[0].Hash) {
+		t.Fatalf("session hash should be 10 hex chars, got %q", summaries[0].Hash)
+	}
+	if ResolveSession(dir, summaries[0].Hash) == nil {
+		t.Fatal("hash did not resolve")
+	}
+	if ResolveSession(dir, summaries[0].Hash[:6]) == nil {
+		t.Fatal("hash prefix did not resolve")
 	}
 }
 

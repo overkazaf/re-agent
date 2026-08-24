@@ -39,7 +39,7 @@ var SlashCommandSections = []HelpSection{
 		{"/compact", "[provider]", "Fold the session into a summary and free context"},
 		{"/session", "", "Print the JSONL transcript path"},
 		{"/sessions", "", "List recent sessions"},
-		{"/resume", "[id]", "Load a previous session's history"},
+		{"/resume", "[hash|id]", "Load a previous session's history"},
 		{"/policy", "", "Show the active safety policy"},
 		{"/approval", "[mode|tool <n> allow|deny]", "Show or change tool approval (yolo/write/always-ask)"},
 		{"/exit", "", "Quit"},

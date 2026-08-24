@@ -3,6 +3,8 @@
 package core
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,7 +27,10 @@ type SessionEntry struct {
 // Summary is one row of the `--resume` / `/sessions` picker.
 type Summary struct {
 	// ID is a stable handle: the file name without `.jsonl`, also accepted as a prefix.
-	ID        string
+	ID string
+	// Hash is a short stable content hash, accepted by --resume / /resume as an
+	// alias: easier to read aloud than the timestamp ID.
+	Hash      string
 	File      string
 	StartedAt string
 	UpdatedAt time.Time
@@ -145,6 +150,17 @@ func ResolveSession(sessionDir, idOrPath string) *Summary {
 	}
 	for i := range sessions {
 		if strings.HasPrefix(sessions[i].ID, wanted) {
+			return &sessions[i]
+		}
+	}
+	// A short content hash is the operator-friendly alias: exact or prefix.
+	for i := range sessions {
+		if sessions[i].Hash == wanted {
+			return &sessions[i]
+		}
+	}
+	for i := range sessions {
+		if strings.HasPrefix(sessions[i].Hash, wanted) {
 			return &sessions[i]
 		}
 	}
@@ -282,7 +298,26 @@ func summarize(file string) (Summary, bool) {
 		summary.FirstPrompt = prompts[0]
 		summary.LastPrompt = prompts[len(prompts)-1]
 	}
+	// The hash is content-stable: the file name (creation stamp), workspace, and
+	// first prompt never change for a transcript, so the short hash is a
+	// reliable alias that survives restarts.
+	key := summary.ID
+	if workspace, ok := meta["workspace"].(string); ok && workspace != "" {
+		key += "|" + workspace
+	}
+	if len(prompts) > 0 {
+		key += "|" + prompts[0]
+	}
+	summary.Hash = shortHash(key)
 	return summary, true
+}
+
+// hashChars is the displayed length of a session hash alias.
+const hashChars = 10
+
+func shortHash(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])[:hashChars]
 }
 
 func readEntries(file string) ([]SessionEntry, error) {
