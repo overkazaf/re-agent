@@ -1,0 +1,44 @@
+internal/ui/ui.go
+  37aaf2a74230c902 461
+internal/ui/hud.go
+  37aaf2a74230c902 80-82,533,535-540,542,545-548,550,701,718-720,741-748,750-751,753,755-756,758-760,762,764-765,768-774,778-782,784,789-792,819-820,847-849,853-861,870-872,875-876,878
+internal/ui/dashboard.go
+  37aaf2a74230c902 61,64,88,116,161-162,193-194,199,203,267-292,294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "4d16a1afbdf49919ad789c437876ed47e595f90c",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 139,
+      "total_deletions": 230,
+      "accepted_lines": 129,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/ui/dashboard.go": {
+          "additions": 38,
+          "deletions": 28,
+          "accepted_lines": 38
+        },
+        "internal/ui/ui.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/ui/hud.go": {
+          "additions": 100,
+          "deletions": 201,
+          "accepted_lines": 90
+        }
+      }
+    }
+  }
+}
