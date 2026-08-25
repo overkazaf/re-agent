@@ -1,0 +1,72 @@
+internal/app/app.go
+  37aaf2a74230c902 53-55,280
+internal/app/commands.go
+  37aaf2a74230c902 195-196,382-387,635-667
+internal/app/args.go
+  37aaf2a74230c902 61-62,218-230
+internal/app/args_test.go
+  37aaf2a74230c902 81-101
+internal/app/commands_test.go
+  37aaf2a74230c902 8-9,22-52
+internal/app/repl.go
+  37aaf2a74230c902 230
+internal/ui/help.go
+  37aaf2a74230c902 33
+internal/ui/live.go
+  37aaf2a74230c902 61-64,78,134,149-151,167-169,356-358
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "b6a5cd004413a0ac5b517840329b67541cc498bd",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 139,
+      "total_deletions": 7,
+      "accepted_lines": 134,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/app/args.go": {
+          "additions": 16,
+          "accepted_lines": 16
+        },
+        "internal/app/commands.go": {
+          "additions": 41,
+          "accepted_lines": 41
+        },
+        "internal/ui/help.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/ui/live.go": {
+          "additions": 20,
+          "deletions": 7,
+          "accepted_lines": 15
+        },
+        "internal/app/repl.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/app/args_test.go": {
+          "additions": 21,
+          "accepted_lines": 21
+        },
+        "internal/app/app.go": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "internal/app/commands_test.go": {
+          "additions": 35,
+          "accepted_lines": 35
+        }
+      }
+    }
+  }
+}
