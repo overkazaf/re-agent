@@ -65,23 +65,26 @@ type LivePane struct {
 	interactive bool
 	start       time.Time
 
-	mu         sync.Mutex
-	stats      types.TokenUsage
-	route      *HudRoute
-	flow       *FlowModel
-	onFrame    func()
-	phase      string
-	thinking   string
-	thinkChars int
-	thinkMode  ThinkDisplayMode
-	plan       *types.PlanSnapshot
-	planMode   PlanDisplayMode
-	queueDraft string
-	queueCount int
-	drawn      int
-	tick       int
-	stopped    bool
-	paused     bool
+	mu              sync.Mutex
+	stats           types.TokenUsage
+	route           *HudRoute
+	flow            *FlowModel
+	onFrame         func()
+	phase           string
+	thinking        string
+	thinkChars      int
+	thinkMode       ThinkDisplayMode
+	plan            *types.PlanSnapshot
+	planMode        PlanDisplayMode
+	remoteHost      string
+	remoteConnected bool
+	remotePeers     int
+	queueDraft      string
+	queueCount      int
+	drawn           int
+	tick            int
+	stopped         bool
+	paused          bool
 
 	spark         []float64
 	sawStats      bool
@@ -203,6 +206,18 @@ func (p *LivePane) PushThinking(delta string) {
 func (p *LivePane) SetPlan(snapshot *types.PlanSnapshot) {
 	p.mu.Lock()
 	p.plan = snapshot
+	p.mu.Unlock()
+	p.render()
+}
+
+// SetRemote updates the SSH status shown in the dashboard status row: the
+// selected host, whether its background connection is established, and how many
+// hosts are connected in total.
+func (p *LivePane) SetRemote(host string, connected bool, peers int) {
+	p.mu.Lock()
+	p.remoteHost = host
+	p.remoteConnected = connected
+	p.remotePeers = peers
 	p.mu.Unlock()
 	p.render()
 }
@@ -478,22 +493,25 @@ func (p *LivePane) bodyLocked() []string {
 		flowState = &snapshot
 	}
 	return ComposePane(now, width, heightBudget(), flowState, HudModel{
-		Label:          p.label,
-		Phase:          p.phase,
-		Frame:          spinFrames[p.tick%len(spinFrames)],
-		ElapsedMs:      time.Since(p.start).Milliseconds(),
-		Now:            now,
-		Width:          width,
-		Stats:          p.stats,
-		Spark:          p.spark,
-		Route:          p.route,
-		Plan:           p.plan,
-		PlanDisplay:    p.planMode,
-		QueueDraft:     p.queueDraft,
-		QueueCount:     p.queueCount,
-		Thinking:       p.thinking,
-		ThinkingWindow: thinkWindow,
-		ThinkDisplay:   p.thinkMode,
+		Label:           p.label,
+		Phase:           p.phase,
+		Frame:           spinFrames[p.tick%len(spinFrames)],
+		ElapsedMs:       time.Since(p.start).Milliseconds(),
+		Now:             now,
+		Width:           width,
+		Stats:           p.stats,
+		Spark:           p.spark,
+		Route:           p.route,
+		Plan:            p.plan,
+		PlanDisplay:     p.planMode,
+		RemoteHost:      p.remoteHost,
+		RemoteConnected: p.remoteConnected,
+		RemotePeers:     p.remotePeers,
+		QueueDraft:      p.queueDraft,
+		QueueCount:      p.queueCount,
+		Thinking:        p.thinking,
+		ThinkingWindow:  thinkWindow,
+		ThinkDisplay:    p.thinkMode,
 	})
 }
 

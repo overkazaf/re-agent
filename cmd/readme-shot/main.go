@@ -19,6 +19,7 @@ func main() {
 	frame := flag.Int("frame", 0, "animation frame index (drives spinner + elapsed)")
 	width := flag.Int("width", 100, "terminal width")
 	mode := flag.String("mode", "dashboard", "dashboard | remote")
+	remote := flag.Bool("remote", false, "show the SSH status indicator in the dashboard")
 	flag.Parse()
 
 	if *mode == "remote" {
@@ -27,6 +28,11 @@ func main() {
 	}
 	state := dashboardState(*frame)
 	hud := dashboardHud(*frame, *width)
+	if *remote {
+		hud.RemoteHost = "lab"
+		hud.RemoteConnected = true
+		hud.RemotePeers = 1
+	}
 	for _, line := range ui.RenderDashboard(state, hud) {
 		fmt.Println(line)
 	}

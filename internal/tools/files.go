@@ -172,9 +172,11 @@ func runCommandTool() types.Tool {
 		Parameters: objectSchema(map[string]any{
 			"command":   map[string]any{"type": "string", "description": "Shell command to run in the workspace."},
 			"timeoutMs": map[string]any{"type": "number", "default": 30000},
+			"pty":       map[string]any{"type": "boolean", "default": true, "description": "Remote mode only: allocate a remote PTY (ssh -tt)."},
 		}, "command"),
 		Execute: func(args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
 			command := util.AsString(args["command"])
+			pty := util.AsBool(args["pty"], true)
 			target := tc.RemoteHost
 			label := "run_command"
 			if tc.Remote != nil && target != "" {
@@ -199,7 +201,12 @@ func runCommandTool() types.Tool {
 			if tc.Remote != nil && target != "" {
 				ctx, cancel := context.WithTimeout(tc.Context(), time.Duration(timeoutMs)*time.Millisecond)
 				defer cancel()
-				out, err := tc.Remote.Run(ctx, target, command)
+				var out string
+				if pty {
+					out, err = tc.Remote.RunPty(ctx, target, command, 100, 30)
+				} else {
+					out, err = tc.Remote.Run(ctx, target, command)
+				}
 				if err != nil {
 					return types.ToolResult{}, err
 				}

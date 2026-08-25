@@ -30,10 +30,12 @@ func remoteExecTool() types.Tool {
 			"host":      map[string]any{"type": "string", "description": "Saved host name; defaults to the current remote host."},
 			"command":   map[string]any{"type": "string", "description": "Shell command to run on the remote host."},
 			"timeoutMs": map[string]any{"type": "number", "default": 30000},
+			"pty":       map[string]any{"type": "boolean", "default": true, "description": "Allocate a remote PTY (ssh -tt). True by default; set false for clean non-interactive output."},
 		}, "command"),
 		Execute: func(args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
 			host := util.AsString(args["host"])
 			command := util.AsString(args["command"])
+			pty := util.AsBool(args["pty"], true)
 			if tc.Remote == nil {
 				return types.ToolResult{}, fmt.Errorf("remote mode unavailable: no SSH manager in this context")
 			}
@@ -63,7 +65,12 @@ func remoteExecTool() types.Tool {
 			}
 			ctx, cancel := context.WithTimeout(tc.Context(), time.Duration(timeoutMs)*time.Millisecond)
 			defer cancel()
-			out, err := tc.Remote.Run(ctx, target, command)
+			var out string
+			if pty {
+				out, err = tc.Remote.RunPty(ctx, target, command, 100, 30)
+			} else {
+				out, err = tc.Remote.Run(ctx, target, command)
+			}
 			if err != nil {
 				return types.ToolResult{}, err
 			}

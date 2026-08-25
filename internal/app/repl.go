@@ -228,11 +228,25 @@ func runTurn(state *State, line string) bool {
 		PlanDisplay:  state.PlanDisplay,
 		ThinkDisplay: state.ThinkDisplay,
 	}
+	var pane *ui.LivePane
+	refreshRemote := func() {
+		if pane == nil || state.Remote == nil {
+			return
+		}
+		host := state.ToolContext.RemoteHost
+		pane.SetRemote(host, host != "" && state.Remote.Connected(host), len(state.Remote.Peers()))
+	}
 	if viz == "full" || viz == "flow" {
 		paneOptions.Flow = flow
-		paneOptions.OnFrame = flow.Tick
 	}
-	pane := ui.NewLivePane(routeLabel(state), paneOptions)
+	paneOptions.OnFrame = func() {
+		if paneOptions.Flow != nil {
+			flow.Tick()
+		}
+		refreshRemote()
+	}
+	pane = ui.NewLivePane(routeLabel(state), paneOptions)
+	refreshRemote()
 
 	started := types.NowMs()
 	traceOn := viz == "full" || viz == "trace"
@@ -825,7 +839,7 @@ func runShellEscape(state *State, line string) error {
 	if state.ToolContext.Remote != nil && state.ToolContext.RemoteHost != "" {
 		host := state.ToolContext.RemoteHost
 		fmt.Println(ui.RenderShellCommand("ssh " + host + " " + command))
-		out, err := state.ToolContext.Remote.Run(ctx, host, command)
+		out, err := state.ToolContext.Remote.RunPty(ctx, host, command, 100, 30)
 		if err != nil {
 			return err
 		}

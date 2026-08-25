@@ -13,6 +13,7 @@ type fakeRemote struct {
 	output  string
 	err     error
 	ran     []string
+	ptys    []string
 	current string
 }
 
@@ -21,7 +22,14 @@ func (f *fakeRemote) Run(ctx context.Context, name, command string) (string, err
 	return f.output, f.err
 }
 
+func (f *fakeRemote) RunPty(ctx context.Context, name, command string, cols, rows int) (string, error) {
+	f.ptys = append(f.ptys, name+":"+command)
+	return f.output, f.err
+}
+
 func (f *fakeRemote) Current() string { return f.current }
+
+func (f *fakeRemote) Connected(name string) bool { return f.current == name }
 
 func policyForTools() *types.ExecutionPolicy {
 	return &types.ExecutionPolicy{
@@ -44,8 +52,8 @@ func TestRemoteExecRunsOnCurrentHost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(fake.ran) != 1 || fake.ran[0] != "lab:uname -a" {
-		t.Fatalf("unexpected remote call: %+v", fake.ran)
+	if len(fake.ptys) != 1 || fake.ptys[0] != "lab:uname -a" {
+		t.Fatalf("unexpected remote call: %+v", fake.ptys)
 	}
 	if !strings.Contains(types.TextFromBlocks(result.Content), "uname -a") {
 		t.Fatalf("output missing: %q", types.TextFromBlocks(result.Content))
@@ -89,10 +97,30 @@ func TestRunCommandRedirectsToRemoteHost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(fake.ran) != 1 || fake.ran[0] != "lab:echo remote" {
-		t.Fatalf("run_command did not redirect: %+v", fake.ran)
-	}
 	if !strings.Contains(types.TextFromBlocks(result.Content), "remote ok") {
 		t.Fatalf("remote output missing: %q", types.TextFromBlocks(result.Content))
+	}
+	// Default remote execution allocates a PTY (ssh -tt semantics).
+	if len(fake.ptys) != 1 || fake.ptys[0] != "lab:echo remote" {
+		t.Fatalf("run_command should use a PTY by default: %+v", fake.ptys)
+	}
+}
+
+func TestRemoteExecCanDisablePty(t *testing.T) {
+	fake := &fakeRemote{output: "ok", current: "lab"}
+	tc := types.ToolContext{
+		Policy:     policyForTools(),
+		Remote:     fake,
+		RemoteHost: "lab",
+		Confirm: func(types.ApprovalRequest) types.ApprovalDecision {
+			return types.DecisionAllow
+		},
+	}
+	tool := remoteExecTool()
+	if _, err := tool.Execute(map[string]any{"command": "ls", "pty": false}, tc); err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.ptys) != 0 || len(fake.ran) != 1 {
+		t.Fatalf("pty=false should use the plain runner: pty=%+v run=%+v", fake.ptys, fake.ran)
 	}
 }

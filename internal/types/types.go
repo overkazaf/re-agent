@@ -320,7 +320,12 @@ type ExecutionPolicy struct {
 // internal/remote.Manager; kept as an interface so types stays dependency-free.
 type RemoteRunner interface {
 	Run(ctx context.Context, name, command string) (string, error)
+	// RunPty executes with an allocated remote PTY (`ssh -tt` semantics), for
+	// interactive tools and commands that need a terminal.
+	RunPty(ctx context.Context, name, command string, cols, rows int) (string, error)
 	Current() string
+	// Connected reports whether name has an established background connection.
+	Connected(name string) bool
 }
 
 // ToolContext carries everything a tool needs beyond its arguments.

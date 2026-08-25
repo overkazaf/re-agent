@@ -139,6 +139,12 @@ type HudModel struct {
 	// turn. Expanding also moves the tail to the back of the shed order below,
 	// since content you asked for should not be the first thing dropped.
 	ThinkDisplay ThinkDisplayMode
+	// RemoteHost is the selected SSH host in remote mode ("" = local).
+	RemoteHost string
+	// RemoteConnected marks an established background SSH connection.
+	RemoteConnected bool
+	// RemotePeers is how many hosts currently have an established connection.
+	RemotePeers int
 	// MaxRows is a hard ceiling on returned lines. The HUD sheds content for it.
 	MaxRows int
 }
@@ -604,6 +610,28 @@ func statusRow(model HudModel, inner int) string {
 	}
 	if cost, ok := costChip(model.Stats.CostUsd); ok {
 		tail = append(tail, cost)
+	}
+	// Remote mode indicator: `ssh lab ●` (connected) or `ssh lab ○` (selected,
+	// not yet connected), plus a count of other established sessions.
+	if model.RemoteHost != "" || model.RemotePeers > 0 {
+		host := model.RemoteHost
+		if host == "" {
+			host = "remote"
+		}
+		connected := model.RemoteHost != "" && model.RemoteConnected
+		dot := "○"
+		dotPaint := C.Faint(dot)
+		if connected {
+			dot = "●"
+			dotPaint = C.OK(dot)
+		}
+		suffix := ""
+		if model.RemotePeers > 1 && model.RemoteHost != "" {
+			suffix = fmt.Sprintf(" +%d", model.RemotePeers-1)
+		}
+		plain := "ssh " + host + " " + dot + suffix
+		painted := C.Faint("ssh") + " " + C.Text(host) + " " + dotPaint + suffix
+		tail = append(tail, chip(plain, painted))
 	}
 	for len(tail) > 0 {
 		var plains, painteds []string

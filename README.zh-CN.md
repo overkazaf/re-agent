@@ -439,20 +439,69 @@ provider（Anthropic、OpenAI Responses、OpenAI 兼容 chat）会直接读图�
   <img src="docs/shots/remote.png" alt="/remote 主机列表" width="420">
 </p>
 
+### 快速上手
+
 ```text
-/remote add lab dev@10.0.0.5                     # 密码提示，不回显
-/remote add srv root@srv.local --key ~/.ssh/id_ed25519
-/remote list                                     # 已保存主机 + 当前主机
-/remote use lab   |  /remote off                 # 切换执行目标
-0xaf --remote lab -p "inventory /opt"            # 启动即进入远程模式
+# 1) 保存一台机器（密码提示不回显）
+/remote add lab dev@10.0.0.5
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519   # 或用私钥
+/remote add box root@10.0.0.9 --insecure                 # 实验室机器，跳过 known_hosts 校验
+
+# 2) 查看并选择目标
+/remote list
+/remote use lab
+
+# 3) 之后所有执行都在这台机器上（同一窗口）
+!uname -a                       # shell escape -> ssh lab
+0xaf --remote lab -p "inventory /opt"                    # 或启动即进入远程模式
+
+# 4) 让模型自己驱动
+# （REPL 里直接提问即可：run_command 会自动转发，或让它用 remote_exec）
 ```
 
-- **本地加密存储：** 主机配置（含密码）放在 `~/.0xaf-re-agent/remote.json`，
+模型也可以无视当前主机、指定任意已保存主机：
+
+```text
+remote_exec(host="srv", command="systemctl status myapp")
+remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
+```
+
+### 工作原理
+
+- **后台保活连接。** 每台已保存主机一条持久 `ssh.Client`。`--remote` 或 `/remote use` 会立即建连，
+  `/remote connect <name>` 按需建连，首次执行命令也会懒连接。每条连接每 30s 发一次 keepalive，
+  全部命令复用同一条连接，退出时统一关闭。仪表盘状态行会显示已建连会话：
+  `ssh lab ●`（已连接）或 `ssh lab ○`（已选择未连接），多台连接时显示 `+N`。
+- **本地加密存储。** 主机配置（含密码）放在 `~/.0xaf-re-agent/remote.json`，
   AES-256-GCM 加密，密钥绑定机器（macOS IOPlatformUUID / `/etc/machine-id` + 用户目录 + 随机盐，
-  权限 0600）。把文件拷到别的机器也解不开；`OXAF_REMOTE_KEY` 可覆盖密钥用于便携场景。
-- **认证：** 优先 ssh-agent，其次配置的私钥路径，最后密码。
+  权限 0600）。把文件拷到别的机器也解不开；`OXAF_REMOTE_KEY`（32 字节 base64）可覆盖密钥用于便携场景。
+- **`ssh -tt` 语义。** 远程命令（`remote_exec`、远程 `run_command`、`!shell`）默认分配远端 PTY，
+  交互式工具、`sudo` 提示等需要终端的场景都能用；工具调用里设 `pty: false` 可拿干净的非交互输出。
+- **认证顺序：** ssh-agent → 配置的私钥路径 → 密码。
 - **信任：** 默认严格校验 `~/.ssh/known_hosts`；`/remote add --insecure` 仅对实验室机器显式开启。
 - **审批：** 远程命令一律 exec 级，y/a/d/n 提示显示 `ssh <host> <command>`。
+
+### 命令
+
+| 命令 | 作用 |
+| --- | --- |
+| `/remote` / `/remote list` | 列出已保存主机，标记当前主机 |
+| `/remote add <name> <user>@<host>[:port] [--key <path>] [--insecure]` | 保存主机（无 key 时提示输密码） |
+| `/remote rm <name>` | 删除主机 |
+| `/remote use <name>` / `/remote off` | 切换执行目标（use 会立即建连） |
+| `/remote connect <name>` | 现在就建立后台会话 |
+| `0xaf --remote <name> …` | 启动即进入远程模式 |
+| `remote_exec(host?, command)` | 模型可用的工具，指定任意已保存主机 |
+
+### 排错
+
+- **`strict host-key verification needs ~/.ssh/known_hosts`** —— 用
+  `ssh-keyscan <host> >> ~/.ssh/known_hosts` 加入主机公钥，或实验室机器用 `--insecure` 保存。
+- **`no auth method`** —— 启动 ssh-agent（`ssh-add ~/.ssh/id_ed25519`）、传 `--key`，
+  或重新添加主机并输入密码。
+- **换机器解不开** —— `remote.json` 绑定本机；换机器后重新添加主机，或设置相同的 `OXAF_REMOTE_KEY`。
+- **有真实协议测试** —— 测试内用 x/crypto/ssh 起一个进程内 SSH server，实测密码认证、命令执行、
+  输出回读与错误密码拒绝（`internal/remote/ssh_integration_test.go`）。
 
 下一步：远程文件工具（`list_files` / `read_file` 走 SSH）、SCP 拉取、一个计划多主机分发。
 

@@ -391,7 +391,7 @@ func handleRemoteCommand(arg string, state *State) error {
 		return fmt.Errorf("remote host not found: %s", fields[1])
 	case "use":
 		if len(fields) != 2 {
-			return fmt.Errorf("usage: /remote use <name> | off")
+			return fmt.Errorf("usage: /remote use <name> | off | connect [name]")
 		}
 		if fields[1] == "off" {
 			state.ToolContext.RemoteHost = ""
@@ -406,10 +406,36 @@ func handleRemoteCommand(arg string, state *State) error {
 		state.ToolContext.RemoteHost = fields[1]
 		state.RemoteStore.SetCurrent(fields[1])
 		_ = state.RemoteStore.Save()
-		fmt.Println(ui.RenderNotice("remote mode → " + fields[1] + " (run_command and !shell execute there)"))
+		// Establish the background session immediately so the status bar can
+		// show ●; a failure is reported but does not block the switch.
+		connected := ""
+		if err := state.Remote.Connect(context.Background(), fields[1]); err != nil {
+			connected = " · " + err.Error()
+		}
+		fmt.Println(ui.RenderNotice("remote mode → " + fields[1] + " (run_command and !shell execute there)" + connected))
+		return nil
+	case "connect":
+		name := ""
+		if len(fields) > 1 {
+			name = fields[1]
+		}
+		if name == "" {
+			name = state.ToolContext.RemoteHost
+		}
+		if name == "" {
+			return fmt.Errorf("usage: /remote connect <name>")
+		}
+		fmt.Println(ui.RenderNotice("connecting to " + name + " …"))
+		if err := state.Remote.Connect(context.Background(), name); err != nil {
+			return err
+		}
+		state.ToolContext.RemoteHost = name
+		state.RemoteStore.SetCurrent(name)
+		_ = state.RemoteStore.Save()
+		fmt.Println(ui.RenderNotice("ssh " + name + " connected ● (background session kept alive)"))
 		return nil
 	default:
-		return fmt.Errorf("usage: /remote [list|add <name> <user@host[:port]> [--key <path>] [--insecure]|rm <name>|use <name>|off]")
+		return fmt.Errorf("usage: /remote [list|add <name> <user@host[:port]> [--key <path>] [--insecure]|rm <name>|use <name>|connect [name]|off]")
 	}
 }
 
@@ -427,6 +453,9 @@ func listRemoteHosts(state *State) error {
 			mark = ui.C.Accent("●")
 		} else {
 			mark = ui.C.Faint("○")
+		}
+		if state.Remote.Connected(host.Name) {
+			mark = ui.C.OK("●")
 		}
 		auth := "password"
 		if host.KeyPath != "" {

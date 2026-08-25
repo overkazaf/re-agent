@@ -275,6 +275,16 @@ func Run(argv []string) error {
 		SessionMeta: sessionMeta,
 		Remote:      remoteManager, RemoteStore: remoteStore,
 	}
+	// Start the background SSH session for --remote straight away so the status
+	// bar shows the established connection; a failure is non-fatal and the
+	// connection is retried on first use.
+	if args.Remote != "" && !args.Print && args.Prompt == "" {
+		go func() {
+			if err := state.Remote.Connect(context.Background(), args.Remote); err != nil {
+				fmt.Println(ui.RenderNotice(fmt.Sprintf("remote %s: %s (will retry on first use)", args.Remote, err)))
+			}
+		}()
+	}
 
 	if args.Smoke {
 		result, err := loop.Run("smoke test: identify yourself and list capabilities",

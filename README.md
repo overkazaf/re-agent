@@ -491,24 +491,81 @@ host named in the prompt.
   <img src="docs/shots/remote.png" alt="/remote host list" width="420">
 </p>
 
+### Quick start
+
 ```text
-/remote add lab dev@10.0.0.5                     # password prompt, never echoed
-/remote add srv root@srv.local --key ~/.ssh/id_ed25519
-/remote list                                     # saved hosts + current
-/remote use lab   |  /remote off                 # switch the execution target
-0xaf --remote lab -p "inventory /opt"            # start straight into remote mode
+# 1) save a machine (password prompt is never echoed)
+/remote add lab dev@10.0.0.5
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519   # or key auth
+/remote add box root@10.0.0.9 --insecure                 # lab box, skip known_hosts check
+
+# 2) see what you have and pick the target
+/remote list
+/remote use lab
+
+# 3) everything now runs on lab from the same window
+!uname -a                       # shell escape -> ssh lab
+0xaf --remote lab -p "inventory /opt"                    # or start straight into remote mode
+
+# 4) let the model drive it
+# (in the REPL, just prompt; run_command auto-redirects, or ask for remote_exec)
 ```
 
-- **Encrypted at rest:** hosts (including passwords) live in
+The model can also target a specific host regardless of the current one:
+
+```text
+remote_exec(host="srv", command="systemctl status myapp")
+remote_exec(command="ls /opt")       # host omitted -> current remote host
+```
+
+### How it works
+
+- **Background connections that stay alive.** Each saved host gets one persistent
+  `ssh.Client`. `--remote` or `/remote use` connects immediately, `/remote
+  connect <name>` connects on demand, and a first command dials lazily. Every
+  connection is kept alive with a 30s keepalive and reused for all commands;
+  all connections close when 0xAF-Re exits. The dashboard status row shows the
+  established sessions: `ssh lab ●` (connected) or `ssh lab ○` (selected, not
+  yet connected), plus `+N` when more hosts are connected.
+- **Encrypted at rest.** Hosts (including passwords) live in
   `~/.0xaf-re-agent/remote.json`, AES-256-GCM encrypted with a machine-bound key
   (macOS IOPlatformUUID / `/etc/machine-id` + home + random salt, `0600` perms).
   Copying the file to another machine does not reveal credentials;
-  `OXAF_REMOTE_KEY` overrides the key for portable setups.
-- **Auth:** ssh-agent first, then the configured key path, then password.
+  `OXAF_REMOTE_KEY` (base64 of 32 bytes) overrides the key for portable setups.
+- **`ssh -tt` semantics.** Remote commands (`remote_exec`, remote `run_command`,
+  `!shell`) allocate a remote PTY by default, so interactive tools, `sudo`
+  prompts, and anything that needs a terminal work. Set `pty: false` on a tool
+  call for clean non-interactive output.
+- **Auth order:** ssh-agent → configured private key path → password.
 - **Trust:** strict `~/.ssh/known_hosts` by default; `/remote add --insecure` is
   an explicit opt-in for lab boxes.
 - **Approvals:** every remote command is exec-tier; the y/a/d/n prompt shows
   `ssh <host> <command>`.
+
+### Commands
+
+| Command | What it does |
+| --- | --- |
+| `/remote` / `/remote list` | list saved hosts, mark the current one |
+| `/remote add <name> <user>@<host>[:port] [--key <path>] [--insecure]` | save a host (password prompt if no key) |
+| `/remote rm <name>` | forget a host |
+| `/remote use <name>` / `/remote off` | switch the execution target (use connects immediately) |
+| `/remote connect <name>` | establish the background session now |
+| `0xaf --remote <name> …` | start the session already in remote mode |
+| `remote_exec(host?, command)` | model-facing tool for any saved host |
+
+### Troubleshooting
+
+- **`strict host-key verification needs ~/.ssh/known_hosts`** — add the host key
+  with `ssh-keyscan <host> >> ~/.ssh/known_hosts`, or save the host with
+  `--insecure` for lab boxes.
+- **`no auth method`** — start `ssh-agent` (`ssh-add ~/.ssh/id_ed25519`), pass
+  `--key`, or re-add the host and enter a password.
+- **Wrong-machine ciphertext** — `remote.json` is machine-bound; on a new
+  machine re-add hosts or set `OXAF_REMOTE_KEY` to the same key.
+- **Verified by tests** — an in-process SSH server (x/crypto/ssh) exercises the
+  real wire protocol: password auth, command execution, output, and rejection of
+  bad credentials (`internal/remote/ssh_integration_test.go`).
 
 Coming next: per-host file tools (`list_files` / `read_file` over SSH), SCP
 pulls, and multi-host fan-out of one plan.
