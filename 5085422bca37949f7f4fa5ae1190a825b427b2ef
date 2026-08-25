@@ -1,0 +1,29 @@
+README.zh-CN.md
+  37aaf2a74230c902 232-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "5085422bca37949f7f4fa5ae1190a825b427b2ef",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "README.zh-CN.md": {
+          "additions": 9,
+          "accepted_lines": 9
+        }
+      }
+    }
+  }
+}
