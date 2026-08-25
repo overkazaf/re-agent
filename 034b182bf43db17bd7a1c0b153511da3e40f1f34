@@ -1,0 +1,105 @@
+internal/app/repl.go
+  37aaf2a74230c902 824-843
+internal/ui/help.go
+  37aaf2a74230c902 81
+internal/tools/remote_test.go
+  37aaf2a74230c902 1-98
+internal/app/app.go
+  37aaf2a74230c902 20,51-52,172,212-231,276
+internal/app/args_test.go
+  37aaf2a74230c902 68-80
+internal/app/args.go
+  37aaf2a74230c902 42-44,124-126
+internal/types/types.go
+  37aaf2a74230c902 319-325,336-340
+internal/remote/remote_test.go
+  37aaf2a74230c902 1-10,12-57,59-76,78-90
+internal/tools/files.go
+  37aaf2a74230c902 4,14,170,178-182,191,199-209
+internal/tools/remote.go
+  37aaf2a74230c902 1-76
+internal/app/commands.go
+  37aaf2a74230c902 7,20,27,114-115,363-533
+internal/remote/ssh.go
+  37aaf2a74230c902 1-219
+internal/remote/remote.go
+  37aaf2a74230c902 1-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "034b182bf43db17bd7a1c0b153511da3e40f1f34",
+  "prompts": {
+    "37aaf2a74230c902": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018ad-1136-7352-8de0-72228c784507",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1057,
+      "total_deletions": 7,
+      "accepted_lines": 1053,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/remote/remote.go": {
+          "additions": 297,
+          "accepted_lines": 297
+        },
+        "internal/app/app.go": {
+          "additions": 25,
+          "deletions": 1,
+          "accepted_lines": 25
+        },
+        "internal/app/args.go": {
+          "additions": 6,
+          "accepted_lines": 6
+        },
+        "internal/app/args_test.go": {
+          "additions": 13,
+          "accepted_lines": 13
+        },
+        "internal/tools/remote.go": {
+          "additions": 76,
+          "accepted_lines": 76
+        },
+        "internal/ui/help.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/remote/ssh.go": {
+          "additions": 220,
+          "deletions": 1,
+          "accepted_lines": 219
+        },
+        "internal/tools/remote_test.go": {
+          "additions": 101,
+          "deletions": 3,
+          "accepted_lines": 98
+        },
+        "internal/remote/remote_test.go": {
+          "additions": 87,
+          "accepted_lines": 87
+        },
+        "internal/types/types.go": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "internal/app/repl.go": {
+          "additions": 20,
+          "accepted_lines": 20
+        },
+        "internal/app/commands.go": {
+          "additions": 178,
+          "accepted_lines": 178
+        },
+        "internal/tools/files.go": {
+          "additions": 21,
+          "deletions": 2,
+          "accepted_lines": 21
+        }
+      }
+    }
+  }
+}
