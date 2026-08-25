@@ -229,6 +229,15 @@ go version          # 需要 go1.21+
 /help
 ```
 
+实时仪表盘每 90ms 重绘一次，会让终端滚动缓冲里堆满帧；觉得吵时可以：
+
+```bash
+0xaf --refresh calm            # 500ms 动画，滚动缓冲更安静
+0xaf --refresh off             # 只在状态变化时重绘
+0xaf --flow off                # 完全不要仪表盘（trace 仍在）
+# REPL 里等价命令：/refresh calm | /refresh off | /flow off
+```
+
 默认路由会优先复用本地 CLI 登录。检查当前可用状态：
 
 ```bash

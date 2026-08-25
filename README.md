@@ -260,6 +260,16 @@ Inside the REPL:
 /help
 ```
 
+The live dashboard redraws every 90ms, which fills the terminal scrollback with
+frames. When that gets noisy:
+
+```bash
+0xaf --refresh calm            # 500ms animation, quieter scrollback
+0xaf --refresh off             # redraw only on changes
+0xaf --flow off                # no dashboard at all (trace stays)
+# or, inside the REPL: /refresh calm | /refresh off | /flow off
+```
+
 The default route uses local CLIs when available. Check what 0xAF-Re can see:
 
 ```bash
