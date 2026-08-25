@@ -17,6 +17,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/mcp"
 	"github.com/overkazaf/re-agent/internal/providers"
+	"github.com/overkazaf/re-agent/internal/remote"
 	"github.com/overkazaf/re-agent/internal/skills"
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
@@ -47,6 +48,8 @@ type State struct {
 	Queue        *taskQueue
 	PlanDisplay  ui.PlanDisplayMode
 	ThinkDisplay ui.ThinkDisplayMode
+	Remote       *remote.Manager
+	RemoteStore  *remote.Store
 	editor       *Editor
 }
 
@@ -166,6 +169,7 @@ func Run(argv []string) error {
 	}
 
 	registry := tools.CreateReverseTools()
+	registry = append(registry, tools.CreateRemoteTools()...)
 	// MCP servers join the same registry as the built-ins; a server that will
 	// not start is reported and skipped, never fatal.
 	connections := mcp.ConnectAll(agentConfig.MCPServers)
@@ -205,7 +209,26 @@ func Run(argv []string) error {
 		return err
 	}
 
-	toolContext := &types.ToolContext{Workspace: workspace, SessionDir: sessionDir, Policy: policy}
+	// Remote mode: an encrypted host store plus a background SSH manager. The
+	// connection is dialed lazily per host and reused for the whole session.
+	remoteStore, err := remote.Load()
+	if err != nil {
+		return err
+	}
+	remoteManager := remote.NewManager(remoteStore)
+	defer remoteManager.Close()
+	remoteHost := ""
+	if args.Remote != "" {
+		if _, ok := remoteStore.Get(args.Remote); !ok {
+			return fmt.Errorf("unknown remote host: %s (see /remote add)", args.Remote)
+		}
+		remoteStore.SetCurrent(args.Remote)
+		remoteHost = args.Remote
+	}
+	toolContext := &types.ToolContext{
+		Workspace: workspace, SessionDir: sessionDir, Policy: policy,
+		Remote: remoteManager, RemoteHost: remoteHost,
+	}
 	loop := core.NewAgentLoop(core.LoopOptions{
 		Config: agentConfig, Providers: providerMap, Tools: registry,
 		ToolContext: toolContext, SystemPrompt: systemPrompt, RolePrompts: rolePrompts, Session: session,
@@ -250,6 +273,7 @@ func Run(argv []string) error {
 		Providers: providerMap, Workflow: args.Workflow, Queue: newTaskQueue(),
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
 		SessionMeta: sessionMeta,
+		Remote:      remoteManager, RemoteStore: remoteStore,
 	}
 
 	if args.Smoke {

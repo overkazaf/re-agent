@@ -65,6 +65,19 @@ func TestParseArgsContextRequiresValue(t *testing.T) {
 	}
 }
 
+func TestParseArgsRemoteHost(t *testing.T) {
+	args, err := ParseArgs([]string{"--remote", "lab", "-p", "ls /tmp"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if args.Remote != "lab" {
+		t.Fatalf("--remote not parsed: %q", args.Remote)
+	}
+	if _, err := ParseArgs([]string{"--remote"}); err == nil {
+		t.Fatal("--remote without a value should be rejected")
+	}
+}
+
 func TestParseArgsVersion(t *testing.T) {
 	args, err := ParseArgs([]string{"--version"})
 	if err != nil {

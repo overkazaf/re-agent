@@ -16,3 +16,6 @@ agent.config.json
 knowledge/reverse-index.json
 
 .DS_Store
+
+# python dev tooling
+__pycache__/

@@ -1,33 +1,36 @@
 # 0xAF-Re
 
-A terminal agent for authorized reverse-engineering and CTF work. It combines a
-planner model, an executor model, local RE tools, workflow modes, queued prompts,
-and a live view of each turn in one static Go binary.
+An authorized reverse-engineering & CTF terminal agent. One static Go binary that
+combines a **planner** and an **executor** model seat, local RE tools, workflow
+modes, queued prompts, session resume, and a live view of every turn.
 
 **Language:** English | [中文](README.zh-CN.md)
 
 **Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg)
 
 <p align="center">
-  <img src="docs/shots/live.svg" alt="A live mid-turn frame with a dataflow diagram, a HUD, task progress, and token telemetry." width="900">
+  <img src="docs/shots/dashboard.png" alt="0xAF-Re live dashboard: FLOW / TOOLS / PLAN / THINK / TELE" width="900">
+  <br/>
+  <img src="docs/casts/dashboard.gif" alt="0xAF-Re live dashboard, animated" width="600">
 </p>
 
 ## Table of Contents
 
-- [Why 0xAF-Re](#why-0xaf-re)
+- [Motivation](#motivation)
+- [Features](#features)
+- [Demos](#demos)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Developer Highlights](#developer-highlights)
-- [Project Motivation](#project-motivation)
 - [Install](#install)
 - [Quick Start](#quick-start)
-- [Basic Demos](#basic-demos)
-- [Worked Case](#worked-case-solve-a-challenge-end-to-end)
 - [Workflow Modes](#workflow-modes)
+- [Context Compaction](#context-compaction)
 - [Providers and Models](#providers-and-models)
 - [Skills and Knowledge](#skills-and-knowledge)
 - [Safety](#safety)
 - [Common Commands](#common-commands)
+- [Roadmap](#roadmap)
 - [More Docs](#more-docs)
 
 ## Bilingual Map
@@ -36,55 +39,83 @@ The English and Chinese READMEs keep the same structure for quick switching.
 
 | English | 中文 |
 | --- | --- |
-| [Why 0xAF-Re](#why-0xaf-re) | [为什么用 0xAF-Re](README.zh-CN.md#为什么用-0xaf-re) |
+| [Motivation](#motivation) | [动机](README.zh-CN.md#动机) |
+| [Features](#features) | [功能特性](README.zh-CN.md#功能特性) |
+| [Demos](#demos) | [演示](README.zh-CN.md#演示) |
 | [Overview](#overview) | [概览](README.zh-CN.md#概览) |
 | [Architecture](#architecture) | [架构设计](README.zh-CN.md#架构设计) |
 | [Developer Highlights](#developer-highlights) | [开发者亮点](README.zh-CN.md#开发者亮点) |
-| [Project Motivation](#project-motivation) | [项目动机](README.zh-CN.md#项目动机) |
 | [Install](#install) | [安装](README.zh-CN.md#安装) |
 | [Quick Start](#quick-start) | [快速开始](README.zh-CN.md#快速开始) |
-| [Basic Demos](#basic-demos) | [基础 Demos](README.zh-CN.md#基础-demos) |
-| [Worked Case](#worked-case-solve-a-challenge-end-to-end) | [实战案例](README.zh-CN.md#实战案例完整解一道题) |
 | [Workflow Modes](#workflow-modes) | [Workflow 模式](README.zh-CN.md#workflow-模式) |
+| [Context Compaction](#context-compaction) | [上下文压缩](README.zh-CN.md#上下文压缩) |
 | [Providers and Models](#providers-and-models) | [Provider 与模型](README.zh-CN.md#provider-与模型) |
 | [Skills and Knowledge](#skills-and-knowledge) | [Skills 与知识库](README.zh-CN.md#skills-与知识库) |
 | [Safety](#safety) | [安全策略](README.zh-CN.md#安全策略) |
 | [Common Commands](#common-commands) | [常用命令](README.zh-CN.md#常用命令) |
+| [Roadmap](#roadmap) | [未来设想](README.zh-CN.md#未来设想) |
 | [More Docs](#more-docs) | [更多文档](README.zh-CN.md#更多文档) |
 
-## Why 0xAF-Re
+## Motivation
 
 Reverse engineering is already a pipeline: `file`, `strings`, `entropy`, r2,
-JADX, Frida, a scratch script, a note somewhere. The slow part is rarely any
-single tool — it is holding the thread across all of them, and re-deriving what
-you already knew two hours ago.
+JADX, Frida, a scratch script, and a note somewhere. The slow part is rarely any
+single tool — it is **holding the thread across all of them** and re-deriving
+what you already knew two hours ago. 0xAF-Re exists to keep that thread: a
+planner model writes the route, an executor model drives the tools, and every
+fact lands in a transcript you can resume, diff, and hand to someone else.
 
-0xAF-Re keeps that pipeline and adds a planner on top of it. Five things it does
-that a chat window bolted onto a terminal does not:
+Three principles shape it:
 
-1. **The cheap path stays free.** `/scan`, `/hex`, `/entropy`, `/carve`,
-   `/decode`, `/mitigations`, `/apk` are direct local tools. No model, no token,
-   no latency. You only spend a model when you actually want one to think.
-2. **Two seats, not one.** A planner model writes the route; a separate executor
-   model drives the tools. Give the planning to a strong reasoner and the tool
-   calls to something cheap and fast — or point them at different vendors
-   entirely, at runtime, with `/planner` and `/executor`.
-3. **Cautious models can still work the case.** `caveman` mode splits one
-   request into a planner phase and an isolated executor phase that sees only a
-   bounded local-evidence packet. Ordinary providers that would otherwise stall
-   on RE phrasing keep collecting file facts.
-4. **You watch it work, and you can steer mid-turn.** Plan rows, tool calls,
-   reasoning, tokens, and timings render live. `/think expand`, `/tasks
-   collapse`, `/queue edit` and `/model` all take effect **while the turn is
-   still running** — you do not have to kill a turn to redirect it.
-5. **Nothing leaves the workspace by accident.** Reads are workspace-scoped;
-   writes, network, and sensitive paths are off until you say otherwise; exec
-   tier prompts before it runs. Every turn lands in a JSONL transcript you can
-   diff, replay, and hand to someone else.
+1. **Local and evidence-first.** Reads stay inside the workspace; writes,
+   network, and sensitive paths are off until you say otherwise. Facts come from
+   real tools (`/scan`, radare2, JADX, Frida, …) before they come from a model.
+2. **Two seats, not one.** A strong reasoner plans; a cheap executor collects
+   evidence. `/planner`, `/executor`, and `/model` re-route at runtime.
+3. **You watch it work and can steer mid-turn.** Plan rows, tool calls,
+   reasoning, tokens, and timings render live; `/think expand`, `/tasks
+   collapse`, `/queue edit`, `/model` take effect while the turn is running.
 
-And when the agent is the wrong tool for the next five minutes, `/r2 <file>`
-hands the terminal straight to radare2 and takes it back when you quit.
+## Features
 
+| Area | What you get |
+| --- | --- |
+| **Live dashboard** | One boxed view: FLOW (animated dataflow strip), TOOLS (tool cards), PLAN (task list + progress), THINK (reasoning tail), TELE (throughput/tokens/clock). Tight terminals shed gracefully down to the current step. |
+| **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
+| **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering` — each wraps the prompt with a focused contract. |
+| **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
+| **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
+| **Reference context** | `--context "know:…"` seeds the system prompt from the knowledge base, `--context "file:…"` from a workspace file, raw notes pass through. |
+| **Knowledge & skills** | `/know` search + synthesis from the local knowledge index; built-in RE skills; MCP servers join the same tool registry. |
+| **Approvals, live** | Tiered policy (read/write/exec) with safety-concern prompts; one-shot runs ask **y/a/d/n** interactively on a TTY instead of restarting with new flags. |
+| **Remote mode** | Background SSH connections to saved machines; plan locally, execute remotely from the same window. (See [Remote mode](#remote-mode).) |
+| **Publishing** | `go install @vX.Y.Z` plus GitHub Releases with prebuilt darwin/linux binaries on every tag. |
+
+## Demos
+
+Real terminal output, captured from the actual binary:
+
+| Demo | Description |
+| --- | --- |
+| <img src="docs/shots/dashboard.png" width="420"> | Live dashboard mid-turn (FLOW / TOOLS / PLAN / THINK / TELE). |
+| <img src="docs/casts/dashboard.gif" width="280"> | Same view, animated. |
+| <img src="docs/shots/sessions.png" width="420"> | `/sessions` — hash aliases for `--resume`. |
+| <img src="docs/shots/help.png" width="420"> | The command deck. |
+
+Animated cast walkthroughs (SVG, render inline): [quickstart](docs/casts/quickstart.svg) · [deck](docs/casts/deck.svg) · [scan](docs/casts/scan.svg).
+
+More static captures: [boot](docs/shots/boot.svg) · [reply](docs/shots/reply.svg) · [approval](docs/shots/approval.svg) · [auth](docs/shots/auth.svg) · [tools](docs/shots/tools.svg) · [providers](docs/shots/providers.svg) · [palette](docs/shots/palette.svg) · [shell](docs/shots/shell.svg) · [verify](docs/shots/verify.svg).
+
+Quick taste:
+
+```bash
+0xaf --smoke                                  # offline wiring check
+0xaf -p "triage ./ctf/chall" --workspace ./ctf
+0xaf --workflow reverse -p "static + dynamic analysis, then a PoC"
+0xaf --context "know:android packer" -p "identify the packer"
+```
+
+## Overview
 ## Overview
 
 - **Local first:** slash commands run file triage, strings, entropy, carving,
@@ -447,6 +478,41 @@ for authorized local RE by changing what each role legitimately needs to see:
 - the session transcript keeps both phases auditable
 - unsafe requests are refused instead of being hidden in alternate wording
 
+## Remote mode
+
+Plan in the current window, execute on another box. `--remote <name>` (or
+`/remote use <name>`) puts the session into remote mode: `run_command` and
+`!shell` execute over a **background SSH connection**, and the model can call
+`remote_exec` on any saved host. Output lands in the same transcript as local
+work, and every remote command still passes the exec-tier approval gate with the
+host named in the prompt.
+
+<p align="center">
+  <img src="docs/shots/remote.png" alt="/remote host list" width="420">
+</p>
+
+```text
+/remote add lab dev@10.0.0.5                     # password prompt, never echoed
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519
+/remote list                                     # saved hosts + current
+/remote use lab   |  /remote off                 # switch the execution target
+0xaf --remote lab -p "inventory /opt"            # start straight into remote mode
+```
+
+- **Encrypted at rest:** hosts (including passwords) live in
+  `~/.0xaf-re-agent/remote.json`, AES-256-GCM encrypted with a machine-bound key
+  (macOS IOPlatformUUID / `/etc/machine-id` + home + random salt, `0600` perms).
+  Copying the file to another machine does not reveal credentials;
+  `OXAF_REMOTE_KEY` overrides the key for portable setups.
+- **Auth:** ssh-agent first, then the configured key path, then password.
+- **Trust:** strict `~/.ssh/known_hosts` by default; `/remote add --insecure` is
+  an explicit opt-in for lab boxes.
+- **Approvals:** every remote command is exec-tier; the y/a/d/n prompt shows
+  `ssh <host> <command>`.
+
+Coming next: per-host file tools (`list_files` / `read_file` over SSH), SCP
+pulls, and multi-host fan-out of one plan.
+
 ## Providers and Models
 
 Planner, executor, and researcher are roles. Providers are replaceable seats.
@@ -584,7 +650,25 @@ Inside the REPL:
 | `/sessions` / `/continue` / `/resume <id>` | resume prior work |
 | `!<command>` | run a workspace shell command under policy |
 
+## Roadmap
+
+Where 0xAF-Re is heading:
+
+- **Remote mode (shipped)** — background SSH to saved machines; next: remote file
+  tools, SCP pulls, multi-host fan-out.
+- **snapcompact hardening** — bundle a CJK-capable font, frame-cap UI, and
+  per-provider image billing like oh-my-pi's snapcompact evals.
+- **Auto-resume prompt** — detect an interrupted session at startup and offer to
+  continue it before you type anything.
+- **Multi-host orchestration** — run one plan across several boxes; collect
+  outputs into the same transcript.
+- **Knowledge sharing** — import/export the local index, team-shareable bundles.
+- **Benchmark harness** — replay real sessions to measure provider/workflow
+  quality, so routing choices improve from evidence.
+- **Plugin/skill marketplace** — install community RE skills from a catalog.
+
 ## More Docs
+
 
 - [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html): exportable Cocoon AI-style overview of the design.
 - [Architecture deep dive](docs/ARCHITECTURE.md): package map, turn sequence,

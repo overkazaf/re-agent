@@ -340,7 +340,7 @@ func ThemePicker() string {
 
 // --- tables ------------------------------------------------------------------
 
-func table(title string, headers []string, rows [][]string) string {
+func FormatTable(title string, headers []string, rows [][]string) string {
 	widths := make([]int, len(headers))
 	for index, header := range headers {
 		widths[index] = DisplayWidth(header)
@@ -393,7 +393,7 @@ func FormatProviders(config *types.AgentConfig) string {
 		}
 		rows = append(rows, []string{C.Text(name), role, kind, C.Muted(provider.Model), effort})
 	}
-	return table("PROVIDERS", []string{"name", "role", "kind", "model", "effort"}, rows)
+	return FormatTable("PROVIDERS", []string{"name", "role", "kind", "model", "effort"}, rows)
 }
 
 func providerRoleLabels(config *types.AgentConfig, name string) []string {
@@ -422,7 +422,7 @@ func FormatTools(tools []types.Tool) string {
 	for _, tool := range tools {
 		rows = append(rows, []string{C.Text(tool.Name), riskBadge(tool.Risk), C.Muted(tool.Description)})
 	}
-	return table("TOOLS", []string{"tool", "risk", "description"}, rows)
+	return FormatTable("TOOLS", []string{"tool", "risk", "description"}, rows)
 }
 
 type SessionRow struct {
@@ -458,7 +458,7 @@ func FormatSessions(sessions []SessionRow, now time.Time) string {
 			C.Muted(Truncate(opened, 52)),
 		})
 	}
-	return table("SESSIONS", []string{"hash", "age", "msgs", "opened with"}, rows) +
+	return FormatTable("SESSIONS", []string{"hash", "age", "msgs", "opened with"}, rows) +
 		C.Faint("  resume with") + " " + C.Accent("/resume <hash>") + " " +
 		C.Faint("or") + " " + C.Accent("--resume <hash>") + " " +
 		C.Faint("(timestamp id/prefix still works)") + "\n\n"
@@ -509,7 +509,7 @@ func FormatMCP(connections []MCPRow) string {
 			C.Muted(Truncate(detail, 60)),
 		})
 	}
-	return table("MCP SERVERS", []string{"server", "state", "tools", "detail"}, rows)
+	return FormatTable("MCP SERVERS", []string{"server", "state", "tools", "detail"}, rows)
 }
 
 func FormatAuthStatus(statuses []auth.Status) string {
@@ -520,7 +520,7 @@ func FormatAuthStatus(statuses []auth.Status) string {
 			C.Faint(orText(strings.Join(status.EnvVars, ", "), "–")),
 		})
 	}
-	return table("AUTH", []string{"provider", "state", "source", "env"}, rows)
+	return FormatTable("AUTH", []string{"provider", "state", "source", "env"}, rows)
 }
 
 // AuthStateBadge keeps the three states visually distinct. `present` is not a

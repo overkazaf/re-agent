@@ -821,6 +821,26 @@ func runShellEscape(state *State, line string) error {
 	defer signal.Stop(signals)
 
 	writer := ui.NewShellStreamWriter(func(text string) { fmt.Print(text) })
+	// Remote mode: `!cmd` executes on the selected SSH host instead of locally.
+	if state.ToolContext.Remote != nil && state.ToolContext.RemoteHost != "" {
+		host := state.ToolContext.RemoteHost
+		fmt.Println(ui.RenderShellCommand("ssh " + host + " " + command))
+		out, err := state.ToolContext.Remote.Run(ctx, host, command)
+		if err != nil {
+			return err
+		}
+		fmt.Print(out)
+		if out != "" && !strings.HasSuffix(out, "\n") {
+			fmt.Println()
+		}
+		// Best-effort transcript note, bounded like the local path.
+		note := fmt.Sprintf("[operator shell · ssh %s] $ %s\n%s", host, command, out)
+		if len(note) > core.ShellContextMaxChars {
+			note = note[:core.ShellContextMaxChars] + "\n…[truncated]"
+		}
+		_ = state.Loop.AddContext(note)
+		return nil
+	}
 	fmt.Println(ui.RenderShellCommand(command))
 	result, err := core.RunShellCommand(command, core.ShellRunOptions{
 		Workspace:   state.ToolContext.Workspace,

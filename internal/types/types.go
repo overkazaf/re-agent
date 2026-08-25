@@ -316,6 +316,13 @@ type ExecutionPolicy struct {
 	Approvals map[string]string `json:"approvals"`
 }
 
+// RemoteRunner executes a shell command on a saved SSH host. Implemented by
+// internal/remote.Manager; kept as an interface so types stays dependency-free.
+type RemoteRunner interface {
+	Run(ctx context.Context, name, command string) (string, error)
+	Current() string
+}
+
 // ToolContext carries everything a tool needs beyond its arguments.
 type ToolContext struct {
 	Workspace  string
@@ -326,6 +333,11 @@ type ToolContext struct {
 	// Confirm is set by the CLI in interactive mode; nil means "no one is there
 	// to ask".
 	Confirm func(ApprovalRequest) ApprovalDecision
+	// Remote executes commands over SSH on saved hosts; nil when not configured.
+	Remote RemoteRunner
+	// RemoteHost is the session's selected host. When set, run_command executes
+	// there instead of the local workspace (remote mode).
+	RemoteHost string
 	// OnPlan lets the update_plan tool publish into the live pane.
 	OnPlan func([]PlanStep, PlanUpdateMeta)
 }

@@ -1,82 +1,116 @@
 # 0xAF-Re
 
-一个面向授权逆向工程与 CTF 的终端 Agent。它把 planner 模型、executor 模型、本地逆向工具、
-workflow 模式、任务队列和实时运行视图打包进一个静态 Go 二进制。
+面向**授权逆向 / CTF** 的终端 Agent。一个静态 Go 二进制，内置 **planner + executor** 双模型座位、
+本地 RE 工具、工作模式、任务队列、会话恢复，以及每一轮的实时可视化。
 
-**语言:** [English](README.md) | 中文
+**Language:** [English](README.md) | 中文
 
 **链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg)
 
 <p align="center">
-  <img src="docs/shots/live.svg" alt="一轮运行中的实时画面：数据流图、HUD、任务进度和 token 遥测。" width="900">
+  <img src="docs/shots/dashboard.png" alt="0xAF-Re 实时仪表盘：FLOW / TOOLS / PLAN / THINK / TELE" width="900">
+  <br/>
+  <img src="docs/casts/dashboard.gif" alt="0xAF-Re 实时仪表盘（动画）" width="600">
 </p>
 
 ## 目录
 
-- [为什么用 0xAF-Re](#为什么用-0xaf-re)
+- [动机](#动机)
+- [功能特性](#功能特性)
+- [演示](#演示)
 - [概览](#概览)
 - [架构设计](#架构设计)
 - [开发者亮点](#开发者亮点)
-- [项目动机](#项目动机)
 - [安装](#安装)
 - [快速开始](#快速开始)
-- [基础 Demos](#基础-demos)
-- [实战案例](#实战案例完整解一道题)
 - [Workflow 模式](#workflow-模式)
+- [上下文压缩](#上下文压缩)
 - [Provider 与模型](#provider-与模型)
 - [Skills 与知识库](#skills-与知识库)
 - [安全策略](#安全策略)
 - [常用命令](#常用命令)
+- [未来设想](#未来设想)
 - [更多文档](#更多文档)
 
-## 双语对照
+## 双语地图
 
-中英文 README 保持同一结构，方便直接切换。
+中英 README 结构保持一致，方便快速切换。
 
 | 中文 | English |
 | --- | --- |
-| [为什么用 0xAF-Re](#为什么用-0xaf-re) | [Why 0xAF-Re](README.md#why-0xaf-re) |
+| [动机](#动机) | [Motivation](README.md#motivation) |
+| [功能特性](#功能特性) | [Features](README.md#features) |
+| [演示](#演示) | [Demos](README.md#demos) |
 | [概览](#概览) | [Overview](README.md#overview) |
 | [架构设计](#架构设计) | [Architecture](README.md#architecture) |
 | [开发者亮点](#开发者亮点) | [Developer Highlights](README.md#developer-highlights) |
-| [项目动机](#项目动机) | [Project Motivation](README.md#project-motivation) |
 | [安装](#安装) | [Install](README.md#install) |
 | [快速开始](#快速开始) | [Quick Start](README.md#quick-start) |
-| [基础 Demos](#基础-demos) | [Basic Demos](README.md#basic-demos) |
-| [实战案例](#实战案例完整解一道题) | [Worked Case](README.md#worked-case-solve-a-challenge-end-to-end) |
 | [Workflow 模式](#workflow-模式) | [Workflow Modes](README.md#workflow-modes) |
+| [上下文压缩](#上下文压缩) | [Context Compaction](README.md#context-compaction) |
 | [Provider 与模型](#provider-与模型) | [Providers and Models](README.md#providers-and-models) |
 | [Skills 与知识库](#skills-与知识库) | [Skills and Knowledge](README.md#skills-and-knowledge) |
 | [安全策略](#安全策略) | [Safety](README.md#safety) |
 | [常用命令](#常用命令) | [Common Commands](README.md#common-commands) |
+| [未来设想](#未来设想) | [Roadmap](README.md#roadmap) |
 | [更多文档](#更多文档) | [More Docs](README.md#more-docs) |
 
-## 为什么用 0xAF-Re
+## 动机
 
-逆向本来就是一条流水线：`file`、`strings`、熵扫描、r2、JADX、Frida、一个临时脚本、
-一份不知道存哪了的笔记。慢的地方很少是某一个工具本身，而是在这些工具之间**接住那根线**，
-以及两小时后重新推导一遍你早就知道的东西。
+逆向本身就是一条流水线：`file`、`strings`、`entropy`、r2、JADX、Frida、临时脚本、随手笔记。
+慢的从来不是某个单独工具，而是**把整条线串起来**——两个小时后还要重新推导你已经知道的东西。
+0xAF-Re 就是为了守住这条线：planner 模型负责规划路线，executor 模型负责驱动工具，
+每一步事实都落在可恢复、可 diff、可交接的 JSONL 转录里。
 
-0xAF-Re 保留这条流水线，在它上面加一个规划者。相比"往终端里塞一个聊天框"，它多做五件事：
+三条原则：
 
-1. **省钱的那条路依然免费。** `/scan`、`/hex`、`/entropy`、`/carve`、`/decode`、
-   `/mitigations`、`/apk` 都是直连本地工具。不过模型、不花 token、没有延迟。
-   只有你真的想要一个脑子的时候才付费。
-2. **两个座位，不是一个。** planner 模型写路线，executor 模型跑工具。
-   把规划交给强推理模型、把工具调用交给便宜快速的——或者干脆指向两个不同厂商，
-   运行中用 `/planner`、`/executor` 随时换。
-3. **谨慎的模型也能干活。** `caveman` 模式把一次请求拆成 planner 阶段和隔离的
-   executor 阶段，后者只看到一个有边界的本地证据包。那些一见逆向措辞就卡住的普通
-   provider，照样能继续收集文件事实。
-4. **过程可见，而且能中途改道。** plan 行、工具调用、推理、token、耗时全部实时渲染。
-   `/think expand`、`/tasks collapse`、`/queue edit`、`/model` 都能**在这一轮还在跑的时候**
-   生效——不需要杀掉当前 turn 才能调整方向。
-5. **没有东西会意外离开工作区。** 读操作限定在工作区内；写盘、联网、敏感路径默认关闭；
-   exec 级动作执行前先问。每一轮都落进 JSONL 记录，可 diff、可回放、可交给别人复核。
+1. **本地优先、证据优先。** 读取被限制在工作区内；写入、网络、敏感路径默认关闭，直到你明确放开。
+   事实先来自真实工具（`/scan`、radare2、JADX、Frida…），再来自模型。
+2. **双座位，而不是单对话。** 强推理模型规划，便宜模型收集证据；`/planner`、`/executor`、`/model`
+   可随时换路由。
+3. **看得见、可干预。** 计划行、工具调用、推理、token、耗时全部实时渲染；`/think expand`、
+   `/tasks collapse`、`/queue edit`、`/model` 在回合运行中即刻生效。
 
-而当接下来五分钟里 agent 反而是碍事的那个，`/r2 <file>` 直接把终端交给 radare2，
-你退出时再还回来。
+## 功能特性
 
+| 领域 | 你得到什么 |
+| --- | --- |
+| **实时仪表盘** | 单框视图：FLOW（动画数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；矮终端优雅降级，保住当前步骤。 |
+| **双模型路由** | planner / executor / researcher 三个座位，可固定、可按角色，运行中可切换。 |
+| **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`——每种模式给 prompt 加上聚焦的契约。 |
+| **会话恢复** | append-only JSONL 转录；`--resume <hash|id>` / `--continue` / `/sessions`；崩溃自动修复悬挂工具调用；`/new` 开新会话。 |
+| **上下文压缩** | 每次请求机械裁剪 + `/compact`；可选 `snapcompact` 把被丢弃历史渲染成 PNG 帧，视觉模型直接读回。 |
+| **参考上下文** | `--context "know:…"` 从知识库注入、`--context "file:…"` 从工作区文件注入，原始备注直接透传。 |
+| **知识与技能** | `/know` 检索+综合本地知识索引；内置 RE 技能；MCP server 并入同一工具注册表。 |
+| **运行中审批** | 分级策略（read/write/exec）+ 安全模式命中即询问；one-shot 在 TTY 下也会弹 **y/a/d/n**，不用重启换模式。 |
+| **远程模式** | 后台 SSH 连接已保存的机器；本地规划、同窗口远程执行。（见 [远程模式](#远程模式)） |
+| **发布** | `go install @vX.Y.Z`，且每个 tag 自动在 GitHub Releases 附上 darwin/linux 预编译二进制。 |
+
+## 演示
+
+全部来自真实二进制的终端输出：
+
+| 演示 | 说明 |
+| --- | --- |
+| <img src="docs/shots/dashboard.png" width="420"> | 回合运行中的实时仪表盘（FLOW / TOOLS / PLAN / THINK / TELE）。 |
+| <img src="docs/casts/dashboard.gif" width="280"> | 同一视图，动画版。 |
+| <img src="docs/shots/sessions.png" width="420"> | `/sessions`——`--resume` 的 hash 别名。 |
+| <img src="docs/shots/help.png" width="420"> | 命令面板。 |
+
+动画录制（SVG，内联渲染）：[quickstart](docs/casts/quickstart.svg) · [deck](docs/casts/deck.svg) · [scan](docs/casts/scan.svg)。
+
+更多静态截图：[boot](docs/shots/boot.svg) · [reply](docs/shots/reply.svg) · [approval](docs/shots/approval.svg) · [auth](docs/shots/auth.svg) · [tools](docs/shots/tools.svg) · [providers](docs/shots/providers.svg) · [palette](docs/shots/palette.svg) · [shell](docs/shots/shell.svg) · [verify](docs/shots/verify.svg)。
+
+快速体验：
+
+```bash
+0xaf --smoke                                  # 离线自检
+0xaf -p "triage ./ctf/chall" --workspace ./ctf
+0xaf --workflow reverse -p "静态+动态分析，最后给 PoC"
+0xaf --context "know:android packer" -p "识别加壳方式"
+```
+
+## 概览
 ## 概览
 
 - **本地优先:** 斜杠命令直接在本机做文件粗筛、strings、熵扫描、carve、APK 检查、保护检查和逆向工具盘点。
@@ -394,6 +428,34 @@ provider（Anthropic、OpenAI Responses、OpenAI 兼容 chat）会直接读图�
 - session transcript 保留两段完整记录，方便审计
 - 不安全请求会被拒绝，而不是藏进其它说法
 
+## 远程模式
+
+在当前窗口规划，在另一台机器上执行。`--remote <name>`（或 `/remote use <name>`）把会话切到
+远程模式：`run_command` 和 `!shell` 通过**后台 SSH 连接**执行，模型也能用 `remote_exec`
+在任意已保存主机上执行。输出与本地工作进同一份转录，且每条远程命令仍走 exec 级审批，
+提示里会写明 `ssh <host> <command>`。
+
+<p align="center">
+  <img src="docs/shots/remote.png" alt="/remote 主机列表" width="420">
+</p>
+
+```text
+/remote add lab dev@10.0.0.5                     # 密码提示，不回显
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519
+/remote list                                     # 已保存主机 + 当前主机
+/remote use lab   |  /remote off                 # 切换执行目标
+0xaf --remote lab -p "inventory /opt"            # 启动即进入远程模式
+```
+
+- **本地加密存储：** 主机配置（含密码）放在 `~/.0xaf-re-agent/remote.json`，
+  AES-256-GCM 加密，密钥绑定机器（macOS IOPlatformUUID / `/etc/machine-id` + 用户目录 + 随机盐，
+  权限 0600）。把文件拷到别的机器也解不开；`OXAF_REMOTE_KEY` 可覆盖密钥用于便携场景。
+- **认证：** 优先 ssh-agent，其次配置的私钥路径，最后密码。
+- **信任：** 默认严格校验 `~/.ssh/known_hosts`；`/remote add --insecure` 仅对实验室机器显式开启。
+- **审批：** 远程命令一律 exec 级，y/a/d/n 提示显示 `ssh <host> <command>`。
+
+下一步：远程文件工具（`list_files` / `read_file` 走 SSH）、SCP 拉取、一个计划多主机分发。
+
 ## Provider 与模型
 
 planner、executor、researcher 是角色；provider 是可替换的座位。
@@ -529,7 +591,18 @@ REPL 内：
 | `/sessions` / `/continue` / `/resume <id>` | 续接历史会话 |
 | `!<command>` | 在工作区内按当前策略跑 shell 命令 |
 
+## 未来设想
+
+- **远程模式（已发布）**——后台 SSH 连接已保存的机器；下一步：远程文件工具、SCP 拉取、多主机分发。
+- **snapcompact 加固**——内置 CJK 字体、帧数上限 UI、按 provider 的图片计费（对齐 oh-my-pi 的 snapcompact 评测）。
+- **自动续接提示**——启动时检测到未正常结束的会话，先问你是否继续，再进入提示符。
+- **多主机编排**——一个计划跑多台机器，输出统一收进同一份转录。
+- **知识库共享**——本地索引导入/导出，可团队共享的打包格式。
+- **基准评测**——回放真实会话衡量 provider/workflow 质量，让路由选择有据可依。
+- **插件/技能市场**——从目录一键安装社区 RE 技能。
+
 ## 更多文档
+
 
 - [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)：可导出 PNG/PDF 的 Cocoon AI 风格设计概览。
 - [架构深挖](docs/ARCHITECTURE.zh-CN.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。

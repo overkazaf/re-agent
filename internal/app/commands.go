@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -16,12 +17,14 @@ import (
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/knowledge"
 	"github.com/overkazaf/re-agent/internal/providers"
+	"github.com/overkazaf/re-agent/internal/remote"
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/skills"
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
 	"github.com/overkazaf/re-agent/internal/workflow"
+	"golang.org/x/term"
 )
 
 func handleCommand(line string, state *State) error {
@@ -108,6 +111,8 @@ func handleCommand(line string, state *State) error {
 		return runSkillCommand(arg, state)
 	case "/know":
 		return runKnowledgeCommand(arg, state)
+	case "/remote":
+		return handleRemoteCommand(arg, state)
 	case "/scan":
 		if arg == "" {
 			return fmt.Errorf("usage: /scan <path>")
@@ -353,6 +358,179 @@ func handleCommand(line string, state *State) error {
 		return runDirectTool("run_command", map[string]any{"command": arg}, state)
 	}
 	return fmt.Errorf("unknown command: %s. Try /help", command)
+}
+
+// handleRemoteCommand manages saved SSH hosts (see internal/remote). Secrets
+// never print: passwords are read without echo and stored inside the encrypted
+// envelope at ~/.0xaf-re-agent/remote.json.
+func handleRemoteCommand(arg string, state *State) error {
+	if state.RemoteStore == nil || state.Remote == nil {
+		return fmt.Errorf("remote mode not available in this build")
+	}
+	fields := strings.Fields(arg)
+	verb := ""
+	if len(fields) > 0 {
+		verb = fields[0]
+	}
+	switch verb {
+	case "", "list":
+		return listRemoteHosts(state)
+	case "add":
+		return addRemoteHost(fields[1:], state)
+	case "rm", "remove":
+		if len(fields) != 2 {
+			return fmt.Errorf("usage: /remote rm <name>")
+		}
+		if state.RemoteStore.Remove(fields[1]) {
+			if err := state.RemoteStore.Save(); err != nil {
+				return err
+			}
+			fmt.Println(ui.RenderNotice("removed remote host: " + fields[1]))
+			return nil
+		}
+		return fmt.Errorf("remote host not found: %s", fields[1])
+	case "use":
+		if len(fields) != 2 {
+			return fmt.Errorf("usage: /remote use <name> | off")
+		}
+		if fields[1] == "off" {
+			state.ToolContext.RemoteHost = ""
+			state.RemoteStore.SetCurrent("")
+			_ = state.RemoteStore.Save()
+			fmt.Println(ui.RenderNotice("remote mode off — run_command and !shell run locally"))
+			return nil
+		}
+		if _, ok := state.RemoteStore.Get(fields[1]); !ok {
+			return fmt.Errorf("remote host not found: %s", fields[1])
+		}
+		state.ToolContext.RemoteHost = fields[1]
+		state.RemoteStore.SetCurrent(fields[1])
+		_ = state.RemoteStore.Save()
+		fmt.Println(ui.RenderNotice("remote mode → " + fields[1] + " (run_command and !shell execute there)"))
+		return nil
+	default:
+		return fmt.Errorf("usage: /remote [list|add <name> <user@host[:port]> [--key <path>] [--insecure]|rm <name>|use <name>|off]")
+	}
+}
+
+func listRemoteHosts(state *State) error {
+	hosts := state.RemoteStore.List()
+	if len(hosts) == 0 {
+		fmt.Println(ui.RenderNotice("no remote hosts saved — /remote add <name> <user@host[:port]> [--key <path>]"))
+		return nil
+	}
+	rows := make([][]string, 0, len(hosts))
+	current := state.ToolContext.RemoteHost
+	for _, host := range hosts {
+		mark := " "
+		if host.Name == current {
+			mark = ui.C.Accent("●")
+		} else {
+			mark = ui.C.Faint("○")
+		}
+		auth := "password"
+		if host.KeyPath != "" {
+			auth = "key:" + host.KeyPath
+		}
+		extra := ""
+		if host.Insecure {
+			extra = " insecure"
+		}
+		rows = append(rows, []string{
+			mark + " " + ui.C.Text(host.Name),
+			ui.C.Faint(host.User + "@" + host.Host),
+			ui.C.Muted(auth + extra),
+		})
+	}
+	fmt.Print(ui.FormatTable("REMOTE HOSTS", []string{"name", "target", "auth"}, rows))
+	fmt.Println(ui.RenderNotice("remote mode: " + orRemote(current)))
+	return nil
+}
+
+func orRemote(name string) string {
+	if name == "" {
+		return "local (use /remote use <name>)"
+	}
+	return name
+}
+
+func addRemoteHost(fields []string, state *State) error {
+	if len(fields) < 2 {
+		return fmt.Errorf("usage: /remote add <name> <user@host[:port]> [--key <path>] [--insecure]")
+	}
+	name := fields[0]
+	target := fields[1]
+	keyPath := ""
+	insecure := false
+	for i := 2; i < len(fields); i++ {
+		switch fields[i] {
+		case "--key":
+			if i+1 >= len(fields) {
+				return fmt.Errorf("--key needs a path")
+			}
+			i++
+			keyPath = fields[i]
+		case "--insecure":
+			insecure = true
+		default:
+			return fmt.Errorf("unknown flag: %s", fields[i])
+		}
+	}
+	user, host, port, err := parseTarget(target)
+	if err != nil {
+		return err
+	}
+	password := ""
+	if keyPath == "" {
+		if !term.IsTerminal(int(os.Stdin.Fd())) {
+			return fmt.Errorf("no --key given and stdin is not a terminal; cannot read a password safely")
+		}
+		fmt.Printf("password for %s@%s (not echoed): ", user, host)
+		raw, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Println()
+		if err != nil {
+			return err
+		}
+		password = string(raw)
+		if password == "" {
+			return fmt.Errorf("empty password; use --key <path> for key auth")
+		}
+	}
+	hostConfig := remote.Host{
+		Name: name, Host: host, Port: port, User: user,
+		KeyPath: keyPath, Password: password, Insecure: insecure,
+	}
+	if err := state.RemoteStore.Add(hostConfig); err != nil {
+		return err
+	}
+	if err := state.RemoteStore.Save(); err != nil {
+		return err
+	}
+	fmt.Println(ui.RenderNotice(fmt.Sprintf("saved remote host %s (%s@%s:%d) — encrypted at %s",
+		name, user, host, port, remote.ConfigDir())))
+	return nil
+}
+
+func parseTarget(target string) (user, host string, port int, err error) {
+	at := strings.LastIndex(target, "@")
+	if at <= 0 || at == len(target)-1 {
+		return "", "", 0, fmt.Errorf("target must look like <user>@<host>[:port]")
+	}
+	user = target[:at]
+	hostPort := target[at+1:]
+	port = 22
+	if colon := strings.LastIndex(hostPort, ":"); colon >= 0 {
+		portText := hostPort[colon+1:]
+		hostPort = hostPort[:colon]
+		fmt.Sscanf(portText, "%d", &port)
+		if port <= 0 || port > 65535 {
+			return "", "", 0, fmt.Errorf("bad port: %s", portText)
+		}
+	}
+	if hostPort == "" {
+		return "", "", 0, fmt.Errorf("target must look like <user>@<host>[:port]")
+	}
+	return user, hostPort, port, nil
 }
 
 func handleApproval(arg string, state *State) error {

@@ -78,6 +78,7 @@ var SlashCommandSections = []HelpSection{
 		{"/plan", "", "Reprint the current task list"},
 		{"/read", "<path>", "Read a file without the model"},
 		{"/run", "<command>", "Run a local command without the model"},
+		{"/remote", "[list|add|rm|use|off]", "Manage saved SSH hosts and remote mode"},
 	}},
 	{"skills & knowledge", []HelpEntry{
 		{"/skills", "", "List built-in reverse engineering skills"},

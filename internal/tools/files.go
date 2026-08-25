@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
@@ -165,7 +167,7 @@ func grepTool() types.Tool {
 func runCommandTool() types.Tool {
 	return types.Tool{
 		Name:        "run_command",
-		Description: "Run a local workspace command for CTF/reverse engineering. Network and destructive commands are blocked by default.",
+		Description: "Run a workspace command for CTF/reverse engineering. In remote mode the command runs on the selected SSH host.",
 		Risk:        types.RiskExecute,
 		Parameters: objectSchema(map[string]any{
 			"command":   map[string]any{"type": "string", "description": "Shell command to run in the workspace."},
@@ -173,6 +175,11 @@ func runCommandTool() types.Tool {
 		}, "command"),
 		Execute: func(args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
 			command := util.AsString(args["command"])
+			target := tc.RemoteHost
+			label := "run_command"
+			if tc.Remote != nil && target != "" {
+				label = "ssh " + target
+			}
 			// The tier gate already ran in the loop; this is the command-specific
 			// pass, where a safety pattern turns into a prompt instead of a flat
 			// refusal.
@@ -181,13 +188,25 @@ func runCommandTool() types.Tool {
 				return types.ToolResult{}, err
 			}
 			if err := security.RequestApproval(types.ApprovalRequest{
-				Tool: "run_command", Tier: types.TierExec, Summary: command, Concerns: concerns,
+				Tool: label, Tier: types.TierExec, Summary: command, Concerns: concerns,
 			}, tc); err != nil {
 				return types.ToolResult{}, err
 			}
 			timeoutMs := util.AsInt(args["timeoutMs"], tc.Policy.CommandTimeoutMs)
 			if timeoutMs > tc.Policy.CommandTimeoutMs {
 				timeoutMs = tc.Policy.CommandTimeoutMs
+			}
+			if tc.Remote != nil && target != "" {
+				ctx, cancel := context.WithTimeout(tc.Context(), time.Duration(timeoutMs)*time.Millisecond)
+				defer cancel()
+				out, err := tc.Remote.Run(ctx, target, command)
+				if err != nil {
+					return types.ToolResult{}, err
+				}
+				spilled := SpillIfLarge(out, SpillOptions{Context: tc, Label: label})
+				return textResult(spilled.Text, map[string]any{
+					"host": target, "chars": spilled.OriginalChars, "artifact": spilled.Artifact,
+				}), nil
 			}
 			argv, err := ShellCommand(command)
 			if err != nil {

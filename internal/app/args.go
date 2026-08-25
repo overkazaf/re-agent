@@ -39,6 +39,9 @@ type Args struct {
 	Researcher string
 	Prompt     string
 	Print      bool
+	// Remote names a saved SSH host to start in remote mode (run_command and
+	// !shell execute there; the model can also use remote_exec).
+	Remote string
 	// Contexts seed the session with operator-provided reference material:
 	// `know:<query>` searches the knowledge base, `file:<path>` reads a
 	// workspace file, anything else is passed through as raw notes.
@@ -118,6 +121,9 @@ func ParseArgs(argv []string) (Args, error) {
 		case "--researcher":
 			index++
 			args.Researcher, err = requireValue(index, item)
+		case "--remote":
+			index++
+			args.Remote, err = requireValue(index, item)
 		case "--prompt":
 			index++
 			args.Prompt, err = requireValue(index, item)
