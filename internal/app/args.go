@@ -58,6 +58,8 @@ type Args struct {
 	MaxOutputChars int
 	ApprovalMode   types.ApprovalMode
 	Viz            ui.VizMode
+	// RefreshMs overrides the live pane animation interval (0 = default 90ms).
+	RefreshMs int
 
 	// Resume: "" with HasResume means "most recent"; a value names a session.
 	Resume       string
@@ -212,6 +214,20 @@ func ParseArgs(argv []string) (Args, error) {
 					return args, fmt.Errorf("--flow must be one of: %s", vizList())
 				}
 				args.Viz = ui.VizMode(mode)
+			}
+		case "--refresh":
+			index++
+			var value string
+			value, err = requireValue(index, item)
+			if err == nil {
+				fmt.Sscanf(value, "%d", &args.RefreshMs)
+				if args.RefreshMs < 0 {
+					return args, fmt.Errorf("--refresh must be >= 0")
+				}
+				if args.RefreshMs == 0 {
+					// 0 means "no animation" from the CLI.
+					args.RefreshMs = -1
+				}
 			}
 		case "--yolo":
 			args.ApprovalMode = types.ApprovalYolo

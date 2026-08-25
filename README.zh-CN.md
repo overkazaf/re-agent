@@ -615,6 +615,16 @@ REPL 内：
 /approval
 ```
 
+## 排错
+
+- **滚动回去看到很多仪表盘帧。** live pane 每 90ms 重绘一次（spinner + 耗时），终端/tmux 会把每一帧
+  留在滚动缓冲里。这是任何动画 TUI 的正常现象，屏幕上并没有卡住的东西。想安静一点：
+  `/refresh calm`（500ms）、`/refresh off`（只在状态变化时重绘）、或 `/flow off`（完全不要仪表盘）。
+- **`CLI provider 'codex' failed with exit 1` / `claude`** —— CLI 本身没登录。在 0xAF-Re 外执行
+  `codex login` / `claude auth status`，或用 API provider 路由：`/agent deepseek` / `--planner deepseek`。
+- **macOS 上 `dyld: missing LC_UUID`** —— Go 工具链太旧；用 GitHub Releases 的预编译包或升级 Go ≥ 1.22。
+- **`--resume` / `/resume` 找不到会话** —— 用 `/sessions` 显示的短 hash（支持前缀）或完整时间戳 id。
+
 ## 常用命令
 
 | 命令 | 用途 |
@@ -634,6 +644,7 @@ REPL 内：
 | `/queue edit <id> <text>` | 修改尚未执行的任务 |
 | `/queue cancel <id>` | 取消尚未执行的任务 |
 | `/tasks collapse` / `/tasks expand` | 折叠或展开 live 任务列表 |
+| `/refresh calm\|off\|ms` | 降低/关闭仪表盘动画（滚动缓冲更干净） |
 | `/think expand` / `/think collapse` | 折叠或展开流式推理，运行中可用 |
 | `/prompt edit <role>` | 编辑 system、planner、executor、researcher prompt |
 | `/new` | 清掉当前会话，开新会话做任务（旧 transcript 仍留在磁盘上） |

@@ -192,6 +192,8 @@ func handleCommand(line string, state *State) error {
 		config.SaveUIPrefs(config.UIPrefs{Flow: arg})
 		fmt.Println(ui.RenderNotice("flow=" + arg + " (saved)"))
 		return nil
+	case "/refresh":
+		return handleRefreshCommand(arg, state)
 	case "/workflow":
 		if arg == "" {
 			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
@@ -377,6 +379,12 @@ func handleRemoteCommand(arg string, state *State) error {
 		return listRemoteHosts(state)
 	case "add":
 		return addRemoteHost(fields[1:], state)
+	case "off":
+		state.ToolContext.RemoteHost = ""
+		state.RemoteStore.SetCurrent("")
+		_ = state.RemoteStore.Save()
+		fmt.Println(ui.RenderNotice("remote mode off — run_command and !shell run locally"))
+		return nil
 	case "rm", "remove":
 		if len(fields) != 2 {
 			return fmt.Errorf("usage: /remote rm <name>")
@@ -621,6 +629,39 @@ func handleNewSession(state *State) error {
 		"new session: %s — the previous transcript is still on disk; /sessions to list, /resume <id> to reopen it",
 		session.File,
 	)))
+	return nil
+}
+
+// handleRefreshCommand sets the live pane animation interval. Faster keeps the
+// spinner smooth; slower (or off) keeps the scrollback quiet — the dashboard
+// still redraws on every state change, just not on a timer.
+func handleRefreshCommand(arg string, state *State) error {
+	arg = strings.TrimSpace(arg)
+	switch arg {
+	case "", "normal", "default":
+		state.RefreshMs = 0
+		fmt.Println(ui.RenderNotice("refresh=90ms (default)"))
+	case "calm":
+		state.RefreshMs = 500
+		fmt.Println(ui.RenderNotice("refresh=500ms (calm — quieter scrollback)"))
+	case "off":
+		state.RefreshMs = -1
+		fmt.Println(ui.RenderNotice("refresh=off — the dashboard only redraws on changes"))
+	default:
+		var ms int
+		if _, err := fmt.Sscanf(arg, "%d", &ms); err != nil || ms < 0 {
+			return fmt.Errorf("usage: /refresh [ms|calm|normal|off]")
+		}
+		if ms == 0 {
+			ms = -1
+		}
+		state.RefreshMs = ms
+		label := fmt.Sprintf("%dms", ms)
+		if ms < 0 {
+			label = "off"
+		}
+		fmt.Println(ui.RenderNotice("refresh=" + label))
+	}
 	return nil
 }
 

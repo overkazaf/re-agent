@@ -58,6 +58,10 @@ type LivePaneOptions struct {
 	PlanDisplay PlanDisplayMode
 	// ThinkDisplay does the same for the streamed reasoning tail.
 	ThinkDisplay ThinkDisplayMode
+	// RefreshMs is the animation frame interval in milliseconds: 0 (default)
+	// uses frameInterval (90ms), -1 disables the timer entirely so the pane
+	// only redraws on state changes (quietest scrollback).
+	RefreshMs int
 }
 
 type LivePane struct {
@@ -71,6 +75,7 @@ type LivePane struct {
 	flow            *FlowModel
 	onFrame         func()
 	phase           string
+	refreshMs       int
 	thinking        string
 	thinkChars      int
 	thinkMode       ThinkDisplayMode
@@ -126,6 +131,7 @@ func NewLivePane(label string, options LivePaneOptions) *LivePane {
 		label:       label,
 		interactive: term.IsTerminal(int(os.Stdout.Fd())),
 		start:       time.Now(),
+		refreshMs:   options.RefreshMs,
 		phase:       "working",
 		route:       options.Route,
 		flow:        options.Flow,
@@ -140,7 +146,9 @@ func NewLivePane(label string, options LivePaneOptions) *LivePane {
 	}
 	fmt.Print("\x1b[?25l") // hide cursor
 	pane.render()
-	pane.startTimer()
+	if pane.refreshMs != -1 {
+		pane.startTimer()
+	}
 	return pane
 }
 
@@ -156,6 +164,9 @@ func (p *LivePane) startTimer() {
 	go func() {
 		defer timer.wg.Done()
 		ticker := time.NewTicker(frameInterval)
+		if p.refreshMs > 0 {
+			ticker = time.NewTicker(time.Duration(p.refreshMs) * time.Millisecond)
+		}
 		defer ticker.Stop()
 		for {
 			select {
@@ -342,7 +353,9 @@ func (p *LivePane) Resume() {
 	p.mu.Unlock()
 	fmt.Print("\x1b[?25l")
 	p.render()
-	p.startTimer()
+	if p.refreshMs != -1 {
+		p.startTimer()
+	}
 }
 
 // Stop tears the pane down and returns the total elapsed milliseconds.

@@ -30,6 +30,7 @@ var SlashCommandSections = []HelpSection{
 		{"/new", "", "Clear the current session and start a fresh one"},
 		{"/theme", "[name]", "Switch palette (deck/amber/matrix/mono)"},
 		{"/flow", "[full|flow|trace|off]", "Live dataflow diagram and trace lines"},
+		{"/refresh", "[ms|calm|normal|off]", "Set the live pane refresh interval (calm/off quiet the scrollback)"},
 		{"/workflow", "[off|auto|specialist|caveman|research|writeup|ctf|reverse|engineering]", "Pick RE workflow mode"},
 		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
 		{"/think", "[auto|collapse|expand|toggle]", "Fold or expand the streamed reasoning"},

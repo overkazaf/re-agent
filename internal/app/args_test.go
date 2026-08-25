@@ -78,6 +78,27 @@ func TestParseArgsRemoteHost(t *testing.T) {
 	}
 }
 
+func TestParseArgsRefresh(t *testing.T) {
+	args, err := ParseArgs([]string{"--refresh", "500"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if args.RefreshMs != 500 {
+		t.Fatalf("--refresh 500 not parsed: %d", args.RefreshMs)
+	}
+	// 0 means "no animation" from the CLI.
+	args, err = ParseArgs([]string{"--refresh", "0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if args.RefreshMs != -1 {
+		t.Fatalf("--refresh 0 should mean no animation, got %d", args.RefreshMs)
+	}
+	if _, err := ParseArgs([]string{"--refresh", "-5"}); err == nil {
+		t.Fatal("--refresh -5 should be rejected")
+	}
+}
+
 func TestParseArgsVersion(t *testing.T) {
 	args, err := ParseArgs([]string{"--version"})
 	if err != nil {

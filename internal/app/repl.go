@@ -227,6 +227,7 @@ func runTurn(state *State, line string) bool {
 		},
 		PlanDisplay:  state.PlanDisplay,
 		ThinkDisplay: state.ThinkDisplay,
+		RefreshMs:    state.RefreshMs,
 	}
 	var pane *ui.LivePane
 	refreshRemote := func() {

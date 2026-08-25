@@ -682,6 +682,21 @@ Inside the REPL:
 /approval
 ```
 
+## Troubleshooting
+
+- **Scrolling back shows many dashboard frames.** The live pane redraws every
+  90ms (spinner + elapsed), and terminals/tmux keep every frame in the
+  scrollback. This is normal for any animated TUI — nothing is stuck on screen.
+  For a quieter scrollback: `/refresh calm` (500ms), `/refresh off` (redraw
+  only on changes), or `/flow off` (no dashboard at all).
+- **`CLI provider 'codex' failed with exit 1` / `claude`** — the CLI itself is
+  not authenticated. Run `codex login` / `claude auth status` outside 0xAF-Re,
+  or route to an API provider with `/agent deepseek` / `--planner deepseek`.
+- **`dyld: missing LC_UUID` on macOS** — your Go toolchain is older than the OS
+  needs; use the prebuilt binaries from GitHub Releases or upgrade Go ≥ 1.22.
+- **`--resume` / `/resume` can't find the session** — use the short hash shown
+  in `/sessions` (prefix works) or the full timestamp id.
+
 ## Common Commands
 
 | Command | Purpose |
@@ -701,6 +716,7 @@ Inside the REPL:
 | `/queue edit <id> <text>` | edit queued work before it runs |
 | `/queue cancel <id>` | cancel queued work |
 | `/tasks collapse` / `/tasks expand` | fold or expand the live task list |
+| `/refresh calm\|off\|ms` | slower / no dashboard animation (quieter scrollback) |
 | `/think expand` / `/think collapse` | fold or expand streamed reasoning, mid-turn |
 | `/prompt edit <role>` | edit system, planner, executor, or researcher prompts |
 | `/new` | clear the live session and start a fresh one (old transcript stays on disk) |

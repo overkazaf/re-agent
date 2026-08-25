@@ -50,7 +50,10 @@ type State struct {
 	ThinkDisplay ui.ThinkDisplayMode
 	Remote       *remote.Manager
 	RemoteStore  *remote.Store
-	editor       *Editor
+	// RefreshMs is the live pane animation interval (0 = default 90ms; larger
+	// values keep the scrollback quieter).
+	RefreshMs int
+	editor    *Editor
 }
 
 func Run(argv []string) error {
@@ -274,6 +277,7 @@ func Run(argv []string) error {
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
 		SessionMeta: sessionMeta,
 		Remote:      remoteManager, RemoteStore: remoteStore,
+		RefreshMs: args.RefreshMs,
 	}
 	// Start the background SSH session for --remote straight away so the status
 	// bar shows the established connection; a failure is non-fatal and the
