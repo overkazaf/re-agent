@@ -676,9 +676,10 @@ func isExecutionPrompt(lowerPrompt string) bool {
 	keywords := []string{
 		"run ", "execute", "shell", "command", "read file", "list files", "ls ", "cat ",
 		"grep", "strings", "hexdump", "objdump", "nm ", "file ", "check ./", "inspect ./",
-		"summarize ./",
+		"summarize ./", "download", "install", "pull ", "fetch ",
 		"执行", "运行", "跑一下", "跑 ", "读取", "读一下", "列出", "查看文件", "看文件",
 		"检查 ./", "分析 ./", "总结 ./",
+		"下载", "安装", "拉取", "获取", "抓取", "提取", "导出", "解压", "拷贝", "复制",
 	}
 	for _, keyword := range keywords {
 		if strings.Contains(lowerPrompt, keyword) {
