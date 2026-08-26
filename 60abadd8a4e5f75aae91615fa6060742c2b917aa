@@ -1,0 +1,30 @@
+internal/providers/clitmux.go
+  244f8e778705fd29 66-69,483,487,535-541
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "60abadd8a4e5f75aae91615fa6060742c2b917aa",
+  "prompts": {
+    "244f8e778705fd29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30871658-69a0-4d3b-958f-e8072df89492",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 1,
+      "accepted_lines": 13,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/providers/clitmux.go": {
+          "additions": 13,
+          "deletions": 1,
+          "accepted_lines": 13
+        }
+      }
+    }
+  }
+}
