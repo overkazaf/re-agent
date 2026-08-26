@@ -1,0 +1,30 @@
+internal/core/agentloop.go
+  473bfef09f381d42 679,682
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "fc6c52ea8c0be41f2e1ab31432462d302a965442",
+  "prompts": {
+    "473bfef09f381d42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d02aa8c-2114-4741-9541-ea595e33faa3",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/core/agentloop.go": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        }
+      }
+    }
+  }
+}
