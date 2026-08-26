@@ -63,6 +63,10 @@ func (p *CLITmuxProvider) Complete(input types.ProviderInput) (types.ProviderRes
 		workspace, _ = os.Getwd()
 	}
 	workspace, _ = filepath.Abs(workspace)
+	if info, err := os.Stat(workspace); err != nil || !info.IsDir() {
+		return types.ProviderResponse{}, fmt.Errorf(
+			"CLI provider '%s': workspace directory does not exist: %s", p.name, workspace)
+	}
 
 	paths, err := createRunPaths(p.name, input.SessionDir)
 	if err != nil {
@@ -476,10 +480,11 @@ func runnerScript(shellPath, command string, args []string, paths cliPaths, work
 	for _, arg := range args {
 		quoted = append(quoted, shellQuote(arg))
 	}
+	exitFile := shellQuote(paths.exit)
 	lines := []string{
 		"#!" + shellPath,
 		"set +e",
-		"cd " + shellQuote(workspace) + " || exit 97",
+		fmt.Sprintf("cd %s || { printf '%%s' 97 > %s; exit 0; }", shellQuote(workspace), exitFile),
 	}
 	for _, name := range unsetEnv {
 		safe, err := shellName(name)
@@ -527,6 +532,13 @@ func killTmux(sessionName string, paths cliPaths) {
 
 // FormatCLIFailure explains a non-zero CLI exit in the terms the operator needs.
 func FormatCLIFailure(providerName, command string, status int, stdout, stderr, runDir string, format StreamFormat) string {
+	if status == 97 {
+		parts := []string{
+			fmt.Sprintf("CLI provider '%s' failed: workspace directory does not exist or is inaccessible.", providerName),
+			"Logs: " + runDir,
+		}
+		return strings.Join(parts, "\n")
+	}
 	// A JSONL stdout is hundreds of event lines; dumping it raw buries the one
 	// line that explains the failure. Read the cause out of the stream instead.
 	cause := ""
