@@ -38,6 +38,7 @@ export function createReverseTools(): AgentTool[] {
     findBytesTool,
     carveArtifactsTool,
     apkInspectTool,
+    batchAnalyzeTool,
     fridaHookTemplateTool,
     listSkillsTool,
     readSkillTool,
@@ -612,6 +613,243 @@ const apkInspectTool: AgentTool = {
     return { content: [textBlock(clip(out.join("\n"), context.policy.maxReadBytes))], details: { entries: entries.length, dex: dex.length, libs: libs.length, packers, frameworks } };
   },
 };
+
+// ---------------------------------------------------------------------------
+// Batch APK analysis — scan, classify, group, and report
+// ---------------------------------------------------------------------------
+
+interface ApkProfile {
+  file: string;
+  relativePath: string;
+  entries: number;
+  dexCount: number;
+  nativeLibs: string[];
+  packers: string[];
+  frameworks: string[];
+  interestingAssets: string[];
+  sizeBytes: number;
+}
+
+interface ApkGroup {
+  label: string;
+  key: string;
+  apks: ApkProfile[];
+  commonLibs: string[];
+  commonPackers: string[];
+}
+
+function profileFingerprint(profile: ApkProfile): string {
+  const fw = profile.frameworks.length ? profile.frameworks.sort().join("+") : "native-java";
+  const pk = profile.packers.length ? profile.packers.sort().join("+") : "unpacked";
+  return `${fw}::${pk}`;
+}
+
+function clusterApks(profiles: ApkProfile[]): ApkGroup[] {
+  const buckets = new Map<string, ApkProfile[]>();
+  for (const profile of profiles) {
+    const key = profileFingerprint(profile);
+    const list = buckets.get(key) ?? [];
+    list.push(profile);
+    buckets.set(key, list);
+  }
+  const groups: ApkGroup[] = [];
+  for (const [key, apks] of buckets) {
+    const [fwPart, pkPart] = key.split("::");
+    const label = `${fwPart}${pkPart !== "unpacked" ? ` + ${pkPart}` : ""}`;
+    const libSets = apks.map(a => new Set(a.nativeLibs.map(l => l.split("/").pop() ?? l)));
+    const commonLibs = libSets.length
+      ? [...libSets[0]].filter(lib => libSets.every(set => set.has(lib))).sort()
+      : [];
+    const packerSets = apks.map(a => new Set(a.packers));
+    const commonPackers = packerSets.length
+      ? [...packerSets[0]].filter(p => packerSets.every(set => set.has(p))).sort()
+      : [];
+    groups.push({ label, key, apks, commonLibs, commonPackers });
+  }
+  return groups.sort((a, b) => b.apks.length - a.apks.length);
+}
+
+function formatBatchReport(dir: string, profiles: ApkProfile[], groups: ApkGroup[]): string {
+  const lines: string[] = [
+    "BATCH ANALYSIS REPORT",
+    `scanned: ${dir}`,
+    `found: ${profiles.length} APKs`,
+    `groups: ${groups.length}`,
+    "",
+  ];
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    lines.push(`═══ Group ${i + 1}: ${group.label} (${group.apks.length} APK${group.apks.length > 1 ? "s" : ""})`);
+    for (let j = 0; j < group.apks.length; j++) {
+      const apk = group.apks[j];
+      const prefix = j < group.apks.length - 1 ? "├──" : "└──";
+      const packer = apk.packers.length ? apk.packers.join(", ") : "no packer";
+      lines.push(`${prefix} ${apk.relativePath} — ${apk.frameworks.join(", ") || "native"}, ${packer}, ${apk.nativeLibs.length} native lib${apk.nativeLibs.length !== 1 ? "s" : ""}, ${apk.dexCount} dex`);
+    }
+    if (group.commonLibs.length) lines.push(`    common libs: ${group.commonLibs.join(", ")}`);
+    if (group.commonPackers.length) lines.push(`    shared packer: ${group.commonPackers.join(", ")}`);
+    lines.push(`    next: ${groupNextSteps(group)}`);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+function groupNextSteps(group: ApkGroup): string {
+  const hints: string[] = [];
+  const fw = group.label.toLowerCase();
+  if (fw.includes("flutter")) hints.push("Extract libapp.so, check for snapshot engine obfuscation, dump Dart symbols");
+  else if (fw.includes("react native")) hints.push("Extract index.android.bundle, check for Hermes bytecode vs plain JS");
+  else if (fw.includes("unity")) hints.push("Extract global-metadata.dat and il2cpp if present, run Il2CppDumper");
+  else if (fw.includes("cordova") || fw.includes("uniapp")) hints.push("Extract www/ assets, review JS source for API endpoints and crypto");
+  else hints.push("Decompile with JADX, search for crypto/sign/token/root/frida keywords");
+  if (group.commonPackers.length) hints.push(`bypass ${group.commonPackers.join("/")} packing first`);
+  return hints.join("; ");
+}
+
+async function scanApkFiles(dir: string, maxDepth: number, maxApks: number): Promise<string[]> {
+  const apks: string[] = [];
+  const walk = async (current: string, depth: number) => {
+    if (depth > maxDepth || apks.length >= maxApks) return;
+    const entries = await fs.readdir(current, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      if (apks.length >= maxApks) break;
+      const full = path.join(current, entry.name);
+      if (entry.isFile() && /\.apk$/i.test(entry.name)) {
+        apks.push(full);
+      } else if (entry.isDirectory() && !entry.name.startsWith(".")) {
+        await walk(full, depth + 1);
+      }
+    }
+  };
+  await walk(dir, 0);
+  return apks.sort();
+}
+
+const batchAnalyzeTool: AgentTool = {
+  name: "batch_analyze",
+  description:
+    "Scan a directory for APK files, inspect each one (packer, framework, native libs, DEX), classify by similarity, and produce a grouped triage report. Use for bulk reverse engineering of multiple APKs in one shot.",
+  risk: "read",
+  parameters: objectSchema(
+    {
+      path: { type: "string", description: "Directory to scan for APK files." },
+      maxDepth: { type: "number", default: 3, description: "Maximum directory depth to scan." },
+      maxApks: { type: "number", default: 50, description: "Maximum number of APKs to analyze." },
+      outputDir: {
+        type: "string",
+        description: "Optional workspace-relative directory to write per-group and summary reports. Requires --write.",
+      },
+    },
+    ["path"],
+  ),
+  async execute(args, context) {
+    const dir = resolveInside(context.workspace, asString(args.path));
+    validatePathRead(dir, context.policy);
+    const maxDepth = Math.min(Math.max(1, asNumber(args.maxDepth, 3)), 10);
+    const maxApks = Math.min(Math.max(1, asNumber(args.maxApks, 50)), 200);
+
+    const apkPaths = await scanApkFiles(dir, maxDepth, maxApks);
+    if (apkPaths.length === 0) {
+      return { content: [textBlock(`No APK files found in ${path.relative(context.workspace, dir)} (depth=${maxDepth}).`)], details: { found: 0 } };
+    }
+
+    const profiles: ApkProfile[] = [];
+    const errors: string[] = [];
+    for (const apkPath of apkPaths) {
+      try {
+        const stat = await fs.stat(apkPath);
+        const entries = await zipEntries(apkPath, context);
+        const packers = detectApkPackers(entries);
+        const frameworks = detectApkFrameworks(entries);
+        const dex = entries.filter(e => /(^|\/)classes.*\.dex$/i.test(e));
+        const libs = entries.filter(e => /^lib\/.*\.so$/i.test(e));
+        const assets = entries.filter(e => /^assets\//i.test(e)).slice(0, 20);
+        profiles.push({
+          file: apkPath,
+          relativePath: path.relative(context.workspace, apkPath),
+          entries: entries.length,
+          dexCount: dex.length,
+          nativeLibs: libs,
+          packers,
+          frameworks,
+          interestingAssets: assets,
+          sizeBytes: stat.size,
+        });
+      } catch (err) {
+        errors.push(`${path.relative(context.workspace, apkPath)}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    const groups = clusterApks(profiles);
+    const report = formatBatchReport(path.relative(context.workspace, dir), profiles, groups);
+
+    const outputDir = asString(args.outputDir).trim();
+    const written: string[] = [];
+    if (outputDir) {
+      validateWriteAllowed(context.policy);
+      const outBase = resolveInside(context.workspace, outputDir);
+      await fs.mkdir(outBase, { recursive: true });
+      const summaryPath = path.join(outBase, "batch-summary.txt");
+      await fs.writeFile(summaryPath, report, "utf8");
+      written.push(path.relative(context.workspace, summaryPath));
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const groupFile = path.join(outBase, `group-${i + 1}-${slugify(group.label)}.txt`);
+        const groupReport = [
+          `Group ${i + 1}: ${group.label}`,
+          `APKs: ${group.apks.length}`,
+          `Common libs: ${group.commonLibs.join(", ") || "none"}`,
+          `Common packers: ${group.commonPackers.join(", ") || "none"}`,
+          `Next: ${groupNextSteps(group)}`,
+          "",
+          ...group.apks.map(a => [
+            `── ${a.relativePath}`,
+            `   size: ${(a.sizeBytes / 1024 / 1024).toFixed(1)} MB`,
+            `   entries: ${a.entries}`,
+            `   dex: ${a.dexCount}`,
+            `   native libs: ${a.nativeLibs.length} (${a.nativeLibs.map(l => l.split("/").pop()).join(", ")})`,
+            `   packers: ${a.packers.join(", ") || "none"}`,
+            `   frameworks: ${a.frameworks.join(", ") || "native"}`,
+            `   assets: ${a.interestingAssets.slice(0, 10).join(", ") || "none"}`,
+            "",
+          ].join("\n")),
+        ].join("\n");
+        await fs.writeFile(groupFile, groupReport, "utf8");
+        written.push(path.relative(context.workspace, groupFile));
+      }
+    }
+
+    const out: string[] = [report];
+    if (errors.length) {
+      out.push("", `errors (${errors.length}):`);
+      for (const err of errors.slice(0, 10)) out.push(`- ${err}`);
+    }
+    if (written.length) {
+      out.push("", `written ${written.length} files:`);
+      for (const w of written) out.push(`- ${w}`);
+    }
+
+    const spilled = await spillIfLarge(out.join("\n"), { context, label: "batch-analyze" });
+    return {
+      content: [textBlock(spilled.text)],
+      details: {
+        scanned: apkPaths.length,
+        analyzed: profiles.length,
+        groups: groups.length,
+        errors: errors.length,
+        written: written.length,
+      },
+    };
+  },
+};
+
+function slugify(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30) || "group";
+}
 
 const fridaHookTemplateTool: AgentTool = {
   name: "frida_hook_template",

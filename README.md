@@ -7,7 +7,8 @@
 - a single tool registry,
 - append-only JSONL sessions,
 - role-based routing between planner and executor models,
-- interruptible turns, context compaction, tiered tool approval, session resume, and MCP tools.
+- interruptible turns, context compaction, tiered tool approval, session resume, and MCP tools,
+- **batch APK workflow** — one-shot automated analysis of an entire APK directory: scan, classify, group, and write structured reverse engineering reports.
 
 It is intentionally much smaller than `oh-my-pi`; the first version is a practical lab tool rather than a full TUI framework.
 
@@ -198,6 +199,8 @@ bun src/cli.ts --agent grok-cli -p "Review this reverse engineering plan for bli
 /findbytes ./chall flag{
 /carve ./blob          locate embedded file signatures
 /apk ./app.apk         inspect APK structure
+/batch ./apks          batch-scan APKs, classify, group, and report
+/batch ./apks --output ./reports   same, writing per-group report files
 /decode base64 ZmxhZw==
 /hook java com.a.Crypto sign java.lang.String
 /read ./file           direct read_file call
@@ -420,6 +423,7 @@ skipped, never fatal. `/mcp` shows the state of each one.
 - `find_bytes`
 - `carve_artifacts`
 - `apk_inspect`
+- `batch_analyze` — scan a directory of APKs, classify by framework/packer, group, and report
 - `frida_hook_template`
 - `list_skills`
 - `read_skill`
@@ -474,6 +478,73 @@ Try:
 /findbytes carrier.bin %PDF-
 /carve carrier.bin
 /know frida ssl pinning
+```
+
+## Batch APK Analysis
+
+Drop a directory of APK files and let the agent scan, classify, group, and write up
+findings automatically — one command replaces the repetitive per-APK triage loop.
+
+```bash
+# Interactive: scan, then follow up with deeper analysis prompts
+bun src/cli.ts --workspace ./apk-collection
+```
+
+```text
+/batch ./apks
+```
+
+```text
+╔══════════════════════════════════════════════════════════════╗
+  BATCH ANALYSIS REPORT
+  scanned: ./apks
+  found: 12 APKs
+  groups: 4
+
+  ═══ Group 1: Flutter + 360 jiagu (5 APKs)
+  ├── app-music.apk — Flutter, 360 jiagu, 3 native libs, 2 dex
+  ├── app-video.apk — Flutter, 360 jiagu, 3 native libs, 1 dex
+  └── app-live.apk  — Flutter, 360 jiagu, 4 native libs, 2 dex
+      common libs: libflutter.so, libapp.so
+      shared packer: 360 jiagu
+      next: Extract libapp.so, check for snapshot engine obfuscation
+
+  ═══ Group 2: React Native (3 APKs)
+  ├── shop.apk  — React Native, no packer, 2 native libs
+  └── pay.apk   — React Native, no packer, 1 native lib
+      common libs: libreactnativejni.so
+      next: Extract index.android.bundle, check for Hermes bytecode
+╚══════════════════════════════════════════════════════════════╝
+```
+
+The workflow automates the most repetitive parts of bulk Android reverse engineering:
+
+1. **Discover** — recursively finds all `.apk` files in a directory (configurable depth and cap).
+2. **Inspect** — runs packer detection, framework identification, native lib enumeration, and DEX counting on each APK.
+3. **Classify** — clusters APKs by framework + packer fingerprint, so Flutter+360 apps land in one group, unpacked React Native apps in another.
+4. **Report** — produces a structured grouped report with per-group next-step guidance.
+5. **Writeup** — the built-in `batch-apk-analysis` skill guides the agent through cross-group comparison and structured writeup generation.
+
+Persist reports with `--write`:
+
+```text
+/batch ./apks --output ./reports
+```
+
+This writes `batch-summary.txt` and per-group `group-N-label.txt` files that the agent
+can read back for deeper analysis without re-scanning.
+
+For the full automated workflow — scan through writeup in one shot:
+
+```text
+Use batch_analyze on ./apks, pick the hardest group, deep-dive the representative APK,
+and write a grouped reverse engineering report.
+```
+
+Or use the skill directly:
+
+```text
+/skill batch-apk-analysis analyze all APKs in ./apks and produce a writeup
 ```
 
 ## HUD

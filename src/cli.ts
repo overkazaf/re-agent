@@ -116,7 +116,7 @@ interface CliArgs {
   authCommand?: { action: "login" | "status" | "logout"; provider?: string };
 }
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
@@ -751,6 +751,9 @@ async function handleCommand(
       if (!arg) throw new Error("Usage: /apk <apk>");
       await runDirectTool("apk_inspect", { path: arg }, state);
       return;
+    case "/batch":
+      await runBatchCommand(arg, state);
+      return;
     case "/hook":
       await runDirectTool("frida_hook_template", parseHookCommand(arg), state);
       return;
@@ -1242,6 +1245,22 @@ async function runDirectTool(
   if (!tool) throw new Error(`Tool not found: ${toolName}`);
   const result = await tool.execute(args, state.toolContext);
   process.stdout.write(`${textFromBlocks(result.content)}\n`);
+}
+
+async function runBatchCommand(
+  arg: string,
+  state: { tools: AgentTool[]; toolContext: ToolContext; config: AgentConfig; loop: AgentLoop; role: AgentRole; provider?: string; builtInSkills: BuiltInSkill[]; flow: VizMode },
+): Promise<void> {
+  const trimmed = arg.trim();
+  if (!trimmed) throw new Error("Usage: /batch <directory> [--output <dir>]");
+  const parts = trimmed.split(/\s+/);
+  const dir = parts[0];
+  const outputIdx = parts.indexOf("--output");
+  const outputDir = outputIdx >= 0 && parts[outputIdx + 1] ? parts[outputIdx + 1] : undefined;
+  const toolArgs: Record<string, unknown> = { path: dir };
+  if (outputDir) toolArgs.outputDir = outputDir;
+  await runDirectTool("batch_analyze", toolArgs, state);
+  process.stdout.write(`${renderNotice("Tip: send a prompt like \"classify these groups and write a grouped writeup\" or use /skill batch-apk-analysis to continue.")}\n`);
 }
 
 function parseArgs(argv: string[]): CliArgs {
