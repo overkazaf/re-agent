@@ -1,0 +1,75 @@
+package.json
+  d414efc63d8586b8 3
+skills/batch-apk-analysis/SKILL.md
+  d414efc63d8586b8 1-118
+src/tools/reverse-tools.ts
+  d414efc63d8586b8 41,617-853
+src/cli.ts
+  d414efc63d8586b8 119,754-756,1250-1265
+README.md
+  d414efc63d8586b8 10-11,202-203,426,483-549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "92aa6e9e773f35b99f8cd59d06dc81cf0ec08f0c",
+  "prompts": {
+    "244f8e778705fd29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30871658-69a0-4d3b-958f-e8072df89492",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/providers/clitmux.go": {
+          "additions": 13,
+          "deletions": 1
+        }
+      }
+    },
+    "d414efc63d8586b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea788d4-9742-40cc-bd7e-93ac90a7f75c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 452,
+      "total_deletions": 6,
+      "accepted_lines": 449,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "skills/batch-apk-analysis/SKILL.md": {
+          "additions": 118,
+          "accepted_lines": 118
+        },
+        "README.md": {
+          "additions": 72,
+          "deletions": 1,
+          "accepted_lines": 72
+        },
+        "src/cli.ts": {
+          "additions": 23,
+          "deletions": 4,
+          "accepted_lines": 20
+        },
+        "src/tools/reverse-tools.ts": {
+          "additions": 238,
+          "accepted_lines": 238
+        },
+        "package.json": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
