@@ -1,3 +1,12 @@
+<div align="center">
+
+![Stars](https://img.shields.io/github/stars/overkazaf/re-agent?style=flat-square&color=58a6ff)
+![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Last Commit](https://img.shields.io/github/last-commit/overkazaf/re-agent?style=flat-square&color=58a6ff)
+![License](https://img.shields.io/github/license/overkazaf/re-agent?style=flat-square&color=58a6ff)
+
+</div>
+
 # 0xAF-Re
 
 An authorized reverse-engineering & CTF terminal agent. One static Go binary that
