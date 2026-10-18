@@ -76,6 +76,7 @@ func (l *AgentLoop) hypothesisStackSection() string {
 		"",
 		"Record claims via hypothesis_create and update them via hypothesis_update.",
 		"Challenge a hypothesis whenever new evidence contradicts it; rejected roots mark their dependents for re-examination.",
+		"Run evidence_review after collecting dynamic results: the arbitrator cross-checks static claims against runtime observations.",
 	}, "\n")
 }
 
@@ -83,6 +84,23 @@ func (l *AgentLoop) hypothesisStackSection() string {
 // than evidence about the target.
 func isHostStateTool(name string) bool {
 	return name == "update_plan" || strings.HasPrefix(name, "hypothesis_")
+}
+
+// dynamicTools are the tools whose output observes the target at runtime, as
+// opposed to reading bytes off disk. The arbitrator uses the split to pair
+// static claims against dynamic observations.
+var dynamicTools = map[string]bool{
+	"run_command": true,
+	"remote_exec": true,
+}
+
+// evidenceKindFor classifies a tool's output view: dynamic (runtime) or
+// static (on-disk).
+func evidenceKindFor(tool string) string {
+	if dynamicTools[tool] {
+		return "dynamic"
+	}
+	return "static"
 }
 
 // recordEvidence files one tool result in the ledger and stamps the id into
@@ -94,6 +112,7 @@ func (l *AgentLoop) recordEvidence(call types.ToolCall, content []types.ContentB
 	}
 	record := l.evidence.Add(evidence.Input{
 		Source:     call.Name,
+		Kind:       evidenceKindFor(call.Name),
 		Text:       types.TextFromBlocks(content),
 		IsError:    isError,
 		ToolCallID: call.ID,

@@ -310,12 +310,30 @@ type HypothesisStore interface {
 type EvidenceRecord struct {
 	ID         string `json:"id"` // ev_001
 	Source     string `json:"source"`
-	Kind       string `json:"kind,omitempty"`
+	Kind       string `json:"kind,omitempty"` // static | dynamic | verification
 	Excerpt    string `json:"excerpt"`
 	IsError    bool   `json:"isError,omitempty"`
 	ToolCallID string `json:"toolCallId,omitempty"`
 	Bytes      int    `json:"bytes"`
 	CreatedAt  int64  `json:"createdAt"`
+}
+
+// Finding is one arbitration outcome: how the evidence ledger and the
+// hypothesis stack disagree. Applied findings already mutated the stack (a
+// challenge ran); advisory findings only report.
+type Finding struct {
+	Rule         string `json:"rule"`
+	HypothesisID string `json:"hypothesisId"`
+	EvidenceID   string `json:"evidenceId,omitempty"`
+	Applied      bool   `json:"applied"`
+	Message      string `json:"message"`
+}
+
+// Arbitrator cross-checks the ledger against the stack. Implemented by
+// internal/verify; exposed to tools via ToolContext so the model can ask for
+// an explicit review, while the loop runs it automatically after tool results.
+type Arbitrator interface {
+	Review() []Finding
 }
 
 // --- approval ----------------------------------------------------------------
@@ -409,6 +427,9 @@ type ToolContext struct {
 	// is unavailable and the hypothesis_* tools report that instead of
 	// silently dropping claims.
 	Hypotheses HypothesisStore
+	// Arbitrator cross-checks the evidence ledger against the stack. Nil when
+	// arbitration is unavailable; the evidence_review tool reports that.
+	Arbitrator Arbitrator
 }
 
 func (tc ToolContext) Context() context.Context {

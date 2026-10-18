@@ -13,6 +13,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/util"
+	"github.com/overkazaf/re-agent/internal/verify"
 )
 
 // DefaultContextBudgetTokens fits comfortably inside the smallest context we
@@ -78,9 +79,11 @@ type AgentLoop struct {
 	planTracker plan.Tracker
 	// The evidence ledger and hypothesis stack live outside the transcript so
 	// compaction cannot take them; the stack is re-injected into the system
-	// prompt on every request instead.
+	// prompt on every request instead. The arbitrator cross-checks the two
+	// after every tool result.
 	evidence   *evidence.Ledger
 	hypotheses *hypothesis.Tracker
+	arbiter    *verify.Arbitrator
 	emit       func(LoopEvent)
 	// lastProviderName is whoever answered last, so `/compact` defaults to the
 	// model that holds the context.
@@ -100,13 +103,20 @@ func NewAgentLoop(options LoopOptions) *AgentLoop {
 		loop.publishPlan(steps, meta)
 	}
 	// The hypothesis tools mutate the loop's own tracker, and every successful
-	// mutation snapshots the stack into the session event stream.
-	options.ToolContext.Hypotheses = &persistingHypotheses{
+	// mutation snapshots the stack into the session event stream. The
+	// arbitrator challenges through the same decorator, so its auto-challenges
+	// persist exactly like model-driven ones.
+	persistingStack := &persistingHypotheses{
 		store: loop.hypotheses,
 		onSave: func(hypotheses []types.Hypothesis) {
 			_ = loop.options.Session.AppendEvent(map[string]any{"type": "hypotheses", "hypotheses": hypotheses})
 		},
 	}
+	options.ToolContext.Hypotheses = persistingStack
+	loop.arbiter = verify.New(loop.evidence, persistingStack, func(record types.EvidenceRecord) {
+		_ = loop.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": record})
+	})
+	options.ToolContext.Arbitrator = loop.arbiter
 	return loop
 }
 
@@ -590,6 +600,11 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					runMessages = append(runMessages, resultMessage)
 				}
 			}
+			// The arbitrator runs after every real tool result: a contradiction
+			// the model did not notice still becomes evidence and a challenge.
+			// Findings are not echoed into the transcript — the challenge is
+			// visible through the stack digest the next turn already carries.
+			l.arbiter.Review()
 			// A tool call that finished right as the operator hit ^C still
 			// counts: the remaining calls in this batch are the ones to skip.
 			if ctx.Err() != nil {

@@ -50,6 +50,7 @@ func CreateReverseTools() []types.Tool {
 		hypothesisCreateTool(),
 		hypothesisUpdateTool(),
 		hypothesisListTool(),
+		evidenceReviewTool(),
 	}
 }
 

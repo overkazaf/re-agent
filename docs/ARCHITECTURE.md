@@ -684,6 +684,24 @@ mutation snapshots the whole stack as a `hypotheses` event; `LoadSession`
 returns both stores in `Loaded` and `Restore` seeds them back, numbering
 continuing past the restored ids.
 
+**Arbitration** (`internal/verify`): a deterministic pass that cross-checks
+the ledger against the stack. The loop runs it after every real tool result —
+findings are not echoed into the transcript; the challenge is visible through
+the stack digest the next turn already carries. `evidence_review` exposes the
+same pass on demand. Four rules:
+
+| Rule | Trigger | Action |
+|---|---|---|
+| `dangling-citation` | a claim cites an `ev_NNN` that is not in the ledger | synthesizes a `verification` record (id keyed by `arbiter:<hyp>:<ev>` so re-review is idempotent across restarts) and challenges |
+| `error-support` | a claim cites a record flagged `IsError` | challenges with the erroring record |
+| `runtime-contradiction` | a dynamic, erroring record shares a subject token with a claim but is not attached to it | challenges with that record |
+| `single-view` | confidence ≥ 0.8 backed only by on-disk (static) evidence while an unattached opposite-view record shares the subject | advisory only — no mutation |
+
+Records carry a `kind`: `dynamic` (`run_command`, `remote_exec`), `static`
+(everything else), or `verification` (synthesized by the arbitrator). The
+auto-challenge routes through the same persisting stack decorator as
+model-driven mutations, so it snapshots to the session JSONL identically.
+
 The point of the layer: a contradiction is handled by a deterministic state
 transition, not by the model noticing its own inconsistency.
 
@@ -765,8 +783,8 @@ itself.
 | `compaction` | mechanical pass trimmed the view (`agentloop.go:306`) | `tokensBefore`, `tokensAfter`, `dropped`, `elided` |
 | `compaction` + `"mode":"summary"` | `/compact` (`agentloop.go:174`) | `provider`, `tokensBefore`, `tokensAfter` |
 | `plan` | a task list actually changed (`agentloop.go:225`) | `source`, `note`, `steps[]` |
-| `evidence` | a real tool result was filed in the ledger (`core/metacog.go`) | `record`: `id` (`ev_NNN`), `source`, `excerpt`, `isError`, `toolCallId`, `bytes` |
-| `hypotheses` | a hypothesis mutation succeeded (`core/metacog.go`) | `hypotheses[]`: whole-stack snapshot, last one wins on load |
+| `evidence` | a real tool result was filed in the ledger (`core/metacog.go`), or the arbitrator synthesized a verification record (`core/agentloop.go`) | `record`: `id` (`ev_NNN`), `source`, `kind` (`static\|dynamic\|verification`), `excerpt`, `isError`, `toolCallId`, `bytes` |
+| `hypotheses` | a hypothesis mutation succeeded — model-driven or arbitrator challenge (`core/metacog.go`) | `hypotheses[]`: whole-stack snapshot, last one wins on load |
 | `interrupted` | `noteInterrupted` (`agentloop.go:214`) | — |
 | `max_turns_reached` | the loop hit its ceiling (`agentloop.go:439`) | `maxTurns` |
 | `resumed_from` | `--resume` / `/resume` (`app/app.go:187`, `commands.go:225`) | `file`, `messages` |

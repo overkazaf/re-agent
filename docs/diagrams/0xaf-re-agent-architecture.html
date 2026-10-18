@@ -168,7 +168,7 @@
     <main class="diagram-container">
       <svg viewBox="0 0 1280 1048" role="img" aria-labelledby="diagram-title diagram-desc">
         <title id="diagram-title">0xAF-Re architecture map</title>
-        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools. A metacognition layer holds the evidence ledger and hypothesis stack beside the agent loop; the evidence arbitrator and adversarial auditor are planned.</desc>
+        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools. A metacognition layer holds the evidence ledger and hypothesis stack beside the agent loop, and an evidence arbitrator cross-checks them after every tool result; the adversarial auditor is planned.</desc>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
@@ -186,7 +186,10 @@
             <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
           </marker>
           <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+          <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185"/>
           </marker>
           <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.28"/>
@@ -208,7 +211,8 @@
           <path d="M 700 350 L 700 272" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
           <path d="M 782 486 L 782 820 Q 782 832 794 832 L 961 832 Q 973 832 973 844 L 973 904" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-violet)"/>
           <path d="M 639 462 L 639 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-          <path d="M 392 462 L 392 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 392 462 L 392 514" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
+          <path d="M 460 516 L 460 489 L 580 489 L 580 464" stroke="#fb7185" stroke-width="1.8" marker-end="url(#arrow-rose)"/>
           <path d="M 1058 310 L 1014 310 L 1014 118 L 740 118 L 740 146" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
           <path d="M 1058 350 L 1000 350 L 1000 570 L 985 570" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
           <path d="M 894 626 L 894 904" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
@@ -222,6 +226,8 @@
           <text x="420" y="276">stamp ev_NNN</text>
           <text x="710" y="300" fill="#22d3ee">stack feeds system prompt</text>
           <text x="560" y="826" fill="#a78bfa" text-anchor="middle">persist evidence + hypothesis events to JSONL</text>
+          <text x="404" y="484" fill="#a78bfa" font-size="8">reads</text>
+          <text x="498" y="484" fill="#fb7185" font-size="8">challenges</text>
           <text x="860" y="112">seat results</text>
           <text x="1008" y="460" fill="#fb7185">write / network</text>
           <text x="902" y="700" fill="#fbbf24">approved exec</text>
@@ -280,12 +286,12 @@
         <text x="536" y="432" fill="#cbd5e1" font-size="9">reject/revise cascades to derived rows</text>
         <text x="639" y="452" fill="#34d399" font-size="9" text-anchor="middle">host-enforced rules, not prompted hopes</text>
 
-        <!-- Planned verification layer -->
-        <rect x="290" y="516" width="205" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
-        <text x="392" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Evidence Arbitrator</text>
-        <text x="308" y="562" fill="#fb7185" font-size="9">planned · verification layer</text>
-        <text x="308" y="578" fill="#cbd5e1" font-size="9">static vs dynamic cross-check</text>
-        <text x="308" y="594" fill="#cbd5e1" font-size="9">contradictions become evidence</text>
+        <!-- Implemented verification layer -->
+        <rect x="290" y="516" width="205" height="100" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
+        <text x="392" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Evidence Arbitrator</text>
+        <text x="308" y="562" fill="#a78bfa" font-size="9">host rule engine · after every tool result</text>
+        <text x="308" y="578" fill="#cbd5e1" font-size="9">dangling citation → synthesized + challenged</text>
+        <text x="308" y="594" fill="#cbd5e1" font-size="9">static vs dynamic contradictions become evidence</text>
 
         <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
         <text x="639" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Adversarial Auditor</text>
@@ -387,7 +393,7 @@
       </article>
       <article class="card">
         <h2><span class="card-dot violet"></span>Metacognition layer (new)</h2>
-        <p>Tool results become ev_NNN ledger records; committed claims become H-NNN hypotheses. A contradiction halves confidence and a rejected root cascades a re-check flag to everything derived from it — host code, not prompt hope.</p>
+        <p>Tool results become ev_NNN ledger records; committed claims become H-NNN hypotheses. A contradiction halves confidence and a rejected root cascades a re-check flag to everything derived from it — host code, not prompt hope. After every tool result an arbitrator pass challenges dangling citations and runtime contradictions on its own.</p>
       </article>
       <article class="card">
         <h2><span class="card-dot emerald"></span>Composable model seats</h2>
