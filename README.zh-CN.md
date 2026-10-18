@@ -5,7 +5,7 @@
 
 **Language:** [English](README.md) | 中文
 
-**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg)
+**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg) · [设计分析（博客）](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)
 
 <p align="center">
   <img src="docs/shots/dashboard.png" alt="0xAF-Re 实时仪表盘：FLOW / TOOLS / PLAN / THINK / TELE" width="900">
@@ -77,6 +77,7 @@
 | --- | --- |
 | **实时仪表盘** | 单框视图：FLOW（动画数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；矮终端优雅降级，保住当前步骤。 |
 | **双模型路由** | planner / executor / researcher 三个座位，可固定、可按角色，运行中可切换。 |
+| **元认知层** | 证据账本（`ev_NNN`）+ 假设栈（`H-NNN`）：每个工具结果自动入库并被引用；矛盾证据会把判断置信度减半，并级联到派生判断——全部由宿主代码强制。（见 [0xAF-Re 与 REA 的架构差异](#0xaf-re-与-rea-的架构差异)） |
 | **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`——每种模式给 prompt 加上聚焦的契约。 |
 | **会话恢复** | append-only JSONL 转录；`--resume <hash|id>` / `--continue` / `/sessions`；崩溃自动修复悬挂工具调用；`/new` 开新会话。 |
 | **上下文压缩** | 每次请求机械裁剪 + `/compact`；可选 `snapcompact` 把被丢弃历史渲染成 PNG 帧，视觉模型直接读回。 |
@@ -134,6 +135,7 @@
 | --- | --- |
 | 终端交互层 | 把任务队列、斜杠命令、shell escape 和 live HUD 放在同一个工作区策略下。 |
 | Agent loop | 路由 planner/executor/researcher，压缩上下文，流式输出事件，并持久化 JSONL session。 |
+| 元认知层 | 把证据（`ev_NNN`）和判断（`H-NNN`）作为转录之外的宿主状态：每个工具结果自动打标入库，假设栈注入 system prompt，降级与级联由确定性代码执行。 |
 | Workflow 模式 | 有 specialist route 就直接用；没有时把 RE 任务拆成有边界的本地证据 executor packet。 |
 | 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
 | 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |
@@ -148,8 +150,28 @@
 - **模型座位可组合:** planner、executor、researcher 可以接不同 provider、不同模型和不同 prompt。
 - **证据优先 workflow:** 有 GPT Cyber / Claude Code CVP / Grok 类订阅就直走 specialist；
   普通模型走 caveman，只拿只读本地证据包。
+- **元认知即宿主状态:** 证据账本和假设栈活在转录之外，矛盾不会被上下文压缩吞掉，`--resume` 时原样重放；
+  降级和级联是确定性 Go 代码，不靠 prompt 自觉。
 - **过程可调试:** HUD、trace、token/耗时遥测、任务状态和 JSONL session 让每一轮都能复盘。
 - **扩展面够直接:** 内置 RE 工具、MCP tools、skills、知识库导入、本地覆盖和运行中任务队列。
+
+### 0xAF-Re 与 REA 的架构差异
+
+[REA](https://github.com/morluto/rea) 是这个项目借鉴的重要先行者——工具观测的证据账本、
+provider 隔离不做静默降级、静态与运行时视图配对，都来自它。0xAF-Re 是另一种形态
+（自包含 agent 而非 MCP 工具服务器），现在又往前走了一步：把证据和假设变成**一等宿主状态**。
+完整设计思路见[博客分析](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)。
+
+| 维度 | REA（MCP 工具服务器） | 0xAF-Re（终端 agent） |
+| --- | --- | --- |
+| 形态 | 把 Ghidra/IDA/LLDB 风格的工具暴露给任何支持 MCP 的 agent 宿主。 | 一个 Go 二进制同时拥有循环、席位、策略闸门和工具。 |
+| 证据 | 带 integrity policy 的证据账本；结果记录在案、持续可用。 | 同一思路，但接进了循环：每个工具结果自动打上 `ev_NNN`、截成 400 字符摘录、带 id 回注上下文，并作为会话事件持久化——引用在压缩和 `--resume` 之后仍然成立。 |
+| 假设管理 | 隐式；推理叙事活在模型上下文里。 | 显式的 `hypothesis_create/update/list` 工具背后是宿主侧栈：`challenge` 使置信度减半，低于 0.25 标记需重查，reject/revise 级联到派生判断。 |
+| 上下文压力 | 证据在服务器侧累积，但叙事仍由客户端 agent 扛着。 | 账本摘要和假设栈每轮注入，原始历史继续机械裁剪——状态不是压缩的牺牲品。 |
+| 审计 / 验证 | 未内置。 | 规划中：对抗审计员在隔离上下文（可换模型）复跑分析；证据仲裁器交叉核对静态与动态判断。 |
+
+一句话：REA 给外部 agent 一套**诚实的工具**；0xAF-Re 在诚实工具之外，还让 agent 自己的
+**判断可检视、可降级、可恢复**——那些通常活在（也死在）上下文窗口里的分析脉络。
 
 ## 项目动机
 
@@ -674,6 +696,7 @@ REPL 内：
 
 
 - [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)：可导出 PNG/PDF 的 Cocoon AI 风格设计概览。
+- [设计分析（博客）](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)：催生元认知层的完整分析，含 REA 对比和基于挑战题的回归评测计划。
 - [架构深挖](docs/ARCHITECTURE.zh-CN.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。
 - [架构图索引](docs/diagrams/index.zh-CN.html)：核心运行机制的图形化入口。
 - [模块图](docs/diagrams/01-module-graph.svg)

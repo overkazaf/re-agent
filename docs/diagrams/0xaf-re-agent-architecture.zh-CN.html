@@ -48,7 +48,7 @@
       color: #94a3b8;
       font-size: 13px;
       line-height: 1.6;
-      max-width: 92ch;
+      max-width: 96ch;
       margin-left: 24px;
     }
     .toolbar {
@@ -112,6 +112,7 @@
     .emerald { background: #34d399; }
     .amber { background: #fbbf24; }
     .rose { background: #fb7185; }
+    .violet { background: #a78bfa; }
     .card p {
       color: #94a3b8;
       font-size: 11px;
@@ -149,8 +150,8 @@
           <h1>0xAF-Re 架构总图</h1>
         </div>
         <p class="subtitle">
-          一个终端优先的 RE Agent：Go 宿主把规划、执行、研究路由到不同模型座位，
-          必要时收窄 workflow 上下文，并把证据收集留在本地工具和可审计 transcript 中。
+          终端优先的逆向 agent，带 REA 式元认知层：每个工具结果自动入库为 ev_NNN 证据记录，已提交的判断由宿主强制的假设栈（H-NNN）显式管理；
+          planner / executor / researcher 三席位共享同一份可审计转录。
         </p>
       </div>
       <div class="toolbar" data-export-ignore>
@@ -164,9 +165,9 @@
     </header>
 
     <main class="diagram-container">
-      <svg viewBox="0 0 1280 860" role="img" aria-labelledby="diagram-title diagram-desc">
+      <svg viewBox="0 0 1280 1048" role="img" aria-labelledby="diagram-title diagram-desc">
         <title id="diagram-title">0xAF-Re 架构总图</title>
-        <desc id="diagram-desc">终端入口连接 Go 宿主，宿主将角色 prompt 经 workflow 和策略闸门路由到 providers 与本地逆向工具。</desc>
+        <desc id="diagram-desc">操作终端接入 Go 宿主；宿主按角色把提示词经工作流和策略闸门路由到不同 provider 和本地逆向工具。元认知层在 agent 循环旁维护证据账本与假设栈；证据仲裁器与对抗审计员为规划中组件。</desc>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
@@ -183,164 +184,221 @@
           <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
           </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+          </marker>
           <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.28"/>
           </filter>
         </defs>
 
-        <rect width="1280" height="860" fill="#020617"/>
-        <rect width="1280" height="860" fill="url(#grid)"/>
+        <rect width="1280" height="1048" fill="#020617"/>
+        <rect width="1280" height="1048" fill="url(#grid)"/>
 
-        <!-- Arrows are drawn first so boxes stay visually dominant. -->
+        <!-- 箭头先画，盒子压在上面 -->
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M 205 360 L 350 360 L 350 272 L 496 272" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow-cyan)"/>
-          <path d="M 640 330 L 640 392" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
-          <path d="M 760 272 L 803 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
-          <path d="M 985 272 L 1036 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
-          <path d="M 1038 356 L 990 356 L 990 498 L 983 498" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-          <path d="M 805 494 L 740 494 L 740 637" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
-          <path d="M 634 650 L 634 548 L 642 548" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-          <path d="M 528 416 L 205 416" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-          <path d="M 205 390 L 516 390" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
-          <path d="M 975 192 L 1036 192" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
-          <path d="M 1036 450 L 985 450 L 985 214 L 759 214" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 205 320 L 350 320 L 350 250 L 516 250" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow-cyan)"/>
+          <path d="M 121 464 L 121 719 L 284 719" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
+          <path d="M 760 200 L 802 200" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 985 180 L 1036 180" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+          <path d="M 985 300 L 1036 300" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+          <path d="M 639 268 L 639 350" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 560 268 L 560 282 L 392 282 L 392 350" stroke="#22d3ee" stroke-width="1.8" marker-end="url(#arrow-cyan)"/>
+          <path d="M 700 350 L 700 272" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
+          <path d="M 782 486 L 782 820 Q 782 832 794 832 L 961 832 Q 973 832 973 844 L 973 904" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-violet)"/>
+          <path d="M 639 462 L 639 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 392 462 L 392 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 1058 310 L 1014 310 L 1014 118 L 740 118 L 740 146" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 1058 350 L 1000 350 L 1000 570 L 985 570" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 894 626 L 894 904" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
         </g>
 
-        <!-- External operator -->
+        <!-- 箭头标注 -->
+        <g fill="#94a3b8" font-size="8">
+          <text x="240" y="312">提示词 / 命令 / 队列</text>
+          <text x="130" y="704">运行中随时干预</text>
+          <text x="548" y="306">工具调用与结果</text>
+          <text x="420" y="276">打上 ev_NNN</text>
+          <text x="710" y="300" fill="#22d3ee">假设栈注入 system prompt</text>
+          <text x="560" y="826" fill="#a78bfa" text-anchor="middle">evidence / hypotheses 事件持久化到 JSONL</text>
+          <text x="860" y="112">席位结果回流</text>
+          <text x="1008" y="460" fill="#fb7185">写盘 / 网络</text>
+          <text x="902" y="700" fill="#fbbf24">审批后的执行</text>
+        </g>
+
+        <!-- 操作终端 -->
         <rect x="36" y="278" width="170" height="184" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6" filter="url(#soft-shadow)"/>
-        <text x="121" y="306" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">终端入口</text>
+        <text x="121" y="306" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">操作终端</text>
         <text x="121" y="331" fill="#94a3b8" font-size="10" text-anchor="middle">REPL / CLI / TTY</text>
         <text x="62" y="361" fill="#cbd5e1" font-size="10">/scan /r2 /queue</text>
         <text x="62" y="381" fill="#cbd5e1" font-size="10">/workflow /model</text>
-        <text x="62" y="401" fill="#cbd5e1" font-size="10">/prompt edit 角色</text>
-        <text x="62" y="431" fill="#22d3ee" font-size="9">运行中改道</text>
+        <text x="62" y="401" fill="#cbd5e1" font-size="10">/prompt edit role</text>
+        <text x="62" y="431" fill="#22d3ee" font-size="9">turn 内随时干预</text>
 
-        <!-- Host boundary -->
-        <rect x="250" y="60" width="760" height="560" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re 宿主 · 静态 Go 二进制</text>
-        <text x="270" y="103" fill="#64748b" font-size="9">状态机、本地策略、流式遥测、内置 prompts 与 skills</text>
+        <!-- 宿主边界 -->
+        <rect x="250" y="60" width="760" height="750" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re 宿主 · Go 单二进制</text>
+        <text x="270" y="103" fill="#64748b" font-size="9">状态机、本地策略、流式遥测、内嵌提示词与技能</text>
 
-        <rect x="290" y="132" width="205" height="116" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
-        <text x="392" y="159" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Prompt + 配置</text>
-        <text x="312" y="185" fill="#cbd5e1" font-size="10">角色 system prompts</text>
-        <text x="312" y="204" fill="#cbd5e1" font-size="10">provider/model 路由</text>
-        <text x="312" y="223" fill="#a78bfa" font-size="9">项目或 home 覆盖</text>
+        <rect x="290" y="130" width="205" height="112" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
+        <text x="392" y="157" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">提示词 + 配置</text>
+        <text x="312" y="182" fill="#cbd5e1" font-size="10">角色 system prompt</text>
+        <text x="312" y="200" fill="#cbd5e1" font-size="10">provider / 模型路由</text>
+        <text x="312" y="222" fill="#a78bfa" font-size="9">+ 注入的假设栈摘要</text>
 
-        <rect x="518" y="204" width="242" height="126" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
-        <text x="639" y="232" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent Loop</text>
-        <text x="543" y="260" fill="#cbd5e1" font-size="10">role -> provider -> model</text>
-        <text x="543" y="280" fill="#cbd5e1" font-size="10">压缩上下文，流式事件</text>
-        <text x="543" y="300" fill="#cbd5e1" font-size="10">工具结果回灌到下一轮</text>
-
-        <rect x="286" y="376" width="220" height="126" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
-        <text x="396" y="405" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">实时 HUD</text>
-        <text x="310" y="432" fill="#cbd5e1" font-size="10">role/provider/model</text>
-        <text x="310" y="451" fill="#cbd5e1" font-size="10">plan 行与任务状态</text>
-        <text x="310" y="470" fill="#cbd5e1" font-size="10">token、耗时、工具 trace</text>
-
-        <rect x="536" y="392" width="224" height="136" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
-        <text x="648" y="421" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">队列 + 编辑</text>
-        <text x="562" y="449" fill="#cbd5e1" font-size="10">运行中追加任务</text>
-        <text x="562" y="468" fill="#cbd5e1" font-size="10">执行前编辑/取消</text>
-        <text x="562" y="487" fill="#cbd5e1" font-size="10">展开/折叠任务输出</text>
-        <text x="562" y="509" fill="#22d3ee" font-size="9">不用重启当前轮</text>
+        <rect x="518" y="148" width="242" height="120" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
+        <text x="639" y="175" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent 循环</text>
+        <text x="543" y="200" fill="#cbd5e1" font-size="10">按角色路由 provider 与模型</text>
+        <text x="543" y="219" fill="#cbd5e1" font-size="10">压缩上下文、流式事件</text>
+        <text x="543" y="238" fill="#cbd5e1" font-size="10">工具结果并入下一轮</text>
+        <text x="543" y="258" fill="#34d399" font-size="9">单一共享转录，JSONL 落盘</text>
 
         <rect x="804" y="130" width="182" height="148" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.7"/>
         <text x="895" y="158" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Workflow 模式</text>
         <text x="828" y="186" fill="#cbd5e1" font-size="10">off / auto</text>
         <text x="828" y="205" fill="#cbd5e1" font-size="10">specialist 路由</text>
-        <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman 证据包</text>
-        <text x="828" y="246" fill="#fbbf24" font-size="9">plan -> 隔离 executor</text>
+        <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman 分包</text>
+        <text x="828" y="246" fill="#fbbf24" font-size="9">规划后交给隔离执行器</text>
 
-        <rect x="805" y="426" width="178" height="136" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
-        <text x="894" y="455" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">策略闸门</text>
-        <text x="830" y="482" fill="#cbd5e1" font-size="10">工作区范围读取</text>
-        <text x="830" y="501" fill="#cbd5e1" font-size="10">写盘/联网需批准</text>
-        <text x="830" y="520" fill="#cbd5e1" font-size="10">敏感路径检查</text>
-        <text x="830" y="542" fill="#fb7185" font-size="9">不安全任务直接拒绝</text>
+        <!-- 元认知层 -->
+        <rect x="270" y="296" width="720" height="190" rx="12" fill="rgba(76, 29, 149, 0.07)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="8 5"/>
+        <text x="284" y="318" fill="#a78bfa" font-size="11" font-weight="700">元认知层 · 新增</text>
+        <text x="284" y="334" fill="#64748b" font-size="9">状态放在转录之外 —— 每轮注入，resume 时重放</text>
 
-        <!-- Provider seats -->
+        <rect x="290" y="352" width="205" height="110" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
+        <text x="392" y="378" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">证据账本</text>
+        <text x="308" y="400" fill="#cbd5e1" font-size="9">每个工具结果入库为 ev_NNN</text>
+        <text x="308" y="416" fill="#cbd5e1" font-size="9">400 字符摘录，带错误标记</text>
+        <text x="308" y="432" fill="#cbd5e1" font-size="9">按 id 引用，resume 时重放</text>
+        <text x="392" y="452" fill="#a78bfa" font-size="9" text-anchor="middle">上下文压缩也压不掉</text>
+
+        <rect x="518" y="352" width="242" height="110" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.7"/>
+        <text x="639" y="378" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">假设管理器</text>
+        <text x="536" y="400" fill="#cbd5e1" font-size="9">判断即 H-NNN 行，带置信度</text>
+        <text x="536" y="416" fill="#cbd5e1" font-size="9">challenge 减半；低于 0.25 标记重查</text>
+        <text x="536" y="432" fill="#cbd5e1" font-size="9">reject/revise 级联到派生判断</text>
+        <text x="639" y="452" fill="#34d399" font-size="9" text-anchor="middle">宿主代码强制，不靠 prompt 自觉</text>
+
+        <!-- 规划中的验证层 -->
+        <rect x="290" y="516" width="205" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="392" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">证据仲裁器</text>
+        <text x="308" y="562" fill="#fb7185" font-size="9">规划中 · 验证层</text>
+        <text x="308" y="578" fill="#cbd5e1" font-size="9">静态 vs 动态交叉核对</text>
+        <text x="308" y="594" fill="#cbd5e1" font-size="9">矛盾自动变成新证据</text>
+
+        <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="639" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">对抗审计员</text>
+        <text x="536" y="562" fill="#fb7185" font-size="9">规划中 · 元认知层</text>
+        <text x="536" y="578" fill="#cbd5e1" font-size="9">基于 Isolated 的隔离复跑</text>
+        <text x="536" y="594" fill="#cbd5e1" font-size="9">跨模型审计整张假设栈</text>
+
+        <rect x="805" y="516" width="178" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
+        <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">策略闸门</text>
+        <text x="830" y="568" fill="#cbd5e1" font-size="10">读限定在工作区</text>
+        <text x="830" y="586" fill="#cbd5e1" font-size="10">写 / 网络需审批</text>
+        <text x="830" y="604" fill="#cbd5e1" font-size="10">敏感路径检查</text>
+        <text x="830" y="620" fill="#fb7185" font-size="9">不安全的操作直接拒绝</text>
+
+        <rect x="286" y="664" width="220" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
+        <text x="396" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">实时 HUD</text>
+        <text x="310" y="718" fill="#cbd5e1" font-size="10">角色 / provider / 模型</text>
+        <text x="310" y="736" fill="#cbd5e1" font-size="10">计划行与任务状态</text>
+        <text x="310" y="754" fill="#cbd5e1" font-size="10">token、耗时、工具轨迹</text>
+
+        <rect x="536" y="664" width="224" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
+        <text x="648" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">队列 + 编辑</text>
+        <text x="562" y="718" fill="#cbd5e1" font-size="10">运行中追加任务</text>
+        <text x="562" y="736" fill="#cbd5e1" font-size="10">执行前可改可撤</text>
+        <text x="562" y="754" fill="#cbd5e1" font-size="10">任务输出可折叠展开</text>
+
+        <!-- Provider 席位 -->
         <rect x="1038" y="70" width="206" height="528" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="1058" y="95" fill="#34d399" font-size="11" font-weight="700">Provider 座位</text>
-        <text x="1058" y="114" fill="#64748b" font-size="9">运行中可切换 adapter</text>
+        <text x="1058" y="95" fill="#34d399" font-size="11" font-weight="700">Provider 席位</text>
+        <text x="1058" y="114" fill="#64748b" font-size="9">运行时可切换的适配器</text>
 
         <rect x="1060" y="144" width="162" height="92" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="1141" y="170" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Planner 规划</text>
+        <text x="1141" y="170" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">规划器</text>
         <text x="1080" y="195" fill="#cbd5e1" font-size="10">Codex / GPT Cyber</text>
         <text x="1080" y="214" fill="#cbd5e1" font-size="10">DeepSeek / 自定义</text>
 
         <rect x="1060" y="272" width="162" height="100" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="1141" y="298" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Executor 执行</text>
+        <text x="1141" y="298" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">执行器</text>
         <text x="1080" y="323" fill="#cbd5e1" font-size="10">Claude Code / CVP</text>
-        <text x="1080" y="342" fill="#cbd5e1" font-size="10">CLI/API providers</text>
-        <text x="1080" y="361" fill="#34d399" font-size="9">负责工具调用</text>
+        <text x="1080" y="342" fill="#cbd5e1" font-size="10">CLI / API provider</text>
+        <text x="1080" y="361" fill="#34d399" font-size="9">支持工具调用</text>
 
         <rect x="1060" y="408" width="162" height="92" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="1141" y="434" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Researcher 研究</text>
-        <text x="1080" y="459" fill="#cbd5e1" font-size="10">Grok / notes / docs</text>
-        <text x="1080" y="478" fill="#cbd5e1" font-size="10">背景上下文</text>
+        <text x="1141" y="434" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">研究员</text>
+        <text x="1080" y="459" fill="#cbd5e1" font-size="10">Grok / 笔记 / 文档</text>
+        <text x="1080" y="478" fill="#cbd5e1" font-size="10">后台上下文补充</text>
 
         <text x="1060" y="548" fill="#94a3b8" font-size="10">/planner /executor /researcher</text>
-        <text x="1060" y="570" fill="#94a3b8" font-size="10">/model 角色 模型名</text>
+        <text x="1060" y="570" fill="#94a3b8" font-size="10">/model role model-name</text>
 
-        <!-- Evidence layer -->
-        <rect x="180" y="650" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="202" y="675" fill="#fbbf24" font-size="11" font-weight="700">本地证据层</text>
-        <text x="202" y="694" fill="#64748b" font-size="9">先在磁盘上收集事实，再总结回 agent loop</text>
+        <!-- 证据层 -->
+        <rect x="180" y="840" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <text x="202" y="865" fill="#fbbf24" font-size="11" font-weight="700">本地证据层</text>
+        <text x="202" y="884" fill="#64748b" font-size="9">事实先在磁盘上采集，再入库打标，回流给循环</text>
 
-        <rect x="216" y="716" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="314" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">快速本地工具</text>
-        <text x="238" y="765" fill="#cbd5e1" font-size="9">scan, hex, entropy, carve, apk</text>
+        <rect x="216" y="906" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="314" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">快速本地工具</text>
+        <text x="238" y="955" fill="#cbd5e1" font-size="9">scan、hex、entropy、carve、apk</text>
 
-        <rect x="442" y="716" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="545" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">逆向工具链</text>
-        <text x="464" y="765" fill="#cbd5e1" font-size="9">r2, Ghidra, JADX, angr, Frida</text>
+        <rect x="442" y="906" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="545" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE 工具链</text>
+        <text x="464" y="955" fill="#cbd5e1" font-size="9">r2、Ghidra、JADX、angr、Frida</text>
 
-        <rect x="678" y="716" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="767" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">实验 + 抓包</text>
-        <text x="704" y="765" fill="#cbd5e1" font-size="9">Unicorn, unidbg, Burp, mitmproxy</text>
+        <rect x="678" y="906" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="767" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">实验环境 + 流量</text>
+        <text x="704" y="955" fill="#cbd5e1" font-size="9">Unicorn、unidbg、Burp、mitmproxy</text>
 
-        <rect x="884" y="716" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
-        <text x="973" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">记录与知识</text>
-        <text x="910" y="765" fill="#cbd5e1" font-size="9">JSONL sessions, artifacts, skills</text>
+        <rect x="884" y="906" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
+        <text x="973" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">记忆</text>
+        <text x="910" y="955" fill="#cbd5e1" font-size="9">会话、evidence + hyp 事件</text>
 
-        <!-- Legend -->
+        <!-- 图例（所有边界之外） -->
         <g transform="translate(36 48)">
           <text x="0" y="0" fill="#f8fafc" font-size="11" font-weight="700">图例</text>
           <rect x="0" y="14" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee"/>
-          <text x="24" y="23" fill="#94a3b8" font-size="9">用户入口 / 界面</text>
+          <text x="24" y="23" fill="#94a3b8" font-size="9">操作者 / 界面</text>
           <rect x="0" y="34" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399"/>
-          <text x="24" y="43" fill="#94a3b8" font-size="9">agent 运行时 / providers</text>
-          <rect x="0" y="54" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24"/>
-          <text x="24" y="63" fill="#94a3b8" font-size="9">workflow 与本地工具</text>
-          <rect x="0" y="74" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
-          <text x="24" y="83" fill="#94a3b8" font-size="9">策略与审批</text>
+          <text x="24" y="43" fill="#94a3b8" font-size="9">agent 运行时 / provider</text>
+          <rect x="0" y="54" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa"/>
+          <text x="24" y="63" fill="#94a3b8" font-size="9">元认知状态</text>
+          <rect x="0" y="74" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24"/>
+          <text x="24" y="83" fill="#94a3b8" font-size="9">工作流与本地工具</text>
+          <rect x="0" y="94" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
+          <text x="24" y="103" fill="#94a3b8" font-size="9">策略与审批</text>
+          <rect x="0" y="114" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-dasharray="3 2"/>
+          <text x="24" y="123" fill="#94a3b8" font-size="9">规划中的组件</text>
+          <line x1="0" y1="138" x2="16" y2="138" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="4 3"/>
+          <text x="24" y="141" fill="#94a3b8" font-size="9">上下文注入 / 控制</text>
         </g>
 
-        <text x="42" y="828" fill="#475569" font-size="10">设计：拆分意图、执行与证据，让 RE 工作保持可见、本地、可改道。</text>
+        <text x="42" y="1030" fill="#475569" font-size="10">设计原则：模型负责叙述，宿主负责记账 —— 证据与假设是一等状态，而不是转录里的口口相传。</text>
       </svg>
     </main>
 
     <section class="cards" aria-label="架构说明">
       <article class="card">
-        <h2><span class="card-dot cyan"></span>终端优先的 loop</h2>
-        <p>REPL 是产品主界面：prompt 队列、任务展开、斜杠命令和 shell escape 共用同一套工作区策略。</p>
+        <h2><span class="card-dot cyan"></span>终端优先的循环</h2>
+        <p>REPL 就是产品表面：提示词排队、任务实时展开、斜杠命令和裸 shell 逃逸共享同一套工作区策略。</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot emerald"></span>可组合模型座位</h2>
-        <p>Planner、executor、researcher 是独立座位；不用重编译，就能分别指向不同 provider 和模型。</p>
+        <h2><span class="card-dot violet"></span>元认知层（新增）</h2>
+        <p>工具结果变成 ev_NNN 账本记录，已提交的判断变成 H-NNN 假设。一次矛盾就把置信度减半，否定根假设会级联标记所有派生判断 —— 这是宿主代码，不是 prompt 里的美好愿望。</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot amber"></span>Workflow 上下文收敛</h2>
-        <p>Specialist route 保留完整 RE 语境；caveman 把任务拆成有边界的 planner packet 和隔离只读 executor。</p>
+        <h2><span class="card-dot emerald"></span>可组合的模型席位</h2>
+        <p>规划器、执行器、研究员是三个独立席位，各自可以指向不同的 provider 和模型，无需重新编译；结果统一回流到同一份共享转录。</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot rose"></span>本地证据治理</h2>
-        <p>文件事实来自受限本地工具；写盘、联网、敏感路径和破坏性命令都会经过显式策略闸门。</p>
+        <h2><span class="card-dot rose"></span>有治理的证据采集</h2>
+        <p>文件事实来自限定范围的本地工具；写盘、网络、敏感路径和破坏性命令都要先过显式策略闸门。</p>
       </article>
     </section>
 
-    <p class="footer">使用 Cocoon AI architecture-diagram skill 生成 · 0xAF-Re 设计概览 · <a href="0xaf-re-agent-architecture.html">English</a> · 导出按钮可生成 PNG 或 PDF</p>
+    <p class="footer">使用 Cocoon AI architecture-diagram skill 绘制 · 0xAF-Re 设计概览 · <a href="0xaf-re-agent-architecture.html">English version</a> · 导出按钮可将本页渲染为 PNG 或 PDF</p>
   </div>
 
   <script>
@@ -379,7 +437,7 @@
       try {
         const canvas = await html2canvas(document.body, captureOptions());
         const link = document.createElement("a");
-        link.download = "0xaf-re-agent-architecture.zh-CN.png";
+        link.download = "0xaf-re-agent-architecture.png";
         link.href = canvas.toDataURL("image/png");
         link.click();
         btn.textContent = "完成";
@@ -404,7 +462,7 @@
           hotfixes: ["px_scaling"]
         });
         pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-        pdf.save("0xaf-re-agent-architecture.zh-CN.pdf");
+        pdf.save("0xaf-re-agent-architecture.pdf");
         btn.textContent = "完成";
       } catch (err) {
         btn.textContent = "失败";

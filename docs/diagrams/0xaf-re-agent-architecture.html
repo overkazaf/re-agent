@@ -48,7 +48,7 @@
       color: #94a3b8;
       font-size: 13px;
       line-height: 1.6;
-      max-width: 92ch;
+      max-width: 96ch;
       margin-left: 24px;
     }
     .toolbar {
@@ -112,6 +112,7 @@
     .emerald { background: #34d399; }
     .amber { background: #fbbf24; }
     .rose { background: #fb7185; }
+    .violet { background: #a78bfa; }
     .card p {
       color: #94a3b8;
       font-size: 11px;
@@ -149,8 +150,9 @@
           <h1>0xAF-Re Architecture Map</h1>
         </div>
         <p class="subtitle">
-          A terminal-first RE agent: one Go host routes planning, execution, and research to different model seats,
-          narrows workflow context when needed, and keeps evidence collection inside local tools and auditable transcripts.
+          A terminal-first RE agent with a REA-inspired metacognition layer: every tool result is stamped
+          into an evidence ledger (ev_NNN), committed claims live in a host-enforced hypothesis stack (H-NNN),
+          and the planner/executor/researcher seats share one auditable loop.
         </p>
       </div>
       <div class="toolbar" data-export-ignore>
@@ -164,9 +166,9 @@
     </header>
 
     <main class="diagram-container">
-      <svg viewBox="0 0 1280 860" role="img" aria-labelledby="diagram-title diagram-desc">
+      <svg viewBox="0 0 1280 1048" role="img" aria-labelledby="diagram-title diagram-desc">
         <title id="diagram-title">0xAF-Re architecture map</title>
-        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools.</desc>
+        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools. A metacognition layer holds the evidence ledger and hypothesis stack beside the agent loop; the evidence arbitrator and adversarial auditor are planned.</desc>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
@@ -183,27 +185,46 @@
           <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
           </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+          </marker>
           <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.28"/>
           </filter>
         </defs>
 
-        <rect width="1280" height="860" fill="#020617"/>
-        <rect width="1280" height="860" fill="url(#grid)"/>
+        <rect width="1280" height="1048" fill="#020617"/>
+        <rect width="1280" height="1048" fill="url(#grid)"/>
 
         <!-- Arrows are drawn first so boxes stay visually dominant. -->
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M 205 360 L 350 360 L 350 272 L 496 272" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow-cyan)"/>
-          <path d="M 640 330 L 640 392" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
-          <path d="M 760 272 L 803 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
-          <path d="M 985 272 L 1036 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
-          <path d="M 1038 356 L 990 356 L 990 498 L 983 498" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-          <path d="M 805 494 L 740 494 L 740 637" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
-          <path d="M 634 650 L 634 548 L 642 548" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
-          <path d="M 528 416 L 205 416" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-          <path d="M 205 390 L 516 390" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
-          <path d="M 975 192 L 1036 192" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
-          <path d="M 1036 450 L 985 450 L 985 214 L 759 214" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 205 320 L 350 320 L 350 250 L 516 250" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow-cyan)"/>
+          <path d="M 121 464 L 121 719 L 284 719" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
+          <path d="M 760 200 L 802 200" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 985 180 L 1036 180" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+          <path d="M 985 300 L 1036 300" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrow-emerald)"/>
+          <path d="M 639 268 L 639 350" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 560 268 L 560 282 L 392 282 L 392 350" stroke="#22d3ee" stroke-width="1.8" marker-end="url(#arrow-cyan)"/>
+          <path d="M 700 350 L 700 272" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
+          <path d="M 782 486 L 782 820 Q 782 832 794 832 L 961 832 Q 973 832 973 844 L 973 904" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-violet)"/>
+          <path d="M 639 462 L 639 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 392 462 L 392 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 1058 310 L 1014 310 L 1014 118 L 740 118 L 740 146" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 1058 350 L 1000 350 L 1000 570 L 985 570" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 894 626 L 894 904" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
+        </g>
+
+        <!-- Arrow labels -->
+        <g fill="#94a3b8" font-size="8">
+          <text x="240" y="312">prompts, slash, queue</text>
+          <text x="130" y="704">steer mid-turn</text>
+          <text x="548" y="306">tool calls / results</text>
+          <text x="420" y="276">stamp ev_NNN</text>
+          <text x="710" y="300" fill="#22d3ee">stack feeds system prompt</text>
+          <text x="560" y="826" fill="#a78bfa" text-anchor="middle">persist evidence + hypothesis events to JSONL</text>
+          <text x="860" y="112">seat results</text>
+          <text x="1008" y="460" fill="#fb7185">write / network</text>
+          <text x="902" y="700" fill="#fbbf24">approved exec</text>
         </g>
 
         <!-- External operator -->
@@ -216,48 +237,80 @@
         <text x="62" y="431" fill="#22d3ee" font-size="9">mid-turn steering</text>
 
         <!-- Host boundary -->
-        <rect x="250" y="60" width="760" height="560" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <rect x="250" y="60" width="760" height="750" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
         <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re host · static Go binary</text>
         <text x="270" y="103" fill="#64748b" font-size="9">state machine, local policy, stream telemetry, embedded prompts and skills</text>
 
-        <rect x="290" y="132" width="205" height="116" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
-        <text x="392" y="159" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Prompt + Config</text>
-        <text x="312" y="185" fill="#cbd5e1" font-size="10">role system prompts</text>
-        <text x="312" y="204" fill="#cbd5e1" font-size="10">provider/model routing</text>
-        <text x="312" y="223" fill="#a78bfa" font-size="9">project or home overrides</text>
+        <rect x="290" y="130" width="205" height="112" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
+        <text x="392" y="157" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Prompt + Config</text>
+        <text x="312" y="182" fill="#cbd5e1" font-size="10">role system prompts</text>
+        <text x="312" y="200" fill="#cbd5e1" font-size="10">provider/model routing</text>
+        <text x="312" y="222" fill="#a78bfa" font-size="9">+ injected hypothesis stack</text>
 
-        <rect x="518" y="204" width="242" height="126" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
-        <text x="639" y="232" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent Loop</text>
-        <text x="543" y="260" fill="#cbd5e1" font-size="10">route role -> provider -> model</text>
-        <text x="543" y="280" fill="#cbd5e1" font-size="10">compact context, stream events</text>
-        <text x="543" y="300" fill="#cbd5e1" font-size="10">merge tool results into next turn</text>
-
-        <rect x="286" y="376" width="220" height="126" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
-        <text x="396" y="405" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Live HUD</text>
-        <text x="310" y="432" fill="#cbd5e1" font-size="10">role/provider/model</text>
-        <text x="310" y="451" fill="#cbd5e1" font-size="10">plan rows and task state</text>
-        <text x="310" y="470" fill="#cbd5e1" font-size="10">tokens, timing, tool trace</text>
-
-        <rect x="536" y="392" width="224" height="136" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
-        <text x="648" y="421" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Queue + Editing</text>
-        <text x="562" y="449" fill="#cbd5e1" font-size="10">append work while running</text>
-        <text x="562" y="468" fill="#cbd5e1" font-size="10">edit/cancel before execution</text>
-        <text x="562" y="487" fill="#cbd5e1" font-size="10">expand/collapse task output</text>
-        <text x="562" y="509" fill="#22d3ee" font-size="9">no restart needed</text>
+        <rect x="518" y="148" width="242" height="120" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
+        <text x="639" y="175" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent Loop</text>
+        <text x="543" y="200" fill="#cbd5e1" font-size="10">route role, provider, model</text>
+        <text x="543" y="219" fill="#cbd5e1" font-size="10">compact context, stream events</text>
+        <text x="543" y="238" fill="#cbd5e1" font-size="10">merge tool results into next turn</text>
+        <text x="543" y="258" fill="#34d399" font-size="9">one shared transcript, JSONL-backed</text>
 
         <rect x="804" y="130" width="182" height="148" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.7"/>
         <text x="895" y="158" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Workflow Modes</text>
         <text x="828" y="186" fill="#cbd5e1" font-size="10">off / auto</text>
         <text x="828" y="205" fill="#cbd5e1" font-size="10">specialist route</text>
         <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman packet</text>
-        <text x="828" y="246" fill="#fbbf24" font-size="9">plan -> isolated executor</text>
+        <text x="828" y="246" fill="#fbbf24" font-size="9">plan, then isolated executor</text>
 
-        <rect x="805" y="426" width="178" height="136" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
-        <text x="894" y="455" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Policy Gate</text>
-        <text x="830" y="482" fill="#cbd5e1" font-size="10">workspace-scoped reads</text>
-        <text x="830" y="501" fill="#cbd5e1" font-size="10">write/network approvals</text>
-        <text x="830" y="520" fill="#cbd5e1" font-size="10">sensitive path checks</text>
-        <text x="830" y="542" fill="#fb7185" font-size="9">unsafe work is refused</text>
+        <!-- Metacognition layer -->
+        <rect x="270" y="296" width="720" height="190" rx="12" fill="rgba(76, 29, 149, 0.07)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="8 5"/>
+        <text x="284" y="318" fill="#a78bfa" font-size="11" font-weight="700">Metacognition layer · NEW</text>
+        <text x="284" y="334" fill="#64748b" font-size="9">state outside the transcript — injected every turn, replayed on resume</text>
+
+        <rect x="290" y="352" width="205" height="110" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
+        <text x="392" y="378" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Evidence Ledger</text>
+        <text x="308" y="400" fill="#cbd5e1" font-size="9">every tool result becomes ev_NNN</text>
+        <text x="308" y="416" fill="#cbd5e1" font-size="9">400-char excerpts, error-flagged</text>
+        <text x="308" y="432" fill="#cbd5e1" font-size="9">cited by id, replayed on resume</text>
+        <text x="392" y="452" fill="#a78bfa" font-size="9" text-anchor="middle">survives context compaction</text>
+
+        <rect x="518" y="352" width="242" height="110" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.7"/>
+        <text x="639" y="378" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Hypothesis Manager</text>
+        <text x="536" y="400" fill="#cbd5e1" font-size="9">claims are H-NNN rows with confidence</text>
+        <text x="536" y="416" fill="#cbd5e1" font-size="9">challenge halves it; below 0.25 re-check</text>
+        <text x="536" y="432" fill="#cbd5e1" font-size="9">reject/revise cascades to derived rows</text>
+        <text x="639" y="452" fill="#34d399" font-size="9" text-anchor="middle">host-enforced rules, not prompted hopes</text>
+
+        <!-- Planned verification layer -->
+        <rect x="290" y="516" width="205" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="392" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Evidence Arbitrator</text>
+        <text x="308" y="562" fill="#fb7185" font-size="9">planned · verification layer</text>
+        <text x="308" y="578" fill="#cbd5e1" font-size="9">static vs dynamic cross-check</text>
+        <text x="308" y="594" fill="#cbd5e1" font-size="9">contradictions become evidence</text>
+
+        <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
+        <text x="639" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Adversarial Auditor</text>
+        <text x="536" y="562" fill="#fb7185" font-size="9">planned · metacognition layer</text>
+        <text x="536" y="578" fill="#cbd5e1" font-size="9">context-isolated re-run (Isolated)</text>
+        <text x="536" y="594" fill="#cbd5e1" font-size="9">cross-model audit of the stack</text>
+
+        <rect x="805" y="516" width="178" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
+        <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Policy Gate</text>
+        <text x="830" y="568" fill="#cbd5e1" font-size="10">workspace-scoped reads</text>
+        <text x="830" y="586" fill="#cbd5e1" font-size="10">write/network approvals</text>
+        <text x="830" y="604" fill="#cbd5e1" font-size="10">sensitive path checks</text>
+        <text x="830" y="620" fill="#fb7185" font-size="9">unsafe work is refused</text>
+
+        <rect x="286" y="664" width="220" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
+        <text x="396" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Live HUD</text>
+        <text x="310" y="718" fill="#cbd5e1" font-size="10">role/provider/model</text>
+        <text x="310" y="736" fill="#cbd5e1" font-size="10">plan rows and task state</text>
+        <text x="310" y="754" fill="#cbd5e1" font-size="10">tokens, timing, tool trace</text>
+
+        <rect x="536" y="664" width="224" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
+        <text x="648" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Queue + Editing</text>
+        <text x="562" y="718" fill="#cbd5e1" font-size="10">append work while running</text>
+        <text x="562" y="736" fill="#cbd5e1" font-size="10">edit/cancel before execution</text>
+        <text x="562" y="754" fill="#cbd5e1" font-size="10">expand/collapse task output</text>
 
         <!-- Provider seats -->
         <rect x="1038" y="70" width="206" height="528" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
@@ -284,40 +337,46 @@
         <text x="1060" y="570" fill="#94a3b8" font-size="10">/model role model-name</text>
 
         <!-- Evidence layer -->
-        <rect x="180" y="650" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="202" y="675" fill="#fbbf24" font-size="11" font-weight="700">Local evidence layer</text>
-        <text x="202" y="694" fill="#64748b" font-size="9">facts are gathered on disk first, then summarized back into the agent loop</text>
+        <rect x="180" y="840" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
+        <text x="202" y="865" fill="#fbbf24" font-size="11" font-weight="700">Local evidence layer</text>
+        <text x="202" y="884" fill="#64748b" font-size="9">facts are gathered on disk first, then stamped into the ledger and fed back into the loop</text>
 
-        <rect x="216" y="716" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="314" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Fast local tools</text>
-        <text x="238" y="765" fill="#cbd5e1" font-size="9">scan, hex, entropy, carve, apk</text>
+        <rect x="216" y="906" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="314" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Fast local tools</text>
+        <text x="238" y="955" fill="#cbd5e1" font-size="9">scan, hex, entropy, carve, apk</text>
 
-        <rect x="442" y="716" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="545" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE toolchain</text>
-        <text x="464" y="765" fill="#cbd5e1" font-size="9">r2, Ghidra, JADX, angr, Frida</text>
+        <rect x="442" y="906" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="545" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE toolchain</text>
+        <text x="464" y="955" fill="#cbd5e1" font-size="9">r2, Ghidra, JADX, angr, Frida</text>
 
-        <rect x="678" y="716" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="767" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Labs + traffic</text>
-        <text x="704" y="765" fill="#cbd5e1" font-size="9">Unicorn, unidbg, Burp, mitmproxy</text>
+        <rect x="678" y="906" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
+        <text x="767" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Labs + traffic</text>
+        <text x="704" y="955" fill="#cbd5e1" font-size="9">Unicorn, unidbg, Burp, mitmproxy</text>
 
-        <rect x="884" y="716" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
-        <text x="973" y="741" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Memory</text>
-        <text x="910" y="765" fill="#cbd5e1" font-size="9">JSONL sessions, artifacts, skills</text>
+        <rect x="884" y="906" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
+        <text x="973" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Memory</text>
+        <text x="910" y="955" fill="#cbd5e1" font-size="9">sessions, evidence + hyp events</text>
 
-        <!-- Legend -->
+        <!-- Legend (outside all boundaries) -->
         <g transform="translate(36 48)">
           <text x="0" y="0" fill="#f8fafc" font-size="11" font-weight="700">Legend</text>
           <rect x="0" y="14" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee"/>
           <text x="24" y="23" fill="#94a3b8" font-size="9">operator / interface</text>
           <rect x="0" y="34" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399"/>
           <text x="24" y="43" fill="#94a3b8" font-size="9">agent runtime / providers</text>
-          <rect x="0" y="54" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24"/>
-          <text x="24" y="63" fill="#94a3b8" font-size="9">workflow and local tools</text>
-          <rect x="0" y="74" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
-          <text x="24" y="83" fill="#94a3b8" font-size="9">policy and approvals</text>
+          <rect x="0" y="54" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa"/>
+          <text x="24" y="63" fill="#94a3b8" font-size="9">metacognition state</text>
+          <rect x="0" y="74" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24"/>
+          <text x="24" y="83" fill="#94a3b8" font-size="9">workflow and local tools</text>
+          <rect x="0" y="94" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
+          <text x="24" y="103" fill="#94a3b8" font-size="9">policy and approvals</text>
+          <rect x="0" y="114" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-dasharray="3 2"/>
+          <text x="24" y="123" fill="#94a3b8" font-size="9">planned component</text>
+          <line x1="0" y1="138" x2="16" y2="138" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="4 3"/>
+          <text x="24" y="141" fill="#94a3b8" font-size="9">context injection / control</text>
         </g>
 
-        <text x="42" y="828" fill="#475569" font-size="10">Design: split intent, execution, and evidence so RE work stays visible, local, and steerable.</text>
+        <text x="42" y="1030" fill="#475569" font-size="10">Design: the model narrates, the host keeps score — evidence and assumptions are first-class state, not transcript lore.</text>
       </svg>
     </main>
 
@@ -327,16 +386,16 @@
         <p>The REPL is the product surface: prompt queueing, live task expansion, slash commands, and raw shell escapes share one workspace policy.</p>
       </article>
       <article class="card">
+        <h2><span class="card-dot violet"></span>Metacognition layer (new)</h2>
+        <p>Tool results become ev_NNN ledger records; committed claims become H-NNN hypotheses. A contradiction halves confidence and a rejected root cascades a re-check flag to everything derived from it — host code, not prompt hope.</p>
+      </article>
+      <article class="card">
         <h2><span class="card-dot emerald"></span>Composable model seats</h2>
-        <p>Planner, executor, and researcher are independent seats. Each can point at a different provider and model without rebuilding the binary.</p>
+        <p>Planner, executor, and researcher are independent seats. Each can point at a different provider and model without rebuilding the binary, and results flow back into one shared transcript.</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot amber"></span>Workflow context shaping</h2>
-        <p>Specialist routes keep rich RE context. Caveman mode turns one task into a bounded planner packet plus an isolated read-only executor run.</p>
-      </article>
-      <article class="card">
-        <h2><span class="card-dot rose"></span>Local evidence governance</h2>
-        <p>File facts come from scoped local tools. Writes, network, sensitive paths, and destructive commands pass through explicit policy gates.</p>
+        <h2><span class="card-dot rose"></span>Governed evidence collection</h2>
+        <p>File facts come from scoped local tools. Writes, network, sensitive paths, and destructive commands pass through explicit policy gates before anything executes.</p>
       </article>
     </section>
 
