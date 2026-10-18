@@ -1,0 +1,112 @@
+internal/core/arbitrator_test.go
+  3056f023bc2caeab 1-137
+docs/ARCHITECTURE.md
+  3056f023bc2caeab 687-704,786-787
+internal/tools/evidence_review_test.go
+  3056f023bc2caeab 1-77
+docs/diagrams/0xaf-re-agent-architecture.html
+  3056f023bc2caeab 171,189-192,214-215,229-230,289-294,396
+docs/diagrams/0xaf-re-agent-architecture.zh-CN.html
+  3056f023bc2caeab 170,190-192,213-214,228-229,288-293,395
+internal/types/types.go
+  3056f023bc2caeab 313,321-336,430-432
+internal/tools/evidence_review.go
+  3056f023bc2caeab 1-44
+internal/verify/arbitrator.go
+  3056f023bc2caeab 1-238
+internal/tools/registry.go
+  3056f023bc2caeab 53
+internal/tools/tools_test.go
+  3056f023bc2caeab 87
+internal/core/metacog.go
+  3056f023bc2caeab 79,89-103,115
+internal/core/agentloop.go
+  3056f023bc2caeab 16,82-83,86,106-109,115-119,603-607
+internal/verify/arbitrator_test.go
+  3056f023bc2caeab 1-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "f19f4b7f3d95dbfbb21c991dfe591e50df5f3439",
+  "prompts": {
+    "3056f023bc2caeab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "61eddbe6-67e3-4953-b320-b3be28811148",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 779,
+      "total_deletions": 53,
+      "accepted_lines": 752,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/verify/arbitrator.go": {
+          "additions": 255,
+          "deletions": 17,
+          "accepted_lines": 238
+        },
+        "internal/tools/evidence_review_test.go": {
+          "additions": 83,
+          "deletions": 6,
+          "accepted_lines": 77
+        },
+        "internal/core/metacog.go": {
+          "additions": 19,
+          "accepted_lines": 19
+        },
+        "internal/tools/evidence_review.go": {
+          "additions": 45,
+          "deletions": 1,
+          "accepted_lines": 44
+        },
+        "docs/diagrams/0xaf-re-agent-architecture.zh-CN.html": {
+          "additions": 15,
+          "deletions": 9,
+          "accepted_lines": 15
+        },
+        "internal/tools/registry.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/types/types.go": {
+          "additions": 22,
+          "deletions": 1,
+          "accepted_lines": 22
+        },
+        "internal/verify/arbitrator_test.go": {
+          "additions": 145,
+          "deletions": 1,
+          "accepted_lines": 144
+        },
+        "internal/tools/tools_test.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/core/arbitrator_test.go": {
+          "additions": 139,
+          "deletions": 2,
+          "accepted_lines": 137
+        },
+        "docs/diagrams/0xaf-re-agent-architecture.html": {
+          "additions": 16,
+          "deletions": 10,
+          "accepted_lines": 16
+        },
+        "docs/ARCHITECTURE.md": {
+          "additions": 20,
+          "deletions": 2,
+          "accepted_lines": 20
+        },
+        "internal/core/agentloop.go": {
+          "additions": 18,
+          "deletions": 3,
+          "accepted_lines": 18
+        }
+      }
+    }
+  }
+}
