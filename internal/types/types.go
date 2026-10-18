@@ -258,6 +258,66 @@ type PlanUpdateMeta struct {
 	Note   string
 }
 
+// --- hypotheses & evidence ----------------------------------------------------
+
+// HypothesisStatus tracks where a claim stands in the analysis. `reevaluate`
+// is set by the tracker, never declared: when a hypothesis a claim depends on
+// is revised or falls, its dependents are cascade-marked for re-examination.
+type HypothesisStatus string
+
+const (
+	HypActive     HypothesisStatus = "active"
+	HypRevised    HypothesisStatus = "revised"
+	HypRejected   HypothesisStatus = "rejected"
+	HypReevaluate HypothesisStatus = "reevaluate"
+)
+
+// Hypothesis is one explicit, reviewable claim about the target — the unit the
+// planner reasons with instead of prose buried in the transcript.
+type Hypothesis struct {
+	ID         string  `json:"id"` // H-001
+	Claim      string  `json:"claim"`
+	Confidence float64 `json:"confidence"` // 0..1
+	// Supporting/Contradicting hold evidence record ids (ev_NNN).
+	Supporting    []string `json:"supporting,omitempty"`
+	Contradicting []string `json:"contradicting,omitempty"`
+	// DependsOn lists parent hypothesis ids; Derived is the backlink the
+	// cascade walks.
+	DependsOn []string         `json:"dependsOn,omitempty"`
+	Derived   []string         `json:"derived,omitempty"`
+	Status    HypothesisStatus `json:"status"`
+	// Note carries the latest challenge/revision reason.
+	Note      string `json:"note,omitempty"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
+}
+
+// HypothesisStore is the surface the hypothesis_* tools and the loop share.
+// Implementations own the mutation rules (confidence downgrade, cascade).
+type HypothesisStore interface {
+	Create(claim string, confidence float64, evidence []string, dependsOn []string) (Hypothesis, error)
+	Support(id, evidenceID string) (Hypothesis, error)
+	Challenge(id, evidenceID, note string) (Hypothesis, error)
+	Revise(id, claim, note string) (Hypothesis, error)
+	Reject(id, note string) (Hypothesis, error)
+	Get(id string) (Hypothesis, bool)
+	List() []Hypothesis
+}
+
+// EvidenceRecord is one referenceable unit of tool output: the provenance tag
+// every hypothesis citation points at. Full output stays in the transcript and
+// spilled artifacts; the record keeps a clipped excerpt and the coordinates.
+type EvidenceRecord struct {
+	ID         string `json:"id"` // ev_001
+	Source     string `json:"source"`
+	Kind       string `json:"kind,omitempty"`
+	Excerpt    string `json:"excerpt"`
+	IsError    bool   `json:"isError,omitempty"`
+	ToolCallID string `json:"toolCallId,omitempty"`
+	Bytes      int    `json:"bytes"`
+	CreatedAt  int64  `json:"createdAt"`
+}
+
 // --- approval ----------------------------------------------------------------
 
 // ApprovalTier states how much trust a call needs: reads are cheap, exec can do
@@ -345,6 +405,10 @@ type ToolContext struct {
 	RemoteHost string
 	// OnPlan lets the update_plan tool publish into the live pane.
 	OnPlan func([]PlanStep, PlanUpdateMeta)
+	// Hypotheses is the live assumption stack. Nil means hypothesis tracking
+	// is unavailable and the hypothesis_* tools report that instead of
+	// silently dropping claims.
+	Hypotheses HypothesisStore
 }
 
 func (tc ToolContext) Context() context.Context {
@@ -359,6 +423,9 @@ type ToolResult struct {
 	IsError bool
 	Details any
 }
+
+// Text returns the concatenated text blocks — the same view Message.Text gives.
+func (r ToolResult) Text() string { return TextFromBlocks(r.Content) }
 
 // Risk is what a tool can do; the approval tier is derived from it.
 type Risk string

@@ -84,6 +84,7 @@ func TestRegistryIsComplete(t *testing.T) {
 		"entropy_scan", "binary_mitigations", "find_bytes", "carve_artifacts", "reverse_toolkit",
 		"apk_inspect", "frida_hook_template", "list_skills", "read_skill", "knowledge_search",
 		"knowledge_read", "update_plan",
+		"hypothesis_create", "hypothesis_update", "hypothesis_list",
 	}
 	registry := CreateReverseTools()
 	if len(registry) != len(want) {

@@ -37,6 +37,8 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 | `internal/util` | Argument coercion, `ResolveInside` path containment, `Clip`/`Truncate`, `ErrInterrupted`, `IsAbort`. | — |
 | `internal/assets` | `go:embed` of `prompts/system.md` + `skills/`, and project-root resolution (`$OXAF_RE_HOME` → exe dir → cwd, walking up 6 levels). | — |
 | `internal/plan` | The task-list tracker: sanitize untrusted steps, carry step timings, suppress no-op updates. | `types`, `util` |
+| `internal/evidence` | The evidence ledger: `ev_NNN` records of tool output with provenance, digest rendering. | `types`, `util` |
+| `internal/hypothesis` | The assumption stack: tracker with host-side downgrade/cascade rules, prompt digest rendering. | `types`, `util` |
 | `internal/security` | Command safety patterns (`policy.go`) and the tier × mode approval gate (`approval.go`). | `types` |
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
@@ -46,7 +48,7 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 | `internal/tools` | The 24-tool built-in registry, the subprocess runner (`process.go`), the output-spill budget (`output.go`). | `knowledge`, `plan`, `security`, `skills`, `types`, `util` |
 | `internal/mcp` | stdio JSON-RPC 2.0 client (`client.go`) and the wrapper that turns server tools into `types.Tool` (`tools.go`). | `auth`, `tools`, `types` |
 | `internal/providers` | The five adapters, the CLI JSONL stream normalizer (`stream.go`), usage extraction. | `auth`, `config`, `types`, `util` |
-| `internal/core` | The loop, `LoopEvent`, context budgeting, the append-only session, the `!` shell escape. | `plan`, `security`, `tools`, `types`, `util` |
+| `internal/core` | The loop, `LoopEvent`, context budgeting, the append-only session, the `!` shell escape, the evidence ledger and hypothesis stack wiring. | `evidence`, `hypothesis`, `plan`, `security`, `tools`, `types`, `util` |
 | `internal/ui` | Theme + width math, the live pane, the HUD, the dataflow diagram, trace lines, plan box, markdown, palette, splash. | `auth`, `core`, `plan`, `types` |
 | `internal/app` | Argument parsing, the REPL, slash commands, the queued prompt controller, the raw-mode line editor, one-shot `--print` mode. | everything above |
 
@@ -658,6 +660,35 @@ identically.
 
 ---
 
+## The evidence ledger and the hypothesis stack
+
+Two host-side stores sit beside the transcript, and both outlive compaction
+because neither lives inside the message history (`internal/core/metacog.go`).
+
+**Evidence** (`internal/evidence`): every real tool result becomes an `ev_NNN`
+record — source tool, clipped excerpt, error flag, tool-call id — appended to
+the session as an `evidence` event and stamped into the result text the model
+sees (`[evidence ev_007 saved]`), so a later hypothesis can cite it. Host-state
+tools (`update_plan`, `hypothesis_*`) are skipped: bookkeeping is not evidence
+about the target.
+
+**Hypotheses** (`internal/hypothesis`): the assumption stack. Claims arrive
+through the `hypothesis_create` / `hypothesis_update` / `hypothesis_list`
+tools, but the mutation rules are host logic, not model discretion:
+contradicting evidence halves confidence (the same evidence twice is
+idempotent), a claim that drops below 0.25 is marked `reevaluate`, and every
+hypothesis transitively derived from a rejected or revised one is
+cascade-marked the same way. The stack is injected into every request's system
+prompt, so a downgrade cannot hide in a buried transcript line. Each successful
+mutation snapshots the whole stack as a `hypotheses` event; `LoadSession`
+returns both stores in `Loaded` and `Restore` seeds them back, numbering
+continuing past the restored ids.
+
+The point of the layer: a contradiction is handled by a deterministic state
+transition, not by the model noticing its own inconsistency.
+
+---
+
 ## 10. MCP
 
 `internal/mcp/client.go` is a from-scratch JSON-RPC 2.0 client over stdio,
@@ -727,13 +758,15 @@ reconciles them in `MarshalJSON`/`UnmarshalJSON`; the unmarshaller tries both
 encodings regardless of role, because a hand-edited log may disagree with
 itself.
 
-**`type: "event"`** — everything else. All six shapes currently written:
+**`type: "event"`** — everything else. All event shapes currently written:
 
 | `data.type` | Written at | Payload |
 | --- | --- | --- |
 | `compaction` | mechanical pass trimmed the view (`agentloop.go:306`) | `tokensBefore`, `tokensAfter`, `dropped`, `elided` |
 | `compaction` + `"mode":"summary"` | `/compact` (`agentloop.go:174`) | `provider`, `tokensBefore`, `tokensAfter` |
 | `plan` | a task list actually changed (`agentloop.go:225`) | `source`, `note`, `steps[]` |
+| `evidence` | a real tool result was filed in the ledger (`core/metacog.go`) | `record`: `id` (`ev_NNN`), `source`, `excerpt`, `isError`, `toolCallId`, `bytes` |
+| `hypotheses` | a hypothesis mutation succeeded (`core/metacog.go`) | `hypotheses[]`: whole-stack snapshot, last one wins on load |
 | `interrupted` | `noteInterrupted` (`agentloop.go:214`) | — |
 | `max_turns_reached` | the loop hit its ceiling (`agentloop.go:439`) | `maxTurns` |
 | `resumed_from` | `--resume` / `/resume` (`app/app.go:187`, `commands.go:225`) | `file`, `messages` |

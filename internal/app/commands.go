@@ -265,7 +265,7 @@ func handleCommand(line string, state *State) error {
 		if err != nil {
 			return err
 		}
-		if err := state.Loop.Restore(loaded.Messages, loaded.Plan); err != nil {
+		if err := state.Loop.Restore(loaded); err != nil {
 			return err
 		}
 		_ = state.Session.AppendEvent(map[string]any{

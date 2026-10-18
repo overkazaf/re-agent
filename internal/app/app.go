@@ -250,7 +250,7 @@ func Run(argv []string) error {
 			if err != nil {
 				return err
 			}
-			if err := loop.Restore(loaded.Messages, loaded.Plan); err != nil {
+			if err := loop.Restore(loaded); err != nil {
 				return err
 			}
 			_ = session.AppendEvent(map[string]any{
@@ -342,6 +342,7 @@ func runOneShot(state *State, prompt string, viz ui.VizMode) error {
 		state.ToolContext.Confirm = createApprover(state, nil, nil)
 	}
 	state.Loop.ResetPlan()
+	state.Loop.ResetAnalysis()
 	startedAt := types.NowMs()
 	var slowest int64
 	// Plan lines describe a transition, so they need the previous snapshot —

@@ -47,6 +47,9 @@ func CreateReverseTools() []types.Tool {
 		knowledgeSearchTool(),
 		knowledgeReadTool(),
 		updatePlanTool(),
+		hypothesisCreateTool(),
+		hypothesisUpdateTool(),
+		hypothesisListTool(),
 	}
 }
 

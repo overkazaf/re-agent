@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/overkazaf/re-agent/internal/evidence"
+	"github.com/overkazaf/re-agent/internal/hypothesis"
 	"github.com/overkazaf/re-agent/internal/plan"
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
@@ -74,18 +76,36 @@ type AgentLoop struct {
 	// last saved list, but the app resets it at the start of a new user task so
 	// a fresh run never opens with stale steps.
 	planTracker plan.Tracker
-	emit        func(LoopEvent)
+	// The evidence ledger and hypothesis stack live outside the transcript so
+	// compaction cannot take them; the stack is re-injected into the system
+	// prompt on every request instead.
+	evidence   *evidence.Ledger
+	hypotheses *hypothesis.Tracker
+	emit       func(LoopEvent)
 	// lastProviderName is whoever answered last, so `/compact` defaults to the
 	// model that holds the context.
 	lastProviderName string
 }
 
 func NewAgentLoop(options LoopOptions) *AgentLoop {
-	loop := &AgentLoop{options: options, emit: func(LoopEvent) {}}
+	loop := &AgentLoop{
+		options:    options,
+		emit:       func(LoopEvent) {},
+		evidence:   evidence.New(),
+		hypotheses: hypothesis.New(),
+	}
 	// The host-side update_plan tool publishes through the same path as the CLI
 	// stream events, so both sources dedupe and persist identically.
 	options.ToolContext.OnPlan = func(steps []types.PlanStep, meta types.PlanUpdateMeta) {
 		loop.publishPlan(steps, meta)
+	}
+	// The hypothesis tools mutate the loop's own tracker, and every successful
+	// mutation snapshots the stack into the session event stream.
+	options.ToolContext.Hypotheses = &persistingHypotheses{
+		store: loop.hypotheses,
+		onSave: func(hypotheses []types.Hypothesis) {
+			_ = loop.options.Session.AppendEvent(map[string]any{"type": "hypotheses", "hypotheses": hypotheses})
+		},
 	}
 	return loop
 }
@@ -94,8 +114,21 @@ func (l *AgentLoop) History() []types.Message { return l.messages }
 
 func (l *AgentLoop) Plan() *types.PlanSnapshot { return l.planTracker.Current() }
 
+// Hypotheses exposes the assumption stack for the HUD and the app commands.
+func (l *AgentLoop) Hypotheses() []types.Hypothesis { return l.hypotheses.List() }
+
+// Evidence exposes the ledger for the HUD and the app commands.
+func (l *AgentLoop) Evidence() []types.EvidenceRecord { return l.evidence.List() }
+
 // ResetPlan clears the live task list without touching transcript history.
 func (l *AgentLoop) ResetPlan() { l.planTracker.Reset() }
+
+// ResetAnalysis clears the evidence ledger and the hypothesis stack alongside
+// the task list when a new user task starts.
+func (l *AgentLoop) ResetAnalysis() {
+	l.evidence.Reset()
+	l.hypotheses.Reset()
+}
 
 // NewSession switches the live transcript to a fresh session file and clears
 // the working history, task list, and last-provider pointer. The old transcript
@@ -104,6 +137,7 @@ func (l *AgentLoop) NewSession(session *Session) {
 	l.options.Session = session
 	l.messages = nil
 	l.planTracker.Reset()
+	l.ResetAnalysis()
 	l.lastProviderName = ""
 }
 
@@ -119,18 +153,29 @@ func (l *AgentLoop) AddContext(text string) error {
 	return l.options.Session.AppendMessage(message)
 }
 
-// Restore loads a previous session's transcript into this loop. The messages
-// are replayed into the *new* session file too, so the resumed log is
-// self-contained and can itself be resumed.
-func (l *AgentLoop) Restore(messages []types.Message, snapshot *types.PlanSnapshot) error {
-	l.messages = append([]types.Message{}, messages...)
+// Restore loads a previous session into this loop: transcript, task list, and
+// the metacognition state. Everything is replayed into the *new* session file
+// too, so the resumed log is self-contained and can itself be resumed.
+func (l *AgentLoop) Restore(loaded Loaded) error {
+	l.messages = append([]types.Message{}, loaded.Messages...)
 	for _, message := range l.messages {
 		if err := l.options.Session.AppendMessage(message); err != nil {
 			return err
 		}
 	}
-	if snapshot != nil {
-		l.publishPlan(snapshot.Steps, types.PlanUpdateMeta{Source: snapshot.Source, Note: snapshot.Note})
+	if loaded.Plan != nil {
+		l.publishPlan(loaded.Plan.Steps, types.PlanUpdateMeta{Source: loaded.Plan.Source, Note: loaded.Plan.Note})
+	}
+	if len(loaded.Evidence) > 0 {
+		l.evidence.Load(loaded.Evidence)
+		for _, record := range loaded.Evidence {
+			_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": record})
+		}
+	}
+	if len(loaded.Hypotheses) > 0 {
+		l.hypotheses.Load(loaded.Hypotheses)
+		l.options.ToolContext.Hypotheses.(*persistingHypotheses).store = l.hypotheses
+		_ = l.options.Session.AppendEvent(map[string]any{"type": "hypotheses", "hypotheses": loaded.Hypotheses})
 	}
 	return nil
 }
@@ -528,7 +573,9 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					message = "Interrupted by operator."
 				}
 				emit(LoopEvent{Type: "tool_end", Name: call.Name, OK: false, Ms: types.NowMs() - startedAt, Preview: message})
-				resultMessage := l.pushToolResult(call, []types.ContentBlock{types.TextBlock(message)}, true, nil)
+				errorBlocks := []types.ContentBlock{types.TextBlock(message)}
+				evidenceID, stamped := l.recordEvidence(call, errorBlocks, true)
+				resultMessage := l.pushToolResult(call, stamped, true, withEvidenceID(nil, evidenceID))
 				if options.Isolated {
 					runMessages = append(runMessages, resultMessage)
 				}
@@ -537,7 +584,8 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					Type: "tool_end", Name: call.Name, OK: !result.IsError,
 					Ms: types.NowMs() - startedAt, Preview: previewOf(result.Content),
 				})
-				resultMessage := l.pushToolResult(call, result.Content, result.IsError, result.Details)
+				evidenceID, stamped := l.recordEvidence(call, result.Content, result.IsError)
+				resultMessage := l.pushToolResult(call, stamped, result.IsError, withEvidenceID(result.Details, evidenceID))
 				if options.Isolated {
 					runMessages = append(runMessages, resultMessage)
 				}
@@ -575,6 +623,9 @@ func (l *AgentLoop) systemPrompt(role types.AgentRole) string {
 		if prompt := strings.TrimSpace(l.options.RolePrompts[role]); prompt != "" {
 			parts = append(parts, prompt)
 		}
+	}
+	if section := l.hypothesisStackSection(); section != "" {
+		parts = append(parts, section)
 	}
 	return strings.Join(parts, "\n\n")
 }

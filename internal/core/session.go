@@ -47,6 +47,10 @@ type Loaded struct {
 	Messages []types.Message
 	// Plan is the last task list recorded, so a resumed session picks it back up.
 	Plan *types.PlanSnapshot
+	// Evidence and Hypotheses are the metacognition state: the ledger and the
+	// assumption stack recorded as session events, seeded back on resume.
+	Evidence   []types.EvidenceRecord
+	Hypotheses []types.Hypothesis
 }
 
 // Session is an append-only JSONL transcript.
@@ -188,16 +192,25 @@ func LoadSession(file string) (Loaded, error) {
 				Steps  []types.PlanStep `json:"steps"`
 				Source string           `json:"source"`
 				Note   string           `json:"note"`
+				// Metacognition events: one evidence record each, and whole-stack
+				// hypothesis snapshots (last one wins).
+				Record     types.EvidenceRecord `json:"record"`
+				Hypotheses []types.Hypothesis   `json:"hypotheses"`
 			}
 			if err := json.Unmarshal(entry.Data, &event); err != nil {
 				continue
 			}
-			if event.Type == "plan" && len(event.Steps) > 0 {
+			switch {
+			case event.Type == "plan" && len(event.Steps) > 0:
 				source := event.Source
 				if source == "" {
 					source = "resumed"
 				}
 				loaded.Plan = &types.PlanSnapshot{Steps: event.Steps, Source: source, Note: event.Note}
+			case event.Type == "evidence" && event.Record.ID != "":
+				loaded.Evidence = append(loaded.Evidence, event.Record)
+			case event.Type == "hypotheses" && len(event.Hypotheses) > 0:
+				loaded.Hypotheses = event.Hypotheses
 			}
 		}
 	}

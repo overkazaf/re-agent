@@ -204,6 +204,7 @@ func runTurn(state *State, line string) bool {
 	// A new prompt is a new operator task. Keep the transcript, but do not open
 	// the live HUD with the previous task's plan still attached.
 	state.Loop.ResetPlan()
+	state.Loop.ResetAnalysis()
 	// The dataflow model is mutated by events and read by the pane every frame.
 	flow := ui.NewFlowModel(routeLabel(state))
 	flow.Begin(routeLabel(state))
