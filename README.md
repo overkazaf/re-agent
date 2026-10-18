@@ -147,7 +147,7 @@ or browse the [full diagram index](docs/diagrams/).
 | --- | --- |
 | Terminal surface | Keep queueing, slash commands, shell escapes, and live HUD in one workspace. |
 | Agent loop | Route planner/executor/researcher seats, compact context, stream events, and persist JSONL sessions. |
-| Metacognition layer | Keep evidence (`ev_NNN`) and assumptions (`H-NNN`) as host state outside the transcript: stamp every tool result, inject the hypothesis stack into the system prompt, and downgrade/cascade deterministically. |
+| Metacognition layer | Keep evidence (`ev_NNN`) and assumptions (`H-NNN`) as host state outside the transcript: stamp every tool result, inject the hypothesis stack into the system prompt, and downgrade/cascade deterministically. A rule-based arbitrator cross-checks the ledger against the stack after every tool result; `/audit` re-judges the stack from a second model in a context-isolated run. |
 | Workflow modes | Use specialist routes when available; otherwise split RE tasks into bounded local-evidence executor packets. |
 | Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
 | Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |

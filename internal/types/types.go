@@ -112,11 +112,14 @@ type AgentConfig struct {
 	ExecutorProvider   string `json:"executorProvider"`
 	ResearcherProvider string `json:"researcherProvider,omitempty"`
 	// KnowledgeProvider answers `/know` lookups; falls back to the executor.
-	KnowledgeProvider string                      `json:"knowledgeProvider,omitempty"`
-	DefaultRole       AgentRole                   `json:"defaultRole"`
-	MaxTurns          int                         `json:"maxTurns"`
-	Providers         map[string]*ProviderConfig  `json:"providers"`
-	MCPServers        map[string]*MCPServerConfig `json:"mcpServers,omitempty"`
+	KnowledgeProvider string `json:"knowledgeProvider,omitempty"`
+	// AuditProvider runs the adversarial audit (`/audit`); empty picks a
+	// provider outside the main seats automatically.
+	AuditProvider string                      `json:"auditProvider,omitempty"`
+	DefaultRole   AgentRole                   `json:"defaultRole"`
+	MaxTurns      int                         `json:"maxTurns"`
+	Providers     map[string]*ProviderConfig  `json:"providers"`
+	MCPServers    map[string]*MCPServerConfig `json:"mcpServers,omitempty"`
 	// CompactionStrategy: "summary" (default) folds history through an LLM;
 	// "snapcompact" archives dropped history as PNG frames a vision model reads.
 	CompactionStrategy string `json:"compactionStrategy,omitempty"`
@@ -325,8 +328,11 @@ type Finding struct {
 	Rule         string `json:"rule"`
 	HypothesisID string `json:"hypothesisId"`
 	EvidenceID   string `json:"evidenceId,omitempty"`
-	Applied      bool   `json:"applied"`
-	Message      string `json:"message"`
+	// Action is what the finding did to the stack: "challenge" or "support"
+	// (audit verdicts); empty for advisory-only rules.
+	Action  string `json:"action,omitempty"`
+	Applied bool   `json:"applied"`
+	Message string `json:"message"`
 }
 
 // Arbitrator cross-checks the ledger against the stack. Implemented by

@@ -135,7 +135,7 @@
 | --- | --- |
 | 终端交互层 | 把任务队列、斜杠命令、shell escape 和 live HUD 放在同一个工作区策略下。 |
 | Agent loop | 路由 planner/executor/researcher，压缩上下文，流式输出事件，并持久化 JSONL session。 |
-| 元认知层 | 把证据（`ev_NNN`）和判断（`H-NNN`）作为转录之外的宿主状态：每个工具结果自动打标入库，假设栈注入 system prompt，降级与级联由确定性代码执行。 |
+| 元认知层 | 把证据（`ev_NNN`）和判断（`H-NNN`）作为转录之外的宿主状态：每个工具结果自动打标入库，假设栈注入 system prompt，降级与级联由确定性代码执行。规则化的证据仲裁器在每次工具结果后交叉核对账本与假设栈；`/audit` 把假设栈交给第二个模型做上下文隔离的对抗审计。 |
 | Workflow 模式 | 有 specialist route 就直接用；没有时把 RE 任务拆成有边界的本地证据 executor packet。 |
 | 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
 | 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |

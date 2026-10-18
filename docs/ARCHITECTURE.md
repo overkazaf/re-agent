@@ -698,12 +698,32 @@ same pass on demand. Four rules:
 | `single-view` | confidence ≥ 0.8 backed only by on-disk (static) evidence while an unattached opposite-view record shares the subject | advisory only — no mutation |
 
 Records carry a `kind`: `dynamic` (`run_command`, `remote_exec`), `static`
-(everything else), or `verification` (synthesized by the arbitrator). The
-auto-challenge routes through the same persisting stack decorator as
-model-driven mutations, so it snapshots to the session JSONL identically.
+(everything else), or `verification` (synthesized by the arbitrator or the
+auditor). The auto-challenge routes through the same persisting stack
+decorator as model-driven mutations, so it snapshots to the session JSONL
+identically.
+
+**Adversarial audit** (`internal/core/auditor.go`, `/audit`): where the
+arbitrator's rules are deterministic, the audit brings a second model's
+judgment. The loop packs the stack digest and the ledger digest into an
+isolated, tool-free run (`Isolated` + `FreshSession`, the same primitives the
+delegated workflow uses) on a different provider seat: the configured
+`auditProvider`, else any provider outside the planner/executor seats and
+whoever answered last, else the executor. The auditor's reply is parsed for
+strict verdict lines — `AUDIT H-001 CHALLENGE ev_003 <reason>` / `AUDIT H-001
+SUPPORT ev_001 <reason>` — and each verdict becomes a real stack mutation
+through the same Challenge/Support transitions, with the same confidence
+halving and cascade as model-driven ones. An objection without a named record
+is synthesized into the ledger as a `verification` record keyed by the reason
+hash (`audit:<hyp>:<hash8>`), so a repeat audit reuses the record and the
+tracker's per-record idempotency absorbs the repeat. Findings are tagged
+`adversarial-audit` in the `audit` session event; the run restores
+`lastProviderName` so `/compact` does not drift onto the audit seat.
 
 The point of the layer: a contradiction is handled by a deterministic state
-transition, not by the model noticing its own inconsistency.
+transition, not by the model noticing its own inconsistency — and when
+judgment is needed, it comes from a fresh context that never saw the
+narrative being judged.
 
 ---
 
@@ -784,7 +804,8 @@ itself.
 | `compaction` + `"mode":"summary"` | `/compact` (`agentloop.go:174`) | `provider`, `tokensBefore`, `tokensAfter` |
 | `plan` | a task list actually changed (`agentloop.go:225`) | `source`, `note`, `steps[]` |
 | `evidence` | a real tool result was filed in the ledger (`core/metacog.go`), or the arbitrator synthesized a verification record (`core/agentloop.go`) | `record`: `id` (`ev_NNN`), `source`, `kind` (`static\|dynamic\|verification`), `excerpt`, `isError`, `toolCallId`, `bytes` |
-| `hypotheses` | a hypothesis mutation succeeded — model-driven or arbitrator challenge (`core/metacog.go`) | `hypotheses[]`: whole-stack snapshot, last one wins on load |
+| `hypotheses` | a hypothesis mutation succeeded — model-driven, arbitrator challenge, or audit verdict (`core/metacog.go`) | `hypotheses[]`: whole-stack snapshot, last one wins on load |
+| `audit` | an adversarial audit pass ran (`/audit`, `core/auditor.go`) | `provider`, `findings[]`: `rule` (`adversarial-audit`), `hypothesisId`, `evidenceId`, `action` (`challenge\|support`), `applied`, `message` |
 | `interrupted` | `noteInterrupted` (`agentloop.go:214`) | — |
 | `max_turns_reached` | the loop hit its ceiling (`agentloop.go:439`) | `maxTurns` |
 | `resumed_from` | `--resume` / `/resume` (`app/app.go:187`, `commands.go:225`) | `file`, `messages` |

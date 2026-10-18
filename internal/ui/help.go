@@ -88,6 +88,9 @@ var SlashCommandSections = []HelpSection{
 		{"/know raw", "<query>", "Raw index hits, no model call"},
 		{"/know read", "<id>", "Read one knowledge entry in full"},
 	}},
+	{"verification", []HelpEntry{
+		{"/audit", "", "Cross-model adversarial audit of the hypothesis stack"},
+	}},
 }
 
 func HelpText() string {

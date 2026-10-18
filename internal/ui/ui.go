@@ -307,6 +307,37 @@ func RenderNotice(message string) string {
 	return C.AccentDim("▏") + " " + C.Muted(message)
 }
 
+// FormatAuditReport renders what the adversarial auditor concluded and what it
+// changed on the stack.
+func FormatAuditReport(provider string, findings []types.Finding) string {
+	if provider == "" {
+		return RenderNotice("nothing to audit — the hypothesis stack is empty")
+	}
+	if len(findings) == 0 {
+		return RenderNotice("audit via " + provider + ": no findings — the stack held up")
+	}
+	lines := []string{C.Bold(C.Accent("audit")) + " " + C.Faint("via "+provider), GradientRule(minOf(TermWidth(), 52))}
+	for _, finding := range findings {
+		verb := finding.Action
+		if verb == "" {
+			verb = "flagge"
+		}
+		if strings.HasSuffix(verb, "e") {
+			verb += "d"
+		} else {
+			verb += "ed"
+		}
+		record := "-"
+		if finding.EvidenceID != "" {
+			record = finding.EvidenceID
+		}
+		lines = append(lines, "  "+C.Accent(verb)+" "+C.Bold(finding.HypothesisID)+
+			C.Faint(" via "+record)+": "+finding.Message)
+	}
+	lines = append(lines, RenderNotice(fmt.Sprintf("%d verdict(s) applied to the stack", len(findings))))
+	return strings.Join(lines, "\n")
+}
+
 // ThemePicker paints each row in the theme it describes, so the swatches are the
 // actual palette rather than a legend.
 func ThemePicker() string {

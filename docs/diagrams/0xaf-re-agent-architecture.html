@@ -168,7 +168,7 @@
     <main class="diagram-container">
       <svg viewBox="0 0 1280 1048" role="img" aria-labelledby="diagram-title diagram-desc">
         <title id="diagram-title">0xAF-Re architecture map</title>
-        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools. A metacognition layer holds the evidence ledger and hypothesis stack beside the agent loop, and an evidence arbitrator cross-checks them after every tool result; the adversarial auditor is planned.</desc>
+        <desc id="diagram-desc">Operator terminal connects to the Go host, which routes role prompts through workflow and policy gates to providers and local reverse-engineering tools. A metacognition layer holds the evidence ledger and hypothesis stack beside the agent loop, an evidence arbitrator cross-checks them after every tool result, and an adversarial auditor re-judges the stack from a second model on demand.</desc>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
@@ -210,7 +210,8 @@
           <path d="M 560 268 L 560 282 L 392 282 L 392 350" stroke="#22d3ee" stroke-width="1.8" marker-end="url(#arrow-cyan)"/>
           <path d="M 700 350 L 700 272" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
           <path d="M 782 486 L 782 820 Q 782 832 794 832 L 961 832 Q 973 832 973 844 L 973 904" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-violet)"/>
-          <path d="M 639 462 L 639 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 620 462 L 620 514" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
+          <path d="M 658 516 L 658 464" stroke="#fb7185" stroke-width="1.8" marker-end="url(#arrow-rose)"/>
           <path d="M 392 462 L 392 514" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
           <path d="M 460 516 L 460 489 L 580 489 L 580 464" stroke="#fb7185" stroke-width="1.8" marker-end="url(#arrow-rose)"/>
           <path d="M 1058 310 L 1014 310 L 1014 118 L 740 118 L 740 146" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
@@ -228,6 +229,8 @@
           <text x="560" y="826" fill="#a78bfa" text-anchor="middle">persist evidence + hypothesis events to JSONL</text>
           <text x="404" y="484" fill="#a78bfa" font-size="8">reads</text>
           <text x="498" y="484" fill="#fb7185" font-size="8">challenges</text>
+          <text x="600" y="492" fill="#a78bfa" font-size="8" text-anchor="end">packet</text>
+          <text x="668" y="492" fill="#fb7185" font-size="8">verdicts</text>
           <text x="860" y="112">seat results</text>
           <text x="1008" y="460" fill="#fb7185">write / network</text>
           <text x="902" y="700" fill="#fbbf24">approved exec</text>
@@ -293,11 +296,11 @@
         <text x="308" y="578" fill="#cbd5e1" font-size="9">dangling citation → synthesized + challenged</text>
         <text x="308" y="594" fill="#cbd5e1" font-size="9">static vs dynamic contradictions become evidence</text>
 
-        <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
-        <text x="639" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Adversarial Auditor</text>
-        <text x="536" y="562" fill="#fb7185" font-size="9">planned · metacognition layer</text>
-        <text x="536" y="578" fill="#cbd5e1" font-size="9">context-isolated re-run (Isolated)</text>
-        <text x="536" y="594" fill="#cbd5e1" font-size="9">cross-model audit of the stack</text>
+        <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
+        <text x="639" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Adversarial Auditor</text>
+        <text x="536" y="562" fill="#a78bfa" font-size="9">second model · /audit · isolated + tool-free</text>
+        <text x="536" y="578" fill="#cbd5e1" font-size="9">verdict lines AUDIT H· CHALLENGE/SUPPORT</text>
+        <text x="536" y="594" fill="#cbd5e1" font-size="9">objections synthesized as verification records</text>
 
         <rect x="805" y="516" width="178" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
         <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Policy Gate</text>
@@ -376,10 +379,8 @@
           <text x="24" y="83" fill="#94a3b8" font-size="9">workflow and local tools</text>
           <rect x="0" y="94" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
           <text x="24" y="103" fill="#94a3b8" font-size="9">policy and approvals</text>
-          <rect x="0" y="114" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-dasharray="3 2"/>
-          <text x="24" y="123" fill="#94a3b8" font-size="9">planned component</text>
-          <line x1="0" y1="138" x2="16" y2="138" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="4 3"/>
-          <text x="24" y="141" fill="#94a3b8" font-size="9">context injection / control</text>
+          <line x1="0" y1="118" x2="16" y2="118" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="4 3"/>
+          <text x="24" y="121" fill="#94a3b8" font-size="9">context injection / control</text>
         </g>
 
         <text x="42" y="1030" fill="#475569" font-size="10">Design: the model narrates, the host keeps score — evidence and assumptions are first-class state, not transcript lore.</text>
@@ -393,7 +394,7 @@
       </article>
       <article class="card">
         <h2><span class="card-dot violet"></span>Metacognition layer (new)</h2>
-        <p>Tool results become ev_NNN ledger records; committed claims become H-NNN hypotheses. A contradiction halves confidence and a rejected root cascades a re-check flag to everything derived from it — host code, not prompt hope. After every tool result an arbitrator pass challenges dangling citations and runtime contradictions on its own.</p>
+        <p>Tool results become ev_NNN ledger records; committed claims become H-NNN hypotheses. A contradiction halves confidence and a rejected root cascades a re-check flag to everything derived from it — host code, not prompt hope. After every tool result an arbitrator pass challenges dangling citations and runtime contradictions on its own, and /audit lets a second model attack the whole stack from a fresh context.</p>
       </article>
       <article class="card">
         <h2><span class="card-dot emerald"></span>Composable model seats</h2>

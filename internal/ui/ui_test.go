@@ -685,3 +685,27 @@ func TestLivePaneStopIsSafeUnderPauseResume(t *testing.T) {
 	pane.Stop()
 	pane.Stop() // idempotent
 }
+
+func TestFormatAuditReport(t *testing.T) {
+	empty := FormatAuditReport("", nil)
+	if !strings.Contains(empty, "nothing to audit") {
+		t.Fatalf("empty stack should say so:\n%s", empty)
+	}
+	sound := FormatAuditReport("auditor", nil)
+	if !strings.Contains(sound, "auditor") || !strings.Contains(sound, "no findings") {
+		t.Fatalf("sound audit should credit the auditor:\n%s", sound)
+	}
+	report := FormatAuditReport("auditor", []types.Finding{
+		{Rule: "adversarial-audit", HypothesisID: "H-001", EvidenceID: "ev_003", Action: "challenge", Applied: true, Message: "the cited run errored"},
+		{Rule: "adversarial-audit", HypothesisID: "H-002", EvidenceID: "ev_001", Action: "support", Applied: true, Message: "dynamic run confirms"},
+	})
+	if !strings.Contains(report, "H-001") || !strings.Contains(report, "ev_003") {
+		t.Fatalf("findings should name hypothesis and record:\n%s", report)
+	}
+	if !strings.Contains(report, "challenged") || !strings.Contains(report, "supported") {
+		t.Fatalf("findings should carry the verb:\n%s", report)
+	}
+	if !strings.Contains(report, "the cited run errored") || !strings.Contains(report, "2") {
+		t.Fatalf("findings should carry reasons and a count:\n%s", report)
+	}
+}

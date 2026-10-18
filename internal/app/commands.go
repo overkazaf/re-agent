@@ -245,6 +245,14 @@ func handleCommand(line string, state *State) error {
 			"compacted via %s: ≈%d → ≈%d tokens (full transcript kept in %s)",
 			result.Provider, result.TokensBefore, result.TokensAfter, state.Session.File)))
 		return nil
+	case "/audit":
+		fmt.Println(ui.RenderNotice("running the adversarial audit on a second model…"))
+		report, err := state.Loop.Audit(context.Background(), nil)
+		if err != nil {
+			return err
+		}
+		fmt.Println(ui.FormatAuditReport(report.Provider, report.Findings))
+		return nil
 	case "/sessions":
 		fmt.Print(ui.FormatSessions(sessionRows(core.ListSessions(state.ToolContext.SessionDir, 20)), time.Now()))
 		return nil

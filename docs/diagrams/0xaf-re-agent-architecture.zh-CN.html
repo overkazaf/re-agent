@@ -167,7 +167,7 @@
     <main class="diagram-container">
       <svg viewBox="0 0 1280 1048" role="img" aria-labelledby="diagram-title diagram-desc">
         <title id="diagram-title">0xAF-Re 架构总图</title>
-        <desc id="diagram-desc">操作终端接入 Go 宿主；宿主按角色把提示词经工作流和策略闸门路由到不同 provider 和本地逆向工具。元认知层在 agent 循环旁维护证据账本与假设栈，证据仲裁器在每次工具结果后对二者交叉核对；对抗审计员为规划中组件。</desc>
+        <desc id="diagram-desc">操作终端接入 Go 宿主；宿主按角色把提示词经工作流和策略闸门路由到不同 provider 和本地逆向工具。元认知层在 agent 循环旁维护证据账本与假设栈，证据仲裁器在每次工具结果后对二者交叉核对，对抗审计员按需让第二个模型重审整张假设栈。</desc>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
@@ -209,7 +209,8 @@
           <path d="M 560 268 L 560 282 L 392 282 L 392 350" stroke="#22d3ee" stroke-width="1.8" marker-end="url(#arrow-cyan)"/>
           <path d="M 700 350 L 700 272" stroke="#22d3ee" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)"/>
           <path d="M 782 486 L 782 820 Q 782 832 794 832 L 961 832 Q 973 832 973 844 L 973 904" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-violet)"/>
-          <path d="M 639 462 L 639 514" stroke="#fb7185" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+          <path d="M 620 462 L 620 514" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
+          <path d="M 658 516 L 658 464" stroke="#fb7185" stroke-width="1.8" marker-end="url(#arrow-rose)"/>
           <path d="M 392 462 L 392 514" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arrow-violet)"/>
           <path d="M 460 516 L 460 489 L 580 489 L 580 464" stroke="#fb7185" stroke-width="1.8" marker-end="url(#arrow-rose)"/>
           <path d="M 1058 310 L 1014 310 L 1014 118 L 740 118 L 740 146" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
@@ -227,6 +228,8 @@
           <text x="560" y="826" fill="#a78bfa" text-anchor="middle">evidence / hypotheses 事件持久化到 JSONL</text>
           <text x="404" y="484" fill="#a78bfa" font-size="8">读取</text>
           <text x="498" y="484" fill="#fb7185" font-size="8">质询</text>
+          <text x="600" y="492" fill="#a78bfa" font-size="8" text-anchor="end">审计包</text>
+          <text x="668" y="492" fill="#fb7185" font-size="8">裁定</text>
           <text x="860" y="112">席位结果回流</text>
           <text x="1008" y="460" fill="#fb7185">写盘 / 网络</text>
           <text x="902" y="700" fill="#fbbf24">审批后的执行</text>
@@ -292,11 +295,11 @@
         <text x="308" y="578" fill="#cbd5e1" font-size="9">悬空引用 → 合成验证记录并质询</text>
         <text x="308" y="594" fill="#cbd5e1" font-size="9">静态/动态矛盾自动变成新证据</text>
 
-        <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-width="1.4" stroke-dasharray="6 4"/>
-        <text x="639" y="542" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">对抗审计员</text>
-        <text x="536" y="562" fill="#fb7185" font-size="9">规划中 · 元认知层</text>
-        <text x="536" y="578" fill="#cbd5e1" font-size="9">基于 Isolated 的隔离复跑</text>
-        <text x="536" y="594" fill="#cbd5e1" font-size="9">跨模型审计整张假设栈</text>
+        <rect x="518" y="516" width="242" height="100" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
+        <text x="639" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">对抗审计员</text>
+        <text x="536" y="562" fill="#a78bfa" font-size="9">第二个模型 · /audit · 隔离且无工具</text>
+        <text x="536" y="578" fill="#cbd5e1" font-size="9">裁定行 AUDIT H· CHALLENGE/SUPPORT</text>
+        <text x="536" y="594" fill="#cbd5e1" font-size="9">异议合成为 verification 证据记录</text>
 
         <rect x="805" y="516" width="178" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
         <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">策略闸门</text>
@@ -375,10 +378,8 @@
           <text x="24" y="83" fill="#94a3b8" font-size="9">工作流与本地工具</text>
           <rect x="0" y="94" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
           <text x="24" y="103" fill="#94a3b8" font-size="9">策略与审批</text>
-          <rect x="0" y="114" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.16)" stroke="#fb7185" stroke-dasharray="3 2"/>
-          <text x="24" y="123" fill="#94a3b8" font-size="9">规划中的组件</text>
-          <line x1="0" y1="138" x2="16" y2="138" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="4 3"/>
-          <text x="24" y="141" fill="#94a3b8" font-size="9">上下文注入 / 控制</text>
+          <line x1="0" y1="118" x2="16" y2="118" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="4 3"/>
+          <text x="24" y="121" fill="#94a3b8" font-size="9">上下文注入 / 控制</text>
         </g>
 
         <text x="42" y="1030" fill="#475569" font-size="10">设计原则：模型负责叙述，宿主负责记账 —— 证据与假设是一等状态，而不是转录里的口口相传。</text>
@@ -392,7 +393,7 @@
       </article>
       <article class="card">
         <h2><span class="card-dot violet"></span>元认知层（新增）</h2>
-        <p>工具结果变成 ev_NNN 账本记录，已提交的判断变成 H-NNN 假设。一次矛盾就把置信度减半，否定根假设会级联标记所有派生判断 —— 这是宿主代码，不是 prompt 里的美好愿望。每次工具结果后，仲裁器会自动质询悬空引用与运行时矛盾。</p>
+        <p>工具结果变成 ev_NNN 账本记录，已提交的判断变成 H-NNN 假设。一次矛盾就把置信度减半，否定根假设会级联标记所有派生判断 —— 这是宿主代码，不是 prompt 里的美好愿望。每次工具结果后，仲裁器会自动质询悬空引用与运行时矛盾；/audit 让第二个模型在全新上下文里攻击整张假设栈。</p>
       </article>
       <article class="card">
         <h2><span class="card-dot emerald"></span>可组合的模型席位</h2>
