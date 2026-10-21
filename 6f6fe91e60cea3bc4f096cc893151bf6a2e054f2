@@ -1,0 +1,51 @@
+docs/diagrams/0xaf-re-agent-architecture.html
+  3056f023bc2caeab 51,115,153-155,169,171,188-190,196-197,201-227,240,244-255,262-281,283-313,340-342,344-346,348-350,352-354,356-358,360,367-376,379,389-390,393-394,397-398
+README.zh-CN.md
+  3056f023bc2caeab 8,80,138,153-154,158-174,699
+docs/diagrams/0xaf-re-agent-architecture.zh-CN.html
+  3056f023bc2caeab 51,115,153-154,168,170,187-189,195-196,198,200-226,229,231,235-254,260-306,308-312,314,316-317,320,325,327-328,331-333,336,338-341,343-345,347-349,351-353,355-357,359,363,365-375,378,384-385,388-389,392-393,396-397,401,440,465
+README.md
+  3056f023bc2caeab 9,85,150,169-172,178-199,786
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "6f6fe91e60cea3bc4f096cc893151bf6a2e054f2",
+  "prompts": {
+    "3056f023bc2caeab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "61eddbe6-67e3-4953-b320-b3be28811148",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 364,
+      "total_deletions": 194,
+      "accepted_lines": 364,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/diagrams/0xaf-re-agent-architecture.html": {
+          "additions": 142,
+          "deletions": 83,
+          "accepted_lines": 142
+        },
+        "README.md": {
+          "additions": 31,
+          "deletions": 1,
+          "accepted_lines": 31
+        },
+        "docs/diagrams/0xaf-re-agent-architecture.zh-CN.html": {
+          "additions": 167,
+          "deletions": 109,
+          "accepted_lines": 167
+        },
+        "README.zh-CN.md": {
+          "additions": 24,
+          "deletions": 1,
+          "accepted_lines": 24
+        }
+      }
+    }
+  }
+}

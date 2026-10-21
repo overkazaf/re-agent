@@ -1,0 +1,142 @@
+internal/app/commands.go
+  3056f023bc2caeab 268
+internal/app/repl.go
+  3056f023bc2caeab 207
+internal/app/app.go
+  3056f023bc2caeab 253,345
+internal/core/metacog.go
+  3056f023bc2caeab 1-139
+internal/tools/registry.go
+  3056f023bc2caeab 50-52
+internal/types/types.go
+  3056f023bc2caeab 261-320,408-411,427-429
+internal/tools/hypothesis_test.go
+  3056f023bc2caeab 1-120
+internal/core/agentloop.go
+  3056f023bc2caeab 10-11,79-84,91-96,102-109,117-118,120-122,126-131,140,156-160,166-178,576-578,587-588,627-629
+internal/tools/hypothesis.go
+  3056f023bc2caeab 1-183
+internal/hypothesis/tracker_test.go
+  3056f023bc2caeab 1-233
+internal/evidence/ledger_test.go
+  3056f023bc2caeab 1-101
+internal/tools/tools_test.go
+  3056f023bc2caeab 87
+internal/core/session.go
+  3056f023bc2caeab 50-53,195-198,203-204,210-213
+docs/ARCHITECTURE.md
+  3056f023bc2caeab 40-41,51,663-691,761,768-769
+internal/evidence/ledger.go
+  3056f023bc2caeab 1-151
+internal/hypothesis/tracker.go
+  3056f023bc2caeab 1-317
+internal/core/metacog_test.go
+  3056f023bc2caeab 1-245
+internal/hypothesis/render.go
+  3056f023bc2caeab 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "69dcf4b8bda4ad6b97a2f1825fb90ca9f416e0c1",
+  "prompts": {
+    "3056f023bc2caeab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "61eddbe6-67e3-4953-b320-b3be28811148",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1908,
+      "total_deletions": 180,
+      "accepted_lines": 1744,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/core/agentloop.go": {
+          "additions": 62,
+          "deletions": 11,
+          "accepted_lines": 62
+        },
+        "internal/app/app.go": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "internal/hypothesis/render.go": {
+          "additions": 69,
+          "accepted_lines": 69
+        },
+        "internal/types/types.go": {
+          "additions": 72,
+          "deletions": 5,
+          "accepted_lines": 67
+        },
+        "internal/tools/registry.go": {
+          "additions": 3,
+          "accepted_lines": 3
+        },
+        "docs/ARCHITECTURE.md": {
+          "additions": 35,
+          "deletions": 2,
+          "accepted_lines": 35
+        },
+        "internal/hypothesis/tracker.go": {
+          "additions": 452,
+          "deletions": 135,
+          "accepted_lines": 317
+        },
+        "internal/tools/tools_test.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/app/repl.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/app/commands.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/evidence/ledger_test.go": {
+          "additions": 104,
+          "deletions": 3,
+          "accepted_lines": 101
+        },
+        "internal/core/session.go": {
+          "additions": 14,
+          "deletions": 1,
+          "accepted_lines": 14
+        },
+        "internal/tools/hypothesis_test.go": {
+          "additions": 120,
+          "accepted_lines": 120
+        },
+        "internal/core/metacog_test.go": {
+          "additions": 254,
+          "deletions": 9,
+          "accepted_lines": 245
+        },
+        "internal/evidence/ledger.go": {
+          "additions": 159,
+          "deletions": 8,
+          "accepted_lines": 151
+        },
+        "internal/core/metacog.go": {
+          "additions": 139,
+          "accepted_lines": 139
+        },
+        "internal/tools/hypothesis.go": {
+          "additions": 187,
+          "deletions": 4,
+          "accepted_lines": 183
+        },
+        "internal/hypothesis/tracker_test.go": {
+          "additions": 233,
+          "accepted_lines": 233
+        }
+      }
+    }
+  }
+}

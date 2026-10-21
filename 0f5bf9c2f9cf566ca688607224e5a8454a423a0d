@@ -1,0 +1,35 @@
+skills/drm-protocol-analysis/SKILL.md
+  59cfce3f35c53549 1-884
+skills/whitebox-dfa/SKILL.md
+  59cfce3f35c53549 1-899
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "0f5bf9c2f9cf566ca688607224e5a8454a423a0d",
+  "prompts": {
+    "59cfce3f35c53549": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "14b298df-035b-43e5-b9e9-a1b942b46109",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1783,
+      "total_deletions": 0,
+      "accepted_lines": 1783,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "skills/drm-protocol-analysis/SKILL.md": {
+          "additions": 884,
+          "accepted_lines": 884
+        },
+        "skills/whitebox-dfa/SKILL.md": {
+          "additions": 899,
+          "accepted_lines": 899
+        }
+      }
+    }
+  }
+}
