@@ -30,6 +30,16 @@ import type { ThemeName, VizMode } from "./ui";
 import type { AgentConfig, AgentRole, AgentTool, ApprovalMode, ExecutionPolicy, ReasoningEffort, ToolContext } from "./types";
 import { APPROVAL_MODES, ApprovalDeniedError, DEFAULT_APPROVAL_MODE, isApprovalMode } from "./security/approval";
 import { createReverseTools } from "./tools/reverse-tools";
+import { createR2Tools } from "./tools/r2-tools";
+import { createFridaRuntimeTools } from "./tools/frida-runtime-tools";
+import { createCryptoTools } from "./tools/crypto-tools";
+import { createAndroidTools } from "./tools/android-tools";
+import { createPwnTools } from "./tools/pwn-tools";
+import { createBinaryParserTools } from "./tools/binary-parser-tools";
+import { createDiffTools } from "./tools/diff-tools";
+import { createAntiAnalysisTools } from "./tools/anti-analysis-tools";
+import { createExploitTools } from "./tools/exploit-tools";
+import { createYaraTools } from "./tools/yara-tools";
 import { connectMcpServers } from "./mcp/tools";
 import type { McpConnection } from "./mcp/tools";
 import {
@@ -176,7 +186,19 @@ async function main(): Promise<void> {
   const providers = new Map(
     Object.entries(config.providers).map(([name, providerConfig]) => [name, createProvider(name, providerConfig)]),
   );
-  const tools = createReverseTools();
+  const tools = [
+    ...createReverseTools(),
+    ...createR2Tools(),
+    ...createFridaRuntimeTools(),
+    ...createCryptoTools(),
+    ...createAndroidTools(),
+    ...createPwnTools(),
+    ...createBinaryParserTools(),
+    ...createDiffTools(),
+    ...createAntiAnalysisTools(),
+    ...createExploitTools(),
+    ...createYaraTools(),
+  ];
   // MCP servers join the same registry as the built-ins; a server that will not
   // start is reported and skipped, never fatal.
   const mcp = await connectMcpServers(config.mcpServers);
@@ -756,6 +778,136 @@ async function handleCommand(
       return;
     case "/hook":
       await runDirectTool("frida_hook_template", parseHookCommand(arg), state);
+      return;
+    // --- radare2 ---
+    case "/r2fn":
+      if (!arg) throw new Error("Usage: /r2fn <binary> [filter]");
+      { const [file, filter] = splitFirstToken(arg);
+        await runDirectTool("r2_functions", { path: file, ...(filter ? { filter } : {}) }, state); }
+      return;
+    case "/r2dis":
+      if (!arg) throw new Error("Usage: /r2dis <binary> <function|address>");
+      { const [file, fn] = splitFirstToken(arg);
+        if (!fn) throw new Error("Usage: /r2dis <binary> <function|address>");
+        await runDirectTool("r2_disassemble", { path: file, function: fn }, state); }
+      return;
+    case "/r2dec":
+      if (!arg) throw new Error("Usage: /r2dec <binary> <function|address>");
+      { const [file, fn] = splitFirstToken(arg);
+        if (!fn) throw new Error("Usage: /r2dec <binary> <function|address>");
+        await runDirectTool("r2_decompile", { path: file, function: fn }, state); }
+      return;
+    case "/r2xrefs":
+      if (!arg) throw new Error("Usage: /r2xrefs <binary> <target>");
+      { const [file, target] = splitFirstToken(arg);
+        if (!target) throw new Error("Usage: /r2xrefs <binary> <target>");
+        await runDirectTool("r2_xrefs", { path: file, target }, state); }
+      return;
+    case "/r2info":
+      if (!arg) throw new Error("Usage: /r2info <binary>");
+      await runDirectTool("r2_info", { path: arg }, state);
+      return;
+    // --- frida runtime ---
+    case "/frida-ps":
+      await runDirectTool("frida_ps", { target: arg || "usb" }, state);
+      return;
+    case "/frida-devices":
+      await runDirectTool("frida_list_devices", {}, state);
+      return;
+    // --- crypto ---
+    case "/findcrypt":
+      if (!arg) throw new Error("Usage: /findcrypt <binary>");
+      await runDirectTool("crypto_identify", { path: arg }, state);
+      return;
+    case "/hashid":
+      if (!arg) throw new Error("Usage: /hashid <hash>");
+      await runDirectTool("hash_identify", { hash: arg }, state);
+      return;
+    // --- android deep ---
+    case "/manifest":
+      if (!arg) throw new Error("Usage: /manifest <apk>");
+      await runDirectTool("apk_manifest", { path: arg }, state);
+      return;
+    case "/jadx":
+      if (!arg) throw new Error("Usage: /jadx <apk> [search-pattern]");
+      { const [file, search] = splitFirstToken(arg);
+        await runDirectTool("jadx_decompile", { path: file, ...(search ? { search } : {}) }, state); }
+      return;
+    case "/dexinfo":
+      if (!arg) throw new Error("Usage: /dexinfo <dex|apk>");
+      await runDirectTool("dex_info", { path: arg }, state);
+      return;
+    // --- pwn ---
+    case "/rop":
+      if (!arg) throw new Error("Usage: /rop <binary> [filter]");
+      { const [file, filter] = splitFirstToken(arg);
+        await runDirectTool("rop_gadgets", { path: file, ...(filter ? { filter } : {}) }, state); }
+      return;
+    case "/checksec":
+      if (!arg) throw new Error("Usage: /checksec <binary>");
+      await runDirectTool("checksec_detail", { path: arg }, state);
+      return;
+    case "/asm":
+      if (!arg) throw new Error("Usage: /asm <instruction>");
+      await runDirectTool("asm_encode", { instruction: arg }, state);
+      return;
+    case "/disasm":
+      if (!arg) throw new Error("Usage: /disasm <hex-bytes>");
+      await runDirectTool("asm_decode", { bytes: arg }, state);
+      return;
+    case "/pattern": {
+      const [sub, subArg] = splitFirstToken(arg);
+      if (sub === "create" && subArg) await runDirectTool("pattern_create", { length: Number(subArg) }, state);
+      else if (sub === "offset" && subArg) await runDirectTool("pattern_offset", { value: subArg }, state);
+      else throw new Error("Usage: /pattern create <length> | /pattern offset <value>");
+      return;
+    }
+    // --- binary parsing ---
+    case "/elfparse":
+      if (!arg) throw new Error("Usage: /elfparse <binary>");
+      await runDirectTool("elf_parse", { path: arg }, state);
+      return;
+    case "/peparse":
+      if (!arg) throw new Error("Usage: /peparse <binary>");
+      await runDirectTool("pe_parse", { path: arg }, state);
+      return;
+    case "/machoparse":
+      if (!arg) throw new Error("Usage: /machoparse <binary>");
+      await runDirectTool("macho_parse", { path: arg }, state);
+      return;
+    // --- diff ---
+    case "/bindiff":
+      if (!arg) throw new Error("Usage: /bindiff <fileA> <fileB>");
+      { const [a, b] = splitFirstToken(arg);
+        if (!b) throw new Error("Usage: /bindiff <fileA> <fileB>");
+        await runDirectTool("binary_diff", { pathA: a, pathB: b }, state); }
+      return;
+    case "/strdiff":
+      if (!arg) throw new Error("Usage: /strdiff <fileA> <fileB>");
+      { const [a, b] = splitFirstToken(arg);
+        if (!b) throw new Error("Usage: /strdiff <fileA> <fileB>");
+        await runDirectTool("string_diff", { pathA: a, pathB: b }, state); }
+      return;
+    // --- anti-analysis ---
+    case "/antianalysis":
+      if (!arg) throw new Error("Usage: /antianalysis <binary>");
+      await runDirectTool("detect_anti_analysis", { path: arg }, state);
+      return;
+    case "/packer":
+      if (!arg) throw new Error("Usage: /packer <binary>");
+      await runDirectTool("detect_packer", { path: arg }, state);
+      return;
+    // --- exploit ---
+    case "/exploit": {
+      if (!arg) throw new Error("Usage: /exploit <binary> [vulnerability-type]");
+      const [file, vulnType] = splitFirstToken(arg);
+      await runDirectTool("exploit_template", { path: file, ...(vulnType ? { vulnerability: vulnType } : {}) }, state);
+      return;
+    }
+    // --- yara ---
+    case "/yara":
+      if (!arg) throw new Error("Usage: /yara <binary>");
+      await runDirectTool("yara_generate", { path: arg }, state);
       return;
     case "/plan": {
       const plan = state.loop.plan;

@@ -450,9 +450,71 @@ export const SLASH_COMMAND_SECTIONS: Array<{ title: string; entries: HelpEntry[]
       { command: "/apk", args: "<apk>", description: "Inspect APK structure and packer/framework hints" },
       { command: "/decode", args: "[mode] <input>", description: "Decode base64/hex/url/rot13/xor candidates" },
       { command: "/hook", args: "[java|native|objc] <target>", description: "Generate a Frida hook scaffold" },
+      { command: "/batch", args: "<directory> [--output <dir>]", description: "Batch-analyze every APK in a directory" },
       { command: "/plan", description: "Reprint the current task list" },
       { command: "/read", args: "<path>", description: "Read a file without the model" },
       { command: "/run", args: "<command>", description: "Run a local command without the model" },
+    ],
+  },
+  {
+    title: "radare2",
+    entries: [
+      { command: "/r2fn", args: "<binary> [filter]", description: "List functions via radare2" },
+      { command: "/r2dis", args: "<binary> <func>", description: "Disassemble a function" },
+      { command: "/r2dec", args: "<binary> <func>", description: "Decompile a function (r2ghidra/r2dec)" },
+      { command: "/r2xrefs", args: "<binary> <target>", description: "Cross-references to a function/address" },
+      { command: "/r2info", args: "<binary>", description: "Binary metadata (arch, bits, NX, PIC...)" },
+    ],
+  },
+  {
+    title: "frida runtime",
+    entries: [
+      { command: "/frida-ps", args: "[usb|remote|local]", description: "List processes on device" },
+      { command: "/frida-devices", description: "List connected Frida devices" },
+    ],
+  },
+  {
+    title: "crypto & pwn",
+    entries: [
+      { command: "/findcrypt", args: "<binary>", description: "FindCrypt — identify crypto constants in binary" },
+      { command: "/hashid", args: "<hash>", description: "Identify hash type by format/length" },
+      { command: "/rop", args: "<binary> [filter]", description: "Search ROP gadgets" },
+      { command: "/checksec", args: "<binary>", description: "Detailed security posture (checksec/pwntools)" },
+      { command: "/asm", args: "<instruction>", description: "Assemble instruction to bytes" },
+      { command: "/disasm", args: "<hex>", description: "Disassemble bytes to instructions" },
+      { command: "/pattern", args: "create <n> | offset <val>", description: "Cyclic pattern for overflow analysis" },
+    ],
+  },
+  {
+    title: "android deep",
+    entries: [
+      { command: "/manifest", args: "<apk>", description: "Parse AndroidManifest.xml" },
+      { command: "/jadx", args: "<apk> [search]", description: "Decompile with JADX and optionally search" },
+      { command: "/dexinfo", args: "<dex|apk>", description: "DEX header info (classes, methods, strings)" },
+    ],
+  },
+  {
+    title: "binary formats",
+    entries: [
+      { command: "/elfparse", args: "<binary>", description: "Deep ELF parse — headers, symbols, relocs (pure JS)" },
+      { command: "/peparse", args: "<binary>", description: "Deep PE/COFF parse — imports, exports, flags" },
+      { command: "/machoparse", args: "<binary>", description: "Deep Mach-O parse — load commands, dylibs" },
+    ],
+  },
+  {
+    title: "diff & anti-analysis",
+    entries: [
+      { command: "/bindiff", args: "<fileA> <fileB>", description: "Byte-level binary diff with patch patterns" },
+      { command: "/strdiff", args: "<fileA> <fileB>", description: "Diff extracted strings between two binaries" },
+      { command: "/antianalysis", args: "<binary>", description: "Anti-debug/anti-VM/anti-Frida/anti-root scan" },
+      { command: "/packer", args: "<binary>", description: "Packer/protector identification (UPX, VMProtect...)" },
+    ],
+  },
+  {
+    title: "exploit & yara",
+    entries: [
+      { command: "/exploit", args: "<binary> [vulnerability-type]", description: "Generate a pwntools exploit scaffold" },
+      { command: "/yara", args: "<binary>", description: "Auto-generate a YARA rule from a binary" },
     ],
   },
   {

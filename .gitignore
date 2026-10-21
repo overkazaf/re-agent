@@ -6,3 +6,10 @@ artifacts/
 .env
 agent.config.json
 *.apk
+
+# Rust build artifacts (source is tracked, binary is built locally)
+crates/oxaf-parse/target/
+
+# Local build artifacts
+0xaf
+bin/
