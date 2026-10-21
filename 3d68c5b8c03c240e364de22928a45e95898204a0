@@ -1,0 +1,269 @@
+src/tools/binary-parser-tools.test.ts
+  3a657dd4918810ba 1-220
+src/cli.ts
+  3d76b8bbd83b3ca6 33-37,189-195,201,782-864
+  164f50e3dab1bf10 38-42,196-200,865-911
+.gitignore
+  164f50e3dab1bf10 9-11
+  3a657dd4918810ba 12-15
+src/tools/crypto-tools.ts
+  3d76b8bbd83b3ca6 1-453,461-487,491-786
+  3a657dd4918810ba 454-460,488-490
+src/tools/diff-tools.ts
+  3a657dd4918810ba 94-100,103-109,175-176,201,210,215,223-228,230-234,383-388,478-479,482-483,488-494,764,766-767,852,855,859,875,926-928,989,991-994,1000,1013,1036-1054,1119
+  164f50e3dab1bf10 1-93,101-102,110-174,177-200,202-209,211-214,216-222,229,235-382,389-477,480-481,484-487,495-763,765,768-851,853-854,856-858,860-874,876-925,929-988,990,995-999,1001-1012,1014-1035,1055-1118,1120-1197
+src/tools/crypto-exploit-fixes.test.ts
+  3a657dd4918810ba 1-131
+src/tools/pwn-tools.test.ts
+  3a657dd4918810ba 1-99
+src/tools/diff-tools.test.ts
+  3a657dd4918810ba 1-164
+src/tools/android-tools.ts
+  3d76b8bbd83b3ca6 1-84,86-103,112-147,159-219,221-237,239-247,257-264,266-345,347-697,703-790
+  3a657dd4918810ba 85,104-111,148-158,238,248-256,265,346,698-702
+src/tools/anti-analysis-tools.test.ts
+  3a657dd4918810ba 1-45
+src/tools/r2-tools.ts
+  3a657dd4918810ba 18-23,32,39-46,48,194,205,260,461-463
+  3d76b8bbd83b3ca6 1-17,24-31,33-38,47,49-148,153-193,195-204,206-259,261-460,464-481
+src/tools/frida-runtime-tools.ts
+  3d76b8bbd83b3ca6 1-3,5-78,80-98,100-121,123-141,143-166,168-215,217-232,234-252,254-268
+  3a657dd4918810ba 4,79,99,122,167,233,253
+prompts/system.md
+  164f50e3dab1bf10 65-166
+  3d76b8bbd83b3ca6 33,35-41
+src/tools/pwn-tools.ts
+  3a657dd4918810ba 248-250
+  3d76b8bbd83b3ca6 1-247,251-517
+src/tools/anti-analysis-tools.ts
+  164f50e3dab1bf10 1-259,262,264-1291
+  3a657dd4918810ba 260-261,263
+src/tools/binary-parser-tools.ts
+  3a657dd4918810ba 536,553,617-620,968,970-973,985,1078-1082,1167-1170,1275,1296
+  164f50e3dab1bf10 1-535,537-552,554-616,621-967,969,974-984,986-1077,1083-1166,1171-1274,1276-1295,1297-1642
+src/ui/index.ts
+  3d76b8bbd83b3ca6 460-496
+  3a657dd4918810ba 453,497-519
+src/tools/exploit-tools.ts
+  164f50e3dab1bf10 1-495,497-501,507-513,515-527,529-533,543-591,593-596,600-645,647-659,662-665,667-846
+  3a657dd4918810ba 496,502-506,514,528,534-542,592,597-599,646,660-661,666
+src/tools/yara-tools.ts
+  3a657dd4918810ba 221,552-554,562,588-606,638-641,644-655,663,665-666,675-692,694-697,702-735
+  164f50e3dab1bf10 1-220,222-551,555-561,563-587,607-637,642-643,656-662,664,667-674,693,698-701,736-756
+src/tools/frida-runtime-tools.test.ts
+  3a657dd4918810ba 1-60
+src/tools/android-tools.test.ts
+  3a657dd4918810ba 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "3d68c5b8c03c240e364de22928a45e95898204a0",
+  "prompts": {
+    "164f50e3dab1bf10": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6938924-53d2-4e1b-bccb-0f6ac77b2e2b",
+        "model": "<synthetic>"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 5737,
+      "total_deletions": 5,
+      "accepted_lines": 5660,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".gitignore": {
+          "additions": 3,
+          "accepted_lines": 3
+        },
+        "prompts/system.md": {
+          "additions": 102,
+          "accepted_lines": 102
+        },
+        "src/tools/binary-parser-tools.ts": {
+          "additions": 1635,
+          "deletions": 3,
+          "accepted_lines": 1619
+        },
+        "src/tools/yara-tools.ts": {
+          "additions": 678,
+          "accepted_lines": 657
+        },
+        "src/cli.ts": {
+          "additions": 57,
+          "accepted_lines": 57
+        },
+        "src/tools/exploit-tools.ts": {
+          "additions": 839,
+          "accepted_lines": 821
+        },
+        "src/tools/diff-tools.ts": {
+          "additions": 1130,
+          "accepted_lines": 1113
+        },
+        "src/tools/anti-analysis-tools.ts": {
+          "additions": 1293,
+          "deletions": 2,
+          "accepted_lines": 1288
+        }
+      }
+    },
+    "3a657dd4918810ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bcfaa4c-b04d-4ee4-a6bd-1d6ceb8115ad",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1313,
+      "total_deletions": 272,
+      "accepted_lines": 1139,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "src/tools/binary-parser-tools.test.ts": {
+          "additions": 220,
+          "accepted_lines": 220
+        },
+        "src/tools/r2-tools.ts": {
+          "additions": 30,
+          "deletions": 17,
+          "accepted_lines": 22
+        },
+        "src/tools/android-tools.test.ts": {
+          "additions": 156,
+          "deletions": 78,
+          "accepted_lines": 78
+        },
+        ".gitignore": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "src/tools/pwn-tools.ts": {
+          "additions": 3,
+          "deletions": 1,
+          "accepted_lines": 3
+        },
+        "src/tools/crypto-tools.ts": {
+          "additions": 10,
+          "deletions": 2,
+          "accepted_lines": 10
+        },
+        "src/tools/diff-tools.ts": {
+          "additions": 94,
+          "deletions": 27,
+          "accepted_lines": 84
+        },
+        "src/tools/frida-runtime-tools.test.ts": {
+          "additions": 135,
+          "deletions": 75,
+          "accepted_lines": 60
+        },
+        "src/tools/android-tools.ts": {
+          "additions": 38,
+          "deletions": 8,
+          "accepted_lines": 37
+        },
+        "src/tools/binary-parser-tools.ts": {
+          "additions": 23,
+          "deletions": 13,
+          "accepted_lines": 23
+        },
+        "src/ui/index.ts": {
+          "additions": 25,
+          "accepted_lines": 25
+        },
+        "src/tools/diff-tools.test.ts": {
+          "additions": 164,
+          "accepted_lines": 164
+        },
+        "src/tools/exploit-tools.ts": {
+          "additions": 25,
+          "deletions": 18,
+          "accepted_lines": 25
+        },
+        "src/tools/anti-analysis-tools.test.ts": {
+          "additions": 45,
+          "accepted_lines": 45
+        },
+        "src/tools/anti-analysis-tools.ts": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 3
+        },
+        "src/tools/yara-tools.ts": {
+          "additions": 99,
+          "deletions": 21,
+          "accepted_lines": 99
+        },
+        "src/tools/crypto-exploit-fixes.test.ts": {
+          "additions": 131,
+          "accepted_lines": 131
+        },
+        "src/tools/frida-runtime-tools.ts": {
+          "additions": 7,
+          "deletions": 7,
+          "accepted_lines": 7
+        },
+        "src/tools/pwn-tools.test.ts": {
+          "additions": 101,
+          "deletions": 2,
+          "accepted_lines": 99
+        }
+      }
+    },
+    "3d76b8bbd83b3ca6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cd914f14-53fe-45fe-8df5-df55b4da03f5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 2927,
+      "total_deletions": 3,
+      "accepted_lines": 2897,
+      "overriden_lines": 5,
+      "per_file_stats": {
+        "prompts/system.md": {
+          "additions": 8,
+          "deletions": 2,
+          "accepted_lines": 8
+        },
+        "src/ui/index.ts": {
+          "additions": 37,
+          "accepted_lines": 37
+        },
+        "src/tools/frida-runtime-tools.ts": {
+          "additions": 268,
+          "accepted_lines": 259,
+          "overriden_lines": 2
+        },
+        "src/tools/android-tools.ts": {
+          "additions": 760,
+          "accepted_lines": 752,
+          "overriden_lines": 1
+        },
+        "src/tools/crypto-tools.ts": {
+          "additions": 778,
+          "accepted_lines": 776
+        },
+        "src/tools/pwn-tools.ts": {
+          "additions": 515,
+          "accepted_lines": 514
+        },
+        "src/cli.ts": {
+          "additions": 96,
+          "deletions": 1,
+          "accepted_lines": 96
+        },
+        "src/tools/r2-tools.ts": {
+          "additions": 465,
+          "accepted_lines": 455,
+          "overriden_lines": 2
+        }
+      }
+    }
+  }
+}
