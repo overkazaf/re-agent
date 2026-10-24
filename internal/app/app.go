@@ -78,6 +78,16 @@ func Run(argv []string) error {
 	if err != nil {
 		return err
 	}
+	// Saved prefs override config-file defaults; CLI flags override both.
+	if prefs.PlannerProvider != "" && agentConfig.Providers[prefs.PlannerProvider] != nil && args.Planner == "" {
+		agentConfig.PlannerProvider = prefs.PlannerProvider
+	}
+	if prefs.ExecutorProvider != "" && agentConfig.Providers[prefs.ExecutorProvider] != nil && args.Executor == "" {
+		agentConfig.ExecutorProvider = prefs.ExecutorProvider
+	}
+	if prefs.ResearcherProvider != "" && agentConfig.Providers[prefs.ResearcherProvider] != nil && args.Researcher == "" {
+		agentConfig.ResearcherProvider = prefs.ResearcherProvider
+	}
 	if args.Planner != "" {
 		agentConfig.PlannerProvider = args.Planner
 	}
@@ -269,10 +279,19 @@ func Run(argv []string) error {
 		}
 	}
 
+	savedRole := types.AgentRole(prefs.Role)
+	if !types.IsRole(string(savedRole)) {
+		savedRole = ""
+	}
+	restoredRole := orRole(args.Role, orRole(savedRole, agentConfig.DefaultRole))
+	restoredProvider := args.Provider
+	if restoredProvider == "" && prefs.Provider != "" && agentConfig.Providers[prefs.Provider] != nil {
+		restoredProvider = prefs.Provider
+	}
 	state := &State{
 		Config: agentConfig, Loop: loop, Session: session, Tools: registry,
-		ToolContext: toolContext, Role: orRole(args.Role, agentConfig.DefaultRole),
-		Provider: args.Provider, Skills: builtInSkills, MCP: connections,
+		ToolContext: toolContext, Role: restoredRole,
+		Provider: restoredProvider, Skills: builtInSkills, MCP: connections,
 		Providers: providerMap, Workflow: args.Workflow, Queue: newTaskQueue(),
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
 		SessionMeta: sessionMeta,

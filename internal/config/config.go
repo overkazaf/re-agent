@@ -275,6 +275,12 @@ type UIPrefs struct {
 	Theme string `json:"theme,omitempty"`
 	// Flow is the visualization mode for a turn: full | flow | trace | off.
 	Flow string `json:"flow,omitempty"`
+	// Persisted routing so /planner, /executor, /role, /agent survive restarts.
+	PlannerProvider  string `json:"plannerProvider,omitempty"`
+	ExecutorProvider string `json:"executorProvider,omitempty"`
+	ResearcherProvider string `json:"researcherProvider,omitempty"`
+	Role             string `json:"role,omitempty"`
+	Provider         string `json:"provider,omitempty"`
 }
 
 func prefsFile() string {
@@ -294,25 +300,33 @@ func LoadUIPrefs() UIPrefs {
 	return prefs
 }
 
-// SaveUIPrefs merges into whatever is already stored, so saving one preference
-// keeps the rest. Persistence is best-effort; never break a session over it.
-func SaveUIPrefs(next UIPrefs) {
-	merged := LoadUIPrefs()
-	if next.Theme != "" {
-		merged.Theme = next.Theme
+// SaveUIPrefs merges the provided key/value pairs into whatever is already
+// stored. Keys present in the map overwrite (including to ""); keys absent are
+// kept. Persistence is best-effort; never break a session over it.
+func SaveUIPrefs(pairs map[string]string) {
+	existing := LoadUIPrefs()
+	data, _ := json.Marshal(existing)
+	var merged map[string]any
+	_ = json.Unmarshal(data, &merged)
+	if merged == nil {
+		merged = map[string]any{}
 	}
-	if next.Flow != "" {
-		merged.Flow = next.Flow
+	for k, v := range pairs {
+		if v == "" {
+			delete(merged, k)
+		} else {
+			merged[k] = v
+		}
 	}
 	file := prefsFile()
 	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
 		return
 	}
-	data, err := json.MarshalIndent(merged, "", "  ")
+	out, err := json.MarshalIndent(merged, "", "  ")
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(file, append(data, '\n'), 0o644)
+	_ = os.WriteFile(file, append(out, '\n'), 0o644)
 }
 
 // SetReasoningEffort applies an effort level to a provider. HTTP providers carry

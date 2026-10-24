@@ -53,7 +53,7 @@ func handleCommand(line string, state *State) error {
 			return fmt.Errorf("usage: /theme %s", strings.Join(ui.ThemeNames, "|"))
 		}
 		ui.SetTheme(arg)
-		config.SaveUIPrefs(config.UIPrefs{Theme: arg})
+		config.SaveUIPrefs(map[string]string{"theme": arg})
 		fmt.Print("\x1b[2J\x1b[H")
 		fmt.Print(redrawSplash(state))
 		fmt.Println(ui.RenderNotice("theme=" + arg + " (saved)"))
@@ -189,7 +189,7 @@ func handleCommand(line string, state *State) error {
 			return fmt.Errorf("usage: /flow %s", vizList())
 		}
 		state.Flow = ui.VizMode(arg)
-		config.SaveUIPrefs(config.UIPrefs{Flow: arg})
+		config.SaveUIPrefs(map[string]string{"flow": arg})
 		fmt.Println(ui.RenderNotice("flow=" + arg + " (saved)"))
 		return nil
 	case "/refresh":
@@ -319,11 +319,13 @@ func handleCommand(line string, state *State) error {
 		}
 		state.Role = types.AgentRole(arg)
 		state.Provider = ""
-		fmt.Printf("role=%s\n", state.Role)
+		config.SaveUIPrefs(map[string]string{"role": arg, "provider": ""})
+		fmt.Printf("role=%s (saved)\n", state.Role)
 		return nil
 	case "/agent":
 		if arg == "" || arg == "auto" {
 			state.Provider = ""
+			config.SaveUIPrefs(map[string]string{"provider": ""})
 			fmt.Printf("agent=auto role=%s\n", state.Role)
 			return nil
 		}
@@ -331,28 +333,32 @@ func handleCommand(line string, state *State) error {
 			return fmt.Errorf("unknown provider: %s", arg)
 		}
 		state.Provider = arg
-		fmt.Printf("agent=%s\n", state.Provider)
+		config.SaveUIPrefs(map[string]string{"provider": arg})
+		fmt.Printf("agent=%s (saved)\n", state.Provider)
 		return nil
 	case "/planner":
 		if _, ok := state.Config.Providers[arg]; !ok {
 			return fmt.Errorf("unknown provider: %s", arg)
 		}
 		state.Config.PlannerProvider = arg
-		fmt.Printf("planner=%s\n", arg)
+		config.SaveUIPrefs(map[string]string{"plannerProvider": arg})
+		fmt.Printf("planner=%s (saved)\n", arg)
 		return nil
 	case "/executor":
 		if _, ok := state.Config.Providers[arg]; !ok {
 			return fmt.Errorf("unknown provider: %s", arg)
 		}
 		state.Config.ExecutorProvider = arg
-		fmt.Printf("executor=%s\n", arg)
+		config.SaveUIPrefs(map[string]string{"executorProvider": arg})
+		fmt.Printf("executor=%s (saved)\n", arg)
 		return nil
 	case "/researcher":
 		if _, ok := state.Config.Providers[arg]; !ok {
 			return fmt.Errorf("unknown provider: %s", arg)
 		}
 		state.Config.ResearcherProvider = arg
-		fmt.Printf("researcher=%s\n", arg)
+		config.SaveUIPrefs(map[string]string{"researcherProvider": arg})
+		fmt.Printf("researcher=%s (saved)\n", arg)
 		return nil
 	case "/read":
 		return runDirectTool("read_file", map[string]any{"path": arg}, state)
