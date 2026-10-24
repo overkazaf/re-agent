@@ -194,6 +194,39 @@ func handleCommand(line string, state *State) error {
 		return nil
 	case "/refresh":
 		return handleRefreshCommand(arg, state)
+	case "/phase":
+		if state.REState == nil {
+			return fmt.Errorf("no active RE session — enter /workflow reverse first")
+		}
+		if arg == "" {
+			fmt.Println(ui.RenderNotice(fmt.Sprintf(
+				"phase=%s [%d/%d] hypotheses=%d evidence=%d sample=%s",
+				state.REState.Phase, workflow.PhaseIndex(state.REState.Phase)+1, len(workflow.Phases),
+				len(state.REState.Hypotheses), len(state.REState.Evidence), state.REState.SampleType,
+			)))
+			for i, h := range state.REState.Hypotheses {
+				status := "active"
+				if h.Revised != "" {
+					status = "revised → " + h.Revised
+				}
+				fmt.Printf("  [H%d] %s (%s)\n", i, h.Text, status)
+			}
+			for i, e := range state.REState.Evidence {
+				fmt.Printf("  [E%d] %s\n", i, e.Text)
+			}
+			return nil
+		}
+		switch arg {
+		case "next":
+			state.REState.AdvancePhase()
+			fmt.Println(ui.RenderNotice("phase → " + string(state.REState.Phase)))
+		default:
+			if err := state.REState.SkipTo(workflow.Phase(arg)); err != nil {
+				return err
+			}
+			fmt.Println(ui.RenderNotice("phase → " + string(state.REState.Phase)))
+		}
+		return nil
 	case "/workflow":
 		if arg == "" {
 			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))

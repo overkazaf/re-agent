@@ -32,6 +32,7 @@ var SlashCommandSections = []HelpSection{
 		{"/flow", "[full|flow|trace|off]", "Live dataflow diagram and trace lines"},
 		{"/refresh", "[ms|calm|normal|off]", "Set the live pane refresh interval (calm/off quiet the scrollback)"},
 		{"/workflow", "[off|auto|specialist|caveman|research|writeup|ctf|reverse|engineering]", "Pick RE workflow mode"},
+		{"/phase", "[next|<phase-name>]", "Show or advance the RE workflow phase"},
 		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
 		{"/think", "[auto|collapse|expand|toggle]", "Fold or expand the streamed reasoning"},
 		{"/queue", "[list|add|edit|cancel|clear|run]", "Manage queued prompts"},
