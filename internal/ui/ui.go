@@ -100,6 +100,11 @@ func REPromptLabel(context string) string {
 	return C.Accent("0xAF") + C.Muted(":") + C.Bold(C.Accent(context)) + C.Accent(" ▸ ")
 }
 
+// REPhasePromptLabel is the prompt label shown during an active RE session.
+func REPhasePromptLabel(phase, sampleType string) string {
+	return C.Accent("0xAF") + C.Muted("[") + C.Warn(sampleType) + C.Muted("|") + C.Bold(C.Accent(phase)) + C.Muted("]") + C.Accent(" ▸ ")
+}
+
 // --- run rendering -----------------------------------------------------------
 
 // ReplyHeader is printed above a model reply.

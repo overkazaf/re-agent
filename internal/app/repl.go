@@ -62,7 +62,12 @@ func repl(state *State) error {
 	}
 
 	for {
-		prompt := ui.PromptLabel(state.Config, state.Role, state.Provider)
+		var prompt string
+		if state.Workflow == workflow.Reverse && state.REState != nil {
+			prompt = ui.REPhasePromptLabel(string(state.REState.Phase), state.REState.SampleType)
+		} else {
+			prompt = ui.PromptLabel(state.Config, state.Role, state.Provider)
+		}
 		raw, err := editor.ReadLine(prompt)
 		if errors.Is(err, io.EOF) {
 			return nil
