@@ -1,0 +1,47 @@
+internal/workflow/workflow.go
+  86bc0079a85ab92d 112,126,276-335
+internal/workflow/workflow_test.go
+  86bc0079a85ab92d 34,57,66,86,188-222
+internal/app/workflow_run.go
+  86bc0079a85ab92d 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "16425278beb8a926abd78389a7495cf4e9cdb505",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 108,
+      "total_deletions": 9,
+      "accepted_lines": 1385,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "internal/workflow/workflow.go": {
+          "additions": 66,
+          "deletions": 4,
+          "accepted_lines": 65
+        },
+        "internal/app/workflow_run.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/workflow/workflow_test.go": {
+          "additions": 41,
+          "deletions": 4,
+          "accepted_lines": 41
+        }
+      }
+    }
+  }
+}
