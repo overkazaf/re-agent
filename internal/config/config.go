@@ -276,11 +276,11 @@ type UIPrefs struct {
 	// Flow is the visualization mode for a turn: full | flow | trace | off.
 	Flow string `json:"flow,omitempty"`
 	// Persisted routing so /planner, /executor, /role, /agent survive restarts.
-	PlannerProvider  string `json:"plannerProvider,omitempty"`
-	ExecutorProvider string `json:"executorProvider,omitempty"`
+	PlannerProvider    string `json:"plannerProvider,omitempty"`
+	ExecutorProvider   string `json:"executorProvider,omitempty"`
 	ResearcherProvider string `json:"researcherProvider,omitempty"`
-	Role             string `json:"role,omitempty"`
-	Provider         string `json:"provider,omitempty"`
+	Role               string `json:"role,omitempty"`
+	Provider           string `json:"provider,omitempty"`
 }
 
 func prefsFile() string {
