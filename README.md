@@ -91,7 +91,7 @@ Three principles shape it:
 | --- | --- |
 | **Live dashboard** | One boxed view: FLOW (animated dataflow strip), TOOLS (tool cards), PLAN (task list + progress), THINK (reasoning tail), TELE (throughput/tokens/clock). Tight terminals shed gracefully down to the current step. |
 | **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
-| **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering` — each wraps the prompt with a focused contract. |
+| **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 7 structured phases, hacker-mode HUD, and hypothesis/evidence tracking. |
 | **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
 | **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
 | **Reference context** | `--context "know:…"` seeds the system prompt from the knowledge base, `--context "file:…"` from a workspace file, raw notes pass through. |
@@ -124,7 +124,6 @@ Quick taste:
 0xaf --context "know:android packer" -p "identify the packer"
 ```
 
-## Overview
 ## Overview
 
 - **Local first:** slash commands run file triage, strings, entropy, carving,
@@ -434,18 +433,28 @@ Workflow mode is explicit. Default `off` sends prompts unchanged.
 | `research` | survey work | survey public resources (web, GitHub, arXiv) and produce a sourced report |
 | `writeup` | reporting | turn existing session evidence into a clean structured summary report |
 | `ctf` | one concrete challenge | triage, plan, solve, and verify the exact flag on a single target |
-| `reverse` | goal-driven RE | static + dynamic analysis toward the goal, ending with a verified core PoC |
+| `reverse` | goal-driven RE | **interactive**: sample type picker → structured phases (triage → static → dynamic → evidence → interface → hypothesis → writeup), hacker-mode HUD, `/phase` control, hypothesis/evidence tracking |
 | `engineering` | interface reconstruction | recover a target's protocol/schema into models, client stubs, and tests |
 
 ```text
 /workflow auto
 /workflow caveman
 /workflow research
-/workflow reverse
+/workflow reverse          # interactive: pick sample type, choose a starter prompt
 /workflow engineering
 0xaf --workflow specialist -p "triage ./app.apk"
 0xaf --workflow research -p "survey obfuscation papers on arXiv"
 ```
+
+### Interactive Reverse Workflow
+
+`/workflow reverse` launches an interactive session:
+
+1. **Sample type picker** — choose from APK, SO/ELF shared lib, dylib/Mach-O, ELF binary, PE/DLL, firmware blob, or PCAP, each with canned starter prompts.
+2. **Structured phases** — triage → static analysis → dynamic analysis → evidence production → interface recovery → hypothesis revision → writeup. The prompt label shows the active phase: `0xAF[apk|triage] ▸`.
+3. **Hacker-mode HUD** — a distinct RE overlay in the live dashboard shows phase progress, hypothesis count (H:N), and evidence count (E:N).
+4. **Phase control** — `/phase` shows status, `/phase next` advances, `/phase <name>` skips to a named phase.
+5. **LLM-driven state** — the model calls `update_re_state` to advance phases, record hypotheses, log evidence, and revise findings as analysis progresses.
 
 The "delegated local evidence mode" demo is the `caveman` workflow. It means the
 host splits one operator request into two model calls:
@@ -731,6 +740,8 @@ Inside the REPL:
 | `/retool frida template android_ssl_pinning` | emit common Frida SSL/crypto/root/debug/native templates |
 | `/retool mitmproxy template api.example.test` | emit a scoped mitmproxy capture addon |
 | `/retool burp template mobile` | emit a Burp mobile/API capture checklist |
+| `/phase` | show RE workflow phase, hypotheses, and evidence |
+| `/phase next` | advance to the next RE phase |
 | `/queue list` | show queued prompts |
 | `/queue edit <id> <text>` | edit queued work before it runs |
 | `/queue cancel <id>` | cancel queued work |

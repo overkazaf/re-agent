@@ -55,7 +55,7 @@
     <span class="pill"><b>6.7 MB</b> binary</span>
     <span class="pill"><b>24</b> tools</span>
     <span class="pill"><b>8</b> providers</span>
-    <span class="pill"><b>3</b> workflows</span>
+    <span class="pill"><b>9</b> workflows</span>
     <span class="pill"><b>1</b> dependency</span>
   </div>
 
@@ -470,8 +470,22 @@
       </table>
     </div>
 
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>mode</th><th>purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">research</code></td><td>survey public resources and produce a sourced report</td></tr>
+          <tr><td><code class="inline">writeup</code></td><td>turn existing session evidence into a clean summary</td></tr>
+          <tr><td><code class="inline">ctf</code></td><td>triage, plan, solve, and verify a single challenge target</td></tr>
+          <tr><td><code class="inline">reverse</code></td><td><strong>interactive</strong>: sample type picker → 7 structured phases → hacker-mode HUD → hypothesis/evidence tracking</td></tr>
+          <tr><td><code class="inline">engineering</code></td><td>recover a target's protocol/schema into models, stubs, and tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <pre class="block">/workflow auto                 <span class="c">use specialist if a cyber/CVP route is configured</span>
 /workflow caveman              <span class="c">planner writes packet, executor collects local evidence</span>
+/workflow reverse              <span class="c">interactive: pick sample type, choose prompt, enter phases</span>
 0xaf --workflow specialist -p "triage ./app.apk"</pre>
 
     <p>
@@ -505,6 +519,19 @@
       narrower legitimate context: the planner handles the full authorized objective, the
       executor receives only workspace-local evidence steps, the callable tools are read-only,
       and both phases remain visible in the transcript.
+    </p>
+
+    <h3>Interactive Reverse Workflow</h3>
+    <p>
+      <code class="inline">/workflow reverse</code> is the most structured mode. It launches an
+      interactive session: a hacker-styled <strong>sample type picker</strong> (APK, SO, dylib, ELF,
+      PE, firmware, PCAP) with canned starter prompts, then drives through
+      <strong>7 phases</strong> — triage → static → dynamic → evidence → interface recovery →
+      hypothesis revision → writeup. The prompt label changes to
+      <code class="inline">0xAF[apk|triage] ▸</code>, the HUD shows a phase progress bar with
+      hypothesis and evidence counts, and the model calls
+      <code class="inline">update_re_state</code> to advance phases and record findings.
+      Use <code class="inline">/phase</code> to inspect or steer phases manually.
     </p>
 
     <div class="community-invite">
