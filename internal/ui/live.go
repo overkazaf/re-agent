@@ -86,6 +86,7 @@ type LivePane struct {
 	remotePeers     int
 	queueDraft      string
 	queueCount      int
+	re              *REHudModel
 	drawn           int
 	tick            int
 	stopped         bool
@@ -224,6 +225,12 @@ func (p *LivePane) SetPlan(snapshot *types.PlanSnapshot) {
 // SetRemote updates the SSH status shown in the dashboard status row: the
 // selected host, whether its background connection is established, and how many
 // hosts are connected in total.
+func (p *LivePane) SetREState(re *REHudModel) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.re = re
+}
+
 func (p *LivePane) SetRemote(host string, connected bool, peers int) {
 	p.mu.Lock()
 	p.remoteHost = host
@@ -525,6 +532,7 @@ func (p *LivePane) bodyLocked() []string {
 		Thinking:        p.thinking,
 		ThinkingWindow:  thinkWindow,
 		ThinkDisplay:    p.thinkMode,
+		RE:              p.re,
 	})
 }
 

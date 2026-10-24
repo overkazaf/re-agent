@@ -147,6 +147,8 @@ type HudModel struct {
 	RemotePeers int
 	// MaxRows is a hard ceiling on returned lines. The HUD sheds content for it.
 	MaxRows int
+	// RE is set when the workflow is in reverse mode.
+	RE *REHudModel
 }
 
 // --- box primitives ----------------------------------------------------------

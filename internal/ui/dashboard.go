@@ -138,6 +138,13 @@ func dashboardBuild(flow *FlowState, model HudModel, width int, options dashboar
 		lines = append(lines, BoxRow(row, width))
 	}
 
+	// RE: reverse engineering workflow overlay.
+	if model.RE != nil {
+		for _, row := range renderRESection(*model.RE, inner) {
+			lines = append(lines, BoxRow(row, width))
+		}
+	}
+
 	// FLOW / TOOLS: the dataflow strip, labelled by which half of the loop it is.
 	if options.showFlow {
 		if flow == nil {

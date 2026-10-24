@@ -19,6 +19,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/workflow"
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
@@ -240,14 +241,29 @@ func runTurn(state *State, line string) bool {
 	if viz == "full" || viz == "flow" {
 		paneOptions.Flow = flow
 	}
+	refreshRE := func() {
+		if pane == nil || state.REState == nil {
+			return
+		}
+		pane.SetREState(&ui.REHudModel{
+			SampleType: state.REState.SampleType,
+			Phase:      string(state.REState.Phase),
+			PhaseIndex: workflow.PhaseIndex(state.REState.Phase),
+			PhaseCount: len(workflow.Phases),
+			Hypotheses: len(state.REState.Hypotheses),
+			Evidence:   len(state.REState.Evidence),
+		})
+	}
 	paneOptions.OnFrame = func() {
 		if paneOptions.Flow != nil {
 			flow.Tick()
 		}
 		refreshRemote()
+		refreshRE()
 	}
 	pane = ui.NewLivePane(routeLabel(state), paneOptions)
 	refreshRemote()
+	refreshRE()
 
 	started := types.NowMs()
 	traceOn := viz == "full" || viz == "trace"
