@@ -182,8 +182,12 @@ func Run(argv []string) error {
 		providerMap[name] = provider
 	}
 
+	// state is allocated up front so the update_re_state tool can bind to the
+	// live REState field; the struct is filled in once everything else exists.
+	state := &State{}
 	registry := tools.CreateReverseTools()
 	registry = append(registry, tools.CreateRemoteTools()...)
+	registry = append(registry, tools.UpdateREStateTool(&state.REState))
 	// MCP servers join the same registry as the built-ins; a server that will
 	// not start is reported and skipped, never fatal.
 	connections := mcp.ConnectAll(agentConfig.MCPServers)
@@ -289,7 +293,7 @@ func Run(argv []string) error {
 	if restoredProvider == "" && prefs.Provider != "" && agentConfig.Providers[prefs.Provider] != nil {
 		restoredProvider = prefs.Provider
 	}
-	state := &State{
+	*state = State{
 		Config: agentConfig, Loop: loop, Session: session, Tools: registry,
 		ToolContext: toolContext, Role: restoredRole,
 		Provider: restoredProvider, Skills: builtInSkills, MCP: connections,
