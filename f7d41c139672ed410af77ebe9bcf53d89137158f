@@ -1,0 +1,48 @@
+internal/app/commands.go
+  86bc0079a85ab92d 56,192,322-323,328,336-337,344-345,352-353,360-361
+internal/app/app.go
+  86bc0079a85ab92d 81-90,282-290,293-294
+internal/config/config.go
+  86bc0079a85ab92d 278-283,303-319,325,329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "83f47e0e7ac7c8f0f809bfffcec9b5a090267f43",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1338,
+      "total_deletions": 21,
+      "accepted_lines": 1337,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/app/app.go": {
+          "additions": 22,
+          "deletions": 3,
+          "accepted_lines": 21
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "additions": 1278,
+          "accepted_lines": 1278
+        },
+        "internal/config/config.go": {
+          "additions": 25,
+          "deletions": 11,
+          "accepted_lines": 25
+        },
+        "internal/app/commands.go": {
+          "additions": 13,
+          "deletions": 7,
+          "accepted_lines": 13
+        }
+      }
+    }
+  }
+}

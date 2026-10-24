@@ -1,0 +1,38 @@
+internal/workflow/phase_test.go
+  86bc0079a85ab92d 1-103
+internal/workflow/phase.go
+  86bc0079a85ab92d 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "3f7913c64cffd4731ac70baef574a8948427f75f",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 196,
+      "total_deletions": 0,
+      "accepted_lines": 1474,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/workflow/phase.go": {
+          "additions": 93,
+          "accepted_lines": 93
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "internal/workflow/phase_test.go": {
+          "additions": 103,
+          "accepted_lines": 103
+        }
+      }
+    }
+  }
+}

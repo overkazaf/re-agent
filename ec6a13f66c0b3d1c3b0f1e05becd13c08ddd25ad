@@ -1,0 +1,37 @@
+README.md
+  86bc0079a85ab92d 85,427,434,440-448,734-735
+docs/index.html
+  86bc0079a85ab92d 58,473-485,488,524-536
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "0feb1af2c778f2fd1b59df167fde172a8515356f",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 43,
+      "total_deletions": 5,
+      "accepted_lines": 43,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "README.md": {
+          "additions": 15,
+          "deletions": 4,
+          "accepted_lines": 15
+        },
+        "docs/index.html": {
+          "additions": 28,
+          "deletions": 1,
+          "accepted_lines": 28
+        }
+      }
+    }
+  }
+}

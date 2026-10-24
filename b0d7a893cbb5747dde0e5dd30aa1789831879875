@@ -1,0 +1,62 @@
+internal/ui/rehud.go
+  86bc0079a85ab92d 1-60
+internal/ui/rehud_test.go
+  86bc0079a85ab92d 1-44
+internal/app/repl.go
+  86bc0079a85ab92d 22,244-256,262,266
+internal/ui/dashboard.go
+  86bc0079a85ab92d 141-147
+internal/ui/live.go
+  86bc0079a85ab92d 89,228-233,535
+internal/ui/hud.go
+  86bc0079a85ab92d 150-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "d69a15b360ab640df9b1ce1ecfe3ccc226c86081",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 137,
+      "total_deletions": 0,
+      "accepted_lines": 1415,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/ui/rehud.go": {
+          "additions": 60,
+          "accepted_lines": 60
+        },
+        "internal/ui/rehud_test.go": {
+          "additions": 44,
+          "accepted_lines": 44
+        },
+        "internal/ui/live.go": {
+          "additions": 8,
+          "accepted_lines": 8
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "internal/app/repl.go": {
+          "additions": 16,
+          "accepted_lines": 16
+        },
+        "internal/ui/hud.go": {
+          "additions": 2,
+          "accepted_lines": 2
+        },
+        "internal/ui/dashboard.go": {
+          "additions": 7,
+          "accepted_lines": 7
+        }
+      }
+    }
+  }
+}

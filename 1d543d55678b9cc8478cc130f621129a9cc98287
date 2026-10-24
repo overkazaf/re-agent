@@ -1,0 +1,38 @@
+internal/workflow/picker.go
+  86bc0079a85ab92d 1-69
+internal/workflow/picker_test.go
+  86bc0079a85ab92d 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "33ffcf22a47301075e07122ec93b3562ec923b44",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 123,
+      "total_deletions": 0,
+      "accepted_lines": 1401,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/workflow/picker_test.go": {
+          "additions": 54,
+          "accepted_lines": 54
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "internal/workflow/picker.go": {
+          "additions": 69,
+          "accepted_lines": 69
+        }
+      }
+    }
+  }
+}

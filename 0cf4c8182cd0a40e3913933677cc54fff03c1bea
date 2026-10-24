@@ -1,0 +1,38 @@
+internal/ui/repicker_test.go
+  86bc0079a85ab92d 1-65
+internal/ui/repicker.go
+  86bc0079a85ab92d 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "70b480978d2e8b84a4b3260f7743683ed5bb77b2",
+  "prompts": {
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 152,
+      "total_deletions": 0,
+      "accepted_lines": 1430,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/ui/repicker_test.go": {
+          "additions": 65,
+          "accepted_lines": 65
+        },
+        "internal/ui/repicker.go": {
+          "additions": 87,
+          "accepted_lines": 87
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        }
+      }
+    }
+  }
+}
