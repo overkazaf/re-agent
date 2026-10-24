@@ -18,7 +18,7 @@ func runWithWorkflow(state *State, prompt string, options workflowRunOptions) (t
 	if workflow.ShouldDelegate(state.Workflow, state.Config, state.Provider, state.Role) {
 		return runDelegatedWorkflow(state, prompt, options)
 	}
-	wrapped := workflow.WrapPrompt(prompt, state.Workflow, state.Config, state.Provider)
+	wrapped := workflow.WrapPrompt(prompt, state.Workflow, state.Config, state.Provider, state.REState)
 	return state.Loop.Run(wrapped, core.RunOptions{
 		Role: state.Role, ProviderName: state.Provider, Ctx: options.Ctx, OnEvent: options.OnEvent,
 	})

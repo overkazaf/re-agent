@@ -31,7 +31,7 @@ func TestEffectiveDefaultsToOff(t *testing.T) {
 	if got := Effective("", config, ""); got != Off {
 		t.Fatalf("empty workflow should be off, got %s", got)
 	}
-	if got := WrapPrompt("reverse ./chall", "", config, ""); got != "reverse ./chall" {
+	if got := WrapPrompt("reverse ./chall", "", config, "", nil); got != "reverse ./chall" {
 		t.Fatalf("empty workflow should not wrap prompt:\n%s", got)
 	}
 }
@@ -54,7 +54,7 @@ func TestEffectiveSelectsSpecialistForCyberOrCVPProvider(t *testing.T) {
 }
 
 func TestWrapCavemanForbidsPromptLaundering(t *testing.T) {
-	wrapped := WrapPrompt("reverse ./chall", Caveman, nil, "")
+	wrapped := WrapPrompt("reverse ./chall", Caveman, nil, "", nil)
 	for _, want := range []string{"workflow mode: caveman", "Do not use translation", "prompt laundering", "Original user task:"} {
 		if !strings.Contains(wrapped, want) {
 			t.Fatalf("wrapped prompt missing %q:\n%s", want, wrapped)
@@ -63,7 +63,7 @@ func TestWrapCavemanForbidsPromptLaundering(t *testing.T) {
 }
 
 func TestWrapSpecialistPlansThenExecutes(t *testing.T) {
-	wrapped := WrapPrompt("analyze app.apk", Specialist, nil, "")
+	wrapped := WrapPrompt("analyze app.apk", Specialist, nil, "", nil)
 	for _, want := range []string{"workflow mode: specialist", "Publish a 3-7 step plan", "reverse_toolkit", "Original user task:"} {
 		if !strings.Contains(wrapped, want) {
 			t.Fatalf("wrapped prompt missing %q:\n%s", want, wrapped)
@@ -83,7 +83,7 @@ func TestNewWorkflowModesWrapPrompt(t *testing.T) {
 		{Engineering, "workflow mode: engineering"},
 	}
 	for _, tc := range cases {
-		wrapped := WrapPrompt("task", tc.mode, nil, "")
+		wrapped := WrapPrompt("task", tc.mode, nil, "", nil)
 		if !strings.Contains(wrapped, tc.marker) || !strings.Contains(wrapped, "Original user task:") {
 			t.Fatalf("mode %s missing %q:\n%s", tc.mode, tc.marker, wrapped)
 		}
@@ -183,5 +183,42 @@ func TestDelegatedExecutorToolsAreReadOnlyLocalEvidenceTools(t *testing.T) {
 		if !names[want] {
 			t.Fatalf("delegated executor did not expose %s", want)
 		}
+	}
+}
+
+func TestWrapReversePhaseAware(t *testing.T) {
+	s := NewREState("apk")
+	wrapped := WrapReverseWithPhase("analyze this APK", s)
+	if !strings.Contains(wrapped, "TRIAGE") {
+		t.Fatal("triage phase not mentioned in initial wrap")
+	}
+	if !strings.Contains(wrapped, "apk") {
+		t.Fatal("sample type not in wrapped output")
+	}
+	s.AdvancePhase()
+	wrapped = WrapReverseWithPhase("look at imports", s)
+	if !strings.Contains(wrapped, "STATIC") {
+		t.Fatal("static phase not mentioned after advance")
+	}
+}
+
+func TestWrapReverseNilState(t *testing.T) {
+	wrapped := WrapReverseWithPhase("test prompt", nil)
+	if !strings.Contains(wrapped, "reverse") {
+		t.Fatal("nil state should fall back to generic reverse wrap")
+	}
+}
+
+func TestReStateBlock(t *testing.T) {
+	s := NewREState("elf")
+	block := reStateBlock(s)
+	if !strings.Contains(block, "No hypotheses") {
+		t.Fatal("empty state should say no hypotheses")
+	}
+	s.AddHypothesis("uses XOR")
+	s.AddEvidence("found XOR loop at 0x4000")
+	block = reStateBlock(s)
+	if !strings.Contains(block, "[H0]") || !strings.Contains(block, "[E0]") {
+		t.Fatal("state block should contain hypothesis and evidence")
 	}
 }

@@ -109,7 +109,7 @@ func Status(requested Mode, config *types.AgentConfig, pinnedProvider string) st
 	return fmt.Sprintf("workflow=%s effective=%s specialist=%s runner=%s", orOff(requested), effective, specialist, runner)
 }
 
-func WrapPrompt(prompt string, requested Mode, config *types.AgentConfig, pinnedProvider string) string {
+func WrapPrompt(prompt string, requested Mode, config *types.AgentConfig, pinnedProvider string, reState *REState) string {
 	effective := Effective(requested, config, pinnedProvider)
 	switch effective {
 	case Specialist:
@@ -123,7 +123,7 @@ func WrapPrompt(prompt string, requested Mode, config *types.AgentConfig, pinned
 	case CTF:
 		return wrapCTF(prompt, requested)
 	case Reverse:
-		return wrapReverse(prompt, requested)
+		return WrapReverseWithPhase(prompt, reState)
 	case Engineering:
 		return wrapEngineering(prompt, requested)
 	default:
@@ -271,6 +271,68 @@ func wrapReverse(prompt string, requested Mode) string {
 		"Original user task:",
 		strings.TrimSpace(prompt),
 	}, "\n")
+}
+
+func WrapReverseWithPhase(prompt string, state *REState) string {
+	if state == nil {
+		return wrapReverse(prompt, Reverse)
+	}
+	return strings.Join([]string{
+		"0xAF-Re workflow mode: reverse",
+		fmt.Sprintf("Sample type: %s | Current phase: %s", state.SampleType, state.Phase),
+		"",
+		phasePromptBlock(state),
+		"",
+		reStateBlock(state),
+		"",
+		"Original user task:",
+		strings.TrimSpace(prompt),
+	}, "\n")
+}
+
+func phasePromptBlock(state *REState) string {
+	switch state.Phase {
+	case PhaseTriage:
+		return "PHASE: TRIAGE\nGoal: identify file type, architecture, packer, protections, and basic metadata.\nDo: file_info, strings, entropy_scan, binary_mitigations. Report a quick summary.\nThen: call update_re_state to advance to 'static' when triage is complete."
+	case PhaseStatic:
+		return "PHASE: STATIC ANALYSIS\nGoal: disassemble/decompile key routines, map imports/exports, identify algorithms.\nDo: focused disassembly, decompilation, symbol analysis, string cross-references.\nThen: record hypotheses with update_re_state, advance to 'dynamic' when ready."
+	case PhaseDynamic:
+		return "PHASE: DYNAMIC ANALYSIS\nGoal: observe runtime behavior, hook functions, capture I/O, verify static findings.\nDo: run in lab, set breakpoints, attach hooks (Frida/GDB), capture traffic.\nThen: record observations as evidence, advance to 'evidence'."
+	case PhaseEvidence:
+		return "PHASE: EVIDENCE PRODUCTION\nGoal: compile and verify all collected evidence into a structured evidence table.\nDo: organize findings by offset/address, verify each with a minimal command, rate confidence.\nThen: advance to 'interface' when the evidence table is solid."
+	case PhaseInterface:
+		return "PHASE: INTERFACE RECOVERY\nGoal: reconstruct the target's interface — data models, protocol, API surface.\nDo: build client stubs, request builders, data models from evidence.\nThen: advance to 'hypothesis' to validate and revise."
+	case PhaseHypothesis:
+		return "PHASE: HYPOTHESIS REVISION\nGoal: review all hypotheses against evidence, revise or confirm each.\nDo: for each hypothesis, check supporting/contradicting evidence, update confidence.\nThen: advance to 'writeup' when the analysis is converged."
+	case PhaseWriteup:
+		return "PHASE: WRITEUP\nGoal: produce the final report — background, method, findings, PoC, gaps, next steps.\nDo: write a structured report with all evidence, commands, and confidence annotations."
+	default:
+		return ""
+	}
+}
+
+func reStateBlock(state *REState) string {
+	var parts []string
+	if len(state.Hypotheses) > 0 {
+		parts = append(parts, "Active hypotheses:")
+		for i, h := range state.Hypotheses {
+			line := fmt.Sprintf("  [H%d] %s", i, h.Text)
+			if h.Revised != "" {
+				line += fmt.Sprintf(" → REVISED: %s", h.Revised)
+			}
+			parts = append(parts, line)
+		}
+	}
+	if len(state.Evidence) > 0 {
+		parts = append(parts, "Collected evidence:")
+		for i, e := range state.Evidence {
+			parts = append(parts, fmt.Sprintf("  [E%d] %s", i, e.Text))
+		}
+	}
+	if len(parts) == 0 {
+		return "No hypotheses or evidence recorded yet."
+	}
+	return strings.Join(parts, "\n")
 }
 
 func wrapEngineering(prompt string, requested Mode) string {
