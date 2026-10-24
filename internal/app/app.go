@@ -45,6 +45,7 @@ type State struct {
 	Splash       *ui.SplashContext
 	Providers    map[string]types.Provider
 	Workflow     workflow.Mode
+	REState      *workflow.REState
 	Queue        *taskQueue
 	PlanDisplay  ui.PlanDisplayMode
 	ThinkDisplay ui.ThinkDisplayMode

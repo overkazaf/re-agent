@@ -203,6 +203,19 @@ func handleCommand(line string, state *State) error {
 			return fmt.Errorf("usage: /workflow %s", workflow.List())
 		}
 		state.Workflow = workflow.Mode(arg)
+		if state.Workflow == workflow.Reverse {
+			prompt, ok := runREPicker(state)
+			if !ok {
+				state.Workflow = workflow.Off
+				return nil
+			}
+			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
+			if prompt != "" {
+				state.Queue.Add(prompt)
+			}
+			return nil
+		}
+		state.REState = nil
 		fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
 		return nil
 	case "/queue":

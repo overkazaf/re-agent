@@ -95,6 +95,11 @@ func PromptLabel(config *types.AgentConfig, role types.AgentRole, forcedProvider
 	return C.Faint(string(role)) + C.Rule("/") + badge + " " + C.Accent("❯") + " "
 }
 
+// REPromptLabel is the prompt label used by the reverse-engineering picker.
+func REPromptLabel(context string) string {
+	return C.Accent("0xAF") + C.Muted(":") + C.Bold(C.Accent(context)) + C.Accent(" ▸ ")
+}
+
 // --- run rendering -----------------------------------------------------------
 
 // ReplyHeader is printed above a model reply.
