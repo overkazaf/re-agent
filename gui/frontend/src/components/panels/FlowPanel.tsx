@@ -156,7 +156,9 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
                 <>
                   <Spinner tone="ok" />
                   <span className="glow-ok">{flow.activeTool}</span>
-                  <span>{fmtDuration(flow.toolMs)}</span>
+                  {/* toolMs lands on tool_end (FlowDTO has no live ToolStartedAt),
+                      so a mid-flight tool reads "running" like the TUI does */}
+                  <span>{flow.toolMs > 0 ? fmtDuration(flow.toolMs) : 'running'}</span>
                 </>
               )}
               <span className="flow-tally">
