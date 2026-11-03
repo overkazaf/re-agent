@@ -23,6 +23,7 @@
 - [开发者亮点](#开发者亮点)
 - [安装](#安装)
 - [快速开始](#快速开始)
+- [桌面 GUI](#桌面-gui)
 - [Workflow 模式](#workflow-模式)
 - [上下文压缩](#上下文压缩)
 - [Provider 与模型](#provider-与模型)
@@ -372,6 +373,36 @@ accepted and exits 0, otherwise rejected and exit 1.
 
 > **关于复现：** 案例 B 需要真实的 planner 和 executor。`--smoke` 和 `mock`
 > provider 只用于离线验证线路，mock 不会规划也不调工具，跑不出上面这一轮。
+
+## 桌面 GUI
+
+基于 Wails v2 的 CRT 风格桌面端（Go 后端 + 系统 WebView）。同一套 core、同一个
+sessions 目录、同一套策略引擎——GUI 是 agent 的第二张脸，不是分叉。
+
+```bash
+make gui            # 构建产物 -> gui/build/bin/0xAF-Re GUI.app
+make gui-dev        # 热更新开发模式
+```
+
+v1 能力一览：
+
+| 界面 | 能力 |
+| --- | --- |
+| 多 session 并发 | 同时跑多个 agent session，侧栏实时跟踪每个会话的状态（idle / running / awaiting approval） |
+| 实时仪表盘 | 与 TUI 相同的 90ms flow / tools / plan / think / telemetry 五面板，由服务端快照驱动重绘 |
+| 审批门 | 写 / 执行 / 网络类工具调用弹出风险分级的审批对话框；allow / allow-always / deny / deny-always 回写会话策略 |
+| Prompt 队列 | turn 进行中提交的 prompt 自动排队、按序注入 |
+| 主题 | deck / amber / matrix / mono——全套扫描线 + 辉光，尊重 prefers-reduced-motion |
+| Resume | 会话选择器列出与 CLI 相同的已保存 transcript |
+
+无头冒烟测试（不需要窗口）：
+
+```bash
+go test ./gui/ -run TestE2E -v
+```
+
+注意：`/workflow reverse` 暂时仅限终端使用（RE 样本选择器是 TUI 界面）；需要
+stdin 交互的斜杠命令在 GUI 中会被礼貌拒绝。
 
 ## Workflow 模式
 

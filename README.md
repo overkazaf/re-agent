@@ -33,6 +33,7 @@ modes, queued prompts, session resume, and a live view of every turn.
 - [Developer Highlights](#developer-highlights)
 - [Install](#install)
 - [Quick Start](#quick-start)
+- [Desktop GUI](#desktop-gui)
 - [Workflow Modes](#workflow-modes)
 - [Context Compaction](#context-compaction)
 - [Providers and Models](#providers-and-models)
@@ -419,6 +420,38 @@ auditable rather than merely impressive.
 > **Reproducing this:** a real planner and executor are needed for Case B.
 > `--smoke` and the `mock` provider verify wiring offline, but mock does not
 > plan and does not call tools, so it cannot produce the run above.
+
+## Desktop GUI
+
+A CRT-styled desktop front end built with Wails v2 (Go backend + system
+WebView). Same core, same sessions directory, same policy engine — the GUI is
+a second face for the agent, not a fork.
+
+```bash
+make gui            # build -> gui/build/bin/0xAF-Re GUI.app
+make gui-dev        # live-reload dev mode
+```
+
+What v1 ships:
+
+| Surface | What you get |
+| --- | --- |
+| Multi-session | Run several agent sessions at once; the sidebar tracks each one's lifecycle (idle / running / awaiting approval) |
+| Live dashboard | The TUI's 90ms flow / tools / plan / think / telemetry panels, redrawn from server snapshots |
+| Approval gate | Write/exec/network tool calls push a risk-coded dialog; allow / allow-always / deny / deny-always round-trips into the session policy |
+| Prompt queue | Prompts sent mid-turn queue automatically and drain in order |
+| Themes | deck / amber / matrix / mono — scanlines and glow throughout, `prefers-reduced-motion` honored |
+| Resume | The session picker lists the same saved transcripts the CLI resumes |
+
+Headless smoke (no window needed):
+
+```bash
+go test ./gui/ -run TestE2E -v
+```
+
+Notes: `/workflow reverse` stays terminal-only for now (the RE sample picker
+is a TUI surface), and slash commands that read stdin are refused politely in
+the GUI.
 
 ## Workflow Modes
 

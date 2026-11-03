@@ -2,7 +2,9 @@ BIN := bin
 GOFLAGS ?=
 LDFLAGS := -s -w
 
-.PHONY: all build install test vet fmt clean cross
+.PHONY: all build install test vet fmt clean cross gui gui-dev
+
+WAILS ?= $(HOME)/go/bin/wails
 
 all: build
 
@@ -33,3 +35,10 @@ cross:
 
 clean:
 	rm -rf $(BIN)
+
+# Desktop GUI (Wails v2). CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+gui:
+	cd gui && $(WAILS) build
+
+gui-dev:
+	cd gui && $(WAILS) dev
