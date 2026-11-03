@@ -1,0 +1,20 @@
+/* WS2 owns this file — design tokens from internal/ui/theme.go palettes.
+   Scaffold placeholder below keeps var() consumers unbroken until WS2 lands. */
+
+:root[data-theme='deck'] {
+  --accent: rgb(34, 211, 238);
+  --accent-dim: rgb(14, 116, 144);
+  --violet: rgb(167, 139, 250);
+  --violet-dim: rgb(91, 71, 156);
+  --ok: rgb(74, 222, 128);
+  --warn: rgb(251, 191, 36);
+  --err: rgb(248, 113, 113);
+  --text: rgb(229, 231, 235);
+  --muted: rgb(148, 163, 184);
+  --faint: rgb(100, 116, 139);
+  --rule: rgb(51, 65, 85);
+  --bg: #05080c;
+  --bg-panel: rgba(13, 22, 32, 0.6);
+  --glow-strength: 1;
+  --scanline-opacity: 0.5;
+}

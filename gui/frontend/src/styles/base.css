@@ -1,0 +1,10 @@
+/* WS2 owns this file — reset, monospace base, CRT scrollbars. */
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text);
+  background: var(--bg);
+}
+.placeholder { color: var(--faint); font-size: 12px; padding: 8px; }
