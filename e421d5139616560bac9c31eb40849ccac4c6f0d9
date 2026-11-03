@@ -1,0 +1,248 @@
+gui/frontend/src/styles/base.css
+  74bb506e759dbcca 1-10
+gui/frontend/src/App.tsx
+  74bb506e759dbcca 1-16
+gui/frontend/src/components/crt/index.ts
+  74bb506e759dbcca 1-9
+gui/frontend/src/components/crt/BootSplash.tsx
+  74bb506e759dbcca 1-46
+gui/main.go
+  74bb506e759dbcca 1-43
+gui/frontend/vite.config.ts
+  74bb506e759dbcca 1-19
+.gitignore
+  74bb506e759dbcca 22-26
+gui/dto.go
+  74bb506e759dbcca 1-153
+gui/frontend/src/styles/crt.css
+  74bb506e759dbcca 1
+gui/frontend/src/components/shell/AppShell.tsx
+  74bb506e759dbcca 1-52
+gui/frontend/src/components/crt/ProgressChip.tsx
+  74bb506e759dbcca 1-14
+gui/frontend/src/components/crt/Sparkline.tsx
+  74bb506e759dbcca 1-13
+gui/frontend/src/components/crt/Spinner.tsx
+  74bb506e759dbcca 1-13
+gui/frontend/src/styles/tokens.css
+  74bb506e759dbcca 1-20
+gui/frontend/src/components/shell/TopBar.tsx
+  74bb506e759dbcca 1-10
+go.mod
+  74bb506e759dbcca 3,6-8,12-42
+gui/frontend/package.json
+  74bb506e759dbcca 1-25
+gui/frontend/src/components/crt/CornerFrame.tsx
+  74bb506e759dbcca 1-6
+gui/frontend/src/components/crt/GlowText.tsx
+  74bb506e759dbcca 1-12
+gui/frontend/src/lib/api.ts
+  74bb506e759dbcca 1-44
+gui/frontend/src/lib/events.ts
+  74bb506e759dbcca 1-48
+gui/frontend/src/dev/mock.ts
+  74bb506e759dbcca 1-110
+gui/frontend/src/main.tsx
+  74bb506e759dbcca 1-15
+gui/frontend/dev-shell.html
+  74bb506e759dbcca 1-12
+gui/frontend/src/components/crt/PanelBox.tsx
+  74bb506e759dbcca 1-38
+gui/wails.json
+  74bb506e759dbcca 1-12
+gui/frontend/src/lib/types.ts
+  74bb506e759dbcca 1-218
+gui/frontend/dev-interact.html
+  74bb506e759dbcca 1-12
+gui/frontend/src/components/crt/StatusBadge.tsx
+  74bb506e759dbcca 1-10
+gui/app.go
+  74bb506e759dbcca 1-71
+gui/frontend/index.html
+  74bb506e759dbcca 1-13
+gui/frontend/dev-panels.html
+  74bb506e759dbcca 1-12
+gui/frontend/tsconfig.json
+  74bb506e759dbcca 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "e421d5139616560bac9c31eb40849ccac4c6f0d9",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1181,
+      "total_deletions": 45,
+      "accepted_lines": 1142,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/crt/Spinner.tsx": {
+          "additions": 13,
+          "accepted_lines": 13
+        },
+        "gui/frontend/src/styles/crt.css": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "gui/frontend/src/dev/mock.ts": {
+          "additions": 110,
+          "accepted_lines": 110
+        },
+        "gui/frontend/vite.config.ts": {
+          "additions": 19,
+          "accepted_lines": 19
+        },
+        "gui/app.go": {
+          "additions": 78,
+          "deletions": 7,
+          "accepted_lines": 71
+        },
+        "gui/frontend/src/components/shell/AppShell.tsx": {
+          "additions": 52,
+          "accepted_lines": 52
+        },
+        "gui/frontend/dev-panels.html": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "gui/frontend/dist/index.html": {
+          "additions": 5,
+          "accepted_lines": 5
+        },
+        "gui/frontend/src/main.tsx": {
+          "additions": 15,
+          "accepted_lines": 15
+        },
+        "gui/frontend/src/lib/events.ts": {
+          "additions": 48,
+          "accepted_lines": 48
+        },
+        "gui/frontend/tsconfig.json": {
+          "additions": 20,
+          "accepted_lines": 20
+        },
+        "gui/frontend/src/components/crt/Sparkline.tsx": {
+          "additions": 14,
+          "deletions": 1,
+          "accepted_lines": 13
+        },
+        "gui/main.go": {
+          "additions": 44,
+          "deletions": 1,
+          "accepted_lines": 43
+        },
+        "gui/wails.json": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "gui/frontend/src/components/crt/PanelBox.tsx": {
+          "additions": 38,
+          "accepted_lines": 38
+        },
+        "gui/frontend/dev-shell.html": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "gui/frontend/src/lib/api.ts": {
+          "additions": 44,
+          "accepted_lines": 44
+        },
+        "gui/frontend/src/styles/base.css": {
+          "additions": 10,
+          "accepted_lines": 10
+        },
+        "gui/frontend/package.json": {
+          "additions": 25,
+          "accepted_lines": 25
+        },
+        "gui/frontend/src/components/crt/GlowText.tsx": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "gui/dto.go": {
+          "additions": 183,
+          "deletions": 30,
+          "accepted_lines": 153
+        },
+        "gui/frontend/src/components/crt/StatusBadge.tsx": {
+          "additions": 10,
+          "accepted_lines": 10
+        },
+        "gui/frontend/src/components/crt/index.ts": {
+          "additions": 9,
+          "accepted_lines": 9
+        },
+        "gui/frontend/index.html": {
+          "additions": 13,
+          "accepted_lines": 13
+        },
+        "go.mod": {
+          "additions": 35,
+          "deletions": 6,
+          "accepted_lines": 35
+        },
+        "gui/frontend/src/styles/tokens.css": {
+          "additions": 20,
+          "accepted_lines": 20
+        },
+        "gui/frontend/dev-interact.html": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "gui/frontend/src/components/shell/TopBar.tsx": {
+          "additions": 10,
+          "accepted_lines": 10
+        },
+        "gui/frontend/src/App.tsx": {
+          "additions": 16,
+          "accepted_lines": 16
+        },
+        "gui/frontend/src/components/crt/BootSplash.tsx": {
+          "additions": 46,
+          "accepted_lines": 46
+        },
+        "gui/frontend/src/components/crt/CornerFrame.tsx": {
+          "additions": 6,
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/components/crt/ProgressChip.tsx": {
+          "additions": 14,
+          "accepted_lines": 14
+        },
+        "gui/frontend/src/lib/types.ts": {
+          "additions": 218,
+          "accepted_lines": 218
+        },
+        ".gitignore": {
+          "additions": 5,
+          "accepted_lines": 5
+        }
+      }
+    },
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 316,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        }
+      }
+    }
+  }
+}
