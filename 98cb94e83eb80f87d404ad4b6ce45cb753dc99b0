@@ -1,0 +1,45 @@
+gui/frontend/src/components/panels/panels.css
+  74bb506e759dbcca 391-442
+gui/frontend/src/components/panels/index.ts
+  74bb506e759dbcca 1-6
+gui/frontend/src/components/panels/Dashboard.tsx
+  74bb506e759dbcca 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "98cb94e83eb80f87d404ad4b6ce45cb753dc99b0",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 52,
+      "total_deletions": 0,
+      "accepted_lines": 1092,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/dto.go": {
+          "accepted_lines": 20
+        },
+        "gui/frontend/src/components/panels/index.ts": {
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/components/panels/panels.css": {
+          "additions": 52,
+          "accepted_lines": 52
+        },
+        "gui/frontend/src/components/panels/Dashboard.tsx": {
+          "accepted_lines": 39
+        },
+        "gui/manager.go": {
+          "accepted_lines": 975
+        }
+      }
+    }
+  }
+}
