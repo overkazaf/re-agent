@@ -5,7 +5,8 @@ import type { CSSProperties } from 'react'
 import type { ReDTO } from '../../lib/types'
 import { GlowText, PanelBox } from '../crt'
 
-const PHASES = ['TRI', 'STA', 'DYN', 'EVD', 'INT', 'HYP', 'WRU']
+// Glyphs match the TUI strip exactly (internal/ui/rehud.go:19).
+const PHASES = ['TRI', 'STA', 'DYN', 'EVI', 'IFC', 'HYP', 'WRI']
 const BAR_W = 14
 
 export function REHudPanel({ re, style }: { re: ReDTO | null; style?: CSSProperties }) {
