@@ -1,0 +1,57 @@
+gui/frontend/src/components/panels/ToolsPanel.tsx
+  74bb506e759dbcca 1-71
+gui/frontend/src/components/panels/panels.css
+  74bb506e759dbcca 173-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "ea1d85c52fca3354a7cac82b07cadabbe34bfcdf",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 329,
+      "total_deletions": 1,
+      "accepted_lines": 2040,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/session/ResumeDialog.tsx": {
+          "additions": 116,
+          "accepted_lines": 116
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/frontend/src/components/panels/ToolsPanel.tsx": {
+          "additions": 71,
+          "accepted_lines": 71
+        },
+        "gui/frontend/src/components/session/Dialog.tsx": {
+          "accepted_lines": 117
+        },
+        "gui/frontend/src/store/sessions.ts": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "gui/frontend/src/components/session/NewSessionDialog.tsx": {
+          "additions": 80,
+          "accepted_lines": 80
+        },
+        "gui/frontend/src/components/panels/panels.css": {
+          "additions": 60,
+          "accepted_lines": 60
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        }
+      }
+    }
+  }
+}
