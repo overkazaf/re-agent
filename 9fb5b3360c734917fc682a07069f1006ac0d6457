@@ -1,0 +1,54 @@
+gui/frontend/src/dev/panels-demo.tsx
+  74bb506e759dbcca 1-240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "9fb5b3360c734917fc682a07069f1006ac0d6457",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 404,
+      "total_deletions": 12,
+      "accepted_lines": 1412,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/re/REHudPanel.tsx": {
+          "additions": 73,
+          "accepted_lines": 73
+        },
+        "gui/frontend/src/components/session/index.ts": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "gui/manager.go": {
+          "additions": 46,
+          "deletions": 11,
+          "accepted_lines": 1035
+        },
+        "gui/frontend/src/dev/panels-demo.tsx": {
+          "additions": 241,
+          "deletions": 1,
+          "accepted_lines": 240
+        },
+        "gui/frontend/src/components/re/index.ts": {
+          "additions": 2,
+          "accepted_lines": 2
+        },
+        "gui/dto.go": {
+          "accepted_lines": 20
+        },
+        "gui/frontend/src/components/re/QueuePanel.tsx": {
+          "additions": 35,
+          "accepted_lines": 35
+        }
+      }
+    }
+  }
+}
