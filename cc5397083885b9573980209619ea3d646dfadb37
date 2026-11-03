@@ -1,0 +1,42 @@
+gui/approval_test.go
+  74bb506e759dbcca 1-256
+gui/approval.go
+  74bb506e759dbcca 1-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "cc5397083885b9573980209619ea3d646dfadb37",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 462,
+      "total_deletions": 17,
+      "accepted_lines": 2039,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/approval_test.go": {
+          "additions": 273,
+          "deletions": 17,
+          "accepted_lines": 256
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/approval.go": {
+          "additions": 189,
+          "accepted_lines": 189
+        }
+      }
+    }
+  }
+}
