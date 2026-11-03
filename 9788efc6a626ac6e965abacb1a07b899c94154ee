@@ -1,0 +1,44 @@
+gui/frontend/src/components/panels/TelePanel.tsx
+  74bb506e759dbcca 1-77
+gui/frontend/src/components/panels/panels.css
+  74bb506e759dbcca 371-390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "9788efc6a626ac6e965abacb1a07b899c94154ee",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 109,
+      "total_deletions": 2,
+      "accepted_lines": 109,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/panels/panels.css": {
+          "additions": 20,
+          "accepted_lines": 20
+        },
+        "gui/manager.go": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "gui/dto.go": {
+          "additions": 10,
+          "accepted_lines": 10
+        },
+        "gui/frontend/src/components/panels/TelePanel.tsx": {
+          "additions": 77,
+          "accepted_lines": 77
+        }
+      }
+    }
+  }
+}
