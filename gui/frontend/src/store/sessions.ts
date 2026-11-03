@@ -156,9 +156,15 @@ function applyEvent(rt: SessionRuntime, e: GuiEvent): SessionRuntime | null {
         thinkLines = thinkLines.slice(-THINK_LIMIT)
       }
 
-      const loopBuffer = appendCapped(rt.loopBuffer, batch, LOOP_LIMIT)
-      const tsOverflow = batch.length + rt.loopTs.length - LOOP_LIMIT
-      const loopTs = tsOverflow > 0 ? rt.loopTs.slice(tsOverflow).concat(batch.map(() => e.ts)) : rt.loopTs.concat(batch.map(() => e.ts))
+      // ring-cap buffer and timestamps jointly so indices stay aligned even
+      // when a single batch exceeds LOOP_LIMIT
+      let loopBuffer = rt.loopBuffer.concat(batch)
+      let loopTs = rt.loopTs.concat(batch.map(() => e.ts))
+      if (loopBuffer.length > LOOP_LIMIT) {
+        const drop = loopBuffer.length - LOOP_LIMIT
+        loopBuffer = loopBuffer.slice(drop)
+        loopTs = loopTs.slice(drop)
+      }
 
       return {
         ...rt,
