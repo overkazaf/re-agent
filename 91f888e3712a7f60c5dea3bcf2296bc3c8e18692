@@ -1,0 +1,46 @@
+go.mod
+  74bb506e759dbcca 6
+gui/build/darwin/Info.plist
+  74bb506e759dbcca 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "91f888e3712a7f60c5dea3bcf2296bc3c8e18692",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 65,
+      "total_deletions": 1,
+      "accepted_lines": 1659,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/frontend/package.json.md5": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "go.mod": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "gui/build/darwin/Info.plist": {
+          "additions": 63,
+          "accepted_lines": 63
+        }
+      }
+    }
+  }
+}
