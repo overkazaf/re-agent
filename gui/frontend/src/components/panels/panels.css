@@ -170,3 +170,63 @@
   /* freeze packets at their contract offsets (inline `left`) */
   .packet { animation: none; }
 }
+
+/* =============================================================
+   ToolsPanel — tree tool-run cards
+   ============================================================= */
+.tools-head {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.tool-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-card { font-size: 11px; }
+
+.tool-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.tool-name { white-space: nowrap; }
+
+/* running row: the whole header line hums in accent */
+.tool-running .tool-line:first-child {
+  color: var(--accent);
+  text-shadow: 0 0 6px var(--accent);
+}
+
+.tool-running .tool-line:first-child .t-faint { text-shadow: none; }
+
+.tool-failed .tool-name { color: var(--err); }
+
+.tool-args {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-dur {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.tool-preview { color: var(--muted); }
+
+.tool-preview-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
