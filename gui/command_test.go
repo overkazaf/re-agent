@@ -165,6 +165,30 @@ func TestSendCommandErrors(t *testing.T) {
 	}
 }
 
+// TestSendCommandMidTurnGuard: while a turn runs, display toggles and read-only
+// reports pass; state-mutating routing commands are refused.
+func TestSendCommandMidTurnGuard(t *testing.T) {
+	mgr, id := commandTestSession(t)
+	s := mgr.get(id)
+
+	s.mu.Lock()
+	s.running = true
+	s.mu.Unlock()
+
+	if result, err := mgr.SendCommand(id, "/think expand"); err != nil || !result.OK {
+		t.Fatalf("/think must be allowed mid-turn: %v %v", err, noticeTexts(result))
+	}
+	if result, err := mgr.SendCommand(id, "/theme matrix"); err == nil || result.OK {
+		t.Fatal("/theme must be refused mid-turn")
+	}
+	s.mu.Lock()
+	s.running = false
+	s.mu.Unlock()
+	if result, err := mgr.SendCommand(id, "/theme matrix"); err != nil || !result.OK {
+		t.Fatalf("/theme must work once the turn ends: %v %v", err, noticeTexts(result))
+	}
+}
+
 // TestSendCommandSerializes: two commands in a row keep their outputs separate
 // (no stdout bleed between commands).
 func TestSendCommandSerializes(t *testing.T) {

@@ -13,6 +13,7 @@ package main
 // notice with OK=false.
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -20,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/overkazaf/re-agent/internal/app"
+	"github.com/overkazaf/re-agent/internal/ui"
 )
 
 // commandMu guards the process-wide os.Stdout swap during SendCommand.
@@ -35,6 +37,20 @@ var guiInteractiveCommands = map[string]string{
 	"/login": "login is terminal-only (reads the password without echo)",
 }
 
+// guiRunningSafeCommands are allowed mid-turn: read-only reports over data the
+// turn goroutine does not write, plus the two display toggles (whose writes
+// funnel into the locked hudTracker through pushDisplays). Excluded on purpose:
+// /approval and /policy (touch policy.Approvals, which applyMemory writes on the
+// tool goroutine), /context (reads loop history mid-append), and every routing
+// or model command. The terminal app serializes all of these on one input loop;
+// the GUI cannot, so they wait for the turn to end instead of racing it.
+var guiRunningSafeCommands = map[string]bool{
+	"/think": true, "/tasks": true, "/help": true, "/version": true,
+	"/providers": true, "/tools": true, "/skills": true, "/mcp": true,
+	"/status": true, "/auth": true, "/sessions": true, "/session": true,
+	"/plan": true,
+}
+
 // SendCommand executes one slash command synchronously and returns what it
 // printed. It never runs a turn; prompts go through SendPrompt.
 func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) {
@@ -48,6 +64,14 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 	}
 	if hint, blocked := guiInteractiveCommands[strings.ToLower(command[0])]; blocked {
 		return CommandResultDTO{}, errInteractiveCommand(hint)
+	}
+
+	s.mu.Lock()
+	running := s.running
+	s.mu.Unlock()
+	if running && !guiRunningSafeCommands[strings.ToLower(command[0])] {
+		return CommandResultDTO{}, fmt.Errorf(
+			"command %s is not available while a turn is running — wait for it to finish", command[0])
 	}
 
 	s.cmdMu.Lock()
@@ -67,6 +91,7 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		runErr = app.RunCommand(line, s.state)
 		s.state.NoticeSink = nil
 	})
+	pushDisplays(s) // /tasks, /think mutated the state — fold it into the HUD strip
 
 	for _, line := range strings.Split(strings.TrimRight(stdout, "\n"), "\n") {
 		text := strings.TrimSpace(ansiRE.ReplaceAllString(line, ""))
@@ -83,6 +108,22 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		noticeMu.Unlock()
 	}
 	return CommandResultDTO{OK: runErr == nil, Notices: notices}, nil
+}
+
+// pushDisplays folds /tasks and /think state into the HUD strip right where the
+// command wrote it — the write-time counterpart of the TUI pane's
+// SetPlanDisplay/SetThinkDisplay. Snapshot paths never read app.State for these,
+// so command writes cannot race the tick loop.
+func pushDisplays(s *session) {
+	plan := string(s.state.PlanDisplay)
+	if plan == "" {
+		plan = string(ui.PlanDisplayAuto)
+	}
+	think := string(s.state.ThinkDisplay)
+	if think == "" {
+		think = string(ui.ThinkDisplayAuto)
+	}
+	s.hud.setDisplays(plan, think)
 }
 
 // captureStdout runs run with os.Stdout swapped for a pipe and returns

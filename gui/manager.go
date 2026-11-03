@@ -307,10 +307,17 @@ func (h *hudTracker) snapshot() HudSnapshot {
 	if h.turnActive {
 		frame = guiSpinFrames[h.frame%len(guiSpinFrames)]
 	}
-	route := h.route
+	// Copy the mutable parts: the snapshot outlives the lock and the tick
+	// path reads it while beginTurn/applyEvent keep writing.
+	var route *ui.HudRoute
+	if h.route != nil {
+		copied := *h.route
+		route = &copied
+	}
+	spark := append([]float64(nil), h.spark...)
 	return HudSnapshot{
 		Phase: h.phase, Frame: frame, ElapsedMs: elapsed, Stats: h.stats,
-		Spark: h.spark, Route: route, QueueCount: h.queueCount,
+		Spark: spark, Route: route, QueueCount: h.queueCount,
 		PlanDisplay: h.planDisp, ThinkDisplay: h.thinkDisp,
 	}
 }
@@ -719,6 +726,17 @@ func (m *SessionManager) get(id string) *session {
 	return m.sessions[id]
 }
 
+// anyState returns one live session's app.State — the completion source for
+// provider/skill arguments when the frontend asks before picking a session.
+func (m *SessionManager) anyState() *app.State {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, s := range m.sessions {
+		return s.state
+	}
+	return nil
+}
+
 func (m *SessionManager) setLifecycle(s *session, state string) {
 	s.mu.Lock()
 	if s.lifecycle == LifecycleClosed {
@@ -907,7 +925,6 @@ func (m *SessionManager) Snapshot(id string) (TickDTO, bool) {
 	if s == nil {
 		return TickDTO{}, false
 	}
-	syncDisplays(s)
 	return NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
 	), true
@@ -922,24 +939,9 @@ func (m *SessionManager) TickSnapshot(id string) (TickDTO, bool) {
 		return TickDTO{}, false
 	}
 	s.hud.onTick()
-	syncDisplays(s)
 	return NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
 	), true
-}
-
-// syncDisplays folds /tasks and /think state into the HUD strip before a
-// snapshot — the GUI counterpart of the TUI pane's SetPlanDisplay/SetThinkDisplay.
-func syncDisplays(s *session) {
-	plan := string(s.state.PlanDisplay)
-	if plan == "" {
-		plan = string(ui.PlanDisplayAuto)
-	}
-	think := string(s.state.ThinkDisplay)
-	if think == "" {
-		think = string(ui.ThinkDisplayAuto)
-	}
-	s.hud.setDisplays(plan, think)
 }
 
 // reHudOf mirrors repl.go refreshRE: the reverse-mode strip, only in reverse
