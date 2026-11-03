@@ -1,0 +1,42 @@
+gui/frontend/src/components/panels/panels.css
+  74bb506e759dbcca 233-305
+gui/frontend/src/components/panels/PlanPanel.tsx
+  74bb506e759dbcca 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "4b1dc2049ba889a930604030124fda9d2da8c839",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1778,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/frontend/src/components/panels/panels.css": {
+          "accepted_lines": 73
+        },
+        "gui/frontend/src/styles/crt.css": {
+          "accepted_lines": 1
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "gui/frontend/src/components/panels/PlanPanel.tsx": {
+          "accepted_lines": 110
+        }
+      }
+    }
+  }
+}
