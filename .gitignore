@@ -24,3 +24,4 @@ __pycache__/
 gui/frontend/node_modules/
 gui/frontend/dist/
 gui/frontend/wailsjs/
+gui/frontend/package.json.md5
