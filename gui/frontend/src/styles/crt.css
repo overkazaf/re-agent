@@ -1,1 +1,333 @@
-/* WS2 owns this file — scanlines, glow utilities, vignette, flicker, power-on. */
+/* ============================================================================
+   0xAF·RE — CRT effects layer (WS2)
+
+   Scanlines, phosphor glow, vignette, subpixel flicker, power-on. Everything
+   reads its intensity from tokens.css (--glow-strength, --scanline-opacity)
+   so each theme controls how hard its tube blooms (amber blooms hard, mono
+   stays flat).
+
+   Overlay conventions: .crt-scanlines / .crt-vignette are fixed full-viewport
+   layers with pointer-events: none — AppShell mounts them once; every
+   animation here is disabled under prefers-reduced-motion.
+   ========================================================================== */
+
+/* --- screen overlays -------------------------------------------------------- */
+
+/* Slow-drifting scanlines. ~3px period: 1px lit, 2px dark, plus a second
+   gradient moving at a different rate for a subtle moiré-free roll. */
+.crt-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: var(--scanline-opacity);
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.03) 0px,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.crt-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 44px,
+    rgba(0, 0, 0, 0.14) 45px,
+    transparent 48px
+  );
+}
+
+/* Edge darkening — the tube falls off toward the bezel. */
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 58%,
+    rgba(0, 0, 0, 0.22) 86%,
+    rgba(0, 0, 0, 0.42) 100%
+  );
+}
+
+/* --- phosphor glow utilities -------------------------------------------------
+   Double-layer text-shadow: a tight core halo + a wide faint bloom, both
+   scaled by the theme's --glow-strength (calc keeps the knob per-theme).
+   Color comes from color-mix so we derive halos from the exact palette RGB
+   instead of hand-picking shadow colors per theme. */
+
+.glow-accent,
+.glow-violet,
+.glow-ok,
+.glow-warn,
+.glow-err,
+.glow-text {
+  text-shadow:
+    0 0 calc(3px * var(--glow-strength)) currentColor,
+    0 0 calc(10px * var(--glow-strength)) color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.glow-accent { color: var(--accent); }
+.glow-violet { color: var(--violet); }
+.glow-ok     { color: var(--ok); }
+.glow-warn   { color: var(--warn); }
+.glow-err    { color: var(--err); }
+.glow-text   { color: var(--text); }
+
+/* Panel titles get a wider, dimmer bloom than body glow text. */
+.glow-title {
+  color: var(--accent);
+  text-shadow:
+    0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--accent) 80%, transparent),
+    0 0 calc(14px * var(--glow-strength)) color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* --- flicker ------------------------------------------------------------------
+   Subpixel brightness wander. Kept near-invisible (99%+ opacity) so it reads
+   as phosphor, not as a display fault; steps() avoids smooth pulsing. */
+.crt-flicker {
+  animation: crt-flicker 4s steps(1) infinite;
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  7%  { opacity: 0.986; }
+  9%  { opacity: 1; }
+  38% { opacity: 0.99; }
+  41% { opacity: 1; }
+  67% { opacity: 0.988; }
+  69% { opacity: 1; }
+  83% { opacity: 0.995; }
+  85% { opacity: 1; }
+}
+
+/* --- power-on ------------------------------------------------------------------
+   Tube warm-up: vertical collapse blooming open, brightness overshooting then
+   settling. ~400ms, applied to a full-screen container (BootSplash). */
+.crt-power-on {
+  transform-origin: center center;
+  animation: crt-power-on 0.42s cubic-bezier(0.16, 0.9, 0.24, 1) both;
+}
+
+@keyframes crt-power-on {
+  0% {
+    transform: scaleY(0.004) scaleX(0.7);
+    filter: brightness(6);
+    opacity: 0;
+  }
+  32% {
+    transform: scaleY(0.02) scaleX(1);
+    filter: brightness(5);
+    opacity: 1;
+  }
+  58% {
+    transform: scaleY(0.65);
+    filter: brightness(1.9);
+  }
+  82% {
+    transform: scaleY(1.02);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: scaleY(1) scaleX(1);
+    filter: brightness(1);
+  }
+}
+
+/* --- panel chrome (consumed by crt/PanelBox, shell/AppShell) ------------------- */
+
+.crt-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--rule);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 7%, transparent),
+    inset 0 0 calc(24px * var(--glow-strength)) color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.crt-panel-title {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  white-space: pre;
+  user-select: none;
+}
+
+.crt-panel-body {
+  padding: 6px 10px;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Accent variant tints the frame so a panel's job is readable at a glance. */
+.crt-panel--accent { border-color: color-mix(in srgb, var(--accent) 38%, var(--rule)); }
+.crt-panel--violet { border-color: color-mix(in srgb, var(--violet) 38%, var(--rule)); }
+.crt-panel--ok     { border-color: color-mix(in srgb, var(--ok) 38%, var(--rule)); }
+.crt-panel--warn   { border-color: color-mix(in srgb, var(--warn) 45%, var(--rule)); }
+.crt-panel--err    { border-color: color-mix(in srgb, var(--err) 45%, var(--rule)); }
+
+/* --- corner brackets (CornerFrame) -------------------------------------------- */
+
+.corner-frame {
+  position: relative;
+  padding: 4px;
+}
+
+.corner-frame > .corner-frame-tick {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  color: var(--accent-dim);
+  font-size: 10px;
+  line-height: 1;
+  user-select: none;
+}
+
+.corner-frame > .corner-frame-tick.tl { top: -2px; left: -2px; }
+.corner-frame > .corner-frame-tick.tr { top: -2px; right: -2px; }
+.corner-frame > .corner-frame-tick.bl { bottom: -2px; left: -2px; }
+.corner-frame > .corner-frame-tick.br { bottom: -2px; right: -2px; }
+
+/* --- status badge breathing ---------------------------------------------------- */
+
+.status-badge--ok {
+  color: var(--ok);
+  text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent);
+  animation: badge-breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes badge-breathe {
+  0%, 100% {
+    text-shadow: 0 0 calc(3px * var(--glow-strength)) color-mix(in srgb, var(--ok) 35%, transparent);
+  }
+  50% {
+    text-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--ok) 75%, transparent);
+  }
+}
+
+.status-badge--pending {
+  color: var(--warn);
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--warn) 45%, transparent);
+}
+
+.status-badge--off {
+  color: var(--faint);
+}
+
+/* --- spinner -------------------------------------------------------------------- */
+
+.crt-spinner {
+  display: inline-block;
+  white-space: pre;
+}
+
+.crt-spinner--accent { color: var(--accent); text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--accent) 55%, transparent); }
+.crt-spinner--violet { color: var(--violet); text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--violet) 55%, transparent); }
+.crt-spinner--ok     { color: var(--ok);     text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent); }
+.crt-spinner--warn   { color: var(--warn);   text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--warn) 55%, transparent); }
+.crt-spinner--err    { color: var(--err);    text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--err) 55%, transparent); }
+
+/* --- boot splash ----------------------------------------------------------------- */
+
+.boot-logo {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.15;
+  color: var(--accent);
+  text-shadow:
+    0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 calc(18px * var(--glow-strength)) color-mix(in srgb, var(--accent) 28%, transparent);
+  animation: boot-logo-in 1.6s ease-out both;
+  white-space: pre;
+}
+
+@keyframes boot-logo-in {
+  0%   { opacity: 0; filter: brightness(3); }
+  45%  { opacity: 1; filter: brightness(1.35); }
+  100% { opacity: 0.92; filter: brightness(1); }
+}
+
+.boot-probe {
+  font-size: 12px;
+  color: var(--ok);
+  text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--ok) 40%, transparent);
+  animation: boot-probe-in 0.24s ease-out both;
+}
+
+.boot-probe .boot-probe-fail {
+  color: var(--err);
+  text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--err) 40%, transparent);
+}
+
+.boot-probe-label {
+  color: var(--muted);
+}
+
+.boot-probe-meta {
+  color: var(--faint);
+}
+
+@keyframes boot-probe-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.boot-tagline {
+  color: var(--faint);
+  letter-spacing: 0.14em;
+  animation: boot-logo-in 2.2s ease-out both;
+}
+
+/* --- reduced motion: every animation above degrades to its static end-state ----- */
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-scanlines,
+  .crt-scanlines::after {
+    animation: none;
+    transform: none;
+  }
+
+  .crt-flicker {
+    animation: none;
+    opacity: 1;
+  }
+
+  .crt-power-on {
+    animation: none;
+    transform: none;
+    filter: none;
+    opacity: 1;
+  }
+
+  .boot-logo,
+  .boot-tagline {
+    animation: none;
+    opacity: 0.92;
+    filter: none;
+  }
+
+  .boot-probe,
+  .boot-tagline {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .status-badge--ok {
+    animation: none;
+    text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent);
+  }
+}
