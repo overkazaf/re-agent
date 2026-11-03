@@ -1,0 +1,97 @@
+gui/dto.go
+  74bb506e759dbcca 3-6,157-267
+gui/dto_test.go
+  74bb506e759dbcca 1-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "356b0911fbcf30fed832005fd20bbc947986a63a",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 532,
+      "total_deletions": 63,
+      "accepted_lines": 2187,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/crt/GlowText.tsx": {
+          "additions": 3,
+          "deletions": 2,
+          "accepted_lines": 3
+        },
+        "gui/testdata/smoke-config.json": {
+          "accepted_lines": 58
+        },
+        "gui/dto_test.go": {
+          "additions": 200,
+          "deletions": 1,
+          "accepted_lines": 199
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/frontend/src/components/crt/Sparkline.tsx": {
+          "additions": 39,
+          "deletions": 10,
+          "accepted_lines": 39
+        },
+        "gui/frontend/src/components/crt/PanelBox.tsx": {
+          "additions": 10,
+          "deletions": 20,
+          "accepted_lines": 10
+        },
+        "gui/frontend/src/components/crt/corners.tsx": {
+          "additions": 35,
+          "accepted_lines": 35
+        },
+        "gui/frontend/src/components/crt/CornerFrame.tsx": {
+          "additions": 19,
+          "deletions": 2,
+          "accepted_lines": 19
+        },
+        "gui/dto.go": {
+          "additions": 116,
+          "deletions": 2,
+          "accepted_lines": 115
+        },
+        "gui/frontend/src/components/crt/Spinner.tsx": {
+          "additions": 12,
+          "deletions": 2,
+          "accepted_lines": 12
+        },
+        "gui/frontend/src/styles/crt.css": {
+          "additions": 34,
+          "accepted_lines": 34
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "gui/frontend/dist/index.html": {
+          "accepted_lines": 5
+        },
+        "gui/frontend/src/components/crt/StatusBadge.tsx": {
+          "additions": 10,
+          "deletions": 9,
+          "accepted_lines": 10
+        },
+        "gui/frontend/src/components/crt/ProgressChip.tsx": {
+          "additions": 6,
+          "deletions": 3,
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/components/crt/BootSplash.tsx": {
+          "additions": 48,
+          "deletions": 12,
+          "accepted_lines": 48
+        }
+      }
+    }
+  }
+}
