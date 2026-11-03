@@ -1,0 +1,30 @@
+gui/frontend/src/dev/panels-demo.tsx
+  74bb506e759dbcca 37-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "49dc620ccf590baf26f88d5a61a8d360c79c2361",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/dev/panels-demo.tsx": {
+          "additions": 3,
+          "deletions": 3,
+          "accepted_lines": 3
+        }
+      }
+    }
+  }
+}
