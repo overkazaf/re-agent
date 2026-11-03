@@ -54,7 +54,12 @@ type State struct {
 	// RefreshMs is the live pane animation interval (0 = default 90ms; larger
 	// values keep the scrollback quieter).
 	RefreshMs int
-	editor    *Editor
+	// NoticeSink, when set, receives command notices instead of the terminal
+	// (the GUI bridge collects them); nil keeps the terminal behavior. Only
+	// emitNoticeTo/emitErrorTo consult it — raw fmt.Print output in command
+	// handlers still goes to stdout and needs capturing upstream.
+	NoticeSink func(level, text string)
+	editor     *Editor
 }
 
 func Run(argv []string) error {

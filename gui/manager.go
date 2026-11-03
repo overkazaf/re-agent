@@ -336,6 +336,9 @@ type session struct {
 	lifecycle string
 	running   bool
 	turns     sync.WaitGroup
+	// cmdMu serializes SendCommand against itself (the stdout swap it uses is
+	// process-wide and the sink install/restore must stay paired).
+	cmdMu sync.Mutex
 }
 
 func (s *session) lifecycleState() string {
@@ -904,6 +907,7 @@ func (m *SessionManager) Snapshot(id string) (TickDTO, bool) {
 	if s == nil {
 		return TickDTO{}, false
 	}
+	syncDisplays(s)
 	return NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
 	), true
@@ -918,9 +922,24 @@ func (m *SessionManager) TickSnapshot(id string) (TickDTO, bool) {
 		return TickDTO{}, false
 	}
 	s.hud.onTick()
+	syncDisplays(s)
 	return NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
 	), true
+}
+
+// syncDisplays folds /tasks and /think state into the HUD strip before a
+// snapshot — the GUI counterpart of the TUI pane's SetPlanDisplay/SetThinkDisplay.
+func syncDisplays(s *session) {
+	plan := string(s.state.PlanDisplay)
+	if plan == "" {
+		plan = string(ui.PlanDisplayAuto)
+	}
+	think := string(s.state.ThinkDisplay)
+	if think == "" {
+		think = string(ui.ThinkDisplayAuto)
+	}
+	s.hud.setDisplays(plan, think)
 }
 
 // reHudOf mirrors repl.go refreshRE: the reverse-mode strip, only in reverse

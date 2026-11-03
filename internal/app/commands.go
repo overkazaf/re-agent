@@ -27,6 +27,15 @@ import (
 	"golang.org/x/term"
 )
 
+// RunCommand executes one slash command outside the REPL input loop (the GUI
+// bridge drives this). Notices flow through state.NoticeSink when attached;
+// anything printed with raw fmt.Print still goes to stdout, so a headless
+// caller must capture stdout itself. Interactive stdin flows (/login, the
+// /workflow reverse picker) are terminal-only by nature.
+func RunCommand(line string, state *State) error {
+	return handleCommand(line, state)
+}
+
 func handleCommand(line string, state *State) error {
 	command, arg := splitCommand(line)
 	switch command {
@@ -729,7 +738,7 @@ func handleModelCommand(arg string, state *State, pane *ui.LivePane) error {
 			}
 			lines = append(lines, fmt.Sprintf("%s=%s", name, model))
 		}
-		emitNotice(pane, "models: "+strings.Join(lines, " · "))
+		emitNoticeTo(state, pane, "models: "+strings.Join(lines, " · "))
 		return nil
 	}
 	if len(fields) < 2 {
@@ -755,7 +764,7 @@ func handleModelCommand(arg string, state *State, pane *ui.LivePane) error {
 		change := config.SetProviderModel(provider, model)
 		notices = append(notices, fmt.Sprintf("%s model=%s (%s)", name, model, change.Detail))
 	}
-	emitNotice(pane, strings.Join(notices, " · ")+"; applies to the next provider turn")
+	emitNoticeTo(state, pane, strings.Join(notices, " · ")+"; applies to the next provider turn")
 	return nil
 }
 
@@ -795,13 +804,13 @@ func handleQueueCommand(arg string, state *State, pane *ui.LivePane) error {
 	action, rest := splitFirstToken(arg)
 	switch action {
 	case "", "list":
-		emitNotice(pane, formatQueue(state.Queue.List()))
+		emitNoticeTo(state, pane, formatQueue(state.Queue.List()))
 	case "add":
 		if strings.TrimSpace(rest) == "" {
 			return fmt.Errorf("usage: /queue add <task>")
 		}
 		item := state.Queue.Add(rest)
-		emitNotice(pane, fmt.Sprintf("queued #%d", item.ID))
+		emitNoticeTo(state, pane, fmt.Sprintf("queued #%d", item.ID))
 	case "edit":
 		idText, text := splitFirstToken(rest)
 		id, err := strconv.Atoi(idText)
@@ -811,12 +820,12 @@ func handleQueueCommand(arg string, state *State, pane *ui.LivePane) error {
 		if !state.Queue.Edit(id, text) {
 			return fmt.Errorf("queued task not found: #%d", id)
 		}
-		emitNotice(pane, fmt.Sprintf("edited queued task #%d", id))
+		emitNoticeTo(state, pane, fmt.Sprintf("edited queued task #%d", id))
 	case "cancel", "rm", "drop":
 		target, _ := splitFirstToken(rest)
 		if target == "all" {
 			count := state.Queue.Clear()
-			emitNotice(pane, fmt.Sprintf("cancelled %d queued task(s)", count))
+			emitNoticeTo(state, pane, fmt.Sprintf("cancelled %d queued task(s)", count))
 			return nil
 		}
 		id, err := strconv.Atoi(target)
@@ -826,13 +835,13 @@ func handleQueueCommand(arg string, state *State, pane *ui.LivePane) error {
 		if !state.Queue.Cancel(id) {
 			return fmt.Errorf("queued task not found: #%d", id)
 		}
-		emitNotice(pane, fmt.Sprintf("cancelled queued task #%d", id))
+		emitNoticeTo(state, pane, fmt.Sprintf("cancelled queued task #%d", id))
 	case "clear":
 		count := state.Queue.Clear()
-		emitNotice(pane, fmt.Sprintf("cancelled %d queued task(s)", count))
+		emitNoticeTo(state, pane, fmt.Sprintf("cancelled %d queued task(s)", count))
 	case "run":
 		if pane != nil {
-			emitNotice(pane, "queue will continue after the current turn")
+			emitNoticeTo(state, pane, "queue will continue after the current turn")
 			return nil
 		}
 		drainQueue(state)
@@ -852,7 +861,7 @@ func updateQueuePane(state *State, pane *ui.LivePane) {
 func handleTasksCommand(arg string, state *State, pane *ui.LivePane) error {
 	mode := strings.TrimSpace(arg)
 	if mode == "" {
-		emitNotice(pane, fmt.Sprintf("tasks=%s — auto · collapse · expand · toggle", planDisplayLabel(state.PlanDisplay)))
+		emitNoticeTo(state, pane, fmt.Sprintf("tasks=%s — auto · collapse · expand · toggle", planDisplayLabel(state.PlanDisplay)))
 		return nil
 	}
 	switch mode {
@@ -874,7 +883,7 @@ func handleTasksCommand(arg string, state *State, pane *ui.LivePane) error {
 	if pane != nil {
 		pane.SetPlanDisplay(state.PlanDisplay)
 	}
-	emitNotice(pane, "tasks="+planDisplayLabel(state.PlanDisplay))
+	emitNoticeTo(state, pane, "tasks="+planDisplayLabel(state.PlanDisplay))
 	return nil
 }
 
@@ -891,7 +900,7 @@ func planDisplayLabel(mode ui.PlanDisplayMode) string {
 func handleThinkCommand(arg string, state *State, pane *ui.LivePane) error {
 	mode := strings.TrimSpace(arg)
 	if mode == "" {
-		emitNotice(pane, fmt.Sprintf("think=%s — auto · collapse · expand · toggle", thinkDisplayLabel(state.ThinkDisplay)))
+		emitNoticeTo(state, pane, fmt.Sprintf("think=%s — auto · collapse · expand · toggle", thinkDisplayLabel(state.ThinkDisplay)))
 		return nil
 	}
 	switch mode {
@@ -913,7 +922,7 @@ func handleThinkCommand(arg string, state *State, pane *ui.LivePane) error {
 	if pane != nil {
 		pane.SetThinkDisplay(state.ThinkDisplay)
 	}
-	emitNotice(pane, "think="+thinkDisplayLabel(state.ThinkDisplay))
+	emitNoticeTo(state, pane, "think="+thinkDisplayLabel(state.ThinkDisplay))
 	return nil
 }
 
@@ -942,6 +951,20 @@ func emitError(pane *ui.LivePane, message string) {
 			fmt.Println(ui.RenderError(line))
 		}
 	}
+}
+
+// emitNoticeTo routes a notice through the session's NoticeSink when one is
+// attached (GUI sessions collect these instead of reading stdout); state nil or
+// sink nil keeps the terminal rendering. Errors surface as returned errors —
+// the caller renders them — so there is no emitErrorTo.
+func emitNoticeTo(state *State, pane *ui.LivePane, message string) {
+	if state != nil && state.NoticeSink != nil {
+		for _, line := range strings.Split(message, "\n") {
+			state.NoticeSink("info", line)
+		}
+		return
+	}
+	emitNotice(pane, message)
 }
 
 // redrawSplash re-renders the boot screen from the cached probe results.
