@@ -1,0 +1,85 @@
+gui/frontend/src/components/crt/BootSplash.tsx
+  74bb506e759dbcca 1-4,12-45,66-67,69-71,73-75,77,79
+gui/frontend/src/components/crt/StatusBadge.tsx
+  74bb506e759dbcca 1-10
+gui/frontend/src/components/crt/CornerFrame.tsx
+  74bb506e759dbcca 1-2,5-11,13-22
+gui/frontend/src/components/crt/ProgressChip.tsx
+  74bb506e759dbcca 1-2,6,10,13-14
+gui/frontend/src/components/crt/PanelBox.tsx
+  74bb506e759dbcca 1-2,4,15,17-18,20-21,23,25
+gui/frontend/src/components/crt/Sparkline.tsx
+  74bb506e759dbcca 1-16,18-40
+gui/frontend/src/components/crt/GlowText.tsx
+  74bb506e759dbcca 1-2,12
+gui/frontend/src/styles/crt.css
+  74bb506e759dbcca 83-86,186-199,306-316,358-362
+gui/frontend/src/components/crt/corners.tsx
+  74bb506e759dbcca 1-35
+gui/frontend/src/components/crt/Spinner.tsx
+  74bb506e759dbcca 1-2,7-8,15-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "c6f91c8c1be72ceb4d41fe84675f8f55c6f77248",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1873,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/crt/Spinner.tsx": {
+          "accepted_lines": 12
+        },
+        "gui/testdata/smoke-config.json": {
+          "accepted_lines": 58
+        },
+        "gui/frontend/src/components/crt/BootSplash.tsx": {
+          "accepted_lines": 48
+        },
+        "gui/frontend/src/styles/crt.css": {
+          "accepted_lines": 34
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/frontend/src/components/crt/CornerFrame.tsx": {
+          "accepted_lines": 19
+        },
+        "gui/frontend/src/components/crt/GlowText.tsx": {
+          "accepted_lines": 3
+        },
+        "gui/frontend/src/components/crt/corners.tsx": {
+          "accepted_lines": 35
+        },
+        "gui/frontend/src/components/crt/ProgressChip.tsx": {
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/components/crt/Sparkline.tsx": {
+          "accepted_lines": 39
+        },
+        "gui/frontend/dist/index.html": {
+          "accepted_lines": 5
+        },
+        "gui/frontend/src/components/crt/PanelBox.tsx": {
+          "accepted_lines": 10
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "gui/frontend/src/components/crt/StatusBadge.tsx": {
+          "accepted_lines": 10
+        }
+      }
+    }
+  }
+}
