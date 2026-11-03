@@ -1,6 +1,9 @@
 package main
 
-import "github.com/overkazaf/re-agent/internal/types"
+import (
+	"github.com/overkazaf/re-agent/internal/types"
+	"github.com/overkazaf/re-agent/internal/ui"
+)
 
 // DTO contracts between the Go bridge and the GUI frontend.
 // Frozen contract: docs/plans/2026-11-03-gui-implementation.md §0.2-0.4.
@@ -82,30 +85,30 @@ type PlanBadgeDTO struct {
 
 // FlowDTO mirrors ui.FlowState — the animated dashboard data source.
 type FlowDTO struct {
-	Stage          string      `json:"stage"` // idle|send|wait|think|calls|tool|write|done|error
-	Turn           int         `json:"turn"`
-	Provider       string      `json:"provider"`
-	Model          string      `json:"model"`
-	Endpoint       string      `json:"endpoint"`
-	Messages       int         `json:"messages"`
-	SentTokens     int         `json:"sentTokens"`
-	Usage          TokenUsage  `json:"usage"`
-	PendingCalls   int         `json:"pendingCalls"`
-	ActiveTool     string      `json:"activeTool"`
-	ToolMs         int64       `json:"toolMs"`
-	ToolsOK        int         `json:"toolsOk"`
-	ToolsFailed    int         `json:"toolsFailed"`
-	ToolRuns       []ToolRunDTO `json:"toolRuns"`
-	ReplyChars     int         `json:"replyChars"`
-	CompactedDrop  int         `json:"compactedDrop"`
-	CompactedElide int         `json:"compactedElide"`
-	HasCompacted   bool        `json:"hasCompacted"`
+	Stage          string        `json:"stage"` // idle|send|wait|think|calls|tool|write|done|error
+	Turn           int           `json:"turn"`
+	Provider       string        `json:"provider"`
+	Model          string        `json:"model"`
+	Endpoint       string        `json:"endpoint"`
+	Messages       int           `json:"messages"`
+	SentTokens     int           `json:"sentTokens"`
+	Usage          TokenUsage    `json:"usage"`
+	PendingCalls   int           `json:"pendingCalls"`
+	ActiveTool     string        `json:"activeTool"`
+	ToolMs         int64         `json:"toolMs"`
+	ToolsOK        int           `json:"toolsOk"`
+	ToolsFailed    int           `json:"toolsFailed"`
+	ToolRuns       []ToolRunDTO  `json:"toolRuns"`
+	ReplyChars     int           `json:"replyChars"`
+	CompactedDrop  int           `json:"compactedDrop"`
+	CompactedElide int           `json:"compactedElide"`
+	HasCompacted   bool          `json:"hasCompacted"`
 	Plan           *PlanBadgeDTO `json:"plan"`
-	PlanKind       string      `json:"planKind"` // "" | open | write | step
-	Error          string      `json:"error"`
-	Frame          int         `json:"frame"`
-	Packets        [][]int     `json:"packets"`
-	Since          int64       `json:"since"`
+	PlanKind       string        `json:"planKind"` // "" | open | write | step
+	Error          string        `json:"error"`
+	Frame          int           `json:"frame"`
+	Packets        [][]int       `json:"packets"`
+	Since          int64         `json:"since"`
 }
 
 // HudRouteDTO mirrors ui.HudRoute.
@@ -117,37 +120,148 @@ type HudRouteDTO struct {
 
 // HudDTO is the per-tick HUD strip: stats, sparkline, routing, queue.
 type HudDTO struct {
-	Phase       string       `json:"phase"`
-	Frame       string       `json:"frame"`
-	ElapsedMs   int64        `json:"elapsedMs"`
-	Stats       TokenUsage   `json:"stats"`
-	Spark       []float64    `json:"spark"`
-	Route       *HudRouteDTO `json:"route"`
-	QueueCount  int          `json:"queueCount"`
-	PlanDisplay string       `json:"planDisplay"` // auto | collapsed | expanded
-	ThinkDisplay string      `json:"thinkDisplay"` // auto | collapsed | expanded
+	Phase        string       `json:"phase"`
+	Frame        string       `json:"frame"`
+	ElapsedMs    int64        `json:"elapsedMs"`
+	Stats        TokenUsage   `json:"stats"`
+	Spark        []float64    `json:"spark"`
+	Route        *HudRouteDTO `json:"route"`
+	QueueCount   int          `json:"queueCount"`
+	PlanDisplay  string       `json:"planDisplay"`  // auto | collapsed | expanded
+	ThinkDisplay string       `json:"thinkDisplay"` // auto | collapsed | expanded
 }
 
 // ReDTO mirrors ui.REHudModel — the reverse-mode phase tracker.
 type ReDTO struct {
-	SampleType  string `json:"sampleType"`
-	Phase       string `json:"phase"`
-	PhaseIndex  int    `json:"phaseIndex"`
-	PhaseCount  int    `json:"phaseCount"`
-	Hypotheses  int    `json:"hypotheses"`
-	Evidence    int    `json:"evidence"`
+	SampleType string `json:"sampleType"`
+	Phase      string `json:"phase"`
+	PhaseIndex int    `json:"phaseIndex"`
+	PhaseCount int    `json:"phaseCount"`
+	Hypotheses int    `json:"hypotheses"`
+	Evidence   int    `json:"evidence"`
 }
 
 // TickDTO is the 90ms dashboard snapshot — everything the five panels render.
 // types.PlanSnapshot is already json-tagged in core, so it crosses as-is.
 type TickDTO struct {
-	Flow FlowDTO            `json:"flow"`
-	Hud  HudDTO             `json:"hud"`
-	Re   *ReDTO             `json:"re"`
+	Flow FlowDTO             `json:"flow"`
+	Hud  HudDTO              `json:"hud"`
+	Re   *ReDTO              `json:"re"`
 	Plan *types.PlanSnapshot `json:"plan"`
 }
 
 // LifecycleEvent rides kind=lifecycle.
 type LifecycleEvent struct {
 	State string `json:"state"` // idle | running | awaiting_approval | closed
+}
+
+// --- ui state → DTO mapping --------------------------------------------------
+//
+// The GUI never runs a terminal LivePane, so these functions are the only place
+// internal/ui render state becomes wire data. ui.planBadge and ui.FlowStage's
+// constant values are unexported on purpose; the mappings here are the sanctioned
+// read path (fields of unexported types reached through exported fields).
+
+// NewFlowDTO maps a ui.FlowState snapshot onto the frozen FlowDTO wire shape.
+// Slices are always non-nil so the frontend sees [] rather than null.
+func NewFlowDTO(state ui.FlowState) FlowDTO {
+	dto := FlowDTO{
+		Stage:          string(state.Stage),
+		Turn:           state.Turn,
+		Provider:       state.Provider,
+		Model:          state.Model,
+		Endpoint:       state.Endpoint,
+		Messages:       state.Messages,
+		SentTokens:     state.SentTokens,
+		Usage:          state.Usage,
+		PendingCalls:   state.PendingCalls,
+		ActiveTool:     state.ActiveTool,
+		ToolMs:         state.ToolMs,
+		ToolsOK:        state.ToolsOK,
+		ToolsFailed:    state.ToolsFailed,
+		ToolRuns:       make([]ToolRunDTO, 0, len(state.ToolRuns)),
+		ReplyChars:     state.ReplyChars,
+		CompactedDrop:  state.CompactedDrop,
+		CompactedElide: state.CompactedElide,
+		HasCompacted:   state.HasCompacted,
+		PlanKind:       state.PlanKind,
+		Error:          state.Error,
+		Frame:          state.Frame,
+		Packets:        make([][]int, len(state.Packets)),
+		Since:          state.Since,
+	}
+	for _, run := range state.ToolRuns {
+		dto.ToolRuns = append(dto.ToolRuns, ToolRunDTO{
+			ID: run.ID, Name: run.Name, ArgsText: run.ArgsText, Preview: run.Preview,
+			Status: string(run.Status), StartedAt: run.StartedAt, FinishedAt: run.FinishedAt,
+			Ms: run.Ms, OK: run.OK,
+		})
+	}
+	if state.Plan != nil {
+		dto.Plan = &PlanBadgeDTO{Done: state.Plan.Done, Total: state.Plan.Total, Source: state.Plan.Source}
+	}
+	for index, offsets := range state.Packets {
+		packet := make([]int, len(offsets))
+		copy(packet, offsets)
+		dto.Packets[index] = packet
+	}
+	return dto
+}
+
+// HudSnapshot is the server-side HUD strip state the manager tracks per turn —
+// the same fields a ui.HudModel would carry, minus terminal-only details.
+type HudSnapshot struct {
+	Phase        string
+	Frame        string
+	ElapsedMs    int64
+	Stats        TokenUsage
+	Spark        []float64
+	Route        *ui.HudRoute
+	QueueCount   int
+	PlanDisplay  string // auto | collapsed | expanded
+	ThinkDisplay string // auto | collapsed | expanded
+}
+
+// NewHudDTO maps the tracked HUD state onto the wire shape. Spark is always
+// non-nil so the sparkline renders an empty series rather than vanishing.
+func NewHudDTO(snapshot HudSnapshot) HudDTO {
+	spark := make([]float64, len(snapshot.Spark))
+	copy(spark, snapshot.Spark)
+	dto := HudDTO{
+		Phase:        snapshot.Phase,
+		Frame:        snapshot.Frame,
+		ElapsedMs:    snapshot.ElapsedMs,
+		Stats:        snapshot.Stats,
+		Spark:        spark,
+		QueueCount:   snapshot.QueueCount,
+		PlanDisplay:  snapshot.PlanDisplay,
+		ThinkDisplay: snapshot.ThinkDisplay,
+	}
+	if snapshot.Route != nil {
+		dto.Route = &HudRouteDTO{
+			Planner: snapshot.Route.Planner, Executor: snapshot.Route.Executor, Active: snapshot.Route.Active,
+		}
+	}
+	return dto
+}
+
+// NewReDTO maps the reverse-mode HUD model; nil stays nil so the frontend hides
+// the RE panel outside reverse workflow sessions.
+func NewReDTO(model *ui.REHudModel) *ReDTO {
+	if model == nil {
+		return nil
+	}
+	return &ReDTO{
+		SampleType: model.SampleType,
+		Phase:      model.Phase,
+		PhaseIndex: model.PhaseIndex,
+		PhaseCount: model.PhaseCount,
+		Hypotheses: model.Hypotheses,
+		Evidence:   model.Evidence,
+	}
+}
+
+// NewTickDTO assembles the per-tick dashboard snapshot.
+func NewTickDTO(flow ui.FlowState, hud HudSnapshot, re *ui.REHudModel, plan *types.PlanSnapshot) TickDTO {
+	return TickDTO{Flow: NewFlowDTO(flow), Hud: NewHudDTO(hud), Re: NewReDTO(re), Plan: plan}
 }
