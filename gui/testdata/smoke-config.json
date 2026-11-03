@@ -19,18 +19,17 @@
               "arguments": {
                 "plan": [
                   { "step": "Publish smoke plan", "status": "completed" },
-                  { "step": "Write smoke artifact (needs approval)", "status": "in_progress" },
+                  { "step": "Approval-gated command writes artifact", "status": "in_progress" },
                   { "step": "Confirm final reply", "status": "pending" }
                 ],
                 "explanation": "GUI smoke: plan events + approval roundtrip"
               }
             },
             {
-              "id": "smoke-write-1",
-              "name": "write_file",
+              "id": "smoke-exec-1",
+              "name": "run_command",
               "arguments": {
-                "path": "smoke-ok.txt",
-                "content": "written by the GUI smoke run after an approve decision\n"
+                "command": "curl --version > smoke-ok.txt"
               }
             }
           ]
