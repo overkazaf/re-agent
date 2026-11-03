@@ -368,3 +368,23 @@
   .think-newest { animation: none; }
   .think-body { transition: none; }
 }
+
+/* =============================================================
+   TelePanel — telemetry rows
+   ============================================================= */
+.tele-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.tele-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tele-chip { white-space: nowrap; }
