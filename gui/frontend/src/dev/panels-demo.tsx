@@ -34,9 +34,9 @@ const STAGE_OVERRIDES: Partial<Record<FlowStage, Partial<FlowDTO>>> = {
   calls: { pendingCalls: 2, packets: [[], [1], [2, 6], [3, 8]] },
   tool: { activeTool: 'r2', toolMs: 3200, pendingCalls: 1, planKind: 'step', packets: [[], [], [1, 5], [2, 7, 12]] },
   write: { replyChars: 812, planKind: 'write', packets: [[], [2], [], []] },
-  done: {},
-  error: { error: 'provider 500: rate limited' },
-  idle: {},
+  done: { packets: [[], [], [], []] },
+  error: { error: 'provider 500: rate limited', packets: [[], [], [], []] },
+  idle: { packets: [[], [], [], []] },
 }
 
 /** planKind cycle for the flash demo (open → write → step → quiet). */
