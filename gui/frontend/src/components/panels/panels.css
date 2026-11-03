@@ -230,3 +230,76 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* =============================================================
+   PlanPanel — collapsed steps, planKind flash
+   ============================================================= */
+.plan-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.plan-src { font-size: 10px; }
+
+.plan-kind {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.plan-flash { animation: plan-flash 700ms ease-out; }
+
+@keyframes plan-flash {
+  0% {
+    text-shadow: 0 0 10px currentColor;
+    filter: brightness(1.7);
+  }
+  100% {
+    text-shadow: none;
+    filter: none;
+  }
+}
+
+.plan-note {
+  color: var(--muted);
+  font-size: 11px;
+  border-left: 2px solid var(--rule);
+  padding-left: 6px;
+  margin: 2px 0 6px;
+}
+
+.plan-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.plan-done { font-size: 11px; }
+
+.plan-step {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.plan-glyph { flex: 0 0 auto; }
+
+.plan-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-active { color: var(--text); }
+.plan-active .plan-glyph { text-shadow: 0 0 6px var(--accent); }
+.plan-pending { color: var(--faint); }
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-flash { animation: none; }
+}
