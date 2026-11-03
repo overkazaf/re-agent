@@ -76,7 +76,7 @@ func TestFlowDTOEveryStage(t *testing.T) {
 
 func TestFlowDTOToolRunsAndPlan(t *testing.T) {
 	state := ui.FlowState{
-		Stage: ui.FlowStage("tool"), ActiveTool: "run_command", ToolMs: 3200,
+		Stage: ui.FlowStage("tool"), ActiveTool: "run_command", ToolStartedAt: 1700000000000, ToolMs: 3200,
 		ToolsOK: 2, ToolsFailed: 1, PendingCalls: 1,
 		ToolRuns: []ui.ToolRunSnapshot{
 			{ID: 1, Name: "file_info", ArgsText: "path=./x", Preview: "ELF64", Status: ui.ToolRunDone,
@@ -96,7 +96,7 @@ func TestFlowDTOToolRunsAndPlan(t *testing.T) {
 	if dto.ToolRuns[0].ArgsText != "path=./x" || dto.ToolRuns[0].Preview != "ELF64" || dto.ToolRuns[0].Ms != 100 {
 		t.Fatalf("tool run detail wrong: %+v", dto.ToolRuns[0])
 	}
-	if dto.ActiveTool != "run_command" || dto.ToolMs != 3200 || dto.PendingCalls != 1 {
+	if dto.ActiveTool != "run_command" || dto.ToolStartedAt != 1700000000000 || dto.ToolMs != 3200 || dto.PendingCalls != 1 {
 		t.Fatalf("active tool fields wrong: %+v", dto)
 	}
 	if dto.ToolsOK != 2 || dto.ToolsFailed != 1 {

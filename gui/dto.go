@@ -95,6 +95,7 @@ type FlowDTO struct {
 	Usage          TokenUsage    `json:"usage"`
 	PendingCalls   int           `json:"pendingCalls"`
 	ActiveTool     string        `json:"activeTool"`
+	ToolStartedAt  int64         `json:"toolStartedAt"` // wall-clock ms; >0 while a tool runs so the panel can show live elapsed
 	ToolMs         int64         `json:"toolMs"`
 	ToolsOK        int           `json:"toolsOk"`
 	ToolsFailed    int           `json:"toolsFailed"`
@@ -155,6 +156,16 @@ type LifecycleEvent struct {
 	State string `json:"state"` // idle | running | awaiting_approval | closed
 }
 
+// EventEnvelope is the gui:event payload wrapper (contract §0.3). Data holds
+// one of: []core.LoopEvent (kind=loop), TickDTO, ApprovalDTO, NoticeDTO,
+// LifecycleEvent.
+type EventEnvelope struct {
+	SessionID string `json:"sessionId"`
+	Kind      string `json:"kind"`
+	Ts        int64  `json:"ts"`
+	Data      any    `json:"data"`
+}
+
 // --- ui state → DTO mapping --------------------------------------------------
 //
 // The GUI never runs a terminal LivePane, so these functions are the only place
@@ -176,6 +187,7 @@ func NewFlowDTO(state ui.FlowState) FlowDTO {
 		Usage:          state.Usage,
 		PendingCalls:   state.PendingCalls,
 		ActiveTool:     state.ActiveTool,
+		ToolStartedAt:  state.ToolStartedAt,
 		ToolMs:         state.ToolMs,
 		ToolsOK:        state.ToolsOK,
 		ToolsFailed:    state.ToolsFailed,
