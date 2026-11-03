@@ -21,40 +21,40 @@ const DefaultContextBudgetTokens = 48_000
 // struct rather than a union: Go has no discriminated unions, and the Type
 // field is what every consumer switches on anyway.
 type LoopEvent struct {
-	Type string // turn | wire | compaction | progress | plan | reply | tool_start | tool_end
+	Type string `json:"type"` // turn | wire | compaction | progress | plan | reply | tool_start | tool_end
 
 	// turn
-	Turn     int
-	Provider string
+	Turn     int    `json:"turn"`
+	Provider string `json:"provider"`
 
 	// wire
-	Phase     string // send | recv
-	Model     string
-	Endpoint  string
-	Messages  int
-	Tokens    int
-	Tools     int
-	Ms        int64
-	OK        bool
-	ToolCalls int
-	TextChars int
-	Error     string
+	Phase     string `json:"phase"` // send | recv
+	Model     string `json:"model"`
+	Endpoint  string `json:"endpoint"`
+	Messages  int    `json:"messages"`
+	Tokens    int    `json:"tokens"`
+	Tools     int    `json:"tools"`
+	Ms        int64  `json:"ms"`
+	OK        bool   `json:"ok"`
+	ToolCalls int    `json:"toolCalls"`
+	TextChars int    `json:"textChars"`
+	Error     string `json:"error"`
 
 	// compaction
-	TokensBefore      int
-	TokensAfter       int
-	DroppedMessages   int
-	ElidedToolResults int
+	TokensBefore      int `json:"tokensBefore"`
+	TokensAfter       int `json:"tokensAfter"`
+	DroppedMessages   int `json:"droppedMessages"`
+	ElidedToolResults int `json:"elidedToolResults"`
 
 	// progress / plan / reply / tool_*
-	Progress types.ProviderProgress
-	Snapshot *types.PlanSnapshot
-	Text     string
-	Usage    *types.TokenUsage
-	Reason   string
-	Name     string
-	Args     map[string]any
-	Preview  string
+	Progress types.ProviderProgress `json:"progress"`
+	Snapshot *types.PlanSnapshot    `json:"snapshot"`
+	Text     string                 `json:"text"`
+	Usage    *types.TokenUsage      `json:"usage"`
+	Reason   string                 `json:"reason"`
+	Name     string                 `json:"name"`
+	Args     map[string]any         `json:"args"`
+	Preview  string                 `json:"preview"`
 }
 
 type LoopOptions struct {

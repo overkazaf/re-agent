@@ -436,15 +436,15 @@ type ProviderResponse struct {
 
 // ProviderProgress is live progress emitted while a turn is still running.
 type ProviderProgress struct {
-	Kind string // status | thinking | text | tool | usage | plan
-	Text string
-	Tool string
+	Kind string `json:"kind"` // status | thinking | text | tool | usage | plan
+	Text string `json:"text"`
+	Tool string `json:"tool"`
 	// Status is a short phase label.
-	Status string
-	Usage  *TokenUsage
+	Status string      `json:"status"`
+	Usage  *TokenUsage `json:"usage"`
 	// Plan is a full replacement task list, carried by kind=plan.
-	Plan     []PlanStep
-	PlanNote string
+	Plan     []PlanStep `json:"plan"`
+	PlanNote string     `json:"planNote"`
 }
 
 type ProviderInput struct {
