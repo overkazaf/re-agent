@@ -1,10 +1,144 @@
-/* WS2 owns this file — reset, monospace base, CRT scrollbars. */
+/* ============================================================================
+   0xAF·RE — base layer (WS2)
 
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
+   Reset, the terminal monospace stack, CRT scrollbar, selection, and the
+   data-theme crossfade. Loads after tokens.css and crt.css (see main.tsx).
+   ========================================================================== */
+
+/* --- reset ------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Terminal stack: JetBrains Mono ships locally via @fontsource, everything
+     behind it is a system fallback with matching metrics. */
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+  font-size: 13px;
+  line-height: 1.45;
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
 }
-.placeholder { color: var(--faint); font-size: 12px; padding: 8px; }
+
+h1, h2, h3, h4, p, pre, figure, blockquote {
+  margin: 0;
+}
+
+ul, ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button, input, textarea, select {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-shadow: 0 0 calc(6px * var(--glow-strength)) var(--accent);
+}
+
+code, pre, kbd {
+  font-family: inherit;
+}
+
+/* --- theme crossfade -----------------------------------------------------------
+   data-theme swaps swap a dozen vars at once; a short color transition makes
+   /theme feel like retuning a tube instead of cutting the feed. Only
+   colors/borders/shadows transition — layout stays instant. */
+html {
+  transition: background-color 0.3s ease;
+}
+
+body,
+.crt-panel,
+input, textarea, button {
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* --- selection ------------------------------------------------------------------ */
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--text);
+  text-shadow: none;
+}
+
+/* --- CRT scrollbar ----------------------------------------------------------------
+   Thin square thumb, accent-lit, barely-there track. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 0; /* square: phosphor has no antialiasing */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* --- focus ------------------------------------------------------------------------ */
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* --- shared placeholder block (scaffold compatibility) ----------------------------- */
+
+.placeholder {
+  color: var(--faint);
+  font-size: 12px;
+  padding: 8px;
+}
