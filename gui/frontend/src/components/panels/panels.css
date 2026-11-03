@@ -1,0 +1,172 @@
+/* panels/panels.css — WS3 panel-level styles only. Tone colors come straight
+   from the theme tokens (styles/tokens.css); no new color values here. */
+
+/* ---- shared tone utilities (color only) ---- */
+.t-accent { color: var(--accent); }
+.t-violet { color: var(--violet); }
+.t-ok     { color: var(--ok); }
+.t-warn   { color: var(--warn); }
+.t-err    { color: var(--err); }
+.t-text   { color: var(--text); }
+.t-muted  { color: var(--muted); }
+.t-faint  { color: var(--faint); }
+
+.glow-ok  { color: var(--ok); text-shadow: 0 0 6px var(--ok); }
+.glow-err { color: var(--err); text-shadow: 0 0 6px var(--err); }
+
+.panel-empty { font-size: 11px; padding: 4px 0; }
+
+/* =============================================================
+   FlowPanel — dual wires, packet particles, stage rail
+   ============================================================= */
+.flow-body { min-width: 0; }
+
+.stage-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.stage-badge {
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--faint);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.stage-on { background: rgba(255, 255, 255, 0.05); }
+
+.flow-spacer { flex: 1 1 0; }
+
+.flow-plan { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.flow-plan b { color: var(--accent); font-weight: 500; }
+.flow-plan i { color: var(--faint); font-style: normal; }
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flow-row2 { margin-top: 6px; }
+
+.flow-node { white-space: nowrap; font-size: 12px; }
+
+.flow-model-wrap { position: relative; white-space: nowrap; }
+
+.flow-backmark {
+  position: absolute;
+  left: -11px;
+  top: 50%;
+  transform: translateY(-55%);
+  color: var(--ok);
+  font-size: 10px;
+}
+
+/* a wire is a flexible track; the arrow head rides the travel direction */
+.wire {
+  position: relative;
+  flex: 1 1 40px;
+  min-width: 28px;
+  height: 1em;
+}
+
+.wire::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--rule);
+}
+
+.wire::after {
+  content: '▶';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-56%);
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.wire-left::after {
+  content: '◀';
+  right: auto;
+  left: -4px;
+}
+
+.packet {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--wire-tone);
+  box-shadow: 0 0 5px var(--wire-tone);
+  animation: packet-right 1.6s linear infinite;
+}
+
+.wire-left .packet { animation-name: packet-left; }
+
+@keyframes packet-right {
+  from { left: 0%; }
+  to   { left: 100%; }
+}
+
+@keyframes packet-left {
+  from { left: 100%; }
+  to   { left: 0%; }
+}
+
+.flow-phase {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flow-sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  margin: 2px 2px 0;
+}
+
+.flow-tool-line {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.flow-tally { white-space: nowrap; }
+
+.flow-error {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px;
+  color: var(--err);
+  text-shadow: 0 0 6px var(--err);
+  word-break: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* freeze packets at their contract offsets (inline `left`) */
+  .packet { animation: none; }
+}
