@@ -1,0 +1,58 @@
+{
+  "name": "0xAF-Re GUI Smoke",
+  "plannerProvider": "mock",
+  "executorProvider": "mock",
+  "defaultRole": "executor",
+  "maxTurns": 8,
+  "providers": {
+    "mock": {
+      "type": "mock",
+      "label": "Mock (offline smoke)",
+      "model": "mock-1",
+      "mockScript": [
+        {
+          "text": "Beginning offline smoke run: publishing plan, then writing an artifact that requires approval.",
+          "toolCalls": [
+            {
+              "id": "smoke-plan-1",
+              "name": "update_plan",
+              "arguments": {
+                "plan": [
+                  { "step": "Publish smoke plan", "status": "completed" },
+                  { "step": "Write smoke artifact (needs approval)", "status": "in_progress" },
+                  { "step": "Confirm final reply", "status": "pending" }
+                ],
+                "explanation": "GUI smoke: plan events + approval roundtrip"
+              }
+            },
+            {
+              "id": "smoke-write-1",
+              "name": "write_file",
+              "arguments": {
+                "path": "smoke-ok.txt",
+                "content": "written by the GUI smoke run after an approve decision\n"
+              }
+            }
+          ]
+        },
+        {
+          "text": "## Smoke complete\n\nThe approved write landed and the plan advanced. **All GUI event paths exercised.**",
+          "toolCalls": [
+            {
+              "id": "smoke-plan-2",
+              "name": "update_plan",
+              "arguments": {
+                "plan": [
+                  { "step": "Publish smoke plan", "status": "completed" },
+                  { "step": "Write smoke artifact (needs approval)", "status": "completed" },
+                  { "step": "Confirm final reply", "status": "completed" }
+                ],
+                "explanation": "GUI smoke: all steps done"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

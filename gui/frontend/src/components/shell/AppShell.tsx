@@ -28,6 +28,7 @@ export function AppShell({
   side,
   transcript,
   prompt,
+  live = 0,
 }: {
   topRight: ReactNode
   sidebar: ReactNode
@@ -35,12 +36,14 @@ export function AppShell({
   side: ReactNode
   transcript: ReactNode
   prompt: ReactNode
+  /** live session count — drives the breathing ● LIVE indicator (integration) */
+  live?: number
 }) {
   return (
     <>
       <div className="app-shell crt-flicker" style={GRID}>
         <div className="shell-bar" style={{ gridArea: 'top', padding: '0 4px' }}>
-          <TopBar />
+          <TopBar live={live} />
           <div>{topRight}</div>
         </div>
         <div className="shell-cell" style={{ ...cell, gridArea: 'sidebar' }}>{sidebar}</div>

@@ -95,6 +95,7 @@ export interface FlowDTO {
   usage: TokenUsage
   pendingCalls: number
   activeTool: string
+  toolStartedAt: number
   toolMs: number
   toolsOk: number
   toolsFailed: number

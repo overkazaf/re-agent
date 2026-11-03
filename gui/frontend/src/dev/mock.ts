@@ -21,7 +21,7 @@ const usage: TokenUsage = {
 export function flow(stage: FlowDTO['stage'], over: Partial<FlowDTO> = {}): FlowDTO {
   return {
     stage, turn: 4, provider: 'claude-max', model: 'claude-sonnet-5-5', endpoint: 'api.anthropic.com',
-    messages: 23, sentTokens: 8412, usage, pendingCalls: 0, activeTool: '', toolMs: 0,
+    messages: 23, sentTokens: 8412, usage, pendingCalls: 0, activeTool: '', toolStartedAt: 0, toolMs: 0,
     toolsOk: 6, toolsFailed: 1, toolRuns: [], replyChars: 0, compactedDrop: 0, compactedElide: 0,
     hasCompacted: true, plan: { done: 3, total: 7, source: 'update_plan' }, planKind: '',
     error: '', frame: 12, packets: [[3, 8, 14], [2, 9], [5, 11, 16], [1, 7]], since: Date.now() - 94_000,
