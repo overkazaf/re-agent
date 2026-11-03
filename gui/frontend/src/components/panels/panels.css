@@ -388,3 +388,55 @@
 }
 
 .tele-chip { white-space: nowrap; }
+
+/* =============================================================
+   Dashboard — five-panel grid
+   ============================================================= */
+.dash-root {
+  container-type: inline-size;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dash-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(200px, auto) auto;
+  grid-template-areas:
+    'flow  flow'
+    'tools tools'
+    'plan  think'
+    'tele  tele';
+}
+
+/* each cell stretches its PanelBox so grid rows share height cleanly */
+.dash-cell {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dash-cell > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dash-flow  { grid-area: flow; }
+.dash-tools { grid-area: tools; }
+.dash-plan  { grid-area: plan; }
+.dash-think { grid-area: think; }
+.dash-tele  { grid-area: tele; }
+
+/* narrow container: PLAN/THINK stack instead of sharing a row */
+@container (max-width: 719px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'flow'
+      'tools'
+      'plan'
+      'think'
+      'tele';
+  }
+}
