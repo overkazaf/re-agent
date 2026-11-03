@@ -258,6 +258,58 @@
 .crt-spinner--warn   { color: var(--warn);   text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--warn) 55%, transparent); }
 .crt-spinner--err    { color: var(--err);    text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--err) 55%, transparent); }
 
+/* --- shell chrome (consumed by shell/AppShell, shell/TopBar) ---------------------- */
+
+/* Inset instrument cells: panel wash + hairline rule + a single lit top edge,
+   like modules screwed into a rack. */
+.shell-cell {
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-panel);
+  border: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.shell-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+}
+
+.topbar-logo {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  white-space: pre;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.topbar-live-dot {
+  animation: live-breathe 2s ease-in-out infinite;
+  text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+@keyframes live-breathe {
+  0%, 100% {
+    opacity: 0.75;
+    text-shadow: 0 0 calc(3px * var(--glow-strength)) color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 calc(9px * var(--glow-strength)) color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+}
+
 /* --- boot splash ----------------------------------------------------------------- */
 
 .boot-logo {
@@ -363,5 +415,11 @@
   .status-badge--ok {
     animation: none;
     text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent);
+  }
+
+  .topbar-live-dot {
+    animation: none;
+    opacity: 1;
+    text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--accent) 55%, transparent);
   }
 }
