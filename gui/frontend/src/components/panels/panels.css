@@ -303,3 +303,68 @@
 @media (prefers-reduced-motion: reduce) {
   .plan-flash { animation: none; }
 }
+
+/* =============================================================
+   ThinkPanel — bottom-anchored thinking tail
+   ============================================================= */
+.think-root {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.think-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0 0 4px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.think-head-hint { margin-left: auto; }
+
+.think-body {
+  height: calc(var(--think-rows, 3) * 1.5em + 6px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-size: 11px;
+  line-height: 1.5;
+  transition: height 200ms ease;
+}
+
+.think-line {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.think-newest {
+  color: var(--text);
+  animation: think-in 450ms ease-out;
+}
+
+@keyframes think-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .think-newest { animation: none; }
+  .think-body { transition: none; }
+}
