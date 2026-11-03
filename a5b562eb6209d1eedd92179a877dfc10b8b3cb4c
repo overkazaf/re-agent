@@ -1,0 +1,43 @@
+gui/frontend/src/styles/base.css
+  74bb506e759dbcca 1-2,4-24,27-32,35-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "a5b562eb6209d1eedd92179a877dfc10b8b3cb4c",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 197,
+      "total_deletions": 5,
+      "accepted_lines": 1796,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/dist/index.html": {
+          "accepted_lines": 5
+        },
+        "gui/frontend/src/styles/base.css": {
+          "additions": 139,
+          "deletions": 5,
+          "accepted_lines": 139
+        },
+        "gui/testdata/smoke-config.json": {
+          "additions": 58,
+          "accepted_lines": 58
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        }
+      }
+    }
+  }
+}
