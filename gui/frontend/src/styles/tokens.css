@@ -1,6 +1,40 @@
-/* WS2 owns this file — design tokens from internal/ui/theme.go palettes.
-   Scaffold placeholder below keeps var() consumers unbroken until WS2 lands. */
+/* ============================================================================
+   0xAF·RE — CRT design tokens (WS2)
 
+   The 11 tone colors are a literal transcription of internal/ui/theme.go
+   (palette structs `deck`, `amber`, `matrix`, `mono`). RGB values are the
+   source of truth; do not invent colors here — if a tone needs to change,
+   change theme.go first and mirror it.
+
+   Per-theme chrome tokens (--bg, --bg-panel, --glow-strength,
+   --scanline-opacity) are GUI-specific: Go has no canvas background, so these
+   set the "tube" each phosphor palette lives in.
+
+   Consumers: everything. Components read var(--accent) etc.; crt.css reads
+   --glow-strength / --scanline-opacity. Theme switching happens by setting
+   data-theme on <html> (see theme/ThemeContext.tsx).
+   ========================================================================== */
+
+/* Default = deck, so pages that never set data-theme still render correctly. */
+:root {
+  --accent: rgb(34, 211, 238);
+  --accent-dim: rgb(14, 116, 144);
+  --violet: rgb(167, 139, 250);
+  --violet-dim: rgb(91, 71, 156);
+  --ok: rgb(74, 222, 128);
+  --warn: rgb(251, 191, 36);
+  --err: rgb(248, 113, 113);
+  --text: rgb(229, 231, 235);
+  --muted: rgb(148, 163, 184);
+  --faint: rgb(100, 116, 139);
+  --rule: rgb(51, 65, 85);
+  --bg: #05080c;
+  --bg-panel: rgba(13, 22, 32, 0.6);
+  --glow-strength: 1;
+  --scanline-opacity: 0.4;
+}
+
+/* deck — cyan + violet cyberdeck (theme.go:42) */
 :root[data-theme='deck'] {
   --accent: rgb(34, 211, 238);
   --accent-dim: rgb(14, 116, 144);
@@ -16,5 +50,64 @@
   --bg: #05080c;
   --bg-panel: rgba(13, 22, 32, 0.6);
   --glow-strength: 1;
-  --scanline-opacity: 0.5;
+  --scanline-opacity: 0.4;
+}
+
+/* amber — amber phosphor CRT (theme.go:58); everything in the amber family,
+   only err breaks out. Warm deep-brown tube, heavy bloom. */
+:root[data-theme='amber'] {
+  --accent: rgb(255, 176, 0);
+  --accent-dim: rgb(166, 112, 0);
+  --violet: rgb(255, 210, 127);
+  --violet-dim: rgb(140, 100, 40);
+  --ok: rgb(255, 214, 51);
+  --warn: rgb(255, 149, 0);
+  --err: rgb(255, 95, 86);
+  --text: rgb(255, 204, 102);
+  --muted: rgb(193, 143, 43);
+  --faint: rgb(125, 88, 20);
+  --rule: rgb(74, 52, 12);
+  --bg: #0c0702;
+  --bg-panel: rgba(30, 18, 5, 0.55);
+  --glow-strength: 1.25;
+  --scanline-opacity: 0.35;
+}
+
+/* matrix — green phosphor (theme.go:73). Deep green-black tube, brisk glow. */
+:root[data-theme='matrix'] {
+  --accent: rgb(0, 255, 156);
+  --accent-dim: rgb(0, 168, 104);
+  --violet: rgb(124, 255, 178);
+  --violet-dim: rgb(40, 120, 80);
+  --ok: rgb(0, 255, 156);
+  --warn: rgb(255, 209, 102);
+  --err: rgb(255, 107, 107);
+  --text: rgb(200, 255, 217);
+  --muted: rgb(78, 142, 106);
+  --faint: rgb(47, 92, 70);
+  --rule: rgb(30, 58, 44);
+  --bg: #030905;
+  --bg-panel: rgba(7, 26, 16, 0.55);
+  --glow-strength: 1.15;
+  --scanline-opacity: 0.45;
+}
+
+/* mono — hueless, contrast-only (theme.go:89). Neutral tube, minimal bloom:
+   hierarchy must come from contrast, not from glow. */
+:root[data-theme='mono'] {
+  --accent: rgb(255, 255, 255);
+  --accent-dim: rgb(160, 160, 160);
+  --violet: rgb(214, 214, 214);
+  --violet-dim: rgb(120, 120, 120);
+  --ok: rgb(235, 235, 235);
+  --warn: rgb(190, 190, 190);
+  --err: rgb(255, 255, 255);
+  --text: rgb(224, 224, 224);
+  --muted: rgb(150, 150, 150);
+  --faint: rgb(110, 110, 110);
+  --rule: rgb(68, 68, 68);
+  --bg: #0a0a0a;
+  --bg-panel: rgba(20, 20, 20, 0.6);
+  --glow-strength: 0.45;
+  --scanline-opacity: 0.3;
 }
