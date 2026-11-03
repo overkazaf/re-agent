@@ -1,0 +1,66 @@
+gui/manager.go
+  74bb506e759dbcca 310-317,320,729-739
+gui/app_test.go
+  74bb506e759dbcca 1-96
+gui/command.go
+  74bb506e759dbcca 16,24,40-53,69-76,94,113-128
+gui/app.go
+  74bb506e759dbcca 5-13,17-19,21-24,27-33,36-43,47-50,53,56,60,64,68-69,73,77,81,85-89,92-94,96-106,109-120,124-126,129-138,141-148,150-153
+gui/command_test.go
+  74bb506e759dbcca 168-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "40b4e73794cef06e15719ac3e84552a89cbac621",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 299,
+      "total_deletions": 57,
+      "accepted_lines": 1880,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/app_test.go": {
+          "additions": 97,
+          "deletions": 1,
+          "accepted_lines": 96
+        },
+        "gui/command.go": {
+          "additions": 50,
+          "deletions": 9,
+          "accepted_lines": 41
+        },
+        "gui/command_test.go": {
+          "additions": 24,
+          "accepted_lines": 24
+        },
+        "gui/manager.go": {
+          "additions": 20,
+          "deletions": 18,
+          "accepted_lines": 20
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "gui/main.go": {
+          "deletions": 3
+        },
+        "gui/app.go": {
+          "additions": 108,
+          "deletions": 26,
+          "accepted_lines": 105
+        }
+      }
+    }
+  }
+}
