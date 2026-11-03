@@ -1,0 +1,43 @@
+gui/frontend/src/components/session/PromptInput.tsx
+  74bb506e759dbcca 1-273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "04fedee7a9634c7f47e5eb756290fba6ed31bcc2",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 318,
+      "total_deletions": 0,
+      "accepted_lines": 1313,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/panels/Dashboard.tsx": {
+          "additions": 39,
+          "accepted_lines": 39
+        },
+        "gui/dto.go": {
+          "accepted_lines": 20
+        },
+        "gui/manager.go": {
+          "accepted_lines": 975
+        },
+        "gui/frontend/src/components/session/PromptInput.tsx": {
+          "additions": 273,
+          "accepted_lines": 273
+        },
+        "gui/frontend/src/components/panels/index.ts": {
+          "additions": 6,
+          "accepted_lines": 6
+        }
+      }
+    }
+  }
+}
