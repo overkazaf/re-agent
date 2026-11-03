@@ -157,6 +157,9 @@ func TestSendCommandErrors(t *testing.T) {
 	if _, err := mgr.SendCommand(id, "/login"); err == nil {
 		t.Fatal("/login must be refused in the GUI")
 	}
+	if _, err := mgr.SendCommand(id, "/workflow reverse"); err == nil {
+		t.Fatal("/workflow reverse must be refused in the GUI (terminal RE picker)")
+	}
 	if _, err := mgr.SendCommand("gui-missing", "/help"); err == nil {
 		t.Fatal("unknown session must error")
 	}

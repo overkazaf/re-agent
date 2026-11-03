@@ -73,6 +73,12 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		return CommandResultDTO{}, fmt.Errorf(
 			"command %s is not available while a turn is running — wait for it to finish", command[0])
 	}
+	// /workflow reverse opens the terminal RE picker (state.editor.ReadLine);
+	// the GUI State has no editor, so it would nil-panic. Reverse sessions
+	// belong to the frontend's own flow until a GUI-native picker exists.
+	if strings.ToLower(command[0]) == "/workflow" && strings.EqualFold(command[len(command)-1], "reverse") {
+		return CommandResultDTO{}, fmt.Errorf("/workflow reverse needs the terminal RE picker — not available from the GUI yet")
+	}
 
 	s.cmdMu.Lock()
 	defer s.cmdMu.Unlock()
