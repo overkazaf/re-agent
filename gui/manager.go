@@ -418,10 +418,10 @@ func (m *SessionManager) sinkFor() eventSink {
 
 type deadSink struct{}
 
-func (deadSink) LoopEvent(string, core.LoopEvent)      {}
-func (deadSink) Notice(string, string, string)         {}
-func (deadSink) Lifecycle(string, string)              {}
-func (deadSink) Tick(string, TickDTO)                  {}
+func (deadSink) LoopEvent(string, core.LoopEvent) {}
+func (deadSink) Notice(string, string, string)    {}
+func (deadSink) Lifecycle(string, string)         {}
+func (deadSink) Tick(string, TickDTO)             {}
 
 // StartOptions mirrors dto.StartOptions internally so tests can construct it
 // without the Wails binding layer. Workspace defaults to the cwd; Mock=true
@@ -904,6 +904,20 @@ func (m *SessionManager) Snapshot(id string) (TickDTO, bool) {
 	if s == nil {
 		return TickDTO{}, false
 	}
+	return NewTickDTO(
+		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
+	), true
+}
+
+// TickSnapshot advances one animation frame (spinner, sparkline sampling) and
+// returns the fresh snapshot — the EventBridge cadence calls this per tick, the
+// same role the TUI live pane's redraw loop plays.
+func (m *SessionManager) TickSnapshot(id string) (TickDTO, bool) {
+	s := m.get(id)
+	if s == nil {
+		return TickDTO{}, false
+	}
+	s.hud.onTick()
 	return NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
 	), true
