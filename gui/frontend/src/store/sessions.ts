@@ -190,7 +190,8 @@ export function hasBackend(): boolean {
   }
 }
 
-function errText(err: unknown): string {
+/** Human-readable message for a failed api call (browser-dev aware). */
+export function errText(err: unknown): string {
   if (!hasBackend()) return 'Wails runtime 不可用（浏览器 dev 环境）'
   if (err instanceof Error) return err.message
   return String(err)
