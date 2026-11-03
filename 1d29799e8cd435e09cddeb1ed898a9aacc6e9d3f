@@ -1,0 +1,43 @@
+gui/e2e_test.go
+  74bb506e759dbcca 1-300
+gui/testdata/smoke-config.json
+  74bb506e759dbcca 22,29-30,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "1d29799e8cd435e09cddeb1ed898a9aacc6e9d3f",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 307,
+      "total_deletions": 8,
+      "accepted_lines": 1898,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/e2e_test.go": {
+          "additions": 303,
+          "deletions": 3,
+          "accepted_lines": 300
+        },
+        "gui/testdata/smoke-config.json": {
+          "additions": 4,
+          "deletions": 5,
+          "accepted_lines": 4
+        },
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 316
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "accepted_lines": 1278
+        }
+      }
+    }
+  }
+}
