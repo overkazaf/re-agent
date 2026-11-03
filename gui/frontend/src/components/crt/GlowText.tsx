@@ -1,4 +1,5 @@
-// Functional baseline — WS2 upgrades with layered text-shadow glow.
+// Phosphor glow text — consumes the .glow-* utilities from crt.css, which
+// derive their halos from the active theme's palette and --glow-strength.
 import type { ReactNode } from 'react'
 
 export function GlowText({
@@ -8,5 +9,5 @@ export function GlowText({
   tone?: 'accent' | 'violet' | 'ok' | 'warn' | 'err' | 'text' | 'muted'
   children: ReactNode
 }) {
-  return <span style={{ color: `var(--${tone})` }}>{children}</span>
+  return <span className={`glow-${tone}`}>{children}</span>
 }

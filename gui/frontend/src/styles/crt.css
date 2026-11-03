@@ -80,6 +80,10 @@
 .glow-warn   { color: var(--warn); }
 .glow-err    { color: var(--err); }
 .glow-text   { color: var(--text); }
+.glow-muted {
+  color: var(--muted);
+  text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--muted) 30%, transparent);
+}
 
 /* Panel titles get a wider, dimmer bloom than body glow text. */
 .glow-title {
@@ -178,6 +182,20 @@
 .crt-panel--ok     { border-color: color-mix(in srgb, var(--ok) 38%, var(--rule)); }
 .crt-panel--warn   { border-color: color-mix(in srgb, var(--warn) 45%, var(--rule)); }
 .crt-panel--err    { border-color: color-mix(in srgb, var(--err) 45%, var(--rule)); }
+
+/* ╭╮╰╯ glyphs sit on the square border corners (TUI box hybrid). */
+.crt-panel-corner {
+  position: absolute;
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) currentColor;
+}
+
+.crt-panel-corner.tl { top: -6px; left: -5px; }
+.crt-panel-corner.tr { top: -6px; right: -5px; }
+.crt-panel-corner.bl { bottom: -6px; left: -5px; }
+.crt-panel-corner.br { bottom: -6px; right: -5px; }
 
 /* --- corner brackets (CornerFrame) -------------------------------------------- */
 
@@ -285,6 +303,17 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
+.boot-cursor {
+  display: inline-block;
+  color: var(--accent);
+  animation: boot-cursor-blink 1.1s steps(1) infinite;
+}
+
+@keyframes boot-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .boot-tagline {
   color: var(--faint);
   letter-spacing: 0.14em;
@@ -324,6 +353,11 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .boot-cursor {
+    animation: none;
+    opacity: 1;
   }
 
   .status-badge--ok {

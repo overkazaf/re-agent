@@ -1,5 +1,7 @@
-// Functional baseline — WS2 upgrades with full CRT corner-glyph treatment.
+// Panel chrome: square CSS border + ╭╮╰╯ phosphor corner glyphs + glowing
+// title, per the TUI box language (internal/ui/hud.go boxTL/TR/BL/BR).
 import type { ReactNode } from 'react'
+import { PanelCorners, toneColor } from './corners'
 
 export function PanelBox({
   title,
@@ -10,29 +12,17 @@ export function PanelBox({
   accent?: 'accent' | 'violet' | 'ok' | 'warn' | 'err'
   children: ReactNode
 }) {
-  const color = accent ? `var(--${accent})` : 'var(--muted)'
+  const tone = accent ?? 'muted'
   return (
-    <section
-      style={{
-        border: '1px solid var(--rule)',
-        background: 'var(--bg-panel)',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-      }}
-    >
+    <section className={`crt-panel${accent ? ` crt-panel--${accent}` : ''}`}>
+      <PanelCorners tone={tone} />
       <header
-        style={{
-          color,
-          fontSize: 11,
-          letterSpacing: '0.12em',
-          padding: '4px 10px',
-          borderBottom: '1px solid var(--rule)',
-        }}
+        className={`crt-panel-title${accent ? ` glow-${accent}` : ''}`}
+        style={accent ? undefined : { color: toneColor('muted') }}
       >
-        ╭─ {title.toUpperCase()} ─╮
+        {title.toUpperCase()}
       </header>
-      <div style={{ padding: '6px 10px', overflow: 'auto', minHeight: 0, flex: 1 }}>{children}</div>
+      <div className="crt-panel-body">{children}</div>
     </section>
   )
 }
