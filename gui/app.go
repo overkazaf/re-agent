@@ -22,6 +22,7 @@ type App struct {
 	manager   *SessionManager
 	events    *EventBridge
 	approvals *ApprovalBridge
+	shells    *ShellManager
 }
 
 // NewApp assembles the backend before the window exists: sessions already work
@@ -30,7 +31,7 @@ type App struct {
 func NewApp() *App {
 	approvals := NewApprovalBridge()
 	manager := NewSessionManager(nil, approvals.Approver())
-	return &App{manager: manager, approvals: approvals}
+	return &App{manager: manager, approvals: approvals, shells: NewShellManager()}
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -40,10 +41,14 @@ func (a *App) startup(ctx context.Context) {
 	a.approvals.SetEmit(func(envelope EventEnvelope) {
 		wruntime.EventsEmit(ctx, EventChannel, envelope)
 	})
+	a.shells.SetEmit(func(envelope ShellEnvelope) {
+		wruntime.EventsEmit(ctx, shellChannel, envelope)
+	})
 }
 
 func (a *App) shutdownCtx(ctx context.Context) {
 	_ = ctx
+	a.shells.StopAll()
 	a.manager.CloseAll()
 	if a.events != nil {
 		a.events.Close()
@@ -89,6 +94,16 @@ func (a *App) GetState(id string) (TickDTO, error) {
 	return tick, nil
 }
 
+// GetSettings renders the session's live config for the settings dialog.
+func (a *App) GetSettings(id string) (SettingsDTO, error) {
+	return a.manager.GetSettings(id)
+}
+
+// SetSettings applies a settings patch to the session's live config.
+func (a *App) SetSettings(id string, patch SettingsPatch) error {
+	return a.manager.SetSettings(id, patch)
+}
+
 // Completions bridges ui.SlashCompletions onto the frozen []string contract.
 // The frontend replaces the whole line, so each entry is the item's Replacement
 // (not its display Value); the rich CompletionItem DTO is a v2 upgrade.
@@ -125,6 +140,43 @@ func (a *App) GetThemes() ([]string, error) {
 	copy(themes, ui.ThemeNames)
 	return themes, nil
 }
+
+// HomeDir is the default workspace root for new sessions and shells — the
+// manager's own fallback (guiHomeDir) exposed so the dialogs pre-fill the
+// same value instead of guessing.
+func (a *App) HomeDir() string {
+	return guiHomeDir()
+}
+
+// PickDirectory opens the OS directory picker and returns the chosen path
+// ("" when cancelled).
+func (a *App) PickDirectory() (string, error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("runtime not ready")
+	}
+	path, err := wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{
+		Title:                "选择 workspace / 选择目录",
+		CanCreateDirectories: true,
+	})
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+// --- shells -------------------------------------------------------------------
+
+// ShellStart spawns an interactive PTY shell rooted at cwd ("" → $HOME).
+func (a *App) ShellStart(cwd string) (ShellInfo, error) {
+	return a.shells.Start(cwd)
+}
+
+func (a *App) ShellWrite(id, data string) error { return a.shells.Write(id, data) }
+func (a *App) ShellResize(id string, cols, rows int) error {
+	return a.shells.Resize(id, cols, rows)
+}
+func (a *App) ShellStop(id string) error       { return a.shells.Stop(id) }
+func (a *App) ShellList() ([]ShellInfo, error) { return a.shells.List(), nil }
 
 func providerNamesOf(config *types.AgentConfig) []string {
 	if config == nil {

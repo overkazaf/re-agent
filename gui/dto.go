@@ -181,6 +181,41 @@ type LifecycleEvent struct {
 	State string `json:"state"` // idle | running | awaiting_approval | closed
 }
 
+// ProviderInfoDTO is one configured provider, read-only detail for the
+// settings dialog. API keys and base URLs never cross this bridge.
+type ProviderInfoDTO struct {
+	Name  string `json:"name"`
+	Model string `json:"model"`
+	Type  string `json:"type"`
+}
+
+// SettingsDTO is the active session's effective configuration — what the
+// settings dialog renders. Workspace/session identity stays client-side (the
+// store already has it); this is pure config.
+type SettingsDTO struct {
+	Role               string            `json:"role"`
+	Provider           string            `json:"provider"` // agent override, "" = auto routing
+	PlannerProvider    string            `json:"plannerProvider"`
+	ExecutorProvider   string            `json:"executorProvider"`
+	ResearcherProvider string            `json:"researcherProvider"`
+	ProviderNames      []string          `json:"providerNames"`
+	Providers          []ProviderInfoDTO `json:"providers"`
+	MaxTurns           int               `json:"maxTurns"`
+	CompactionStrategy string            `json:"compactionStrategy"`
+	MCPServerCount     int               `json:"mcpServerCount"`
+}
+
+// SettingsPatch is the editable subset; empty/zero fields mean "leave
+// unchanged". Provider routes persist through SaveUIPrefs exactly like the
+// terminal /planner /executor /researcher commands; maxTurns is
+// session-local (no prefs slot exists for it).
+type SettingsPatch struct {
+	PlannerProvider    string `json:"plannerProvider"`
+	ExecutorProvider   string `json:"executorProvider"`
+	ResearcherProvider string `json:"researcherProvider"`
+	MaxTurns           int    `json:"maxTurns"`
+}
+
 // EventEnvelope is the gui:event payload wrapper (contract §0.3). Data holds
 // one of: []core.LoopEvent (kind=loop), TickDTO, ApprovalDTO, NoticeDTO,
 // LifecycleEvent.

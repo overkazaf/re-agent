@@ -208,6 +208,49 @@ export interface LoopEvent {
 /** kind=loop payloads arrive 50ms-batched: data is LoopEvent[] */
 export type LoopBatch = LoopEvent[]
 
+// ---------- settings dialog ----------
+export interface ProviderInfoDTO {
+  name: string
+  model: string
+  type: string
+}
+
+export interface SettingsDTO {
+  role: string
+  provider: string // agent override, '' = auto routing
+  plannerProvider: string
+  executorProvider: string
+  researcherProvider: string
+  providerNames: string[]
+  providers: ProviderInfoDTO[]
+  maxTurns: number
+  compactionStrategy: string
+  mcpServerCount: number
+}
+
+/** Empty/zero fields mean "leave unchanged" (mirrors gui.SettingsPatch). */
+export interface SettingsPatch {
+  plannerProvider: string
+  executorProvider: string
+  researcherProvider: string
+  maxTurns: number
+}
+
+// ---------- shells (PTY terminal panel) ----------
+export interface ShellInfo {
+  id: string
+  cwd: string
+  pid: number
+}
+
+/** gui:shell payload — data rides base64 (PTY bytes are not guaranteed UTF-8). */
+export interface ShellEnvelope {
+  shellId: string
+  kind: 'data' | 'exit'
+  b64: string
+  code: number
+}
+
 // ---------- gui event envelope ----------
 export type GuiEventKind = 'loop' | 'tick' | 'approval' | 'notice' | 'lifecycle'
 

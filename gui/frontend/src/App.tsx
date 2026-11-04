@@ -10,8 +10,10 @@ import { BootSplash, PanelBox, type BootProbe } from './components/crt'
 import { Dashboard } from './components/panels'
 import { QueuePanel, REHudPanel } from './components/re'
 import { ApprovalDialog, PromptInput, SessionSidebar, TranscriptStream } from './components/session'
+import { ShellView } from './components/terminal/ShellView'
 import { THEME_NAMES, ThemeProvider, useTheme, type ThemeName } from './theme/ThemeContext'
 import { actions, hasBackend, useSessionRuntime, useSessionStore } from './store/sessions'
+import { useShellStore } from './store/shells'
 import { api } from './lib/api'
 import type { NoticeDTO } from './lib/types'
 import type { StoreToast } from './store/sessions'
@@ -86,8 +88,10 @@ function CommandCenter() {
   const probes = useBootProbes()
   const [booted, setBooted] = useState(false)
   const { sessions, activeId, toast } = useSessionStore()
+  const { shells, activeShellId } = useShellStore()
   const active = useSessionRuntime(activeId)
   const { themes, theme, setTheme } = useTheme()
+  const activeShell = activeShellId ? shells.get(activeShellId) : null
 
   if (!booted) {
     if (probes.length === 0) return null // power-on dark frame
@@ -117,6 +121,13 @@ function CommandCenter() {
           </label>
         }
         sidebar={<SessionSidebar style={{ width: '100%' }} />}
+        // shell mode: key includes the theme so the terminal palette re-reads
+        // CSS vars on a theme switch
+        main={
+          activeShell ? (
+            <ShellView key={`${theme}:${activeShell.id}`} shell={activeShell} />
+          ) : undefined
+        }
         dashboard={
           active?.latestTick ? (
             <Dashboard tick={active.latestTick} thinkLines={active.thinkLines} />

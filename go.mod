@@ -3,6 +3,7 @@ module github.com/overkazaf/re-agent
 go 1.26.0
 
 require (
+	github.com/creack/pty v1.1.24
 	github.com/wailsapp/wails/v2 v2.17.1
 	golang.org/x/crypto v0.57.0
 	golang.org/x/sys v0.48.0

@@ -441,18 +441,29 @@ func (deadSink) Tick(string, TickDTO)             {}
 // forces every route to the mock provider (the --smoke equivalent).
 func (m *SessionManager) Start(opts StartOptions) (SessionInfo, error) {
 	workspace := strings.TrimSpace(opts.Workspace)
-	if workspace == "" {
+	if workspace == "" || workspace == "." {
 		// LaunchServices starts a .app with cwd=/, so os.Getwd is meaningless
-		// in a GUI process — $HOME is the honest fallback. The new-session
-		// dialog collects the real workspace in the normal flow.
+		// in a GUI process — an empty field and the dialog's "." both resolve
+		// to the filesystem root. $HOME is the honest default; the new-session
+		// dialog opens pre-filled with it (or the last used workspace).
 		workspace = guiHomeDir()
+	}
+	if workspace == "~" || strings.HasPrefix(workspace, "~/") {
+		// users type shell-isms into the dialog; expand them the way a shell would
+		if home, homeErr := os.UserHomeDir(); homeErr == nil {
+			workspace = filepath.Join(home, strings.TrimPrefix(strings.TrimPrefix(workspace, "~"), "/"))
+		}
 	}
 	workspace, err := filepath.Abs(workspace)
 	if err != nil {
 		return SessionInfo{}, err
 	}
-	if info, err := os.Stat(workspace); err != nil || !info.IsDir() {
-		return SessionInfo{}, fmt.Errorf("workspace is not a directory: %s", workspace)
+	if info, statErr := os.Stat(workspace); statErr != nil || !info.IsDir() {
+		// a workspace that does not exist yet is a new project — create it the
+		// way `mkdir -p` would, instead of failing the whole dialog
+		if mkdirErr := os.MkdirAll(workspace, 0o755); mkdirErr != nil {
+			return SessionInfo{}, fmt.Errorf("workspace %s is not usable: %w", workspace, mkdirErr)
+		}
 	}
 
 	agentConfig, configPath, err := config.Load("")
@@ -1015,6 +1026,80 @@ func (m *SessionManager) TickSnapshot(id string) (TickDTO, bool) {
 	return NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
 	), true
+}
+
+// GetSettings renders the session's live config for the settings dialog.
+// Providers are sorted by name; API keys and endpoints stay on this side.
+func (m *SessionManager) GetSettings(id string) (SettingsDTO, error) {
+	s := m.get(id)
+	if s == nil {
+		return SettingsDTO{}, errUnknownSession(id)
+	}
+	cfg := s.state.Config
+	dto := SettingsDTO{
+		Role:               string(s.state.Role),
+		Provider:           s.state.Provider,
+		PlannerProvider:    cfg.PlannerProvider,
+		ExecutorProvider:   cfg.ExecutorProvider,
+		ResearcherProvider: cfg.ResearcherProvider,
+		ProviderNames:      providerNamesOf(cfg),
+		MaxTurns:           cfg.MaxTurns,
+		CompactionStrategy: cfg.CompactionStrategy,
+		MCPServerCount:     len(cfg.MCPServers),
+	}
+	dto.Providers = make([]ProviderInfoDTO, 0, len(cfg.Providers))
+	for _, name := range dto.ProviderNames {
+		p := cfg.Providers[name]
+		dto.Providers = append(dto.Providers, ProviderInfoDTO{Name: name, Model: p.Model, Type: string(p.Type)})
+	}
+	if dto.CompactionStrategy == "" {
+		dto.CompactionStrategy = "summary"
+	}
+	return dto, nil
+}
+
+// SetSettings applies the patch to the session's live config. Provider routes
+// persist through SaveUIPrefs (the same path the terminal /planner /executor
+// /researcher commands take), so they survive restarts; maxTurns stays
+// session-local. Empty patch fields leave their setting alone.
+func (m *SessionManager) SetSettings(id string, patch SettingsPatch) error {
+	s := m.get(id)
+	if s == nil {
+		return errUnknownSession(id)
+	}
+	// config mutations go through the same serialization as slash commands —
+	// a running turn reads cfg.PlannerProvider mid-loop
+	s.cmdMu.Lock()
+	defer s.cmdMu.Unlock()
+	cfg := s.state.Config
+	if patch.PlannerProvider != "" {
+		if cfg.Providers[patch.PlannerProvider] == nil {
+			return fmt.Errorf("unknown provider: %s", patch.PlannerProvider)
+		}
+		cfg.PlannerProvider = patch.PlannerProvider
+		config.SaveUIPrefs(map[string]string{"plannerProvider": patch.PlannerProvider})
+	}
+	if patch.ExecutorProvider != "" {
+		if cfg.Providers[patch.ExecutorProvider] == nil {
+			return fmt.Errorf("unknown provider: %s", patch.ExecutorProvider)
+		}
+		cfg.ExecutorProvider = patch.ExecutorProvider
+		config.SaveUIPrefs(map[string]string{"executorProvider": patch.ExecutorProvider})
+	}
+	if patch.ResearcherProvider != "" {
+		if cfg.Providers[patch.ResearcherProvider] == nil {
+			return fmt.Errorf("unknown provider: %s", patch.ResearcherProvider)
+		}
+		cfg.ResearcherProvider = patch.ResearcherProvider
+		config.SaveUIPrefs(map[string]string{"researcherProvider": patch.ResearcherProvider})
+	}
+	if patch.MaxTurns != 0 {
+		if patch.MaxTurns < 1 || patch.MaxTurns > 200 {
+			return fmt.Errorf("maxTurns %d out of range (1-200)", patch.MaxTurns)
+		}
+		cfg.MaxTurns = patch.MaxTurns
+	}
+	return nil
 }
 
 // reHudOf mirrors repl.go refreshRE: the reverse-mode strip, only in reverse

@@ -46,3 +46,25 @@ export function onSessionEvent<K extends GuiEventKind>(
     }
   })
 }
+
+// ---------- gui:shell (PTY terminal channel) ----------
+
+const SHELL_CHANNEL = 'gui:shell'
+
+type ShellHandler = (env: import('./types').ShellEnvelope) => void
+
+const shellHandlers = new Set<ShellHandler>()
+let shellSubscribed = false
+
+/** Subscribe to gui:shell. Same join-once + fan-out pattern as onGuiEvent. */
+export function onShellEvent(handler: ShellHandler): () => void {
+  if (!shellSubscribed) {
+    shellSubscribed = true
+    runtime().EventsOn(SHELL_CHANNEL, (...payload: unknown[]) => {
+      const env = payload[0] as import('./types').ShellEnvelope
+      for (const h of shellHandlers) h(env)
+    })
+  }
+  shellHandlers.add(handler)
+  return () => shellHandlers.delete(handler)
+}

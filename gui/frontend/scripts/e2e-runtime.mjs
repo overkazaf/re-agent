@@ -420,6 +420,37 @@ function installShim() {
           await sleep(10)
           return ['deck', 'amber', 'matrix', 'mono']
         },
+        async HomeDir() {
+          return '/home/e2e'
+        },
+        async PickDirectory() {
+          return '/home/e2e/picked'
+        },
+        async GetSettings(id) {
+          if (!sessions.has(id)) throw `no such session: ${id}`
+          return {
+            role: 'auto', provider: '', plannerProvider: '', executorProvider: '', researcherProvider: '',
+            providerNames: ['mock-planner', 'mock-executor'],
+            providers: [
+              { name: 'mock-planner', model: 'mock-1', type: 'mock' },
+              { name: 'mock-executor', model: 'mock-1', type: 'mock' },
+            ],
+            maxTurns: 30, compactionStrategy: 'summary', mcpServerCount: 0,
+          }
+        },
+        async SetSettings(id, patch) {
+          if (!sessions.has(id)) throw `no such session: ${id}`
+          if (patch.maxTurns !== 0 && (patch.maxTurns < 1 || patch.maxTurns > 200)) throw `bad maxTurns: ${patch.maxTurns}`
+        },
+        async ShellStart(cwd) {
+          return { id: `sh-${++seq}`, cwd: cwd || '/home/e2e', pid: 4242 }
+        },
+        async ShellWrite() {},
+        async ShellResize() {},
+        async ShellStop() {},
+        async ShellList() {
+          return []
+        },
       },
     },
   }
@@ -499,7 +530,7 @@ async function main() {
   await step('create session via dialog', async () => {
     await page.getByTitle('new session').click()
     await waitFor(page, 'workspace')
-    await page.getByPlaceholder('/abs/path/to/workspace').fill('/tmp/0xaf-e2e-ws-alpha')
+    await page.getByPlaceholder('默认使用 $HOME（输入绝对路径或选择目录）').fill('/tmp/0xaf-e2e-ws-alpha')
     await page.getByRole('button', { name: 'start session' }).click()
     await waitFor(page, 'session s-1 started')
     await waitFor(page, '0xaf-e2e-ws-alpha') // sidebar entry (basename)
@@ -556,7 +587,7 @@ async function main() {
   await step('second session, buffers isolated', async () => {
     await page.getByTitle('new session').click()
     await waitFor(page, 'workspace')
-    await page.getByPlaceholder('/abs/path/to/workspace').fill('/tmp/0xaf-e2e-ws-beta')
+    await page.getByPlaceholder('默认使用 $HOME（输入绝对路径或选择目录）').fill('/tmp/0xaf-e2e-ws-beta')
     await page.getByRole('button', { name: 'start session' }).click()
     await waitFor(page, 'session s-2 started')
     // active = s-2 → transcript must NOT contain s-1's reply
@@ -622,6 +653,45 @@ async function main() {
     await waitFor(page, '○ idle')
   }, page)
   await shot('stop-interrupt')
+
+  // S13 settings dialog: load, patch a route, save
+  await step('settings dialog loads and saves', async () => {
+    await page.getByTitle('session config').click()
+    await waitFor(page, 'CONFIG')
+    await waitFor(page, 'max turns') // settings loaded (rendered after GetSettings lands)
+    const planner = page.locator('label:has-text("planner") select').first()
+    await planner.selectOption('mock-executor')
+    await page.getByRole('button', { name: 'save', exact: true }).click()
+    await waitFor(page, '已保存')
+    await page.getByRole('button', { name: 'close', exact: true }).click()
+    const gone = (await page.locator('text=CONFIG').count()) === 0
+    if (!gone) throw new Error('settings dialog still open after close')
+  }, page)
+  await shot('settings-saved')
+
+  // S14 shell view: sidebar entry swaps the main area to the terminal
+  await step('shell view swaps the main area', async () => {
+    await page.getByTitle(/开 shell/).click()
+    await waitFor(page, 'SHELL sh-') // ShellView header
+    // the shell inherits the active session's workspace — row span and header
+    // span both carry title=<cwd>
+    const shellRow = page.locator('span[title="/tmp/0xaf-e2e-ws-alpha"]')
+    // xterm injects its own hidden .xterm-helper-textarea for input capture —
+    // the real prompt input must be gone while that one exists
+    const promptGone = (await page.locator('textarea:not(.xterm-helper-textarea)').count()) === 0
+    if (!promptGone) throw new Error('prompt input still visible in shell mode')
+    const helperIn = (await page.locator('textarea.xterm-helper-textarea').count()) > 0
+    if (!helperIn) throw new Error('xterm helper textarea missing — terminal not capturing keys')
+    // back to the session — shell data stays in the sidebar (first match is
+    // the session row; the shell header's cwd span carries a title attr)
+    await page.getByText('0xaf-e2e-ws-alpha', { exact: true }).first().click()
+    await page.locator('textarea:not(.xterm-helper-textarea)').waitFor({ state: 'visible', timeout: 5000 })
+    // reopen from the sidebar SHELLS row (only that span has the title now —
+    // the shell header is unmounted in session mode)
+    await shellRow.click()
+    await waitFor(page, 'SHELL sh-')
+  }, page)
+  await shot('shell-view')
 
   // verdict
   await browser.close()
