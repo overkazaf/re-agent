@@ -1,6 +1,7 @@
 // WS4 shared dialog chrome: CRT-styled overlay + Esc/click-outside close,
 // plus the small form primitives (field, select, button) the dialogs share.
 import { useEffect, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
+import { pushEsc } from '../../lib/escStack'
 
 export function Dialog({
   title,
@@ -15,13 +16,7 @@ export function Dialog({
   onClose: () => void
   children: ReactNode
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEffect(() => pushEsc(onClose), [onClose])
 
   return (
     <div

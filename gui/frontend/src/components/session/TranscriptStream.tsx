@@ -26,6 +26,22 @@ function trunc(s: string, max = 110): string {
   return s.length > max ? `${s.slice(0, max)}…` : s
 }
 
+// Stable React keys across the ring buffer: once LOOP_LIMIT drops rows from
+// the head, index-based keys would reassign every row; event object identity
+// survives the slice, so hand out a monotonic seq per object instead.
+const keyOf = (() => {
+  const seen = new WeakMap<object, number>()
+  let next = 1
+  return (ev: LoopEvent): number => {
+    let k = seen.get(ev)
+    if (k === undefined) {
+      k = next++
+      seen.set(ev, k)
+    }
+    return k
+  }
+})()
+
 /** Compact markdown overrides — keeps trace density inside the stream. */
 const mdComponents = {
   p: ({ children }: { children?: ReactNode }) => <p style={{ margin: '0.3em 0' }}>{children}</p>,
@@ -169,9 +185,11 @@ function traceRow(ev: LoopEvent, ts: number, origin: number | null): ReactNode {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: 'var(--ok)', marginBottom: 2 }}>
               ✦ reply{ev.textChars > 0 ? ` · ${fmtTok(ev.textChars)} chars` : ''}
-              {ev.usage ? ` · $${ev.usage.costUsd.toFixed(4)}` : ''}
+              {/* core's TokenUsage tags are omitempty: a zero usage crosses the
+                  wire as {} and costUsd is undefined here */}
+              {ev.usage ? ` · $${(ev.usage.costUsd ?? 0).toFixed(4)}` : ''}
             </div>
-            <div style={{ color: 'var(--text)', fontSize: 13, lineHeight: 1.5, borderLeft: '2px solid var(--rule)', paddingLeft: 10 }}>
+            <div style={{ color: 'var(--text)', fontSize: 13, lineHeight: 1.5, borderLeft: '2px solid var(--rule)', paddingLeft: 10, whiteSpace: 'normal' }}>
               <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                 {ev.text}
               </Markdown>
@@ -205,16 +223,19 @@ export function TranscriptStream({
   const pinnedRef = useRef(true)
   const [pinned, setPinned] = useState(true)
   const count = runtime.loopBuffer.length
+  // ring buffer: length stops growing at LOOP_LIMIT, so also key the effect on
+  // the tail event's identity — a fresh tail means new content to scroll to
+  const tailEvent = count > 0 ? runtime.loopBuffer[count - 1] : undefined
 
   useEffect(() => {
     const el = scrollRef.current
     if (el && pinnedRef.current) el.scrollTop = el.scrollHeight
-  }, [count])
+  }, [count, tailEvent])
 
   const rows: ReactNode[] = []
   for (let i = 0; i < count; i++) {
     const node = traceRow(runtime.loopBuffer[i], runtime.loopTs[i], runtime.firstLoopTs)
-    if (node) rows.push(<div key={i}>{node}</div>)
+    if (node) rows.push(<div key={keyOf(runtime.loopBuffer[i])}>{node}</div>)
   }
 
   return (

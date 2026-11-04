@@ -2,6 +2,7 @@
 // network=err exec=violet), monospace args preview, four-way decision with
 // deny focused by default and Esc = deny so a fat-finger Enter stays safe.
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { pushEsc } from '../../lib/escStack'
 import type { ApprovalDTO, ApprovalDecision } from '../../lib/types'
 import { actions } from '../../store/sessions'
 import { GlowText } from '../crt'
@@ -45,17 +46,13 @@ export function ApprovalDialog({
     }
   }
 
-  // Esc = deny (safe default), deny button focused on mount
+  // Esc = deny (safe default), deny button focused on mount; routed through
+  // the esc stack so a dialog underneath doesn't also close
+  const decideRef = useRef(decide)
+  decideRef.current = decide
   useEffect(() => {
     denyRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        void decide('deny')
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return pushEsc(() => void decideRef.current('deny'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

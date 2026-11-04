@@ -163,7 +163,7 @@ function ToastStrip({ toast }: { toast: StoreToast }) {
         position: 'fixed',
         top: 42,
         right: 12,
-        zIndex: 40,
+        zIndex: 60, // above the approval overlay (50) so errors stay visible while a card is up
         maxWidth: 420,
         padding: '6px 12px',
         fontSize: 12,

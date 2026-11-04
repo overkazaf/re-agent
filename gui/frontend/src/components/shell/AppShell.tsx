@@ -8,7 +8,9 @@ const GRID: CSSProperties = {
   display: 'grid',
   height: '100%',
   gridTemplateColumns: '200px minmax(0, 1fr) 240px',
-  gridTemplateRows: '34px minmax(0, 1fr) 180px 64px',
+  // prompt row grows with its content (auto-grow textarea up to 6 lines +
+  // queue hint) instead of clipping at a fixed 64px
+  gridTemplateRows: '34px minmax(0, 1fr) 180px minmax(64px, auto)',
   gap: 8,
   padding: 8,
   gridTemplateAreas: `

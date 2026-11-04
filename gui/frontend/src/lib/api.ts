@@ -18,6 +18,7 @@ export interface AppAPI {
   ListSessions(): Promise<SessionSummaryDTO[]>
   CloseSession(id: string): Promise<void>
   SendPrompt(id: string, text: string): Promise<void>
+  Interrupt(id: string): Promise<boolean>
   SendCommand(id: string, line: string): Promise<CommandResultDTO>
   Approve(id: string, requestID: string, decision: ApprovalDecision): Promise<void>
   GetState(id: string): Promise<TickDTO>
@@ -35,6 +36,7 @@ export const api = {
   listSessions: () => app().ListSessions(),
   closeSession: (id: string) => app().CloseSession(id),
   sendPrompt: (id: string, text: string) => app().SendPrompt(id, text),
+  interrupt: (id: string) => app().Interrupt(id),
   sendCommand: (id: string, line: string) => app().SendCommand(id, line),
   approve: (id: string, requestID: string, decision: ApprovalDecision) =>
     app().Approve(id, requestID, decision),

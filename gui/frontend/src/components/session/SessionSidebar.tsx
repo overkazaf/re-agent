@@ -5,6 +5,7 @@ import { useState, type CSSProperties } from 'react'
 import { actions, useSessionStore } from '../../store/sessions'
 import type { LifecycleState } from '../../lib/types'
 import { StatusBadge } from '../crt'
+import { Btn, Dialog } from './Dialog'
 import { NewSessionDialog } from './NewSessionDialog'
 import { ResumeDialog } from './ResumeDialog'
 
@@ -29,9 +30,15 @@ export function SessionSidebar({
   const { sessions, activeId } = useSessionStore()
   const [showNew, setShowNew] = useState(false)
   const [showResume, setShowResume] = useState(false)
+  // in-app confirm: window.confirm always returns false inside Wails' WKWebView
+  // (no WKUIDelegate), so a running session could never be closed
+  const [confirmClose, setConfirmClose] = useState<{ id: string; name: string } | null>(null)
 
   function requestClose(id: string, lifecycle: LifecycleState, name: string) {
-    if (lifecycle === 'running' && !window.confirm(`session ${name} 正在运行，确认关闭？`)) return
+    if (lifecycle === 'running') {
+      setConfirmClose({ id, name })
+      return
+    }
     void actions.closeSession(id)
   }
 
@@ -57,6 +64,8 @@ export function SessionSidebar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'nowrap',
+          whiteSpace: 'nowrap',
           color: 'var(--muted)',
           fontSize: 11,
           letterSpacing: '0.12em',
@@ -64,7 +73,7 @@ export function SessionSidebar({
           borderBottom: '1px solid var(--rule)',
         }}
       >
-        <span>SESSIONS · {list.length}</span>
+        <span style={{ flexShrink: 0 }}>SESSIONS · {list.length}</span>
         <span style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={() => setShowNew(true)}
@@ -164,6 +173,27 @@ export function SessionSidebar({
 
       {showNew && <NewSessionDialog onClose={() => setShowNew(false)} />}
       {showResume && <ResumeDialog onClose={() => setShowResume(false)} />}
+
+      {confirmClose && (
+        <Dialog title="close session" accent="warn" width={380} onClose={() => setConfirmClose(null)}>
+          <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+            session <span style={{ color: 'var(--accent)' }}>{confirmClose.name}</span> 正在运行，确认关闭？
+            <div style={{ color: 'var(--faint)', fontSize: 11 }}>关闭会中止当前 turn 并丢弃未消费的队列</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Btn onClick={() => setConfirmClose(null)}>cancel</Btn>
+            <Btn
+              tone="err"
+              onClick={() => {
+                void actions.closeSession(confirmClose.id)
+                setConfirmClose(null)
+              }}
+            >
+              force close
+            </Btn>
+          </div>
+        </Dialog>
+      )}
     </section>
   )
 }

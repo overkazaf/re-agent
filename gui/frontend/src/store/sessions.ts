@@ -114,8 +114,24 @@ function ensureChannel(): void {
 }
 
 function dispatch(e: GuiEvent): void {
-  const rt = sessions.get(e.sessionId)
-  if (!rt) return
+  let rt = sessions.get(e.sessionId)
+  if (!rt) {
+    // events can arrive for a session this store doesn't know (frontend
+    // reload while the backend keeps running). Dropping an approval would
+    // leave the backend's Confirm blocked forever — stub a runtime so the
+    // card still renders and the decision can flow back.
+    if (e.kind !== 'approval') return
+    rt = freshRuntime({
+      id: e.sessionId,
+      workspace: '(recovered)',
+      role: '',
+      workflow: '',
+      planner: '',
+      executor: '',
+      lifecycle: 'awaiting_approval',
+    })
+    sessions.set(rt.info.id, rt)
+  }
   const next = applyEvent(rt, e)
   if (!next) return
   sessions.set(e.sessionId, next)
@@ -319,6 +335,18 @@ export const actions = {
     try {
       await api.sendPrompt(id, text)
       return { ok: true, value: null }
+    } catch (err) {
+      const error = errText(err)
+      pushToast('err', error)
+      return { ok: false, error }
+    }
+  },
+
+  /** Abort the in-flight turn without closing the session. */
+  async interrupt(id: string): Promise<Result<boolean>> {
+    try {
+      const stopped = await api.interrupt(id)
+      return { ok: true, value: stopped }
     } catch (err) {
       const error = errText(err)
       pushToast('err', error)

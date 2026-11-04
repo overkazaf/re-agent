@@ -3,7 +3,9 @@
 // Shift+Enter newline, queue hint bar driven by hud.queueCount, and a
 // non-blocking `!` shell-escape warning (GUI v1 has no shell passthrough).
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
+import { pushEsc } from '../../lib/escStack'
 import { actions, hasBackend } from '../../store/sessions'
 import { Spinner } from '../crt'
 
@@ -63,7 +65,12 @@ export function PromptInput({
   const [busy, setBusy] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const boxRef = useRef<HTMLDivElement>(null)
   const fetchSeq = useRef(0)
+  // the palette portal-mounts to document.body: the prompt cell has
+  // overflow:hidden and an absolute child popping above it gets clipped by
+  // every ancestor edge. Anchor it to the input box's on-screen rect instead.
+  const [anchor, setAnchor] = useState<{ left: number; width: number; bottom: number } | null>(null)
 
   const paletteOpen = value.startsWith('/') && !dismissed && items.length > 0
   const shellEscape = value.startsWith('!')
@@ -104,6 +111,30 @@ export function PromptInput({
     setActive(0)
   }, [items])
 
+  // Esc closes the palette through the shared stack — a dialog above us wins
+  useEffect(() => {
+    if (!paletteOpen) return
+    return pushEsc(() => setDismissed(true))
+  }, [paletteOpen])
+
+  // track the input box rect while the palette is open (window resizes and
+  // textarea auto-growth both move it)
+  useEffect(() => {
+    if (!paletteOpen) {
+      setAnchor(null)
+      return
+    }
+    const measure = () => {
+      const el = boxRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setAnchor({ left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4 })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [paletteOpen, value])
+
   function applyCompletion(item: PaletteItem) {
     setValue(item.replacement)
     setDismissed(true)
@@ -123,6 +154,11 @@ export function PromptInput({
     else setSendError(res.error)
   }
 
+  async function stop() {
+    if (!sessionId || busy) return
+    await actions.interrupt(sessionId)
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (paletteOpen) {
       if (e.key === 'ArrowDown') {
@@ -140,10 +176,6 @@ export function PromptInput({
         applyCompletion(items[active])
         return
       }
-      if (e.key === 'Escape') {
-        setDismissed(true)
-        return
-      }
     }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -153,6 +185,7 @@ export function PromptInput({
 
   return (
     <div
+      ref={boxRef}
       style={{
         border: `1px solid ${running ? 'var(--accent-dim)' : 'var(--rule)'}`,
         background: 'var(--bg-panel)',
@@ -176,21 +209,20 @@ export function PromptInput({
         </div>
       )}
 
-      {/* slash palette */}
-      {paletteOpen && (
+      {/* slash palette — portal so overflow:hidden ancestors can't clip it */}
+      {paletteOpen && anchor && createPortal(
         <div
           style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            right: 0,
-            marginBottom: 4,
+            position: 'fixed',
+            bottom: anchor.bottom,
+            left: anchor.left,
+            width: anchor.width,
             border: '1px solid var(--accent-dim)',
             background: 'var(--bg-panel)',
             boxShadow: '0 0 18px rgba(0, 0, 0, 0.6)',
             maxHeight: 220,
             overflow: 'auto',
-            zIndex: 20,
+            zIndex: 30,
           }}
         >
           {items.map((it, i) => (
@@ -215,7 +247,8 @@ export function PromptInput({
               {it.desc && <span style={{ color: 'var(--faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.desc}</span>}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
 
       <textarea
@@ -260,6 +293,21 @@ export function PromptInput({
           {running ? (
             <>
               <Spinner ms={90} /> running
+              <button
+                onClick={() => void stop()}
+                title="abort the current turn (queue survives)"
+                style={{
+                  background: 'none',
+                  border: '1px solid var(--err)',
+                  color: 'var(--err)',
+                  font: 'inherit',
+                  fontSize: 10,
+                  padding: '0 6px',
+                  cursor: 'pointer',
+                }}
+              >
+                ■ stop
+              </button>
             </>
           ) : (
             '○ idle'

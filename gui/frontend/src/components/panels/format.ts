@@ -32,6 +32,7 @@ export function fmtClock(ms: number): string {
 
 /** 0.4137 → "$0.4137", 12.5 → "$12.50" */
 export function fmtCost(usd: number): string {
+  if (!Number.isFinite(usd)) return '$0.00' // undefined/NaN from a sparse wire shape
   if (usd > 0 && usd < 10) return `$${usd.toFixed(4)}`
   return `$${usd.toFixed(2)}`
 }
