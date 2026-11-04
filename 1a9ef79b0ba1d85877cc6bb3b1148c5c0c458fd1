@@ -1,0 +1,155 @@
+gui/frontend/src/components/session/NewSessionDialog.tsx
+  74bb506e759dbcca 1-4,6,12,14-27,37-51,56-66,69-78,85-96
+go.mod
+  74bb506e759dbcca 6
+gui/app.go
+  74bb506e759dbcca 25,34,44-46,51,97-106,144-180
+gui/frontend/src/store/shells.ts
+  74bb506e759dbcca 1-135
+gui/frontend/scripts/e2e-runtime.mjs
+  74bb506e759dbcca 423-453,533,590,657-695
+gui/frontend/src/components/terminal/ShellView.tsx
+  74bb506e759dbcca 1-130
+gui/frontend/src/lib/events.ts
+  74bb506e759dbcca 49-70
+gui/manager.go
+  74bb506e759dbcca 444,446-448,451-456,461-466,1031-1104
+gui/frontend/src/components/session/index.ts
+  74bb506e759dbcca 8
+gui/frontend/src/components/shell/AppShell.tsx
+  74bb506e759dbcca 4-5,26-35,45,50-55,59,62,68-70,72-83
+gui/frontend/src/App.tsx
+  74bb506e759dbcca 13,16,91,94,124-130
+gui/frontend/src/components/session/SessionSidebar.tsx
+  74bb506e759dbcca 4-5,8-9,15,28-37,46,49,63-64,100,107,111-117,132,137-141,143-144,159-160,203-286,291-297
+gui/shell.go
+  74bb506e759dbcca 1-279
+gui/shell_test.go
+  74bb506e759dbcca 1-117
+gui/frontend/src/lib/api.ts
+  74bb506e759dbcca 11-13,28-29,32-38,56-57,60-66
+gui/frontend/src/components/session/SettingsDialog.tsx
+  74bb506e759dbcca 1-161
+gui/dto.go
+  74bb506e759dbcca 184-218
+gui/frontend/src/lib/types.ts
+  74bb506e759dbcca 211-253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "1a9ef79b0ba1d85877cc6bb3b1148c5c0c458fd1",
+  "prompts": {
+    "74bb506e759dbcca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "03d91ce3-4ad5-44c9-bbb5-f0c2f9dfc125",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 3173,
+      "total_deletions": 235,
+      "accepted_lines": 3001,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/dto.go": {
+          "additions": 35,
+          "accepted_lines": 35
+        },
+        "gui/frontend/src/components/session/NewSessionDialog.tsx": {
+          "additions": 71,
+          "deletions": 14,
+          "accepted_lines": 70
+        },
+        "gui/frontend/scripts/e2e-runtime.mjs": {
+          "additions": 81,
+          "deletions": 11,
+          "accepted_lines": 72
+        },
+        "gui/frontend/src/App.tsx": {
+          "additions": 11,
+          "accepted_lines": 11
+        },
+        "gui/frontend/src/store/shells.ts": {
+          "additions": 135,
+          "accepted_lines": 135
+        },
+        "docs/re-workflow-demo.md": {
+          "additions": 316,
+          "accepted_lines": 316
+        },
+        "gui/shell.go": {
+          "additions": 310,
+          "deletions": 31,
+          "accepted_lines": 279
+        },
+        "gui/manager.go": {
+          "additions": 90,
+          "deletions": 5,
+          "accepted_lines": 90
+        },
+        "gui/frontend/src/lib/api.ts": {
+          "additions": 21,
+          "accepted_lines": 21
+        },
+        "gui/frontend/src/components/shell/AppShell.tsx": {
+          "additions": 36,
+          "deletions": 12,
+          "accepted_lines": 36
+        },
+        "docs/plans/2026-10-24-re-workflow-interactive.md": {
+          "additions": 1278,
+          "accepted_lines": 1278
+        },
+        "gui/frontend/src/components/session/index.ts": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "gui/app.go": {
+          "additions": 62,
+          "deletions": 10,
+          "accepted_lines": 53
+        },
+        "gui/ptyprobe_test.go": {
+          "additions": 61,
+          "deletions": 61
+        },
+        "gui/frontend/src/lib/types.ts": {
+          "additions": 43,
+          "accepted_lines": 43
+        },
+        "gui/envdump_test.go": {
+          "deletions": 22
+        },
+        "gui/frontend/src/components/terminal/ShellView.tsx": {
+          "additions": 130,
+          "accepted_lines": 130
+        },
+        "gui/frontend/src/components/session/SettingsDialog.tsx": {
+          "additions": 161,
+          "accepted_lines": 161
+        },
+        "gui/frontend/src/components/session/SessionSidebar.tsx": {
+          "additions": 130,
+          "deletions": 8,
+          "accepted_lines": 130
+        },
+        "gui/shell_test.go": {
+          "additions": 177,
+          "deletions": 60,
+          "accepted_lines": 117
+        },
+        "gui/frontend/src/lib/events.ts": {
+          "additions": 22,
+          "accepted_lines": 22
+        },
+        "go.mod": {
+          "additions": 2,
+          "deletions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
