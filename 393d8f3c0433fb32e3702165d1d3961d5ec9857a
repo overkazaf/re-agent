@@ -1,18 +1,18 @@
-gui/dto_test.go
-  74bb506e759dbcca 4,6,55,202-243
-gui/command.go
-  74bb506e759dbcca 40-58,82,87-89,119-125,146-148,171-172,191-199,202
-internal/workflow/phase.go
-  74bb506e759dbcca 5,46-48,50,67-68,76-77,91-92,97-98,103-104,109-121
 gui/manager.go
   74bb506e759dbcca 346-348,440,445-448,458,462-470,546-559,651-654,656-660,664-667,684-686,700,734-743,745,799-804,814-817,832-850,878-886,1026-1028,1030-1032,1034-1035
+gui/command.go
+  74bb506e759dbcca 40-58,82,87-89,119-125,146-148,171-172,191-199,202
 gui/dto.go
   74bb506e759dbcca 66-90,113-120,149-157,212,271
+internal/workflow/phase.go
+  74bb506e759dbcca 5,46-48,50,67-68,76-77,91-92,97-98,103-104,109-121
+gui/dto_test.go
+  74bb506e759dbcca 4,6,55,202-243
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.2.8-ntes.9",
-  "base_commit_sha": "aec115e6a4560a9edc3e5f00e9ff6c209922a062",
+  "base_commit_sha": "393d8f3c0433fb32e3702165d1d3961d5ec9857a",
   "prompts": {
     "74bb506e759dbcca": {
       "agent_id": {
@@ -24,114 +24,127 @@ gui/dto.go
       "messages": [],
       "total_additions": 1240,
       "total_deletions": 212,
-      "accepted_lines": 2718,
+      "accepted_lines": 6095,
       "overriden_lines": 0,
       "per_file_stats": {
-        "gui/frontend/src/App.tsx": {
-          "additions": 1,
-          "deletions": 1,
-          "accepted_lines": 1
-        },
-        "docs/re-workflow-demo.md": {
-          "accepted_lines": 316
-        },
-        "gui/command.go": {
-          "additions": 49,
-          "deletions": 5,
-          "accepted_lines": 48
-        },
         "gui/frontend/src/lib/escStack.ts": {
           "additions": 35,
-          "accepted_lines": 35
-        },
-        "gui/frontend/src/components/shell/AppShell.tsx": {
-          "additions": 3,
-          "deletions": 1,
-          "accepted_lines": 3
-        },
-        "gui/frontend/src/lib/api.ts": {
-          "additions": 2,
-          "accepted_lines": 2
-        },
-        "gui/frontend/package.json.md5": {
-          "additions": 1,
-          "deletions": 1,
-          "accepted_lines": 1
-        },
-        "gui/frontend/src/components/session/ApprovalDialog.tsx": {
-          "additions": 7,
-          "deletions": 10,
-          "accepted_lines": 6
+          "accepted_lines": 70
         },
         "docs/plans/2026-10-24-re-workflow-interactive.md": {
-          "accepted_lines": 1278
+          "accepted_lines": 2556
         },
-        "gui/frontend/src/components/session/TranscriptStream.tsx": {
-          "additions": 25,
-          "deletions": 4,
-          "accepted_lines": 25
+        "docs/re-workflow-demo.md": {
+          "accepted_lines": 632
+        },
+        "gui/dto.go": {
+          "additions": 44,
+          "deletions": 19,
+          "accepted_lines": 44
         },
         "internal/workflow/phase.go": {
           "additions": 30,
           "accepted_lines": 30
         },
-        "gui/frontend/src/components/session/SessionSidebar.tsx": {
-          "additions": 32,
-          "deletions": 2,
-          "accepted_lines": 32
-        },
-        "gui/dto_test.go": {
-          "additions": 64,
-          "deletions": 20,
-          "accepted_lines": 45
-        },
-        "gui/frontend/src/components/session/Dialog.tsx": {
-          "additions": 2,
-          "deletions": 7,
-          "accepted_lines": 2
-        },
-        "gui/frontend/scripts/e2e-runtime.mjs": {
-          "additions": 730,
-          "deletions": 83,
-          "accepted_lines": 647
-        },
         "gui/frontend/.gitignore": {
           "additions": 2,
-          "accepted_lines": 2
+          "accepted_lines": 4
         },
         "gui/manager.go": {
           "additions": 108,
           "deletions": 32,
           "accepted_lines": 108
         },
-        "gui/frontend/src/components/panels/format.ts": {
-          "additions": 1,
-          "accepted_lines": 1
+        "gui/frontend/src/components/session/PromptInput.tsx": {
+          "additions": 61,
+          "deletions": 13,
+          "accepted_lines": 155
         },
-        "gui/frontend/package.json": {
-          "additions": 1,
-          "accepted_lines": 1
-        },
-        "gui/frontend/src/store/sessions.ts": {
-          "additions": 30,
-          "deletions": 2,
-          "accepted_lines": 30
+        "gui/command.go": {
+          "additions": 49,
+          "deletions": 5,
+          "accepted_lines": 48
         },
         ".claude-memory-capture-stdout-defer-deadlock.md": {
           "additions": 12,
           "deletions": 12
         },
-        "gui/frontend/src/components/session/PromptInput.tsx": {
-          "additions": 61,
-          "deletions": 13,
-          "accepted_lines": 61
+        "gui/frontend/package.json.md5": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 2
         },
-        "gui/dto.go": {
-          "additions": 44,
-          "deletions": 19,
-          "accepted_lines": 44
+        "gui/frontend/src/components/session/Dialog.tsx": {
+          "additions": 2,
+          "deletions": 7,
+          "accepted_lines": 4
+        },
+        "gui/dto_test.go": {
+          "additions": 64,
+          "deletions": 20,
+          "accepted_lines": 45
+        },
+        "gui/frontend/src/App.tsx": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "gui/frontend/src/lib/api.ts": {
+          "additions": 2,
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/components/panels/format.ts": {
+          "additions": 1,
+          "accepted_lines": 3
+        },
+        "gui/frontend/src/components/shell/AppShell.tsx": {
+          "additions": 3,
+          "deletions": 1,
+          "accepted_lines": 8
+        },
+        "gui/frontend/src/store/sessions.ts": {
+          "additions": 30,
+          "deletions": 2,
+          "accepted_lines": 88
+        },
+        "gui/frontend/src/components/session/ApprovalDialog.tsx": {
+          "additions": 7,
+          "deletions": 10,
+          "accepted_lines": 12
+        },
+        "gui/frontend/src/components/session/SessionSidebar.tsx": {
+          "additions": 32,
+          "deletions": 2,
+          "accepted_lines": 73
+        },
+        "gui/frontend/package.json": {
+          "additions": 1,
+          "accepted_lines": 3
+        },
+        "gui/frontend/src/components/session/TranscriptStream.tsx": {
+          "additions": 25,
+          "deletions": 4,
+          "accepted_lines": 71
+        },
+        "gui/frontend/scripts/e2e-runtime.mjs": {
+          "additions": 730,
+          "deletions": 83,
+          "accepted_lines": 1294
         }
       }
+    },
+    "86bc0079a85ab92d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ea6178e2-a959-4416-8f27-59ca999a3a41",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 93,
+      "overriden_lines": 0
     }
   }
 }
