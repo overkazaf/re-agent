@@ -63,6 +63,31 @@ type ApprovalDTO struct {
 // TokenUsage aliases core's tagged struct — identical wire format, zero mapping.
 type TokenUsage = types.TokenUsage
 
+// WireTokenUsage is types.TokenUsage with non-omitempty tags. core's tags save
+// bytes in the transcript file, but on the wire a zero value must still arrive
+// as {input:0,...} — with omitempty it crosses as {} and the frontend reads
+// undefined, which crashed TelePanel/TranscriptStream on the first tick.
+type WireTokenUsage struct {
+	Input      float64 `json:"input"`
+	Output     float64 `json:"output"`
+	Thinking   float64 `json:"thinking"`
+	CacheRead  float64 `json:"cacheRead"`
+	CacheWrite float64 `json:"cacheWrite"`
+	CostUsd    float64 `json:"costUsd"`
+}
+
+// wireUsage maps core usage onto the always-complete wire shape.
+func wireUsage(u types.TokenUsage) WireTokenUsage {
+	return WireTokenUsage{
+		Input:      u.Input,
+		Output:     u.Output,
+		Thinking:   u.Thinking,
+		CacheRead:  u.CacheRead,
+		CacheWrite: u.CacheWrite,
+		CostUsd:    u.CostUsd,
+	}
+}
+
 // ToolRunDTO mirrors ui.ToolRunSnapshot.
 type ToolRunDTO struct {
 	ID         int    `json:"id"`
@@ -85,31 +110,31 @@ type PlanBadgeDTO struct {
 
 // FlowDTO mirrors ui.FlowState — the animated dashboard data source.
 type FlowDTO struct {
-	Stage          string        `json:"stage"` // idle|send|wait|think|calls|tool|write|done|error
-	Turn           int           `json:"turn"`
-	Provider       string        `json:"provider"`
-	Model          string        `json:"model"`
-	Endpoint       string        `json:"endpoint"`
-	Messages       int           `json:"messages"`
-	SentTokens     int           `json:"sentTokens"`
-	Usage          TokenUsage    `json:"usage"`
-	PendingCalls   int           `json:"pendingCalls"`
-	ActiveTool     string        `json:"activeTool"`
-	ToolStartedAt  int64         `json:"toolStartedAt"` // wall-clock ms; >0 while a tool runs so the panel can show live elapsed
-	ToolMs         int64         `json:"toolMs"`
-	ToolsOK        int           `json:"toolsOk"`
-	ToolsFailed    int           `json:"toolsFailed"`
-	ToolRuns       []ToolRunDTO  `json:"toolRuns"`
-	ReplyChars     int           `json:"replyChars"`
-	CompactedDrop  int           `json:"compactedDrop"`
-	CompactedElide int           `json:"compactedElide"`
-	HasCompacted   bool          `json:"hasCompacted"`
-	Plan           *PlanBadgeDTO `json:"plan"`
-	PlanKind       string        `json:"planKind"` // "" | open | write | step
-	Error          string        `json:"error"`
-	Frame          int           `json:"frame"`
-	Packets        [][]int       `json:"packets"`
-	Since          int64         `json:"since"`
+	Stage          string         `json:"stage"` // idle|send|wait|think|calls|tool|write|done|error
+	Turn           int            `json:"turn"`
+	Provider       string         `json:"provider"`
+	Model          string         `json:"model"`
+	Endpoint       string         `json:"endpoint"`
+	Messages       int            `json:"messages"`
+	SentTokens     int            `json:"sentTokens"`
+	Usage          WireTokenUsage `json:"usage"`
+	PendingCalls   int            `json:"pendingCalls"`
+	ActiveTool     string         `json:"activeTool"`
+	ToolStartedAt  int64          `json:"toolStartedAt"` // wall-clock ms; >0 while a tool runs so the panel can show live elapsed
+	ToolMs         int64          `json:"toolMs"`
+	ToolsOK        int            `json:"toolsOk"`
+	ToolsFailed    int            `json:"toolsFailed"`
+	ToolRuns       []ToolRunDTO   `json:"toolRuns"`
+	ReplyChars     int            `json:"replyChars"`
+	CompactedDrop  int            `json:"compactedDrop"`
+	CompactedElide int            `json:"compactedElide"`
+	HasCompacted   bool           `json:"hasCompacted"`
+	Plan           *PlanBadgeDTO  `json:"plan"`
+	PlanKind       string         `json:"planKind"` // "" | open | write | step
+	Error          string         `json:"error"`
+	Frame          int            `json:"frame"`
+	Packets        [][]int        `json:"packets"`
+	Since          int64          `json:"since"`
 }
 
 // HudRouteDTO mirrors ui.HudRoute.
@@ -121,15 +146,15 @@ type HudRouteDTO struct {
 
 // HudDTO is the per-tick HUD strip: stats, sparkline, routing, queue.
 type HudDTO struct {
-	Phase        string       `json:"phase"`
-	Frame        string       `json:"frame"`
-	ElapsedMs    int64        `json:"elapsedMs"`
-	Stats        TokenUsage   `json:"stats"`
-	Spark        []float64    `json:"spark"`
-	Route        *HudRouteDTO `json:"route"`
-	QueueCount   int          `json:"queueCount"`
-	PlanDisplay  string       `json:"planDisplay"`  // auto | collapsed | expanded
-	ThinkDisplay string       `json:"thinkDisplay"` // auto | collapsed | expanded
+	Phase        string         `json:"phase"`
+	Frame        string         `json:"frame"`
+	ElapsedMs    int64          `json:"elapsedMs"`
+	Stats        WireTokenUsage `json:"stats"`
+	Spark        []float64      `json:"spark"`
+	Route        *HudRouteDTO   `json:"route"`
+	QueueCount   int            `json:"queueCount"`
+	PlanDisplay  string         `json:"planDisplay"`  // auto | collapsed | expanded
+	ThinkDisplay string         `json:"thinkDisplay"` // auto | collapsed | expanded
 }
 
 // ReDTO mirrors ui.REHudModel — the reverse-mode phase tracker.
@@ -184,7 +209,7 @@ func NewFlowDTO(state ui.FlowState) FlowDTO {
 		Endpoint:       state.Endpoint,
 		Messages:       state.Messages,
 		SentTokens:     state.SentTokens,
-		Usage:          state.Usage,
+		Usage:          wireUsage(state.Usage),
 		PendingCalls:   state.PendingCalls,
 		ActiveTool:     state.ActiveTool,
 		ToolStartedAt:  state.ToolStartedAt,
@@ -243,7 +268,7 @@ func NewHudDTO(snapshot HudSnapshot) HudDTO {
 		Phase:        snapshot.Phase,
 		Frame:        snapshot.Frame,
 		ElapsedMs:    snapshot.ElapsedMs,
-		Stats:        snapshot.Stats,
+		Stats:        wireUsage(snapshot.Stats),
 		Spark:        spark,
 		QueueCount:   snapshot.QueueCount,
 		PlanDisplay:  snapshot.PlanDisplay,

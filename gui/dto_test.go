@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/overkazaf/re-agent/internal/core"
@@ -50,7 +52,7 @@ func TestFlowDTOEveryStage(t *testing.T) {
 			if dto.Endpoint != "mock://mock-reasoner" || dto.Messages != 7 || dto.SentTokens != 1234 {
 				t.Fatalf("wire fields wrong: %+v", dto)
 			}
-			if dto.Usage != (types.TokenUsage{Input: 10, Output: 4, CostUsd: 0.5}) {
+			if dto.Usage != (WireTokenUsage{Input: 10, Output: 4, CostUsd: 0.5}) {
 				t.Fatalf("usage wrong: %+v", dto.Usage)
 			}
 			if dto.ReplyChars != 42 || dto.Frame != 9 || dto.Since != 1700000000000 {
@@ -195,5 +197,47 @@ func TestTickDTOAssembly(t *testing.T) {
 	)
 	if tick.Flow.Stage != "wait" || tick.Hud.Phase != "working" || tick.Re != nil || tick.Plan != plan {
 		t.Fatalf("tick assembly wrong: %+v", tick)
+	}
+}
+
+// TestZeroUsageWireShape guards the TokenUsage omitempty trap: core's struct
+// marshals a zero value as {} on the wire, which the frontend reads as
+// undefined and crashed TelePanel/TranscriptStream. The DTO layer must map to
+// WireTokenUsage so every field is always present in the JSON.
+func TestZeroUsageWireShape(t *testing.T) {
+	tick := NewTickDTO(ui.FlowState{}, HudSnapshot{}, nil, nil)
+
+	flowJSON, err := json.Marshal(tick.Flow)
+	if err != nil {
+		t.Fatalf("marshal flow: %v", err)
+	}
+	raw := string(flowJSON)
+	start := strings.Index(raw, `"usage":`)
+	if start < 0 {
+		t.Fatalf("flow JSON has no usage object: %s", raw)
+	}
+	end := strings.Index(raw[start:], "}")
+	usage := raw[start+len(`"usage":`) : start+len(`"usage":`)+end+1]
+	for _, field := range []string{`"input":0`, `"output":0`, `"thinking":0`, `"cacheRead":0`, `"cacheWrite":0`, `"costUsd":0`} {
+		if !strings.Contains(usage, field) {
+			t.Fatalf("zero usage JSON missing %s: %s (full: %s)", field, usage, raw)
+		}
+	}
+
+	hudJSON, err := json.Marshal(tick.Hud)
+	if err != nil {
+		t.Fatalf("marshal hud: %v", err)
+	}
+	rawHud := string(hudJSON)
+	hStart := strings.Index(rawHud, `"stats":`)
+	if hStart < 0 {
+		t.Fatalf("hud JSON has no stats object: %s", rawHud)
+	}
+	hEnd := strings.Index(rawHud[hStart:], "}")
+	stats := rawHud[hStart+len(`"stats":`) : hStart+len(`"stats":`)+hEnd+1]
+	for _, field := range []string{`"input":0`, `"costUsd":0`} {
+		if !strings.Contains(stats, field) {
+			t.Fatalf("zero stats JSON missing %s: %s (full: %s)", field, stats, rawHud)
+		}
 	}
 }

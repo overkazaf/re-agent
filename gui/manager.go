@@ -343,6 +343,9 @@ type session struct {
 	lifecycle string
 	running   bool
 	turns     sync.WaitGroup
+	// turnCancel aborts the in-flight turn without closing the session; set by
+	// runTurn while a turn runs, nil otherwise
+	turnCancel context.CancelFunc
 	// cmdMu serializes SendCommand against itself (the stdout swap it uses is
 	// process-wide and the sink install/restore must stay paired).
 	cmdMu sync.Mutex
@@ -434,16 +437,15 @@ func (deadSink) Lifecycle(string, string)         {}
 func (deadSink) Tick(string, TickDTO)             {}
 
 // StartOptions mirrors dto.StartOptions internally so tests can construct it
-// without the Wails binding layer. Workspace defaults to the cwd; Mock=true
+// without the Wails binding layer. Workspace defaults to $HOME; Mock=true
 // forces every route to the mock provider (the --smoke equivalent).
 func (m *SessionManager) Start(opts StartOptions) (SessionInfo, error) {
 	workspace := strings.TrimSpace(opts.Workspace)
 	if workspace == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return SessionInfo{}, err
-		}
-		workspace = cwd
+		// LaunchServices starts a .app with cwd=/, so os.Getwd is meaningless
+		// in a GUI process — $HOME is the honest fallback. The new-session
+		// dialog collects the real workspace in the normal flow.
+		workspace = guiHomeDir()
 	}
 	workspace, err := filepath.Abs(workspace)
 	if err != nil {
@@ -453,9 +455,19 @@ func (m *SessionManager) Start(opts StartOptions) (SessionInfo, error) {
 		return SessionInfo{}, fmt.Errorf("workspace is not a directory: %s", workspace)
 	}
 
-	agentConfig, _, err := config.Load("")
+	agentConfig, configPath, err := config.Load("")
 	if err != nil {
 		return SessionInfo{}, err
+	}
+	// With no meaningful cwd, config.Load cannot discover a workspace-local
+	// agent.config.json — probe the workspace explicitly, mirroring what the
+	// TUI finds via cwd.
+	if local := filepath.Join(workspace, "agent.config.json"); local != configPath {
+		if _, statErr := os.Stat(local); statErr == nil {
+			if loaded, _, loadErr := config.Load(local); loadErr == nil {
+				agentConfig = loaded
+			}
+		}
 	}
 	role := types.AgentRole(strings.TrimSpace(opts.Role))
 	if role != "" && !types.IsRole(string(role)) {
@@ -531,7 +543,20 @@ func (m *SessionManager) assemble(opts StartOptions, agentConfig *types.AgentCon
 	registry := tools.CreateReverseTools()
 	registry = append(registry, tools.CreateRemoteTools()...)
 	registry = append(registry, tools.UpdateREStateTool(&s.reState))
-	connections := mcp.ConnectAll(agentConfig.MCPServers)
+	// MCP servers with relative command paths must resolve against the
+	// session's workspace, not the process cwd (/ under LaunchServices).
+	// Clone configs before injecting Cwd — agentConfig is shared per manager.
+	mcpServers := make(map[string]*types.MCPServerConfig, len(agentConfig.MCPServers))
+	for name, serverConfig := range agentConfig.MCPServers {
+		if serverConfig != nil && serverConfig.Cwd == "" {
+			cloned := *serverConfig
+			cloned.Cwd = workspace
+			mcpServers[name] = &cloned
+			continue
+		}
+		mcpServers[name] = serverConfig
+	}
+	connections := mcp.ConnectAll(mcpServers)
 	s.mcp = connections
 	for _, connection := range connections {
 		if connection.Error != "" {
@@ -623,12 +648,23 @@ func (m *SessionManager) restoreAfterApproval(s *session) {
 	}
 }
 
-// Resume revives a previous transcript into a fresh GUI session: ResolveSession
-// → LoadSession → loop.Restore, matching the --resume path in app.Run.
+// Resume revives a previous transcript into a fresh GUI session: resolve →
+// LoadSession → assemble in the original workspace → loop.Restore, matching
+// the --resume path in app.Run. Resolving and loading happen before anything
+// is created, so a bad id leaves no stub session file behind.
 func (m *SessionManager) Resume(idOrPath string) (SessionInfo, error) {
-	workspace, err := os.Getwd()
+	target := m.resolve(idOrPath)
+	if target == nil {
+		return SessionInfo{}, fmt.Errorf("no session matching '%s'", idOrPath)
+	}
+	loaded, err := core.LoadSession(target.File)
 	if err != nil {
 		return SessionInfo{}, err
+	}
+	// The restored session keeps working in the workspace it was started in.
+	workspace := strings.TrimSpace(target.Workspace)
+	if workspace == "" {
+		workspace = guiHomeDir()
 	}
 	opts := StartOptions{Workspace: workspace}
 	agentConfig, _, err := config.Load("")
@@ -643,18 +679,11 @@ func (m *SessionManager) Resume(idOrPath string) (SessionInfo, error) {
 	if s == nil {
 		return SessionInfo{}, fmt.Errorf("session vanished: %s", info.ID)
 	}
-	target := m.resolve(idOrPath)
-	if target == nil {
-		m.CloseSession(info.ID)
-		return SessionInfo{}, fmt.Errorf("no session matching '%s'", idOrPath)
-	}
-	loaded, err := core.LoadSession(target.File)
-	if err != nil {
-		m.CloseSession(info.ID)
-		return SessionInfo{}, err
-	}
 	if err := s.loop.Restore(loaded.Messages, loaded.Plan); err != nil {
 		m.CloseSession(info.ID)
+		// assemble already wrote a session header to disk; a half-restored
+		// transcript is noise, not history — remove it.
+		_ = os.Remove(s.core.File)
 		return SessionInfo{}, err
 	}
 	_ = s.core.AppendEvent(map[string]any{
@@ -668,7 +697,7 @@ func (m *SessionManager) Resume(idOrPath string) (SessionInfo, error) {
 // sessions/ subtree) plus the cwd default.
 func (m *SessionManager) List() ([]SessionSummaryDTO, error) {
 	seen := map[string]bool{}
-	var out []SessionSummaryDTO
+	out := []SessionSummaryDTO{} // nil would marshal as null and break the picker
 	for _, dir := range m.knownDirs() {
 		for _, summary := range core.ListSessions(dir, 20) {
 			if seen[summary.ID] {
@@ -702,11 +731,18 @@ func (m *SessionManager) knownDirs() []string {
 }
 
 func (m *SessionManager) defaultSessionDir() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "sessions"
+	return filepath.Join(guiHomeDir(), "sessions")
+}
+
+// guiHomeDir is the fallback workspace for GUI-initiated sessions. The .app
+// process runs with cwd=/ under LaunchServices, so os.Getwd is meaningless
+// here; $HOME is the stable root the dialogs can relative to. /tmp keeps the
+// manager usable even in a broken environment.
+func guiHomeDir() string {
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		return home
 	}
-	return filepath.Join(cwd, "sessions")
+	return "/tmp"
 }
 
 // resolve finds a saved session by id/prefix/hash/path across the directories
@@ -760,6 +796,12 @@ func (m *SessionManager) SendPrompt(id, text string) error {
 		return fmt.Errorf("empty prompt")
 	}
 	s.mu.Lock()
+	if s.lifecycle == LifecycleClosed {
+		// CloseSession already ran between our get() and this lock — a turn
+		// would run on closed MCP connections
+		s.mu.Unlock()
+		return fmt.Errorf("session %s is closed", id)
+	}
 	if s.running {
 		s.mu.Unlock()
 		item := s.queue.Add(text)
@@ -769,10 +811,13 @@ func (m *SessionManager) SendPrompt(id, text string) error {
 		return nil
 	}
 	s.running = true
+	// Add inside the same critical section as running=true: CloseSession's
+	// turns.Wait must never observe a zero count while a started turn is
+	// still between its Add and its goroutine
+	s.turns.Add(1)
 	s.mu.Unlock()
 
 	s.hud.setQueueCount(s.queue.Len())
-	s.turns.Add(1)
 	go func() {
 		defer s.turns.Done()
 		m.drainTurns(s, text)
@@ -782,6 +827,25 @@ func (m *SessionManager) SendPrompt(id, text string) error {
 		s.hud.setQueueCount(s.queue.Len())
 	}()
 	return nil
+}
+
+// Interrupt aborts the in-flight turn without closing the session. The turn
+// unwinds through the same ctx path as a session close, but the session, its
+// queue, and its MCP connections survive; runTurn returns false on
+// interruption, so the queue stops draining too.
+func (m *SessionManager) Interrupt(id string) bool {
+	s := m.get(id)
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	cancel := s.turnCancel
+	s.mu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	cancel()
+	return true
 }
 
 // drainTurns runs the first prompt, then keeps pulling from the queue while
@@ -811,6 +875,15 @@ func (m *SessionManager) runTurn(s *session, prompt string) bool {
 
 	turnCtx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
+	// expose the cancel so Interrupt can stop a runaway turn mid-flight
+	s.mu.Lock()
+	s.turnCancel = cancel
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		s.turnCancel = nil
+		s.mu.Unlock()
+	}()
 
 	onEvent := func(event core.LoopEvent) {
 		s.flow.Apply(event)
@@ -950,13 +1023,16 @@ func reHudOf(s *session) *ui.REHudModel {
 	if s.reState == nil {
 		return nil
 	}
+	// the update_re_state tool writes this struct on the turn goroutine while
+	// the tick cadence reads it here — snapshot under the state's lock
+	snap := s.reState.Snapshot()
 	return &ui.REHudModel{
-		SampleType: s.reState.SampleType,
-		Phase:      string(s.reState.Phase),
-		PhaseIndex: workflow.PhaseIndex(s.reState.Phase),
+		SampleType: snap.SampleType,
+		Phase:      string(snap.Phase),
+		PhaseIndex: workflow.PhaseIndex(snap.Phase),
 		PhaseCount: len(workflow.Phases),
-		Hypotheses: len(s.reState.Hypotheses),
-		Evidence:   len(s.reState.Evidence),
+		Hypotheses: len(snap.Hypotheses),
+		Evidence:   len(snap.Evidence),
 	}
 }
 

@@ -37,6 +37,25 @@ var guiInteractiveCommands = map[string]string{
 	"/login": "login is terminal-only (reads the password without echo)",
 }
 
+// turnsThroughRepl reports whether this command line would run a terminal repl
+// turn: its own signal handlers (repl.go takes over SIGINT/SIGTERM process-wide),
+// its own Confirm overwrite (which nils out this session's GUI approval bridge
+// for good), and a loop.Run that escapes the manager's turns.WaitGroup — so it
+// survives CloseSession and can run concurrently with a SendPrompt turn on the
+// same AgentLoop. The GUI runs turns exclusively through SendPrompt.
+func turnsThroughRepl(command []string) bool {
+	name := strings.ToLower(command[0])
+	switch name {
+	case "/skill":
+		// `/skill` alone lists; `/skill <name> <task>` runs a repl turn.
+		return len(command) >= 3
+	case "/queue":
+		return len(command) >= 2 && strings.ToLower(command[1]) == "run"
+	default:
+		return false
+	}
+}
+
 // guiRunningSafeCommands are allowed mid-turn: read-only reports over data the
 // turn goroutine does not write, plus the two display toggles (whose writes
 // funnel into the locked hudTracker through pushDisplays). Excluded on purpose:
@@ -60,10 +79,14 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 	}
 	command := strings.Fields(strings.TrimSpace(line))
 	if len(command) == 0 {
-		return CommandResultDTO{}, nil
+		return CommandResultDTO{OK: true, Notices: []NoticeDTO{}}, nil
 	}
 	if hint, blocked := guiInteractiveCommands[strings.ToLower(command[0])]; blocked {
 		return CommandResultDTO{}, errInteractiveCommand(hint)
+	}
+	if turnsThroughRepl(command) {
+		return CommandResultDTO{}, fmt.Errorf(
+			"%s would run a terminal turn — it installs its own signal handlers and would break this session's approval bridge; send the task as a normal prompt instead", command[0])
 	}
 
 	s.mu.Lock()
@@ -93,6 +116,13 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 
 	var runErr error
 	stdout := captureStdout(func() {
+		// a panicking command must degrade to an error notice, not take the
+		// whole GUI process down (wails bindings run on app goroutines)
+		defer func() {
+			if rec := recover(); rec != nil {
+				runErr = fmt.Errorf("command panicked: %v", rec)
+			}
+		}()
 		s.state.NoticeSink = sink
 		runErr = app.RunCommand(line, s.state)
 		s.state.NoticeSink = nil
@@ -112,6 +142,10 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		noticeMu.Lock()
 		notices = append(notices, NoticeDTO{Level: "error", Text: runErr.Error()})
 		noticeMu.Unlock()
+	}
+	if notices == nil {
+		// nil slices marshal as null and the frontend reads res.notices.length
+		notices = []NoticeDTO{}
 	}
 	return CommandResultDTO{OK: runErr == nil, Notices: notices}, nil
 }
@@ -134,6 +168,8 @@ func pushDisplays(s *session) {
 
 // captureStdout runs run with os.Stdout swapped for a pipe and returns
 // everything written. The swap is process-wide: commandMu must be held.
+// Restore/close ride a defer so a panicking run cannot leave the process
+// writing into a dead pipe (the reader goroutine would block forever).
 func captureStdout(run func()) string {
 	commandMu.Lock()
 	defer commandMu.Unlock()
@@ -152,10 +188,18 @@ func captureStdout(run func()) string {
 		captured <- string(data)
 	}()
 
+	// panic-only cleanup. The normal path restores and closes BEFORE reading
+	// captured — the reader's EOF comes from the Close, so closing inside the
+	// defer would deadlock the return value on the defer itself. Both steps
+	// are idempotent: the second os.Stdout store is a no-op and a second
+	// Close on an os.Pipe writer just errors.
+	defer func() {
+		os.Stdout = original
+		_ = writer.Close() // EOF for the reader even when run() panicked
+	}()
 	run()
-
-	writer.Close()
 	os.Stdout = original
+	_ = writer.Close()
 	return <-captured
 }
 
