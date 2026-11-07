@@ -1,0 +1,29 @@
+.gitignore
+  aba46a1cd24a597a 24-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "84165c8556ca7813c049d398c6aa7f2b1e36bba7",
+  "prompts": {
+    "aba46a1cd24a597a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "772765fe-1384-4733-95e8-5dfd484ec801",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        ".gitignore": {
+          "additions": 3,
+          "accepted_lines": 3
+        }
+      }
+    }
+  }
+}
