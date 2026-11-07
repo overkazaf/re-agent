@@ -1,0 +1,77 @@
+crates/oxaf-parse/src/diff.rs
+  aba46a1cd24a597a 1-238
+crates/oxaf-parse/src/pe_parse.rs
+  aba46a1cd24a597a 1-265
+crates/oxaf-parse/.gitignore
+  aba46a1cd24a597a 1
+crates/oxaf-parse/src/util.rs
+  aba46a1cd24a597a 1-146
+crates/oxaf-parse/Cargo.toml
+  aba46a1cd24a597a 1-22
+crates/oxaf-parse/src/anti.rs
+  aba46a1cd24a597a 1-519
+crates/oxaf-parse/src/elf_parse.rs
+  aba46a1cd24a597a 1-425
+crates/oxaf-parse/src/main.rs
+  aba46a1cd24a597a 1-149
+crates/oxaf-parse/src/macho_parse.rs
+  aba46a1cd24a597a 1-319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "efa81a3e62bad406f9351fda0c91d3403cd8eaff",
+  "prompts": {
+    "aba46a1cd24a597a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "772765fe-1384-4733-95e8-5dfd484ec801",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 2084,
+      "total_deletions": 0,
+      "accepted_lines": 2084,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "crates/oxaf-parse/src/macho_parse.rs": {
+          "additions": 319,
+          "accepted_lines": 319
+        },
+        "crates/oxaf-parse/src/util.rs": {
+          "additions": 146,
+          "accepted_lines": 146
+        },
+        "crates/oxaf-parse/src/elf_parse.rs": {
+          "additions": 425,
+          "accepted_lines": 425
+        },
+        "crates/oxaf-parse/src/main.rs": {
+          "additions": 149,
+          "accepted_lines": 149
+        },
+        "crates/oxaf-parse/src/anti.rs": {
+          "additions": 519,
+          "accepted_lines": 519
+        },
+        "crates/oxaf-parse/src/diff.rs": {
+          "additions": 238,
+          "accepted_lines": 238
+        },
+        "crates/oxaf-parse/.gitignore": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "crates/oxaf-parse/Cargo.toml": {
+          "additions": 22,
+          "accepted_lines": 22
+        },
+        "crates/oxaf-parse/src/pe_parse.rs": {
+          "additions": 265,
+          "accepted_lines": 265
+        }
+      }
+    }
+  }
+}
