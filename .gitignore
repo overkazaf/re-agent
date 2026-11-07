@@ -1,5 +1,6 @@
 # build output
 bin/
+0xaf
 *.exe
 
 # runtime state — transcripts and spilled tool output can contain anything
