@@ -21,6 +21,9 @@ knowledge/reverse-index.json
 # python dev tooling
 __pycache__/
 
+# rust build output (crate sources live elsewhere for now)
+crates/**/target/
+
 # GUI frontend
 gui/frontend/node_modules/
 gui/frontend/dist/
