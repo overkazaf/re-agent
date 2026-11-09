@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
 // DTO contracts between the Go bridge and the GUI frontend.
@@ -165,6 +166,36 @@ type ReDTO struct {
 	PhaseCount int    `json:"phaseCount"`
 	Hypotheses int    `json:"hypotheses"`
 	Evidence   int    `json:"evidence"`
+}
+
+// RESamplePromptDTO and RESampleTypeDTO carry workflow.SampleTypes to the
+// frontend's RE picker dialog — the one static surface the terminal picker
+// renders interactively.
+type RESamplePromptDTO struct {
+	Short string `json:"short"`
+	Full  string `json:"full"`
+}
+
+type RESampleTypeDTO struct {
+	Key     string               `json:"key"`
+	Label   string               `json:"label"`
+	Desc    string               `json:"desc"`
+	Prompts []RESamplePromptDTO `json:"prompts"`
+}
+
+// NewRESampleTypesDTO maps the workflow picker data; prompts are non-nil so
+// the slice marshals as [] rather than null (the []-not-null convention).
+func NewRESampleTypesDTO() []RESampleTypeDTO {
+	types := workflow.SampleTypes()
+	out := make([]RESampleTypeDTO, len(types))
+	for i, st := range types {
+		prompts := make([]RESamplePromptDTO, len(st.Prompts))
+		for j, p := range st.Prompts {
+			prompts[j] = RESamplePromptDTO{Short: p.Short, Full: p.Full}
+		}
+		out[i] = RESampleTypeDTO{Key: st.Key, Label: st.Label, Desc: st.Desc, Prompts: prompts}
+	}
+	return out
 }
 
 // TickDTO is the 90ms dashboard snapshot — everything the five panels render.

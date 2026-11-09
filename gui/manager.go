@@ -357,6 +357,15 @@ func (s *session) lifecycleState() string {
 	return s.lifecycle
 }
 
+// reStateSnapshot copies the reverse-mode state pointer under s.mu: syncREState
+// swaps it on the SendCommand path, and runWithWorkflow runs on the turn
+// goroutine that must never observe a torn read.
+func (s *session) reStateSnapshot() *workflow.REState {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.reState
+}
+
 // SessionManager assembles, runs, and closes GUI sessions.
 type SessionManager struct {
 	mu           sync.Mutex
@@ -806,6 +815,12 @@ func (m *SessionManager) SendPrompt(id, text string) error {
 	if text == "" {
 		return fmt.Errorf("empty prompt")
 	}
+	// Serialize the running transition against SendCommand's mid-turn guard
+	// (same lock order cmdMu → s.mu as SendCommand/SetSettings). Without this,
+	// a prompt landing between the guard's check and RunCommand would start a
+	// turn whose state reads race the command's writes.
+	s.cmdMu.Lock()
+	defer s.cmdMu.Unlock()
 	s.mu.Lock()
 	if s.lifecycle == LifecycleClosed {
 		// CloseSession already ran between our get() and this lock — a turn
@@ -952,7 +967,7 @@ func (m *SessionManager) runWithWorkflow(s *session, prompt string, ctx context.
 	if workflow.ShouldDelegate(state.Workflow, state.Config, state.Provider, state.Role) {
 		return m.runDelegated(s, prompt, ctx, onEvent, onPhase)
 	}
-	wrapped := workflow.WrapPrompt(prompt, state.Workflow, state.Config, state.Provider, s.reState)
+	wrapped := workflow.WrapPrompt(prompt, state.Workflow, state.Config, state.Provider, s.reStateSnapshot())
 	return s.loop.Run(wrapped, core.RunOptions{
 		Role: state.Role, ProviderName: state.Provider, Ctx: ctx, OnEvent: onEvent,
 	})
@@ -1105,12 +1120,17 @@ func (m *SessionManager) SetSettings(id string, patch SettingsPatch) error {
 // reHudOf mirrors repl.go refreshRE: the reverse-mode strip, only in reverse
 // workflow sessions that have picked a sample.
 func reHudOf(s *session) *ui.REHudModel {
-	if s.reState == nil {
+	// the pointer itself is swapped by syncREState on the SendCommand path —
+	// copy it under s.mu before snapshotting
+	s.mu.Lock()
+	re := s.reState
+	s.mu.Unlock()
+	if re == nil {
 		return nil
 	}
 	// the update_re_state tool writes this struct on the turn goroutine while
 	// the tick cadence reads it here — snapshot under the state's lock
-	snap := s.reState.Snapshot()
+	snap := re.Snapshot()
 	return &ui.REHudModel{
 		SampleType: snap.SampleType,
 		Phase:      string(snap.Phase),
@@ -1119,6 +1139,22 @@ func reHudOf(s *session) *ui.REHudModel {
 		Hypotheses: len(snap.Hypotheses),
 		Evidence:   len(snap.Evidence),
 	}
+}
+
+// syncREState mirrors state.REState — the single source of truth the /workflow
+// command writes — into s.reState, the field the update_re_state tool binds to,
+// the prompt wrapper reads, and the RE strip snapshots. Unconditional mirroring
+// (not just nil-adoption) keeps a re-pick (apk → so) from leaving every reader
+// on the abandoned session. Returns whether the pointer changed, so callers
+// can emit the tick SendCommand otherwise never would.
+func syncREState(s *session) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.state.REState == s.reState {
+		return false
+	}
+	s.reState = s.state.REState
+	return true
 }
 
 // CloseSession cancels the session context (aborting the turn and any pending

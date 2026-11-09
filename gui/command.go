@@ -96,15 +96,27 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		return CommandResultDTO{}, fmt.Errorf(
 			"command %s is not available while a turn is running — wait for it to finish", command[0])
 	}
-	// /workflow reverse opens the terminal RE picker (state.editor.ReadLine);
-	// the GUI State has no editor, so it would nil-panic. Reverse sessions
-	// belong to the frontend's own flow until a GUI-native picker exists.
-	if strings.ToLower(command[0]) == "/workflow" && strings.EqualFold(command[len(command)-1], "reverse") {
-		return CommandResultDTO{}, fmt.Errorf("/workflow reverse needs the terminal RE picker — not available from the GUI yet")
+	// Bare "/workflow reverse" opens the terminal RE picker (state.editor.ReadLine);
+	// the GUI State has no editor, so it would nil-panic. The argument form
+	// ("/workflow reverse apk") is non-interactive and flows through; the
+	// frontend's RE picker dialog sends exactly that.
+	if strings.ToLower(command[0]) == "/workflow" && len(command) == 2 && strings.EqualFold(command[1], "reverse") {
+		return CommandResultDTO{}, fmt.Errorf(
+			"bare /workflow reverse opens the terminal picker — pick the sample in the GUI dialog (send /workflow reverse from the prompt input) or use /workflow reverse <sample-type>")
 	}
 
 	s.cmdMu.Lock()
 	defer s.cmdMu.Unlock()
+
+	// Re-check under cmdMu: a SendPrompt landing between the early guard and
+	// this lock could have started a turn that RunCommand would then race.
+	s.mu.Lock()
+	running = s.running
+	s.mu.Unlock()
+	if running && !guiRunningSafeCommands[strings.ToLower(command[0])] {
+		return CommandResultDTO{}, fmt.Errorf(
+			"command %s is not available while a turn is running — wait for it to finish", command[0])
+	}
 
 	var noticeMu sync.Mutex
 	var notices []NoticeDTO
@@ -128,6 +140,13 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		s.state.NoticeSink = nil
 	})
 	pushDisplays(s) // /tasks, /think mutated the state — fold it into the HUD strip
+	// /workflow reverse <sample> wrote a fresh state.REState (and /workflow off
+	// cleared it) — mirror it into the session field the tool binding, prompt
+	// wrapper, and RE strip read. A change needs its own tick: SendCommand
+	// otherwise emits none, so the strip would lag until the next turn.
+	if syncREState(s) {
+		m.emitTick(s)
+	}
 
 	for _, line := range strings.Split(strings.TrimRight(stdout, "\n"), "\n") {
 		text := strings.TrimSpace(ansiRE.ReplaceAllString(line, ""))

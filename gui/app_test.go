@@ -94,3 +94,32 @@ func TestAppApproveUnknownIsError(t *testing.T) {
 		t.Fatal("approving an unknown request must error")
 	}
 }
+
+// TestAppRESampleTypes: the picker data binding mirrors workflow.SampleTypes —
+// every key, label, and canned prompt crossed intact.
+func TestAppRESampleTypes(t *testing.T) {
+	app := NewApp()
+
+	types, err := app.RESampleTypes()
+	if err != nil {
+		t.Fatalf("RESampleTypes: %v", err)
+	}
+	if len(types) != 7 {
+		t.Fatalf("sample types = %d, want 7", len(types))
+	}
+	prompts := 0
+	for _, st := range types {
+		if st.Key == "" || st.Label == "" || len(st.Prompts) == 0 {
+			t.Fatalf("incomplete sample type: %+v", st)
+		}
+		for _, p := range st.Prompts {
+			if p.Short == "" || p.Full == "" {
+				t.Fatalf("empty prompt on %s: %+v", st.Key, p)
+			}
+		}
+		prompts += len(st.Prompts)
+	}
+	if prompts != 21 {
+		t.Fatalf("canned prompts = %d, want 21", prompts)
+	}
+}

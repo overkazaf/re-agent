@@ -141,6 +141,12 @@ func (a *App) GetThemes() ([]string, error) {
 	return themes, nil
 }
 
+// RESampleTypes feeds the frontend's reverse-workflow picker dialog: the same
+// sample-type + canned-prompt data the terminal picker renders interactively.
+func (a *App) RESampleTypes() ([]RESampleTypeDTO, error) {
+	return NewRESampleTypesDTO(), nil
+}
+
 // HomeDir is the default workspace root for new sessions and shells — the
 // manager's own fallback (guiHomeDir) exposed so the dialogs pre-fill the
 // same value instead of guessing.

@@ -158,7 +158,16 @@ func TestSendCommandErrors(t *testing.T) {
 		t.Fatal("/login must be refused in the GUI")
 	}
 	if _, err := mgr.SendCommand(id, "/workflow reverse"); err == nil {
-		t.Fatal("/workflow reverse must be refused in the GUI (terminal RE picker)")
+		t.Fatal("bare /workflow reverse must be refused in the GUI (terminal RE picker)")
+	}
+	// the argument form flows to the core handler; extra tokens surface as a
+	// usage notice (OK=false), not a GUI transport error
+	result, err = mgr.SendCommand(id, "/workflow reverse apk now")
+	if err != nil {
+		t.Fatalf("argument form must not hit the GUI block: %v", err)
+	}
+	if result.OK {
+		t.Fatalf("usage error must not be OK: %v", noticeTexts(result))
 	}
 	if _, err := mgr.SendCommand("gui-missing", "/help"); err == nil {
 		t.Fatal("unknown session must error")
@@ -212,5 +221,106 @@ func TestSendCommandSerializes(t *testing.T) {
 		if !strings.Contains(joined, "version") && !strings.Contains(joined, "0xAF-Re") {
 			t.Fatalf("version output lost: %q", joined)
 		}
+	}
+}
+
+// TestSendCommandWorkflowReverse: the argument form starts the RE session end
+// to end — state.REState mirrors into s.reState (the field split the /phase
+// handler and the RE strip read), /phase works, re-picks don't leave a stale
+// pointer, and /workflow off clears both fields and the strip.
+func TestSendCommandWorkflowReverse(t *testing.T) {
+	mgr, id := commandTestSession(t)
+	s := mgr.get(id)
+
+	start := func(line string) CommandResultDTO {
+		t.Helper()
+		result, err := mgr.SendCommand(id, line)
+		if err != nil {
+			t.Fatalf("SendCommand(%q): %v", line, err)
+		}
+		return result
+	}
+
+	result := start("/workflow reverse apk")
+	if !result.OK {
+		t.Fatalf("reverse start failed: %v", noticeTexts(result))
+	}
+	s.mu.Lock()
+	re := s.reState
+	core := s.state.REState
+	s.mu.Unlock()
+	if core == nil || re != core {
+		t.Fatalf("s.reState must mirror state.REState: re=%v core=%v", re, core)
+	}
+	if re.SampleType != "apk" {
+		t.Fatalf("sample type = %s, want apk", re.SampleType)
+	}
+
+	tick, ok := mgr.Snapshot(id)
+	if !ok || tick.Re == nil {
+		t.Fatalf("RE strip missing from snapshot: ok=%v re=%v", ok, tick.Re)
+	}
+	if tick.Re.SampleType != "apk" || tick.Re.Phase != "triage" {
+		t.Fatalf("strip = %+v, want apk/triage", tick.Re)
+	}
+
+	// /phase reads state.REState — the field split must be healed
+	result = start("/phase")
+	if !result.OK || !strings.Contains(strings.Join(noticeTexts(result), "\n"), "phase=triage") {
+		t.Fatalf("/phase after GUI start: %v", noticeTexts(result))
+	}
+	result = start("/phase next")
+	if !result.OK || !strings.Contains(strings.Join(noticeTexts(result), "\n"), "static") {
+		t.Fatalf("/phase next: %v", noticeTexts(result))
+	}
+
+	// re-pick swaps in a fresh state — no stale pointer
+	start("/workflow reverse so")
+	s.mu.Lock()
+	re = s.reState
+	s.mu.Unlock()
+	if re.SampleType != "so" {
+		t.Fatalf("re-pick left stale state: sample=%s, want so", re.SampleType)
+	}
+
+	// off clears both fields and the strip
+	result = start("/workflow off")
+	if !result.OK {
+		t.Fatalf("/workflow off: %v", noticeTexts(result))
+	}
+	s.mu.Lock()
+	re = s.reState
+	core = s.state.REState
+	s.mu.Unlock()
+	if re != nil || core != nil {
+		t.Fatalf("off must clear both fields: re=%v core=%v", re, core)
+	}
+	if tick, ok := mgr.Snapshot(id); ok && tick.Re != nil {
+		t.Fatalf("RE strip must be gone after off: %+v", tick.Re)
+	}
+
+	// unknown sample errors through the handler without starting anything
+	result = start("/workflow reverse alien")
+	if result.OK {
+		t.Fatalf("unknown sample must fail: %v", noticeTexts(result))
+	}
+}
+
+// TestSendCommandWorkflowReverseMidTurn: the argument form is not in the
+// mid-turn safe list — a live turn refuses it like every other routing command.
+func TestSendCommandWorkflowReverseMidTurn(t *testing.T) {
+	mgr, id := commandTestSession(t)
+	s := mgr.get(id)
+	s.mu.Lock()
+	s.running = true
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		s.running = false
+		s.mu.Unlock()
+	}()
+
+	if _, err := mgr.SendCommand(id, "/workflow reverse apk"); err == nil {
+		t.Fatal("reverse start must be refused while a turn runs")
 	}
 }
