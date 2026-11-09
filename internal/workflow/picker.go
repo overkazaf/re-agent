@@ -1,5 +1,7 @@
 package workflow
 
+import "strings"
+
 type SampleType struct {
 	Key     string
 	Label   string
@@ -66,4 +68,14 @@ func SampleTypeByKey(key string) *SampleType {
 		}
 	}
 	return nil
+}
+
+// SampleTypeKeys joins every valid key ("apk|so|…") for usage/error strings.
+func SampleTypeKeys() string {
+	types := SampleTypes()
+	keys := make([]string, len(types))
+	for i, st := range types {
+		keys[i] = st.Key
+	}
+	return strings.Join(keys, "|")
 }

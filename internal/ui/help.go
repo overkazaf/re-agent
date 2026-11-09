@@ -31,7 +31,7 @@ var SlashCommandSections = []HelpSection{
 		{"/theme", "[name]", "Switch palette (deck/amber/matrix/mono)"},
 		{"/flow", "[full|flow|trace|off]", "Live dataflow diagram and trace lines"},
 		{"/refresh", "[ms|calm|normal|off]", "Set the live pane refresh interval (calm/off quiet the scrollback)"},
-		{"/workflow", "[off|auto|specialist|caveman|research|writeup|ctf|reverse|engineering]", "Pick RE workflow mode"},
+		{"/workflow", "[off|auto|specialist|caveman|research|writeup|ctf|reverse [sample]|engineering]", "Pick RE workflow mode; reverse [sample] skips the picker"},
 		{"/phase", "[next|<phase-name>]", "Show or advance the RE workflow phase"},
 		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
 		{"/think", "[auto|collapse|expand|toggle]", "Fold or expand the streamed reasoning"},
@@ -157,7 +157,7 @@ var promptTargets = []string{"system", "planner", "executor", "researcher"}
 
 var promptActions = []string{"list", "show", "path", "edit", "set", "reset", "reload"}
 
-var workflowModes = []string{"off", "auto", "specialist", "caveman"}
+var workflowModes = []string{"off", "auto", "specialist", "caveman", "research", "writeup", "ctf", "reverse", "engineering"}
 
 var taskModes = []string{"auto", "collapse", "expand", "toggle"}
 

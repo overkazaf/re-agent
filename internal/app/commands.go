@@ -31,7 +31,8 @@ import (
 // bridge drives this). Notices flow through state.NoticeSink when attached;
 // anything printed with raw fmt.Print still goes to stdout, so a headless
 // caller must capture stdout itself. Interactive stdin flows (/login, the
-// /workflow reverse picker) are terminal-only by nature.
+// bare /workflow reverse picker) are terminal-only by nature; /workflow
+// reverse <sample> is the non-interactive entry.
 func RunCommand(line string, state *State) error {
 	return handleCommand(line, state)
 }
@@ -239,6 +240,24 @@ func handleCommand(line string, state *State) error {
 	case "/workflow":
 		if arg == "" {
 			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
+			return nil
+		}
+		// "/workflow reverse <sample>" starts the RE session without the
+		// interactive picker (the GUI bridge and shell scripts need this —
+	 // state.editor/state.Queue are terminal-only). Validation happens
+		// before any mutation so a typo leaves the current mode untouched.
+		if fields := strings.Fields(arg); fields[0] == string(workflow.Reverse) && len(fields) > 1 {
+			if len(fields) > 2 {
+				return fmt.Errorf("usage: /workflow reverse [%s]", workflow.SampleTypeKeys())
+			}
+			selected := workflow.SampleTypeByKey(strings.ToLower(fields[1]))
+			if selected == nil {
+				return fmt.Errorf("unknown sample type: %s (usage: /workflow reverse [%s])", fields[1], workflow.SampleTypeKeys())
+			}
+			state.Workflow = workflow.Reverse
+			state.REState = workflow.NewREState(selected.Key)
+			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
+			fmt.Println(ui.RenderNotice("sample=" + selected.Key + " phase=" + string(state.REState.Phase) + " — send your first task"))
 			return nil
 		}
 		if !workflow.IsMode(arg) {
