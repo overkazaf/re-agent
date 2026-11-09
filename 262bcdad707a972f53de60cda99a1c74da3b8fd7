@@ -1,0 +1,80 @@
+gui/manager.go
+  aba46a1cd24a597a 360-368,818-823,970,1123-1128,1133,1144-1159
+gui/command.go
+  aba46a1cd24a597a 99-105,111-119,143-149
+gui/command_test.go
+  aba46a1cd24a597a 161-170,226-326
+gui/app_test.go
+  aba46a1cd24a597a 97-125
+gui/app.go
+  aba46a1cd24a597a 144-149
+gui/dto.go
+  aba46a1cd24a597a 6,171-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "262bcdad707a972f53de60cda99a1c74da3b8fd7",
+  "prompts": {
+    "aba46a1cd24a597a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "772765fe-1384-4733-95e8-5dfd484ec801",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 782,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/session/PromptInput.tsx": {
+          "accepted_lines": 30
+        },
+        "gui/manager.go": {
+          "accepted_lines": 75
+        },
+        "README.md": {
+          "accepted_lines": 5
+        },
+        "gui/command.go": {
+          "accepted_lines": 43
+        },
+        "gui/command_test.go": {
+          "accepted_lines": 120
+        },
+        "gui/app_test.go": {
+          "accepted_lines": 29
+        },
+        "gui/frontend/src/components/re/index.ts": {
+          "accepted_lines": 1
+        },
+        "gui/frontend/src/components/re/REPickerDialog.tsx": {
+          "accepted_lines": 177
+        },
+        "gui/frontend/src/dev/interact-demo.tsx": {
+          "accepted_lines": 51
+        },
+        "gui/dto.go": {
+          "accepted_lines": 62
+        },
+        "gui/frontend/scripts/e2e-runtime.mjs": {
+          "accepted_lines": 134
+        },
+        "gui/frontend/src/lib/types.ts": {
+          "accepted_lines": 30
+        },
+        "gui/app.go": {
+          "accepted_lines": 12
+        },
+        "README.zh-CN.md": {
+          "accepted_lines": 4
+        },
+        "gui/frontend/src/lib/api.ts": {
+          "accepted_lines": 9
+        }
+      }
+    }
+  }
+}
