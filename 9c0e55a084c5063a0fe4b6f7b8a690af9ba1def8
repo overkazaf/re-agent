@@ -1,0 +1,68 @@
+gui/frontend/src/lib/api.ts
+  aba46a1cd24a597a 4-5,10,34,63
+gui/frontend/src/lib/types.ts
+  aba46a1cd24a597a 2-3,158-171
+gui/frontend/src/components/re/REPickerDialog.tsx
+  aba46a1cd24a597a 1-177
+gui/frontend/src/components/re/index.ts
+  aba46a1cd24a597a 3
+README.md
+  aba46a1cd24a597a 452-455
+README.zh-CN.md
+  aba46a1cd24a597a 404-406
+gui/frontend/src/components/session/PromptInput.tsx
+  aba46a1cd24a597a 11,68-70,151-158,210-212
+gui/frontend/src/dev/interact-demo.tsx
+  aba46a1cd24a597a 24,65-89
+gui/frontend/scripts/e2e-runtime.mjs
+  aba46a1cd24a597a 111,341,379-391,394-421,628-651
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "9c0e55a084c5063a0fe4b6f7b8a690af9ba1def8",
+  "prompts": {
+    "aba46a1cd24a597a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "772765fe-1384-4733-95e8-5dfd484ec801",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 441,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/lib/types.ts": {
+          "accepted_lines": 30
+        },
+        "gui/frontend/scripts/e2e-runtime.mjs": {
+          "accepted_lines": 134
+        },
+        "gui/frontend/src/components/session/PromptInput.tsx": {
+          "accepted_lines": 30
+        },
+        "README.zh-CN.md": {
+          "accepted_lines": 4
+        },
+        "README.md": {
+          "accepted_lines": 5
+        },
+        "gui/frontend/src/components/re/index.ts": {
+          "accepted_lines": 1
+        },
+        "gui/frontend/src/dev/interact-demo.tsx": {
+          "accepted_lines": 51
+        },
+        "gui/frontend/src/lib/api.ts": {
+          "accepted_lines": 9
+        },
+        "gui/frontend/src/components/re/REPickerDialog.tsx": {
+          "accepted_lines": 177
+        }
+      }
+    }
+  }
+}
