@@ -1,0 +1,120 @@
+internal/workflow/picker.go
+  aba46a1cd24a597a 3-4,72-81
+internal/app/commands.go
+  aba46a1cd24a597a 34-35,245-262
+internal/app/workflow_arg_test.go
+  aba46a1cd24a597a 1-83
+internal/ui/help.go
+  aba46a1cd24a597a 34,160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.9",
+  "base_commit_sha": "d4e0a166ce407e0fbedc40ed8f8ca80fc4636e42",
+  "prompts": {
+    "aba46a1cd24a597a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "772765fe-1384-4733-95e8-5dfd484ec801",
+        "model": "glm-5.3-flash"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 688,
+      "total_deletions": 39,
+      "accepted_lines": 672,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/app.go": {
+          "additions": 6,
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/components/re/index.ts": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/ui/help.go": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        },
+        "README.zh-CN.md": {
+          "additions": 3,
+          "deletions": 2,
+          "accepted_lines": 3
+        },
+        "internal/workflow/picker.go": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "internal/app/workflow_arg_test.go": {
+          "additions": 85,
+          "deletions": 2,
+          "accepted_lines": 83
+        },
+        "gui/dto.go": {
+          "additions": 31,
+          "accepted_lines": 31
+        },
+        "gui/frontend/src/lib/api.ts": {
+          "additions": 5,
+          "deletions": 1,
+          "accepted_lines": 5
+        },
+        "gui/frontend/src/dev/interact-demo.tsx": {
+          "additions": 27,
+          "deletions": 2,
+          "accepted_lines": 26
+        },
+        "gui/app_test.go": {
+          "additions": 29,
+          "accepted_lines": 29
+        },
+        "gui/frontend/src/lib/types.ts": {
+          "additions": 16,
+          "deletions": 2,
+          "accepted_lines": 16
+        },
+        "README.md": {
+          "additions": 4,
+          "deletions": 3,
+          "accepted_lines": 4
+        },
+        "gui/command.go": {
+          "additions": 24,
+          "deletions": 5,
+          "accepted_lines": 24
+        },
+        "gui/frontend/scripts/e2e-runtime.mjs": {
+          "additions": 69,
+          "deletions": 3,
+          "accepted_lines": 68
+        },
+        "gui/frontend/src/components/session/PromptInput.tsx": {
+          "additions": 15,
+          "accepted_lines": 15
+        },
+        "internal/app/commands.go": {
+          "additions": 20,
+          "deletions": 1,
+          "accepted_lines": 20
+        },
+        "gui/manager.go": {
+          "additions": 39,
+          "deletions": 3,
+          "accepted_lines": 39
+        },
+        "gui/frontend/src/components/re/REPickerDialog.tsx": {
+          "additions": 182,
+          "deletions": 5,
+          "accepted_lines": 177
+        },
+        "gui/command_test.go": {
+          "additions": 118,
+          "deletions": 8,
+          "accepted_lines": 111
+        }
+      }
+    }
+  }
+}
