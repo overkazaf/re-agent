@@ -401,8 +401,9 @@ v1 能力一览：
 go test ./gui/ -run TestE2E -v
 ```
 
-注意：`/workflow reverse` 暂时仅限终端使用（RE 样本选择器是 TUI 界面）；需要
-stdin 交互的斜杠命令在 GUI 中会被礼貌拒绝。
+注意：在 GUI 中发送裸 `/workflow reverse` 会打开原生的样本类型 + 起始 prompt
+选择对话框（终端版选择器需要 stdin）；参数形式 `/workflow reverse <sample-type>`
+在两端都无需选择器直接启动。需要 stdin 交互的其他斜杠命令在 GUI 中仍会被礼貌拒绝。
 
 ## Workflow 模式
 

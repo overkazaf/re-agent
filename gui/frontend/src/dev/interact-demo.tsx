@@ -21,7 +21,7 @@ import {
 import { ApprovalDialog, PromptInput, SessionSidebar, TranscriptStream } from '../components/session'
 import { QueuePanel, REHudPanel } from '../components/re'
 import { approval, guiEvent, loopEvents, tick, tickIdle } from './mock'
-import type { LoopEvent, SessionInfo } from '../lib/types'
+import type { LoopEvent, RESampleType, SessionInfo } from '../lib/types'
 
 // ---------- fake backend (browser-dev only) ----------
 
@@ -62,6 +62,31 @@ function installFakeBackend() {
         CloseSession: async () => {},
         SendPrompt: async () => {},
         SendCommand: async () => ({ ok: true, notices: [{ level: 'info' as const, text: '(demo shim) command accepted' }] }),
+        RESampleTypes: async (): Promise<RESampleType[]> => [
+          {
+            key: 'apk', label: 'APK', desc: 'Android application package',
+            prompts: [
+              { short: 'Triage APK structure', full: 'Identify package name, permissions, components, native libs, and signing info for this APK.' },
+              { short: 'Find hardcoded secrets', full: "Search for hardcoded API keys, tokens, URLs, and credentials in the APK's dex and resource files." },
+              { short: 'Trace native JNI calls', full: 'Map JNI bridge methods between Java/Kotlin and native .so libraries in this APK.' },
+              { short: 'Recover obfuscated logic', full: "Deobfuscate and recover the core business logic from this APK's smali/dex." },
+            ],
+          },
+          {
+            key: 'so', label: 'SO / ELF shared lib', desc: 'Linux/Android shared object',
+            prompts: [
+              { short: 'Symbol & import survey', full: 'List exported/imported symbols, detect stripping level, and identify key routines.' },
+              { short: 'Find crypto primitives', full: 'Locate cryptographic constants, S-boxes, and cipher implementations in this binary.' },
+            ],
+          },
+          {
+            key: 'elf', label: 'ELF executable', desc: 'Linux binary, static or dynamic',
+            prompts: [
+              { short: 'Triage & mitigations', full: 'Identify architecture, linkage, and exploit mitigations (RELRO, canaries, NX, PIE).' },
+              { short: 'Entry & main recovery', full: "Locate the entry point, recover main, and outline the program's control flow." },
+            ],
+          },
+        ],
         Approve: async () => {},
         GetState: async () => tickIdle,
         Completions: async (line: string) => {

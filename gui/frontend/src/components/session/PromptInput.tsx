@@ -8,6 +8,7 @@ import { api } from '../../lib/api'
 import { pushEsc } from '../../lib/escStack'
 import { actions, hasBackend } from '../../store/sessions'
 import { Spinner } from '../crt'
+import { REPickerDialog } from '../re'
 
 const LINE_H = 19
 const MAX_LINES = 6
@@ -64,6 +65,9 @@ export function PromptInput({
   const [dismissed, setDismissed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  // bare "/workflow reverse" opens the GUI picker instead of hitting the
+  // backend block — the argument form flows through send() normally
+  const [rePicker, setRePicker] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
   const fetchSeq = useRef(0)
@@ -144,6 +148,14 @@ export function PromptInput({
   async function send() {
     const text = value.trim()
     if (!text || !sessionId || busy) return
+    // the terminal RE picker has no GUI stdin — bare /workflow reverse opens
+    // the native dialog (exact, case-insensitive match only)
+    if (text.toLowerCase() === '/workflow reverse') {
+      setValue('')
+      setDismissed(true)
+      setRePicker(true)
+      return
+    }
     setBusy(true)
     setSendError(null)
     const res = text.startsWith('/')
@@ -195,6 +207,9 @@ export function PromptInput({
         ...style,
       }}
     >
+      {sessionId && rePicker && (
+        <REPickerDialog sessionId={sessionId} onClose={() => setRePicker(false)} />
+      )}
       {/* queue hint — driven by hud.queueCount via the queueCount prop */}
       {running && queueCount > 0 && (
         <div style={{ color: 'var(--accent)', fontSize: 11, padding: '4px 10px', borderBottom: '1px solid var(--rule)' }}>

@@ -1,11 +1,13 @@
 // FROZEN CONTRACT — typed wrappers over the Wails-bound Go App methods.
 // Calls go through window.go (the runtime object Wails injects), so this file
 // stays stable regardless of how wailsjs/ bindings get regenerated.
-// Read-only for all workstream agents.
+// The freeze served the parallel workstream build; that build is complete and
+// amendments now go through normal review: keep this file mirroring gui/app.go.
 
 import type {
   ApprovalDecision,
   CommandResultDTO,
+  RESampleType,
   SessionInfo,
   SessionSummaryDTO,
   SettingsPatch,
@@ -29,6 +31,7 @@ export interface AppAPI {
   SetSettings(id: string, patch: SettingsPatch): Promise<void>
   Completions(line: string): Promise<string[]>
   GetThemes(): Promise<string[]>
+  RESampleTypes(): Promise<RESampleType[]>
   HomeDir(): Promise<string>
   PickDirectory(): Promise<string>
   ShellStart(cwd: string): Promise<ShellInfo>
@@ -57,6 +60,7 @@ export const api = {
   setSettings: (id: string, patch: SettingsPatch) => app().SetSettings(id, patch),
   completions: (line: string) => app().Completions(line),
   getThemes: () => app().GetThemes(),
+  reSampleTypes: () => app().RESampleTypes(),
   homeDir: () => app().HomeDir(),
   pickDirectory: () => app().PickDirectory(),
   shellStart: (cwd: string) => app().ShellStart(cwd),

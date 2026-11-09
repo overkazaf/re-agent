@@ -108,7 +108,7 @@ function installShim() {
   const tickOf = (s, over = {}) => ({
     flow: flow(over.flow ?? {}),
     hud: hud({ queueCount: s.queue.length, ...(over.hud ?? {}) }),
-    re: null,
+    re: s.re ?? null,
     plan: over.plan ?? null,
   })
   // full-shape LoopEvent (Go marshals every field)
@@ -338,7 +338,7 @@ function installShim() {
             workflow: opts.workflow || '', planner: 'mock-planner', executor: 'mock-executor',
             lifecycle: 'idle',
           }
-          const s = { id, info, busy: false, queue: [], stage: 'idle', turn: 0, messages: 0, toolsOk: 0, toolsFailed: 0, activeTool: '', toolStartedAt: 0, planSnapshot: null, planDone: 0, planTotal: 0, toolRun: null, usageTotals: {}, ticker: null, pending: null, gateResolve: null, gateNext: false, aborted: false, abortNotify: null, slowNext: false }
+          const s = { id, info, busy: false, queue: [], stage: 'idle', turn: 0, messages: 0, toolsOk: 0, toolsFailed: 0, activeTool: '', toolStartedAt: 0, planSnapshot: null, planDone: 0, planTotal: 0, toolRun: null, usageTotals: {}, ticker: null, pending: null, gateResolve: null, gateNext: false, aborted: false, abortNotify: null, slowNext: false, re: null }
           sessions.set(id, s)
           // manager emits a state-change tick right after Start
           emitTick(id, tickOf(s))
@@ -376,7 +376,49 @@ function installShim() {
         async SendCommand(id, line) {
           await sleep(25)
           if (!sessions.has(id)) throw `no such session: ${id}`
+          const s = sessions.get(id)
+          // mirror the Go side: the argument form starts the RE session and
+          // emits its own tick; /workflow off clears the strip
+          const words = line.trim().split(/\s+/)
+          if (words[0] === '/workflow' && words[1] === 'reverse' && words.length === 3) {
+            s.re = { sampleType: words[2], phase: 'triage', phaseIndex: 0, phaseCount: 7, hypotheses: 0, evidence: 0 }
+            emitTick(id, tickOf(s))
+            return { ok: true, notices: [{ level: 'info', text: `workflow=reverse sample=${words[2]}` }] }
+          }
+          if (words[0] === '/workflow' && words[1] === 'off') {
+            s.re = null
+            emitTick(id, tickOf(s))
+          }
           return { ok: true, notices: [{ level: 'info', text: `[mock] command ${line} acknowledged` }] }
+        },
+        async RESampleTypes() {
+          await sleep(10)
+          return [
+            {
+              key: 'apk', label: 'APK', desc: 'Android application package',
+              prompts: [
+                { short: 'Triage APK structure', full: 'Identify package name, permissions, components, native libs, and signing info for this APK.' },
+                { short: 'Find hardcoded secrets', full: "Search for hardcoded API keys, tokens, URLs, and credentials in the APK's dex and resource files." },
+                { short: 'Trace native JNI calls', full: 'Map JNI bridge methods between Java/Kotlin and native .so libraries in this APK.' },
+                { short: 'Recover obfuscated logic', full: "Deobfuscate and recover the core business logic from this APK's smali/dex." },
+              ],
+            },
+            {
+              key: 'so', label: 'SO / ELF shared lib', desc: 'Linux/Android shared object',
+              prompts: [
+                { short: 'Symbol & import survey', full: 'List exported/imported symbols, detect stripping level, and identify key routines.' },
+                { short: 'Find crypto primitives', full: 'Locate cryptographic constants, S-boxes, and cipher implementations in this binary.' },
+                { short: 'Reconstruct C structs', full: 'Recover C/C++ struct layouts from field access patterns in the decompiled code.' },
+              ],
+            },
+            {
+              key: 'firmware', label: 'Firmware image', desc: 'Router/IoT firmware dump',
+              prompts: [
+                { short: 'Filesystem extraction', full: 'Identify the firmware container format, extract the filesystem, and map its layout.' },
+                { short: 'Boot chain analysis', full: 'Trace the boot chain from bootloader to kernel, noting signing and encryption stages.' },
+              ],
+            },
+          ]
         },
         async Approve(id, requestID, decision) {
           const s = sessions.get(id)
@@ -582,6 +624,30 @@ async function main() {
     await waitFor(page, '[mock] command /help acknowledged')
   }, page)
   await shot('slash-command')
+
+  // S6.5 bare "/workflow reverse" opens the native RE picker (client-side
+  // interception — no notice may fire), the dialog starts the session via the
+  // argument form, the canned prompt runs a turn, and /workflow off drops the
+  // strip again
+  await step('RE picker dialog starts reverse workflow', async () => {
+    await page.locator('textarea').fill('/workflow reverse')
+    await page.waitForTimeout(150) // let the completions debounce settle (multi-word → no palette)
+    await page.keyboard.press('Enter')
+    // the dialog itself is the interception proof: without it the line would
+    // have gone to the backend and produced a notice instead
+    await waitFor(page, 'Android application package')
+    await page.getByText('Android application package').click()
+    await page.getByText('Triage APK structure').click()
+    await page.getByText('start RE session').click()
+    await waitFor(page, 'workflow=reverse sample=apk')
+    await waitFor(page, 'Mock reply: Identify package name', 15000)
+    await waitFor(page, '▸TRI')
+    await page.locator('textarea').fill('/workflow off')
+    await page.keyboard.press('Enter')
+    await waitFor(page, '[mock] command /workflow off acknowledged')
+    await waitFor(page, 'RE workflow off')
+  }, page)
+  await shot('re-picker')
 
   // S7 second session + buffer isolation
   await step('second session, buffers isolated', async () => {

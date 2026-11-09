@@ -449,9 +449,10 @@ Headless smoke (no window needed):
 go test ./gui/ -run TestE2E -v
 ```
 
-Notes: `/workflow reverse` stays terminal-only for now (the RE sample picker
-is a TUI surface), and slash commands that read stdin are refused politely in
-the GUI.
+Notes: sending bare `/workflow reverse` in the GUI opens a native sample-type +
+starter-prompt picker dialog (the terminal picker reads stdin); the argument
+form `/workflow reverse <sample-type>` works in both surfaces without any
+picker. Slash commands that read stdin are still refused politely in the GUI.
 
 ## Workflow Modes
 

@@ -1,6 +1,6 @@
 // FROZEN CONTRACT — mirror of gui/dto.go and docs/plans/2026-11-03-gui-implementation.md §0.
-// Read-only for all workstream agents: if a type is missing or wrong, report to
-// the integrator instead of editing this file.
+// The freeze served the parallel workstream build; that build is complete and
+// amendments now go through normal review: keep this file mirroring gui/dto.go.
 
 // ---------- lifecycle ----------
 export type LifecycleState = 'idle' | 'running' | 'awaiting_approval' | 'closed'
@@ -153,6 +153,20 @@ export interface ReDTO {
   phaseCount: number
   hypotheses: number
   evidence: number
+}
+
+// ---------- RE picker (mirrors workflow.SampleTypes via App.RESampleTypes) ----------
+
+export interface RESamplePrompt {
+  short: string
+  full: string
+}
+
+export interface RESampleType {
+  key: string
+  label: string
+  desc: string
+  prompts: RESamplePrompt[]
 }
 
 export interface TickDTO {
