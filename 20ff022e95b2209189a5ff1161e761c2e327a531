@@ -1,0 +1,68 @@
+docs/index.html
+  441ec19d64926727 7,39,56,480,529-534,634,647-648
+docs/diagrams/0xaf-re-agent-architecture.zh-CN.html
+  441ec19d64926727 153,169,186-188,202,259-265,329-330,348,352
+docs/ARCHITECTURE.md
+  441ec19d64926727 30-42,55,528-536,797,962
+docs/index.zh-CN.html
+  441ec19d64926727 7,37,53,55,179-187,213
+docs/diagrams/0xaf-re-agent-architecture.html
+  441ec19d64926727 153-154,170,187-189,203,260-266,330-331,349,353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "20ff022e95b2209189a5ff1161e761c2e327a531",
+  "prompts": {
+    "441ec19d64926727": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5796d99a-de56-4332-a49b-37e4baab54a9",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 147,
+      "total_deletions": 240,
+      "accepted_lines": 134,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/diagrams/0xaf-re-agent-architecture.html": {
+          "additions": 20,
+          "deletions": 6,
+          "accepted_lines": 18
+        },
+        "README.md": {
+          "additions": 19,
+          "deletions": 114,
+          "accepted_lines": 19
+        },
+        "docs/diagrams/0xaf-re-agent-architecture.zh-CN.html": {
+          "additions": 19,
+          "deletions": 6,
+          "accepted_lines": 17
+        },
+        "docs/ARCHITECTURE.md": {
+          "additions": 27,
+          "deletions": 2,
+          "accepted_lines": 25
+        },
+        "README.zh-CN.md": {
+          "additions": 29,
+          "deletions": 94,
+          "accepted_lines": 28
+        },
+        "docs/index.html": {
+          "additions": 15,
+          "deletions": 9,
+          "accepted_lines": 13
+        },
+        "docs/index.zh-CN.html": {
+          "additions": 18,
+          "deletions": 9,
+          "accepted_lines": 14
+        }
+      }
+    }
+  }
+}
