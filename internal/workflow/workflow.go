@@ -304,8 +304,12 @@ func phasePromptBlock(state *REState) string {
 		return "PHASE: INTERFACE RECOVERY\nGoal: reconstruct the target's interface — data models, protocol, API surface.\nDo: build client stubs, request builders, data models from evidence.\nThen: advance to 'hypothesis' to validate and revise."
 	case PhaseHypothesis:
 		return "PHASE: HYPOTHESIS REVISION\nGoal: review all hypotheses against evidence, revise or confirm each.\nDo: for each hypothesis, check supporting/contradicting evidence, update confidence.\nThen: advance to 'writeup' when the analysis is converged."
+	case PhaseVerification:
+		return "PHASE: VERIFICATION\nGoal: prove that candidate artifacts reproduce the recovered behavior.\nDo: build the artifact, replay fixed inputs, compare exact expected outputs, and record failures.\nThen: call verify_artifact; advance only after at least one verification result passes."
+	case PhaseAudit:
+		return "PHASE: AUDIT\nGoal: check conclusions against the evidence ledger, verification results, action scope, and remaining unknowns.\nDo: identify unsupported claims, contradictions, missing tests, and overreach. Do not invent new evidence.\nThen: advance only when every delivered conclusion is either verified or explicitly degraded."
 	case PhaseWriteup:
-		return "PHASE: WRITEUP\nGoal: produce the final report — background, method, findings, PoC, gaps, next steps.\nDo: write a structured report with all evidence, commands, and confidence annotations."
+		return "PHASE: WRITEUP\nGoal: produce the final report — background, method, findings, PoC, verification, evidence IDs, gaps, next steps.\nDo: cite evidence IDs for every material claim, separate verified from unverified statements, and include replay commands and environment."
 	default:
 		return ""
 	}

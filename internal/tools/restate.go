@@ -12,7 +12,7 @@ import (
 // UpdateREStateTool manages the RE workflow session. statePtr points at the
 // app's REState field so the tool always sees the current session.
 func UpdateREStateTool(statePtr **workflow.REState) types.Tool {
-	return types.Tool{
+	tool := types.Tool{
 		Name: "update_re_state",
 		Description: "Manage the RE workflow session: advance phases, record hypotheses and evidence, " +
 			"revise hypotheses, or check status. Only available in /workflow reverse mode.",
@@ -42,6 +42,11 @@ func UpdateREStateTool(statePtr **workflow.REState) types.Tool {
 				return errorResult("no active RE session — enter /workflow reverse first"), nil
 			}
 			action, _ := args["action"].(string)
+			if ledger, ok := tc.PhaseLedger.(workflow.PhaseLedger); ok && action == "advance" {
+				if err := workflow.CheckPhaseGate(state, ledger); err != nil {
+					return errorResult(err.Error()), nil
+				}
+			}
 			switch action {
 			case "advance":
 				old := state.Phase
@@ -97,6 +102,7 @@ func UpdateREStateTool(statePtr **workflow.REState) types.Tool {
 			}
 		},
 	}
+	return tool
 }
 
 func intFromArgs(args map[string]any, key string) int {

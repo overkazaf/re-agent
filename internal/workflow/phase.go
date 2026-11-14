@@ -9,18 +9,21 @@ import (
 type Phase string
 
 const (
-	PhaseTriage     Phase = "triage"
-	PhaseStatic     Phase = "static"
-	PhaseDynamic    Phase = "dynamic"
-	PhaseEvidence   Phase = "evidence"
-	PhaseInterface  Phase = "interface"
-	PhaseHypothesis Phase = "hypothesis"
-	PhaseWriteup    Phase = "writeup"
+	PhaseTriage       Phase = "triage"
+	PhaseStatic       Phase = "static"
+	PhaseDynamic      Phase = "dynamic"
+	PhaseEvidence     Phase = "evidence"
+	PhaseInterface    Phase = "interface"
+	PhaseHypothesis   Phase = "hypothesis"
+	PhaseVerification Phase = "verify"
+	PhaseAudit        Phase = "audit"
+	PhaseWriteup      Phase = "writeup"
 )
 
 var Phases = []Phase{
 	PhaseTriage, PhaseStatic, PhaseDynamic,
-	PhaseEvidence, PhaseInterface, PhaseHypothesis, PhaseWriteup,
+	PhaseEvidence, PhaseInterface, PhaseHypothesis, PhaseVerification,
+	PhaseAudit, PhaseWriteup,
 }
 
 func PhaseIndex(p Phase) int {
@@ -30,6 +33,45 @@ func PhaseIndex(p Phase) int {
 		}
 	}
 	return -1
+}
+
+type PhaseLedger interface {
+	Count(kind any) int
+	HasHypothesisStatus(statuses ...any) bool
+}
+
+func CheckPhaseGate(state *REState, ledger PhaseLedger) error {
+	if ledger == nil {
+		return nil
+	}
+	index := PhaseIndex(state.Phase)
+	if index < 0 || index >= len(Phases)-1 {
+		return nil
+	}
+	target := Phases[index+1]
+	switch target {
+	case PhaseStatic:
+		if ledger.Count("tool_observation") == 0 {
+			return fmt.Errorf("cannot enter static: collect at least one tool observation and record the sample hash/type")
+		}
+	case PhaseDynamic:
+		if !ledger.HasHypothesisStatus("open", "supported", "weakened", "rejected", "verified") {
+			return fmt.Errorf("cannot enter dynamic: record at least one hypothesis with its minimal test")
+		}
+	case PhaseVerification:
+		if ledger.Count("runtime_trace") == 0 && ledger.Count("tool_observation") < 3 {
+			return fmt.Errorf("cannot enter verify: collect runtime observations or a sufficient static evidence set")
+		}
+	case PhaseAudit:
+		if ledger.Count("verification_result") == 0 {
+			return fmt.Errorf("cannot enter audit: run verify_artifact and record at least one verification result")
+		}
+	case PhaseWriteup:
+		if ledger.Count("audit_finding") == 0 {
+			return fmt.Errorf("cannot enter writeup: record an audit finding before delivery")
+		}
+	}
+	return nil
 }
 
 type Hypothesis struct {

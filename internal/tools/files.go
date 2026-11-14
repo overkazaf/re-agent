@@ -149,7 +149,7 @@ func grepTool() types.Tool {
 					output = "(no matches)"
 				}
 				spilled := SpillIfLarge(output, SpillOptions{Context: tc, Label: "grep-" + pattern})
-				return textResult(spilled.Text, map[string]any{"engine": "rg", "exit": rg.Code, "artifact": spilled.Artifact}), nil
+				return textResult(spilled.Text, map[string]any{"engine": "rg", "exit": rg.Code, "artifact": spilled.Artifact, "sha256": spilled.SHA256}), nil
 			}
 			matches, err := goGrep(searchRoot, tc.Workspace, pattern, maxMatches)
 			if err != nil {
@@ -230,6 +230,7 @@ func runCommandTool() types.Tool {
 			spilled := SpillIfLarge(CommandText(command, result), SpillOptions{Context: tc, Label: command})
 			return textResult(spilled.Text, map[string]any{
 				"exit": result.Code, "chars": spilled.OriginalChars, "artifact": spilled.Artifact,
+				"sha256": spilled.SHA256,
 			}), nil
 		},
 	}

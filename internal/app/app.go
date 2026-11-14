@@ -15,6 +15,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
+	"github.com/overkazaf/re-agent/internal/evidence"
 	"github.com/overkazaf/re-agent/internal/mcp"
 	"github.com/overkazaf/re-agent/internal/providers"
 	"github.com/overkazaf/re-agent/internal/remote"
@@ -46,6 +47,7 @@ type State struct {
 	Providers    map[string]types.Provider
 	Workflow     workflow.Mode
 	REState      *workflow.REState
+	Ledger       *evidence.Ledger
 	Queue        *taskQueue
 	PlanDisplay  ui.PlanDisplayMode
 	ThinkDisplay ui.ThinkDisplayMode
@@ -192,6 +194,8 @@ func Run(argv []string) error {
 	state := &State{}
 	registry := tools.CreateReverseTools()
 	registry = append(registry, tools.CreateRemoteTools()...)
+	registry = append(registry, tools.VerifyArtifactTool())
+	registry = append(registry, tools.EvidenceManagerTool())
 	registry = append(registry, tools.UpdateREStateTool(&state.REState))
 	// MCP servers join the same registry as the built-ins; a server that will
 	// not start is reported and skipped, never fatal.
@@ -252,9 +256,26 @@ func Run(argv []string) error {
 		Workspace: workspace, SessionDir: sessionDir, Policy: policy,
 		Remote: remoteManager, RemoteHost: remoteHost,
 	}
+	ledger, err := evidence.Open(sessionDir)
+	if err != nil {
+		return err
+	}
+	toolContext.PhaseLedger = ledger
 	loop := core.NewAgentLoop(core.LoopOptions{
 		Config: agentConfig, Providers: providerMap, Tools: registry,
 		ToolContext: toolContext, SystemPrompt: systemPrompt, RolePrompts: rolePrompts, Session: session,
+		OnEvidence: func(observation types.Observation) {
+			kind := evidence.KindToolObservation
+			if observation.Tool == "verify_artifact" {
+				kind = evidence.KindVerification
+			}
+			_, _ = ledger.AddEvidence(evidence.EvidenceRecord{
+				Kind: kind, Source: observation.Tool,
+				ToolCallID: observation.CallID, Artifact: observation.Artifact,
+				SHA256: observation.SHA256, Summary: observation.Output,
+				UntrustedInput: true,
+			})
+		},
 	})
 
 	if args.ListSessions {
@@ -305,6 +326,7 @@ func Run(argv []string) error {
 		Providers: providerMap, Workflow: args.Workflow, Queue: newTaskQueue(),
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
 		SessionMeta: sessionMeta,
+		Ledger:      ledger,
 		Remote:      remoteManager, RemoteStore: remoteStore,
 		RefreshMs: args.RefreshMs,
 	}

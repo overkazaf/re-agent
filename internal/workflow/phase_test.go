@@ -3,13 +3,13 @@ package workflow
 import "testing"
 
 func TestPhaseOrder(t *testing.T) {
-	if len(Phases) != 7 {
-		t.Fatalf("expected 7 phases, got %d", len(Phases))
+	if len(Phases) != 9 {
+		t.Fatalf("expected 9 phases, got %d", len(Phases))
 	}
 	if Phases[0] != PhaseTriage {
 		t.Fatalf("first phase should be triage, got %s", Phases[0])
 	}
-	if Phases[6] != PhaseWriteup {
+	if Phases[8] != PhaseWriteup {
 		t.Fatalf("last phase should be writeup, got %s", Phases[6])
 	}
 }
@@ -94,7 +94,7 @@ func TestPhaseIndex(t *testing.T) {
 	if PhaseIndex(PhaseTriage) != 0 {
 		t.Fatal("triage should be index 0")
 	}
-	if PhaseIndex(PhaseWriteup) != 6 {
+	if PhaseIndex(PhaseWriteup) != 8 {
 		t.Fatal("writeup should be index 6")
 	}
 	if PhaseIndex(Phase("bogus")) != -1 {

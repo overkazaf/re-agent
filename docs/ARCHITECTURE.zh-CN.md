@@ -45,6 +45,12 @@ provider、本地逆向工具、MCP 工具、session JSONL、实时 HUD 和 work
 模型没有 tool call 时，本次 operator 请求结束。触发中断、到达 `maxTurns` 或
 provider 返回错误时，也会停止当前 run。
 
+逆向模式在这个循环外还有一条证据线：每次工具结果会写入
+`evidence-ledger.jsonl`；`verify_artifact` 会把构建、回放和差分结果写成
+`verification_result`；`evidence_manager` 维护带版本历史的假设状态。
+reverse workflow 的阶段推进会检查这些记录，验证和审计不再是报告里的形容词，
+而是进入 writeup 前的硬条件。
+
 ---
 
 ## 2. 包结构
@@ -55,6 +61,7 @@ provider 返回错误时，也会停止当前 run。
 | `internal/util` | 路径收敛、参数转换、截断、通用错误判断。 |
 | `internal/assets` | 嵌入 `prompts/` 和 `skills/`，并解析项目根目录或 `OXAF_RE_HOME`。 |
 | `internal/config` | 默认配置、`agent.config.json` 合并、UI 偏好、provider model 覆盖。 |
+| `internal/evidence` | append-only 证据账本、假设状态机和审计记录。 |
 | `internal/auth` | 环境变量、`.env`、本地 secrets、CLI 登录状态探测。 |
 | `internal/skills` | 读取内置 skills 和本地覆盖，生成 prompt catalog。 |
 | `internal/knowledge` | 本地 RE 知识库搜索、上下文打包、引用检查。 |

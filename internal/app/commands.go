@@ -15,6 +15,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
+	"github.com/overkazaf/re-agent/internal/evidence"
 	"github.com/overkazaf/re-agent/internal/knowledge"
 	"github.com/overkazaf/re-agent/internal/providers"
 	"github.com/overkazaf/re-agent/internal/remote"
@@ -244,7 +245,7 @@ func handleCommand(line string, state *State) error {
 		}
 		// "/workflow reverse <sample>" starts the RE session without the
 		// interactive picker (the GUI bridge and shell scripts need this —
-	 // state.editor/state.Queue are terminal-only). Validation happens
+		// state.editor/state.Queue are terminal-only). Validation happens
 		// before any mutation so a typo leaves the current mode untouched.
 		if fields := strings.Fields(arg); fields[0] == string(workflow.Reverse) && len(fields) > 1 {
 			if len(fields) > 2 {
@@ -701,6 +702,12 @@ func handleNewSession(state *State) error {
 	}
 	state.Session = session
 	state.Loop.NewSession(session)
+	if ledger, err := evidence.Open(state.ToolContext.SessionDir); err == nil {
+		state.Ledger = ledger
+		state.ToolContext.PhaseLedger = ledger
+	} else {
+		return err
+	}
 	state.Queue.Clear()
 
 	fmt.Print("\x1b[2J\x1b[H")

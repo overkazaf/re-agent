@@ -343,8 +343,13 @@ type ToolContext struct {
 	// RemoteHost is the session's selected host. When set, run_command executes
 	// there instead of the local workspace (remote mode).
 	RemoteHost string
+	// PhaseLedger supplies phase-gate counts without coupling tools to the evidence package.
+	PhaseLedger any
 	// OnPlan lets the update_plan tool publish into the live pane.
 	OnPlan func([]PlanStep, PlanUpdateMeta)
+	// OnEvidence records a completed tool observation in the evidence ledger.
+	// It must not fail the tool turn; persistence errors are surfaced by the host.
+	OnEvidence func(Observation)
 }
 
 func (tc ToolContext) Context() context.Context {
@@ -358,6 +363,17 @@ type ToolResult struct {
 	Content []ContentBlock
 	IsError bool
 	Details any
+}
+
+type Observation struct {
+	CallID    string
+	Tool      string
+	Arguments map[string]any
+	Output    string
+	Artifact  string
+	SHA256    string
+	IsError   bool
+	Details   any
 }
 
 // Risk is what a tool can do; the approval tier is derived from it.

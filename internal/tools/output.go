@@ -7,6 +7,8 @@ package tools
 // can read the rest deliberately with read_file/grep.
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +23,7 @@ type SpillResult struct {
 	Text string
 	// Artifact is the absolute path of the full output, when it did not fit.
 	Artifact      string
+	SHA256        string
 	OriginalChars int
 }
 
@@ -66,6 +69,10 @@ func SpillIfLarge(text string, options SpillOptions) SpillResult {
 
 	preview, _ := Preview(text, maxChars)
 	artifact, err := writeArtifact(text, options.Context, options.Label)
+	digest := ""
+	if err == nil {
+		digest = FileSHA256(artifact)
+	}
 	var note string
 	if err == nil {
 		note = fmt.Sprintf("\n\n[full output: %d chars saved to %s — read_file/grep it for the rest]", length, artifact)
@@ -73,7 +80,16 @@ func SpillIfLarge(text string, options SpillOptions) SpillResult {
 		artifact = ""
 		note = fmt.Sprintf("\n\n[full output was %d chars; could not save an artifact copy]", length)
 	}
-	return SpillResult{Text: preview + note, Artifact: artifact, OriginalChars: length}
+	return SpillResult{Text: preview + note, Artifact: artifact, SHA256: digest, OriginalChars: length}
+}
+
+func FileSHA256(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 func writeArtifact(text string, tc types.ToolContext, label string) (string, error) {

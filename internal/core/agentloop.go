@@ -9,6 +9,7 @@ import (
 
 	"github.com/overkazaf/re-agent/internal/plan"
 	"github.com/overkazaf/re-agent/internal/security"
+	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/util"
 )
@@ -57,6 +58,26 @@ type LoopEvent struct {
 	Preview  string                 `json:"preview"`
 }
 
+func observationFromResult(call types.ToolCall, result types.ToolResult) types.Observation {
+	artifact, digest := "", ""
+	if details, ok := result.Details.(map[string]any); ok {
+		if value, ok := details["artifact"].(string); ok {
+			artifact = value
+		}
+		if value, ok := details["sha256"].(string); ok {
+			digest = value
+		}
+	}
+	if artifact != "" && digest == "" {
+		digest = tools.FileSHA256(artifact)
+	}
+	return types.Observation{
+		CallID: call.ID, Tool: call.Name, Arguments: call.Arguments,
+		Output: previewOf(result.Content), Artifact: artifact, SHA256: digest,
+		IsError: result.IsError, Details: result.Details,
+	}
+}
+
 type LoopOptions struct {
 	Config       *types.AgentConfig
 	Providers    map[string]types.Provider
@@ -65,6 +86,7 @@ type LoopOptions struct {
 	SystemPrompt string
 	RolePrompts  map[types.AgentRole]string
 	Session      *Session
+	OnEvidence   func(types.Observation)
 }
 
 type AgentLoop struct {
@@ -86,6 +108,10 @@ func NewAgentLoop(options LoopOptions) *AgentLoop {
 	// stream events, so both sources dedupe and persist identically.
 	options.ToolContext.OnPlan = func(steps []types.PlanStep, meta types.PlanUpdateMeta) {
 		loop.publishPlan(steps, meta)
+	}
+	if options.OnEvidence != nil {
+		onEvidence := options.OnEvidence
+		options.ToolContext.OnEvidence = onEvidence
 	}
 	return loop
 }
@@ -537,6 +563,9 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					Type: "tool_end", Name: call.Name, OK: !result.IsError,
 					Ms: types.NowMs() - startedAt, Preview: previewOf(result.Content),
 				})
+				if callContext.OnEvidence != nil {
+					callContext.OnEvidence(observationFromResult(call, result))
+				}
 				resultMessage := l.pushToolResult(call, result.Content, result.IsError, result.Details)
 				if options.Isolated {
 					runMessages = append(runMessages, resultMessage)
