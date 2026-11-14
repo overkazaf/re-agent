@@ -1,0 +1,33 @@
+docs/index.zh-CN.html
+  441ec19d64926727 33,45,51-52,270
+docs/index.html
+  441ec19d64926727 35,48,54-55,59,226,364,842,1000,1022
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "e4ced0a00ed7ec8569914d0451903025cf1a4865",
+  "prompts": {
+    "441ec19d64926727": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5796d99a-de56-4332-a49b-37e4baab54a9",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/index.html": {
+          "accepted_lines": 10
+        },
+        "docs/index.zh-CN.html": {
+          "accepted_lines": 5
+        }
+      }
+    }
+  }
+}
