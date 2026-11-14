@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>0xAF-Re — a reverse engineering agent for the terminal</title>
-<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent built for authorized local work: multi-model roles, cyber/CVP specialist routes, caveman evidence packets, 24 local tools, and a live picture of each turn.">
+<meta name="description" content="0xAF-Re is a reverse engineering and CTF agent built for authorized local work: multi-model roles, cyber/CVP specialist routes, caveman evidence packets, 28 built-in tools, and a live picture of each turn.">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -36,7 +36,7 @@
   <h1>A reverse engineering agent<br>that shows its <span>work</span>.</h1>
   <p class="hero__lede">
     0xAF-Re drives a <strong>planner model</strong> and an <strong>executor model</strong> over
-    24 local tools — triage, entropy, carving, symbols, APK inspection, Frida scaffolds, external RE tool wrappers —
+    28 built-in tools — triage, entropy, carving, symbols, APK inspection, Frida scaffolds, external RE tool wrappers, artifact verification —
     plus workflow modes that route GPT Cyber, Claude Code CVP, Grok, or similar specialist subscriptions directly,
     break ordinary-provider work into local evidence packets, and queue your next prompt while the current turn runs.
     It draws the turn while it runs, so you can see where the time went and stop it when it goes
@@ -53,7 +53,7 @@
   <div class="hero__cta">
     <span class="pill"><b>6.7 ms</b> start</span>
     <span class="pill"><b>6.7 MB</b> binary</span>
-    <span class="pill"><b>24</b> tools</span>
+    <span class="pill"><b>28</b> tools</span>
     <span class="pill"><b>8</b> providers</span>
     <span class="pill"><b>9</b> workflows</span>
     <span class="pill"><b>1</b> dependency</span>
@@ -477,7 +477,7 @@
           <tr><td><code class="inline">research</code></td><td>survey public resources and produce a sourced report</td></tr>
           <tr><td><code class="inline">writeup</code></td><td>turn existing session evidence into a clean summary</td></tr>
           <tr><td><code class="inline">ctf</code></td><td>triage, plan, solve, and verify a single challenge target</td></tr>
-          <tr><td><code class="inline">reverse</code></td><td><strong>interactive</strong>: sample type picker → 7 structured phases → hacker-mode HUD → hypothesis/evidence tracking</td></tr>
+          <tr><td><code class="inline">reverse</code></td><td><strong>interactive</strong>: sample type picker → 9 structured phases → verification-gated writeup → hacker-mode HUD → hypothesis/evidence ledger</td></tr>
           <tr><td><code class="inline">engineering</code></td><td>recover a target's protocol/schema into models, stubs, and tests</td></tr>
         </tbody>
       </table>
@@ -526,8 +526,12 @@
       <code class="inline">/workflow reverse</code> is the most structured mode. It launches an
       interactive session: a hacker-styled <strong>sample type picker</strong> (APK, SO, dylib, ELF,
       PE, firmware, PCAP) with canned starter prompts, then drives through
-      <strong>7 phases</strong> — triage → static → dynamic → evidence → interface recovery →
-      hypothesis revision → writeup. The prompt label changes to
+      <strong>9 phases</strong> — triage → static → dynamic → evidence → interface recovery →
+      hypothesis revision → verification → audit → writeup. Every completed tool result and
+      hypothesis lands in an append-only <code class="inline">evidence-ledger.jsonl</code>, and phase
+      advancement is gated on that ledger: audit requires a
+      <code class="inline">verify_artifact</code> run, and writeup requires an audit finding —
+      no unverified claim reaches the report. The prompt label changes to
       <code class="inline">0xAF[apk|triage] ▸</code>, the HUD shows a phase progress bar with
       hypothesis and evidence counts, and the model calls
       <code class="inline">update_re_state</code> to advance phases and record findings.
@@ -627,7 +631,7 @@
 <section id="arsenal">
   <div class="wrap">
     <p class="label">the arsenal</p>
-    <h2>24 tools, all local.</h2>
+    <h2>28 tools, all built in.</h2>
 
     <div class="tablewrap">
       <table>
@@ -640,6 +644,8 @@
           <tr><td>external</td><td class="mono">reverse_toolkit</td></tr>
           <tr><td>mobile</td><td class="mono">apk_inspect · frida_hook_template</td></tr>
           <tr><td>knowledge</td><td class="mono">list_skills · read_skill · knowledge_search · knowledge_read</td></tr>
+          <tr><td>evidence</td><td class="mono">verify_artifact · evidence_manager · update_re_state</td></tr>
+          <tr><td>remote</td><td class="mono">remote_exec</td></tr>
           <tr><td>plan</td><td class="mono">update_plan</td></tr>
         </tbody>
       </table>

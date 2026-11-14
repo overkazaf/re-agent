@@ -27,6 +27,19 @@ again. It exits the loop on a reply with no tool calls, on an interrupt, or at
 feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 `core.Session` is the disk record of what it did.
 
+Reverse work adds a second, evidence loop beside this one. Every completed tool
+call appends its result to `evidence-ledger.jsonl`, an append-only ledger opened
+per session
+(`internal/evidence/evidence.go:98`); the loop feeds it through the `OnEvidence`
+hook (`internal/core/agentloop.go:566` → `internal/app/app.go:267`).
+`verify_artifact` (`internal/tools/verify.go:39`) builds, replays, and diffs an
+artifact, landing the outcome as a `verification_result` record;
+`evidence_manager` (`internal/tools/ledger_tools.go:11`) keeps hypotheses with
+versioned state transitions and audit findings. The reverse workflow's phase
+gates check these records (`internal/workflow/phase.go:43`), so verification
+and audit are hard preconditions for reaching writeup — not adjectives in the
+final report.
+
 ---
 
 ## 2. Package map
@@ -39,6 +52,7 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 | `internal/plan` | The task-list tracker: sanitize untrusted steps, carry step timings, suppress no-op updates. | `types`, `util` |
 | `internal/security` | Command safety patterns (`policy.go`) and the tier × mode approval gate (`approval.go`). | `types` |
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
+| `internal/evidence` | The append-only evidence ledger (`evidence-ledger.jsonl`), the hypothesis state machine with versioned revisions, and audit records. | — |
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
 | `internal/skills` | Loads embedded skills plus `skills/<name>/SKILL.md` overrides, builds the system-prompt catalog. | `assets`, `util` |
@@ -511,6 +525,15 @@ and unidbg templates.
 `update_plan` is `RiskRead` on purpose: it mutates nothing but the operator's
 view, and prompting for it would be noise.
 
+Four more built-ins join at composition time in `app.Run`
+(`internal/app/app.go:196-199`) rather than inside `CreateReverseTools`:
+`remote_exec` (`internal/tools/remote.go:19`), `verify_artifact`
+(`internal/tools/verify.go:39`), `evidence_manager`
+(`internal/tools/ledger_tools.go:11`), and `update_re_state`
+(`internal/tools/restate.go:14`), which only acts inside an active
+`/workflow reverse` session. The model-facing registry is therefore 28
+built-ins plus whatever MCP servers contribute.
+
 **The process runner** (`internal/tools/process.go:62`). `Stream` is the single
 place a subprocess is born, used by `run_command`, every binary helper, and the
 `!` escape. Three things it gets right:
@@ -771,6 +794,7 @@ messages, since those are not what makes a session recognizable.
 | Path | Written by | Contents |
 | --- | --- | --- |
 | `<sessionDir>/*.jsonl` | `core.Session` | transcripts |
+| `<sessionDir>/evidence-ledger.jsonl` | `evidence.Ledger` | append-only evidence, hypothesis, and audit records |
 | `<sessionDir>/artifacts/` | `tools.SpillIfLarge` | full text of over-budget tool output |
 | `<sessionDir>/cli-tmux/<run>/` | `providers.CLITmuxProvider` | prompt, stdout/stderr logs, exit status, runner script, tmux socket |
 | `agent.config.json` (cwd) or `~/.0xaf-re-agent/config.json` | operator | merged over `config.Defaults()` |
@@ -935,6 +959,7 @@ plan.
 | The tier gate and the command gate are separate passes — the loop knows the tool, only the tool knows the command text | `agentloop.go:402` vs `files.go:183` / `shell.go:58` | concern-checking moves somewhere that cannot see the command, so either `rm -rf /` runs unasked or `run_command` only works under `--yolo` | `TestConcernsOutrankAnAllowOverride`, `TestSafeModeRunsToolsButStopsForConcerns` |
 | `tc.Confirm == nil` means refuse, never assume yes; a failed read and a bare Enter are both "no" | `approval.go:108`, `app/repl.go:374`, `repl.go:385` | `--print` in CI silently runs whatever the model asked for | `TestAssertShellCommandAllowedRefusesWithoutAnOperator` |
 | Paths are contained before anything else happens: `util.ResolveInside` refuses to leave the workspace, and no approval mode can override it | `util/util.go:112` | a `../../etc/shadow` argument reads outside the workspace under `--yolo` | `TestReadFileRefusesToEscapeTheWorkspace` |
+| Reverse-workflow phases gate on the ledger: entering `static` needs a tool observation, `dynamic` a hypothesis, `verify` a runtime trace or three observations, `audit` a `verification_result`, `writeup` an `audit_finding` — and those records only exist because every tool result goes through `OnEvidence` | `workflow/phase.go:53-72` (the gates), `tools/restate.go:46` (`advance` consults them), `agentloop.go:566` → `app/app.go:267` (the records) | "verified" becomes an adjective in the writeup instead of a precondition, or the ledger silently stops filling and every gate starves | `TestPhaseGatesRequireEvidenceVerificationAndAudit` (`internal/workflow/gate_test.go:20`) |
 
 ---
 

@@ -150,7 +150,7 @@
         </div>
         <p class="subtitle">
           一个终端优先的 RE Agent：Go 宿主把规划、执行、研究路由到不同模型座位，
-          必要时收窄 workflow 上下文，并把证据收集留在本地工具和可审计 transcript 中。
+          必要时收窄 workflow 上下文，并把证据收集留在本地工具、append-only 证据账本和可审计 transcript 中。
         </p>
       </div>
       <div class="toolbar" data-export-ignore>
@@ -166,7 +166,7 @@
     <main class="diagram-container">
       <svg viewBox="0 0 1280 860" role="img" aria-labelledby="diagram-title diagram-desc">
         <title id="diagram-title">0xAF-Re 架构总图</title>
-        <desc id="diagram-desc">终端入口连接 Go 宿主，宿主将角色 prompt 经 workflow 和策略闸门路由到 providers 与本地逆向工具。</desc>
+        <desc id="diagram-desc">终端入口连接 Go 宿主，宿主将角色 prompt 经 workflow 和策略闸门路由到 providers 与本地逆向工具；每次完成的工具结果都会写入证据账本，reverse 阶段推进以账本记录为闸门。</desc>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.55"/>
@@ -183,6 +183,9 @@
           <marker id="arrow-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24"/>
           </marker>
+          <marker id="arrow-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+          </marker>
           <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.28"/>
           </filter>
@@ -196,6 +199,7 @@
           <path d="M 205 360 L 350 360 L 350 272 L 496 272" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow-cyan)"/>
           <path d="M 640 330 L 640 392" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
           <path d="M 760 272 L 803 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
+          <path d="M 760 310 L 803 310" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-violet)"/>
           <path d="M 985 272 L 1036 272" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-emerald)"/>
           <path d="M 1038 356 L 990 356 L 990 498 L 983 498" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
           <path d="M 805 494 L 740 494 L 740 637" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
@@ -251,6 +255,13 @@
         <text x="828" y="205" fill="#cbd5e1" font-size="10">specialist 路由</text>
         <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman 证据包</text>
         <text x="828" y="246" fill="#fbbf24" font-size="9">plan -> 隔离 executor</text>
+
+        <rect x="805" y="296" width="178" height="120" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.6"/>
+        <text x="894" y="323" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">证据线</text>
+        <text x="830" y="349" fill="#cbd5e1" font-size="10">evidence-ledger.jsonl</text>
+        <text x="830" y="368" fill="#cbd5e1" font-size="10">verify_artifact 验证结果</text>
+        <text x="830" y="387" fill="#cbd5e1" font-size="10">假设状态 + 审计记录</text>
+        <text x="830" y="407" fill="#a78bfa" font-size="9">writeup 前的阶段闸门</text>
 
         <rect x="805" y="426" width="178" height="136" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
         <text x="894" y="455" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">策略闸门</text>
@@ -315,6 +326,8 @@
           <text x="24" y="63" fill="#94a3b8" font-size="9">workflow 与本地工具</text>
           <rect x="0" y="74" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185"/>
           <text x="24" y="83" fill="#94a3b8" font-size="9">策略与审批</text>
+          <rect x="0" y="94" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa"/>
+          <text x="24" y="103" fill="#94a3b8" font-size="9">证据账本 / 记录存储</text>
         </g>
 
         <text x="42" y="828" fill="#475569" font-size="10">设计：拆分意图、执行与证据，让 RE 工作保持可见、本地、可改道。</text>
@@ -332,11 +345,11 @@
       </article>
       <article class="card">
         <h2><span class="card-dot amber"></span>Workflow 上下文收敛</h2>
-        <p>Specialist route 保留完整 RE 语境；caveman 把任务拆成有边界的 planner packet 和隔离只读 executor。</p>
+        <p>Specialist route 保留完整 RE 语境；caveman 把任务拆成有边界的 planner packet 和隔离只读 executor；reverse 的阶段推进必须先过证据、验证和审计闸门。</p>
       </article>
       <article class="card">
         <h2><span class="card-dot rose"></span>本地证据治理</h2>
-        <p>文件事实来自受限本地工具；写盘、联网、敏感路径和破坏性命令都会经过显式策略闸门。</p>
+        <p>文件事实来自受限本地工具，并写入 append-only 证据账本；写盘、联网、敏感路径和破坏性命令都会经过显式策略闸门。</p>
       </article>
     </section>
 
