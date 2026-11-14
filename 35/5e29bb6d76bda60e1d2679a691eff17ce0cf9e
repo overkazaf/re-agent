@@ -1,0 +1,47 @@
+README.zh-CN.md
+  441ec19d64926727 58,61,96,111-112,134-137,273-274,319
+README.md
+  441ec19d64926727 72,75,110,127-130,152-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "355e29bb6d76bda60e1d2679a691eff17ce0cf9e",
+  "prompts": {
+    "441ec19d64926727": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5796d99a-de56-4332-a49b-37e4baab54a9",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 38,
+      "accepted_lines": 39,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "README.md": {
+          "additions": 12,
+          "deletions": 11,
+          "accepted_lines": 12
+        },
+        "README.zh-CN.md": {
+          "additions": 12,
+          "deletions": 12,
+          "accepted_lines": 12
+        },
+        "docs/index.zh-CN.html": {
+          "additions": 5,
+          "deletions": 5,
+          "accepted_lines": 5
+        },
+        "docs/index.html": {
+          "additions": 10,
+          "deletions": 10,
+          "accepted_lines": 10
+        }
+      }
+    }
+  }
+}
