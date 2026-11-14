@@ -28,43 +28,22 @@ modes, queued prompts, session resume, and a live view of every turn.
 - [Motivation](#motivation)
 - [Features](#features)
 - [Demos](#demos)
-- [Overview](#overview)
 - [Architecture](#architecture)
-- [Developer Highlights](#developer-highlights)
 - [Install](#install)
 - [Quick Start](#quick-start)
+- [Basic Demos](#basic-demos)
+- [Worked Case: solve a challenge end to end](#worked-case-solve-a-challenge-end-to-end)
 - [Desktop GUI](#desktop-gui)
 - [Workflow Modes](#workflow-modes)
 - [Context Compaction](#context-compaction)
+- [Remote mode](#remote-mode)
 - [Providers and Models](#providers-and-models)
 - [Skills and Knowledge](#skills-and-knowledge)
 - [Safety](#safety)
+- [Troubleshooting](#troubleshooting)
 - [Common Commands](#common-commands)
 - [Roadmap](#roadmap)
 - [More Docs](#more-docs)
-
-## Bilingual Map
-
-The English and Chinese READMEs keep the same structure for quick switching.
-
-| English | 中文 |
-| --- | --- |
-| [Motivation](#motivation) | [动机](README.zh-CN.md#动机) |
-| [Features](#features) | [功能特性](README.zh-CN.md#功能特性) |
-| [Demos](#demos) | [演示](README.zh-CN.md#演示) |
-| [Overview](#overview) | [概览](README.zh-CN.md#概览) |
-| [Architecture](#architecture) | [架构设计](README.zh-CN.md#架构设计) |
-| [Developer Highlights](#developer-highlights) | [开发者亮点](README.zh-CN.md#开发者亮点) |
-| [Install](#install) | [安装](README.zh-CN.md#安装) |
-| [Quick Start](#quick-start) | [快速开始](README.zh-CN.md#快速开始) |
-| [Workflow Modes](#workflow-modes) | [Workflow 模式](README.zh-CN.md#workflow-模式) |
-| [Context Compaction](#context-compaction) | [上下文压缩](README.zh-CN.md#上下文压缩) |
-| [Providers and Models](#providers-and-models) | [Provider 与模型](README.zh-CN.md#provider-与模型) |
-| [Skills and Knowledge](#skills-and-knowledge) | [Skills 与知识库](README.zh-CN.md#skills-与知识库) |
-| [Safety](#safety) | [安全策略](README.zh-CN.md#安全策略) |
-| [Common Commands](#common-commands) | [常用命令](README.zh-CN.md#常用命令) |
-| [Roadmap](#roadmap) | [未来设想](README.zh-CN.md#未来设想) |
-| [More Docs](#more-docs) | [更多文档](README.zh-CN.md#更多文档) |
 
 ## Motivation
 
@@ -92,7 +71,8 @@ Three principles shape it:
 | --- | --- |
 | **Live dashboard** | One boxed view: FLOW (animated dataflow strip), TOOLS (tool cards), PLAN (task list + progress), THINK (reasoning tail), TELE (throughput/tokens/clock). Tight terminals shed gracefully down to the current step. |
 | **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
-| **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 7 structured phases, hacker-mode HUD, and hypothesis/evidence tracking. |
+| **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 9 structured phases with evidence gates, hacker-mode HUD, and ledger-backed hypothesis/evidence tracking. |
+| **Evidence loop** | Every completed tool result lands in an append-only `evidence-ledger.jsonl`; `verify_artifact` turns build/replay/diff runs into `verification_result` records; hypotheses carry versioned status transitions; reverse phases gate on evidence, verification, and audit before writeup. |
 | **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
 | **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
 | **Reference context** | `--context "know:…"` seeds the system prompt from the knowledge base, `--context "file:…"` from a workspace file, raw notes pass through. |
@@ -125,22 +105,6 @@ Quick taste:
 0xaf --context "know:android packer" -p "identify the packer"
 ```
 
-## Overview
-
-- **Local first:** slash commands run file triage, strings, entropy, carving,
-  APK inspection, mitigations, and reverse-tool inventory directly on your disk.
-- **Two seats:** planner and executor providers can be different models or
-  vendors. Switch them at runtime with `/planner`, `/executor`, and `/model`.
-- **Visible turns:** the HUD shows route, phase, task list, tools, token counts,
-  and timing while the turn is still running.
-- **Scoped by default:** reads stay inside the workspace; writes, network, and
-  sensitive actions need explicit policy changes.
-- **Installable binary:** prompts and built-in skills are embedded, while
-  project-local files can override them when `OXAF_RE_HOME` points at a checkout.
-
-For the full design, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the
-visual overview, start with the [Cocoon AI-style architecture map](docs/diagrams/0xaf-re-agent-architecture.html).
-
 ## Architecture
 
 The core design is a small loop rather than a chatbot bolted onto a shell:
@@ -155,50 +119,19 @@ or browse the [full diagram index](docs/diagrams/).
 | --- | --- |
 | Terminal surface | Keep queueing, slash commands, shell escapes, and live HUD in one workspace. |
 | Agent loop | Route planner/executor/researcher seats, compact context, stream events, and persist JSONL sessions. |
+| Evidence line | Every completed tool result appends to `evidence-ledger.jsonl` beside the session; `verify_artifact` writes build/replay/diff outcomes as `verification_result`; `evidence_manager` keeps hypotheses with versioned status revisions. Reverse phase gates read this ledger, making verification and audit hard preconditions for writeup instead of adjectives in the report. |
 | Workflow modes | Use specialist routes when available; otherwise split RE tasks into bounded local-evidence executor packets. |
 | Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
 | Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |
 
-## Developer Highlights
-
-If you build agents, 0xAF-Re is a compact RE-focused reference implementation:
-one Go binary with provider routing, tool governance, live telemetry,
-prompt/skill overrides, queueing, and audit logs. It is small enough to read,
-but opinionated enough to show the parts most agent demos skip.
-
-- **Single-file install feel:** one static binary, one Go dependency, no Node or
-  browser runtime in the critical path.
-- **Composable model seats:** planner, executor, and researcher can use
-  different providers, models, and editable prompts.
-- **Evidence-first workflows:** specialist routes use GPT Cyber / CC CVP / Grok
-  style subscriptions directly; caveman mode isolates ordinary executors to
-  read-only local evidence packets.
-- **Visible agent loop:** HUD, trace lines, token/timing telemetry, task state,
-  and JSONL sessions make each turn debuggable.
-- **Hackable surface area:** built-in RE tools, MCP tools, skills, knowledge
-  import, project-local overrides, and runtime queue editing.
-
-## Project Motivation
-
-0xAF-Re grew out of daily authorized RE/CTF work where coding-agent risk
-controls tightened and general models became more cautious around
-reverse-engineering language. The goal is not to hide intent. The agent keeps
-work local, authorized, and auditable, then improves the experience by splitting
-roles and composing models.
-
-- **Model composition:** use one model for planning, another for tool execution,
-  and a researcher role for background context.
-- **Specialist routes:** GPT Cyber, Claude Code CVP, Grok, or similar
-  security-research-friendly routes make `workflow auto` smoother.
-- **Ordinary-provider path:** caveman mode narrows the task into local evidence
-  packets so cautious executors can still collect file facts safely.
-- **Roadmap:** local models and reproducible benchmark cases will be added so
-  provider/workflow quality can be measured and improved over time.
+If you build agents, 0xAF-Re also works as a compact RE-focused reference
+implementation: small enough to read, opinionated enough to show the parts most
+agent demos skip. The full design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Install
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.11
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
 0xaf --version
 0xaf --welcome
 ```
@@ -212,7 +145,7 @@ make build
 ./bin/0xaf --version
 ```
 
-`go install ...@v0.1.11` is the recommended install path. `@main` can lag behind
+`go install ...@v0.1.20` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
 **Requires Go 1.21 or newer** (`go.mod` declares `go 1.21`, so no toolchain
@@ -226,32 +159,11 @@ Prebuilt binaries are attached to every release tag by
 needed:
 
 ```bash
-# example: download and run the darwin-arm64 build of v0.1.14
-curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.14/0xaf-darwin-arm64 -o 0xaf
+# example: download and run the darwin-arm64 build of v0.1.20
+curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.20/0xaf-darwin-arm64 -o 0xaf
 chmod +x 0xaf
 ./0xaf --version
 ```
-
-<details>
-<summary>If <code>go install</code> fails with <code>//go:build comment without // +build comment</code></summary>
-
-```text
-.../re-agent@v0.1.11/internal/app/repl.go:22:2: //go:build comment without // +build comment
-.../re-agent@v0.1.11/internal/ui/live.go:23:2: //go:build comment without // +build comment
-```
-
-Nothing is wrong with those two lines — they are the imports of
-`golang.org/x/sys/unix` and `golang.org/x/term`. A Go toolchain older than 1.17
-cannot parse the bare `//go:build` constraints those dependencies use, and it
-reports the failure at the import site rather than in the dependency. Check and
-upgrade:
-
-```bash
-go version          # need go1.21+
-# then reinstall, e.g. via your package manager or https://go.dev/dl/
-```
-
-</details>
 
 ## Quick Start
 
@@ -467,7 +379,7 @@ Workflow mode is explicit. Default `off` sends prompts unchanged.
 | `research` | survey work | survey public resources (web, GitHub, arXiv) and produce a sourced report |
 | `writeup` | reporting | turn existing session evidence into a clean structured summary report |
 | `ctf` | one concrete challenge | triage, plan, solve, and verify the exact flag on a single target |
-| `reverse` | goal-driven RE | **interactive**: sample type picker → structured phases (triage → static → dynamic → evidence → interface → hypothesis → writeup), hacker-mode HUD, `/phase` control, hypothesis/evidence tracking |
+| `reverse` | goal-driven RE | **interactive**: sample type picker → structured phases (triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup), hacker-mode HUD, `/phase` control, hypothesis/evidence tracking persisted in `evidence-ledger.jsonl` |
 | `engineering` | interface reconstruction | recover a target's protocol/schema into models, client stubs, and tests |
 
 ```text
@@ -485,10 +397,11 @@ Workflow mode is explicit. Default `off` sends prompts unchanged.
 `/workflow reverse` launches an interactive session:
 
 1. **Sample type picker** — choose from APK, SO/ELF shared lib, dylib/Mach-O, ELF binary, PE/DLL, firmware blob, or PCAP, each with canned starter prompts.
-2. **Structured phases** — triage → static analysis → dynamic analysis → evidence production → interface recovery → hypothesis revision → writeup. The prompt label shows the active phase: `0xAF[apk|triage] ▸`.
+2. **Structured phases** — triage → static analysis → dynamic analysis → evidence production → interface recovery → hypothesis revision → verification → audit → writeup. The prompt label shows the active phase: `0xAF[apk|triage] ▸`.
 3. **Hacker-mode HUD** — a distinct RE overlay in the live dashboard shows phase progress, hypothesis count (H:N), and evidence count (E:N).
 4. **Phase control** — `/phase` shows status, `/phase next` advances, `/phase <name>` skips to a named phase.
-5. **LLM-driven state** — the model calls `update_re_state` to advance phases, record hypotheses, log evidence, and revise findings as analysis progresses.
+5. **LLM-driven state** — the model calls `update_re_state` to advance phases, record hypotheses, log evidence, and revise findings as analysis progresses. The `advance` action is gate-checked against the evidence ledger: entering static needs a tool observation, dynamic a recorded hypothesis, verify a runtime trace or a sufficient static evidence set, audit a `verify_artifact` result, writeup an audit finding.
+6. **Evidence ledger** — every completed tool result is appended to `evidence-ledger.jsonl` next to the session JSONL, so hypothesis/evidence tracking survives restarts. `verify_artifact` builds an artifact, replays it with fixed inputs, and diffs stdout against the expected output (`verification_result`); `evidence_manager` moves hypotheses through versioned statuses (open → supported / weakened / rejected / retired / verified) linked to evidence records by supports/contradicts.
 
 The "delegated local evidence mode" demo is the `caveman` workflow. It means the
 host splits one operator request into two model calls:
@@ -806,18 +719,10 @@ Where 0xAF-Re is heading:
 
 ## More Docs
 
-
 - [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html): exportable Cocoon AI-style overview of the design.
 - [Architecture deep dive](docs/ARCHITECTURE.md): package map, turn sequence,
   context budget, approval gate, data formats, invariants, and extension points.
 - [Architecture diagrams](docs/diagrams/): visual index for the core runtime.
-- [Module graph](docs/diagrams/01-module-graph.svg)
-- [One turn sequence](docs/diagrams/02-one-turn.svg)
-- [Context budget](docs/diagrams/03-context-budget.svg)
-- [Approval gate](docs/diagrams/04-approval-gate.svg)
-- [Live pane](docs/diagrams/05-live-pane.svg)
-- [oh-my-pi architecture note](docs/diagrams/06-oh-my-pi.svg)
-- [0xAF-Re vs oh-my-pi](docs/diagrams/07-vs-oh-my-pi.svg)
 - [Project page and marketing assets](https://overkazaf.github.io/re-agent/)
 
 Scoped for authorized CTF, lab, and local reverse-engineering work: binary

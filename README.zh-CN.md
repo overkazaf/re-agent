@@ -18,43 +18,22 @@
 - [动机](#动机)
 - [功能特性](#功能特性)
 - [演示](#演示)
-- [概览](#概览)
 - [架构设计](#架构设计)
-- [开发者亮点](#开发者亮点)
 - [安装](#安装)
 - [快速开始](#快速开始)
+- [基础 Demos](#基础-demos)
+- [实战案例：完整解一道题](#实战案例完整解一道题)
 - [桌面 GUI](#桌面-gui)
 - [Workflow 模式](#workflow-模式)
-- [上下文压缩](#上下文压缩)
+- [上下文压缩](#上下文压缩context-compaction)
+- [远程模式](#远程模式)
 - [Provider 与模型](#provider-与模型)
 - [Skills 与知识库](#skills-与知识库)
 - [安全策略](#安全策略)
+- [排错](#排错)
 - [常用命令](#常用命令)
 - [未来设想](#未来设想)
 - [更多文档](#更多文档)
-
-## 双语地图
-
-中英 README 结构保持一致，方便快速切换。
-
-| 中文 | English |
-| --- | --- |
-| [动机](#动机) | [Motivation](README.md#motivation) |
-| [功能特性](#功能特性) | [Features](README.md#features) |
-| [演示](#演示) | [Demos](README.md#demos) |
-| [概览](#概览) | [Overview](README.md#overview) |
-| [架构设计](#架构设计) | [Architecture](README.md#architecture) |
-| [开发者亮点](#开发者亮点) | [Developer Highlights](README.md#developer-highlights) |
-| [安装](#安装) | [Install](README.md#install) |
-| [快速开始](#快速开始) | [Quick Start](README.md#quick-start) |
-| [Workflow 模式](#workflow-模式) | [Workflow Modes](README.md#workflow-modes) |
-| [上下文压缩](#上下文压缩) | [Context Compaction](README.md#context-compaction) |
-| [Provider 与模型](#provider-与模型) | [Providers and Models](README.md#providers-and-models) |
-| [Skills 与知识库](#skills-与知识库) | [Skills and Knowledge](README.md#skills-and-knowledge) |
-| [安全策略](#安全策略) | [Safety](README.md#safety) |
-| [常用命令](#常用命令) | [Common Commands](README.md#common-commands) |
-| [未来设想](#未来设想) | [Roadmap](README.md#roadmap) |
-| [更多文档](#更多文档) | [More Docs](README.md#more-docs) |
 
 ## 动机
 
@@ -78,7 +57,8 @@
 | --- | --- |
 | **实时仪表盘** | 单框视图：FLOW（动画数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；矮终端优雅降级，保住当前步骤。 |
 | **双模型路由** | planner / executor / researcher 三个座位，可固定、可按角色，运行中可切换。 |
-| **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`——每种模式给 prompt 加上聚焦的契约。 |
+| **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`。`reverse` 模式**交互式**：样本类型选择器、9 个带证据闸门的结构化阶段、hacker 风格 HUD，以及落在证据账本上的假设/证据追踪。 |
+| **证据闭环** | 每个完成的工具结果都写入 append-only 的 `evidence-ledger.jsonl`；`verify_artifact` 把构建/回放/差分运行记成 `verification_result`；假设带版本化的状态迁移；reverse 各阶段在进入 writeup 前用证据、验证和审计记录做闸门。 |
 | **会话恢复** | append-only JSONL 转录；`--resume <hash|id>` / `--continue` / `/sessions`；崩溃自动修复悬挂工具调用；`/new` 开新会话。 |
 | **上下文压缩** | 每次请求机械裁剪 + `/compact`；可选 `snapcompact` 把被丢弃历史渲染成 PNG 帧，视觉模型直接读回。 |
 | **参考上下文** | `--context "know:…"` 从知识库注入、`--context "file:…"` 从工作区文件注入，原始备注直接透传。 |
@@ -111,18 +91,6 @@
 0xaf --context "know:android packer" -p "识别加壳方式"
 ```
 
-## 概览
-## 概览
-
-- **本地优先:** 斜杠命令直接在本机做文件粗筛、strings、熵扫描、carve、APK 检查、保护检查和逆向工具盘点。
-- **双角色:** planner 和 executor 可以用不同模型、不同厂商。运行中用 `/planner`、`/executor`、`/model` 切换。
-- **过程可见:** HUD 会显示路由、阶段、任务列表、工具调用、token 和耗时。
-- **默认收敛:** 默认只能读工作区；写盘、联网和敏感操作都需要显式放开。
-- **单二进制:** prompt 和内置 skills 已嵌入；需要本地覆盖时，用 `OXAF_RE_HOME` 指向仓库目录。
-
-完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。图形化概览先看
-[Cocoon AI 风格架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)。
-
 ## 架构设计
 
 核心不是“终端里加一个聊天框”，而是一个很小的 agent loop：用户输入进入 Go 宿主，
@@ -135,36 +103,19 @@
 | --- | --- |
 | 终端交互层 | 把任务队列、斜杠命令、shell escape 和 live HUD 放在同一个工作区策略下。 |
 | Agent loop | 路由 planner/executor/researcher，压缩上下文，流式输出事件，并持久化 JSONL session。 |
+| 证据线 | 每个完成的工具结果追加写入 session 旁的 `evidence-ledger.jsonl`；`verify_artifact` 把构建、回放和差分结果写成 `verification_result`；`evidence_manager` 维护带版本历史的假设状态。reverse 阶段闸门读取这份账本，验证和审计是进入 writeup 前的硬条件，不是报告里的形容词。 |
 | Workflow 模式 | 有 specialist route 就直接用；没有时把 RE 任务拆成有边界的本地证据 executor packet。 |
 | 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
 | 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |
 
-## 开发者亮点
-
-如果你在做 agent，0xAF-Re 是一个足够小、但关键部件齐全的 RE 场景参考实现：
-单个 Go 二进制里包含 provider 路由、工具治理、实时遥测、prompt/skill 覆盖、
-任务队列和审计日志。它不像 demo 那样只展示聊天，而是把 agent 真正落地时麻烦的部分也摊开。
-
-- **安装像单文件工具:** 一个静态二进制，一个 Go 依赖，关键路径不需要 Node 或浏览器 runtime。
-- **模型座位可组合:** planner、executor、researcher 可以接不同 provider、不同模型和不同 prompt。
-- **证据优先 workflow:** 有 GPT Cyber / Claude Code CVP / Grok 类订阅就直走 specialist；
-  普通模型走 caveman，只拿只读本地证据包。
-- **过程可调试:** HUD、trace、token/耗时遥测、任务状态和 JSONL session 让每一轮都能复盘。
-- **扩展面够直接:** 内置 RE 工具、MCP tools、skills、知识库导入、本地覆盖和运行中任务队列。
-
-## 项目动机
-
-0xAF-Re 源于作者日常授权 RE/CTF 工作里的痛点：CC 类 CLI 风控升级后，普通模型面对逆向语义也更容易过度谨慎，本地样本分析经常被打断。这个项目不做隐写、暗语或绕策略，而是把工作限定在授权、本地、可审计范围内，再通过角色拆分和多模型组合改善体验。
-
-- **模型组合:** planner 负责路线，executor 负责工具，researcher 负责背景资料；三个角色可以接不同模型。
-- **专用订阅加成:** 如果有 GPT Cyber、Claude Code CVP、Grok 或类似更适配安全研究/逆向的 route，`workflow auto` 会更顺。
-- **普通 provider 也能跑:** caveman 模式把任务收窄成本地证据包，让谨慎的 executor 只收集文件事实。
-- **后续计划:** 加入本地模型和可复现评测样例，用样例结果衡量不同 provider/workflow 的效果并迭代。
+如果你在做 agent，0xAF-Re 也可以当作一个足够小、但关键部件齐全的 RE 参考实现：
+小到能读完，又把 agent 真正落地时麻烦的部分摊开。完整设计见
+[docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。
 
 ## 安装
 
 ```bash
-go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.11
+go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
 0xaf --version
 0xaf --welcome
 ```
@@ -178,7 +129,7 @@ make build
 ./bin/0xaf --version
 ```
 
-推荐固定安装 `@v0.1.11`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
+推荐固定安装 `@v0.1.20`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
 **需要 Go 1.21 或更新版本**（`go.mod` 声明 `go 1.21`，不会触发工具链下载）。macOS 上
 较老的 Go（如 macOS 26+ 上的 1.21.x）编译出的二进制会因缺少 `LC_UUID` 被系统 dyld 拒绝；
@@ -189,30 +140,11 @@ make build
 （darwin/linux × amd64/arm64），不需要本机 Go 工具链：
 
 ```bash
-# 示例：下载 darwin-arm64 版 v0.1.14
-curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.14/0xaf-darwin-arm64 -o 0xaf
+# 示例：下载 darwin-arm64 版 v0.1.20
+curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.20/0xaf-darwin-arm64 -o 0xaf
 chmod +x 0xaf
 ./0xaf --version
 ```
-
-<details>
-<summary>如果 <code>go install</code> 报 <code>//go:build comment without // +build comment</code></summary>
-
-```text
-.../re-agent@v0.1.11/internal/app/repl.go:22:2: //go:build comment without // +build comment
-.../re-agent@v0.1.11/internal/ui/live.go:23:2: //go:build comment without // +build comment
-```
-
-这两行本身没有问题——它们分别是 `golang.org/x/sys/unix` 和 `golang.org/x/term`
-的 import 行。低于 1.17 的 Go 工具链无法解析这两个依赖使用的裸 `//go:build`
-约束，而它会把失败报在 import 处而不是依赖内部。检查并升级：
-
-```bash
-go version          # 需要 go1.21+
-# 然后用包管理器或 https://go.dev/dl/ 重装
-```
-
-</details>
 
 ## 快速开始
 
@@ -418,7 +350,7 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 | `research` | 调研类任务 | 调研公开资源（web / GitHub / arXiv）并产出带出处的报告 |
 | `writeup` | 写总结报告 | 只基于会话内已有证据，整理成结构化的总结报告 |
 | `ctf` | 处理单个具体目标 | 先粗筛再计划，解出并验证精确 flag |
-| `reverse` | 目标导向逆向 | 静态 + 动态分析，最后写并验证核心 PoC |
+| `reverse` | 目标导向逆向 | **交互式**：样本类型选择器 → 结构化阶段（triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup），hacker 风格 HUD，`/phase` 控制；假设/证据追踪持久化在 `evidence-ledger.jsonl` |
 | `engineering` | 接口工程化还原 | 还原目标协议/结构，产出数据模型、客户端 stub 和测试 |
 
 ```text
@@ -430,6 +362,17 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 0xaf --workflow specialist -p "triage ./app.apk"
 0xaf --workflow research -p "调研 arXiv 上的混淆论文"
 ```
+
+### 交互式逆向 Workflow
+
+`/workflow reverse` 启动一个交互式会话：
+
+1. **样本类型选择器** —— APK、SO/ELF 共享库、dylib/Mach-O、ELF、PE/DLL、固件 blob 或 PCAP，每种都带预设起始 prompt。
+2. **结构化阶段** —— triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup。提示符标签显示当前阶段：`0xAF[apk|triage] ▸`。
+3. **hacker 风格 HUD** —— live dashboard 里的专用 RE 覆盖层，显示阶段进度、假设数（H:N）和证据数（E:N）。
+4. **阶段控制** —— `/phase` 看状态，`/phase next` 前进，`/phase <name>` 跳到指定阶段。
+5. **模型驱动状态** —— 模型调用 `update_re_state` 推进阶段、记录假设、留痕证据、修正结论。`advance` 动作会对照证据账本做闸门检查：进 static 要有工具观测，进 dynamic 要有记录在案的假设，进 verify 要有运行时 trace 或足够的静态证据，进 audit 要有 `verify_artifact` 结果，进 writeup 要有审计发现。
+6. **证据账本** —— 每个完成的工具结果都追加到 session JSONL 旁的 `evidence-ledger.jsonl`，假设/证据追踪跨重启保留。`verify_artifact` 构建 artifact、用固定输入回放、把 stdout 与期望输出做差分（记为 `verification_result`）；`evidence_manager` 把假设在带版本的状态间迁移（open → supported / weakened / rejected / retired / verified），并用 supports/contradicts 关联证据记录。
 
 “跑隔离本地证据模式”指的就是 `caveman` workflow。它不是单纯改写 prompt，
 而是宿主把一次请求拆成两个模型调用：
@@ -704,17 +647,9 @@ REPL 内：
 
 ## 更多文档
 
-
 - [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)：可导出 PNG/PDF 的 Cocoon AI 风格设计概览。
 - [架构深挖](docs/ARCHITECTURE.zh-CN.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。
 - [架构图索引](docs/diagrams/index.zh-CN.html)：核心运行机制的图形化入口。
-- [模块图](docs/diagrams/01-module-graph.svg)
-- [单轮时序](docs/diagrams/02-one-turn.svg)
-- [上下文预算](docs/diagrams/03-context-budget.svg)
-- [审批闸门](docs/diagrams/04-approval-gate.svg)
-- [实时面板](docs/diagrams/05-live-pane.svg)
-- [oh-my-pi 架构笔记](docs/diagrams/06-oh-my-pi.svg)
-- [0xAF-Re vs oh-my-pi](docs/diagrams/07-vs-oh-my-pi.svg)
 - [项目主页和宣传图](https://overkazaf.github.io/re-agent/index.zh-CN.html)
 
 本工具面向**已获授权**的 CTF、实验环境与本地逆向工作：二进制粗筛、静态分析、
