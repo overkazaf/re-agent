@@ -69,10 +69,10 @@ Three principles shape it:
 
 | Area | What you get |
 | --- | --- |
-| **Live dashboard** | One boxed view: FLOW (animated dataflow strip), TOOLS (tool cards), PLAN (task list + progress), THINK (reasoning tail), TELE (throughput/tokens/clock). Tight terminals shed gracefully down to the current step. |
+| **Live dashboard** | One boxed view: FLOW (animated dataflow strip), TOOLS (tool cards), PLAN (task list + progress), THINK (reasoning tail), TELE (throughput/tokens/clock). Tight terminals shrink panel by panel down to the current step. |
 | **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
 | **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 9 structured phases with evidence gates, hacker-mode HUD, and ledger-backed hypothesis/evidence tracking. |
-| **Evidence loop** | Every completed tool result lands in an append-only `evidence-ledger.jsonl`; `verify_artifact` turns build/replay/diff runs into `verification_result` records; hypotheses carry versioned status transitions; reverse phases gate on evidence, verification, and audit before writeup. |
+| **Evidence loop** | Every completed tool result lands in an append-only `evidence-ledger.jsonl`; `verify_artifact` turns build/replay/diff runs into `verification_result` records; every hypothesis status change keeps a versioned record; reverse phases gate on evidence, verification, and audit before writeup. |
 | **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
 | **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
 | **Reference context** | `--context "know:…"` seeds the system prompt from the knowledge base, `--context "file:…"` from a workspace file, raw notes pass through. |
@@ -107,7 +107,7 @@ Quick taste:
 
 ## Architecture
 
-The core design is a small loop rather than a chatbot bolted onto a shell:
+The core is a small loop:
 terminal input enters a Go host, the host routes each turn by role/provider/model,
 workflow mode shapes the context, and local evidence tools feed facts back into
 the next turn.
@@ -124,9 +124,10 @@ or browse the [full diagram index](docs/diagrams/).
 | Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
 | Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |
 
-If you build agents, 0xAF-Re also works as a compact RE-focused reference
-implementation: small enough to read, opinionated enough to show the parts most
-agent demos skip. The full design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+If you build agents, 0xAF-Re also works as a reference implementation: the code
+fits in one reading, and the parts that actually cost time in production —
+provider routing, tool governance, live telemetry, context compaction — are all
+there. The full design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Install
 
@@ -148,11 +149,11 @@ make build
 `go install ...@v0.1.20` is the recommended install path. `@main` can lag behind
 through the Go module proxy cache, and `@latest` resolves to the newest tag.
 
-**Requires Go 1.21 or newer** (`go.mod` declares `go 1.21`, so no toolchain
-download is triggered). On macOS, older Go toolchains (1.21.x on macOS 26+)
-cannot produce runnable binaries because the system linker requires an
-`LC_UUID` load command — upgrade to Go 1.22 or newer if `dyld: missing LC_UUID`
-appears, or download the prebuilt binaries from GitHub Releases.
+**Installing `@v0.1.20` needs Go 1.21 or newer** (that tag declares `go 1.21`);
+**building `main` needs Go 1.26 or newer** (`go.mod` on main now declares
+`go 1.26.0`). On macOS, an older toolchain can produce binaries the system dyld
+refuses (`dyld: missing LC_UUID`) — upgrade Go or take the prebuilt binaries
+from GitHub Releases.
 
 Prebuilt binaries are attached to every release tag by
 `.github/workflows/release.yml` (darwin/linux, amd64/arm64) — no Go toolchain

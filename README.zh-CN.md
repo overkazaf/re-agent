@@ -55,10 +55,10 @@
 
 | 领域 | 你得到什么 |
 | --- | --- |
-| **实时仪表盘** | 单框视图：FLOW（动画数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；矮终端优雅降级，保住当前步骤。 |
+| **实时仪表盘** | 单框视图：FLOW（动画数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；终端太矮时逐层收缩，保住当前步骤。 |
 | **双模型路由** | planner / executor / researcher 三个座位，可固定、可按角色，运行中可切换。 |
 | **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`。`reverse` 模式**交互式**：样本类型选择器、9 个带证据闸门的结构化阶段、hacker 风格 HUD，以及落在证据账本上的假设/证据追踪。 |
-| **证据闭环** | 每个完成的工具结果都写入 append-only 的 `evidence-ledger.jsonl`；`verify_artifact` 把构建/回放/差分运行记成 `verification_result`；假设带版本化的状态迁移；reverse 各阶段在进入 writeup 前用证据、验证和审计记录做闸门。 |
+| **证据闭环** | 每个完成的工具结果都写入 append-only 的 `evidence-ledger.jsonl`；`verify_artifact` 把构建/回放/差分运行记成 `verification_result`；假设每次状态变化都留版本记录；reverse 各阶段在进入 writeup 前用证据、验证和审计记录做闸门。 |
 | **会话恢复** | append-only JSONL 转录；`--resume <hash|id>` / `--continue` / `/sessions`；崩溃自动修复悬挂工具调用；`/new` 开新会话。 |
 | **上下文压缩** | 每次请求机械裁剪 + `/compact`；可选 `snapcompact` 把被丢弃历史渲染成 PNG 帧，视觉模型直接读回。 |
 | **参考上下文** | `--context "know:…"` 从知识库注入、`--context "file:…"` 从工作区文件注入，原始备注直接透传。 |
@@ -93,7 +93,7 @@
 
 ## 架构设计
 
-核心不是“终端里加一个聊天框”，而是一个很小的 agent loop：用户输入进入 Go 宿主，
+核心是一个很小的 agent loop：用户输入进入 Go 宿主，
 宿主按 role/provider/model 路由每一轮，workflow 模式负责收窄上下文，本地证据工具把事实回灌到下一轮。
 
 [打开可导出的架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)，或进入
@@ -108,8 +108,8 @@
 | 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
 | 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |
 
-如果你在做 agent，0xAF-Re 也可以当作一个足够小、但关键部件齐全的 RE 参考实现：
-小到能读完，又把 agent 真正落地时麻烦的部分摊开。完整设计见
+如果你在做 agent，0xAF-Re 也能当个参考实现：代码读得完，而 provider 路由、
+工具治理、实时遥测、上下文压缩这些落地时真正费工的部分都在。完整设计见
 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。
 
 ## 安装
@@ -131,10 +131,10 @@ make build
 
 推荐固定安装 `@v0.1.20`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
 
-**需要 Go 1.21 或更新版本**（`go.mod` 声明 `go 1.21`，不会触发工具链下载）。macOS 上
-较老的 Go（如 macOS 26+ 上的 1.21.x）编译出的二进制会因缺少 `LC_UUID` 被系统 dyld 拒绝；
-如果遇到 `dyld: missing LC_UUID`，请升级到 Go 1.22+，或直接下载 GitHub Releases 里的
-预编译二进制。
+**安装 `@v0.1.20` 需要 Go 1.21 或更新版本**（该 tag 声明 `go 1.21`）；**从 main 源码构建需要
+Go 1.26+**（main 的 `go.mod` 已声明 `go 1.26.0`）。macOS 上过老的 Go 编译出的二进制会因缺少
+`LC_UUID` 被系统 dyld 拒绝；遇到 `dyld: missing LC_UUID` 时升级 Go，或直接用 GitHub Releases
+的预编译二进制。
 
 每个 release tag 都会由 `.github/workflows/release.yml` 附加预编译二进制
 （darwin/linux × amd64/arm64），不需要本机 Go 工具链：
@@ -270,8 +270,8 @@ node chall.js '0xaf{warmup_deck}'       accepted · exit=0
 node chall.js 'wrong'                   rejected · exit=1
 ```
 
-注意最后两行。它没有停在"token 解出来是 X"，而是**正例和反例各跑了一次**——
-结论建立在观察到的行为上，而不是"我源码读对了"这个假设上。
+注意最后两行。它没有停在"token 解出来是 X"——**正例和反例各跑了一次**，
+结论落在观察到的行为上，不靠"我源码读对了"这个假设。
 
 **答案连同证据一起给出：**
 
@@ -316,7 +316,7 @@ make gui            # 构建产物 -> gui/build/bin/0xAF-Re GUI.app
 make gui-dev        # 热更新开发模式
 ```
 
-v1 能力一览：
+v1 目前提供：
 
 | 界面 | 能力 |
 | --- | --- |
