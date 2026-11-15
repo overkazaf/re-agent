@@ -61,6 +61,12 @@ writeup 闸门会把每条验收标准（build_pass、replay_pass >= 0.95、
 differential_cases、evidence_count、audit_finding）对着账本重新检查——
 「完成」是宿主评定的契约，不是模型报告的结尾段。
 
+声明生效还会同时拉起任务能力沙箱（`security/capability.go`）：网络与设备
+访问默认拒绝，授权来自契约的 constraints，随任务一起过期。闸门在
+`run_command` 和 `remote_exec` 内部、审批分层**之前**执行——没有网络授权的
+任务根本走不到 concern 匹配；`/cap` 是操作员运行中的杠杆，每条被闸过的命令
+都留下 ActionRecord（工具、能力、命令哈希、决策、来源）供审计回看。
+
 ---
 
 ## 2. 包结构
@@ -77,7 +83,7 @@ differential_cases、evidence_count、audit_finding）对着账本重新检查�
 | `internal/skills` | 读取内置 skills 和本地覆盖，生成 prompt catalog。 |
 | `internal/knowledge` | 本地 RE 知识库搜索、上下文打包、引用检查。 |
 | `internal/workflow` | `off` / `auto` / `specialist` / `caveman` 的选择、包装和委派逻辑。 |
-| `internal/security` | 命令风险分级和 tier x mode 审批规则。 |
+| `internal/security` | 命令风险分级和 tier x mode 审批规则，以及任务能力沙箱（capability.go）。 |
 | `internal/plan` | 任务列表 tracker：清洗步骤、记录状态、统计进度。 |
 | `internal/tools` | 24 个内置工具、子进程运行器、输出 spill 预算。 |
 | `internal/mcp` | stdio JSON-RPC client，并把 MCP server tools 包装成统一 tool。 |
@@ -220,6 +226,14 @@ MCP server tools 会转成同样的 `types.Tool`，并复用相同的 spill budg
 - 大输出不会直接灌进模型上下文，而是写 artifact 后给摘要。
 
 这让 UI、REPL、模型 tool call 和手动 shell escape 用同一套规则。
+
+在这两道闸门之前，生效的 `/goal` 声明还会加一层更粗的约束：任务能力沙箱
+（`security/capability.go`）。它回答的不是「这条命令安不安全」，而是
+「这个任务的契约允不允许这类动作」——网络与设备工具默认拒绝，除非声明的
+constraints 或操作员 `/cap` 授权。沙箱拒绝是 `DeniedError` 而不是询问：模型
+该做的是找操作员，不是重试。操作员亲手敲的 `!shell` 不经过沙箱——操作员本人
+就是授权来源。没有声明生效时沙箱不拦截，只把动作记为 `unmanaged`，保持原有
+行为。
 
 ---
 

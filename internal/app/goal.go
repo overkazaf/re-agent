@@ -144,7 +144,14 @@ func acceptGoal(state *State) error {
 	state.GoalDraft = nil
 	state.Loop.SetGoal(declaration)
 	attachAcceptanceGate(state)
+	// The declaration's constraints become the task's capability scope:
+	// network and device access are deny-by-default unless the contract
+	// grants them.
+	if state.Sandbox != nil {
+		state.Sandbox.Activate(declaration.Objective.Constraints)
+	}
 	fmt.Println(renderDeclaration(declaration, "accepted — the contract now rides every prompt; writeup checks the acceptance list"))
+	fmt.Println(renderSandbox(state.Sandbox))
 	return nil
 }
 
@@ -157,6 +164,10 @@ func clearGoal(state *State) error {
 	state.Loop.SetGoal(nil)
 	if state.REState != nil {
 		state.REState.Acceptance = nil
+	}
+	// Capabilities are task-scoped: clearing the task expires them.
+	if state.Sandbox != nil {
+		state.Sandbox.Deactivate()
 	}
 	fmt.Println(ui.RenderNotice("goal declaration cleared"))
 	return nil

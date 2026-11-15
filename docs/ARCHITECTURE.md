@@ -50,6 +50,14 @@ every system prompt and the writeup gate re-checks each acceptance criterion
 audit_finding) against the ledger, so "done" is a host-evaluated contract
 rather than the model's closing paragraph.
 
+Accepting a declaration also arms the task capability sandbox
+(`security/capability.go`): network and device access become deny-by-default,
+derived from the contract's constraints, and expire with the task. The gate
+runs inside `run_command` and `remote_exec` *before* the approval tier, so a
+task without a network grant never reaches the concern patterns; `/cap` is the
+operator's mid-run lever, and every gated command leaves an `ActionRecord`
+(tool, capability, command hash, decision, origin) for the audit to read.
+
 ---
 
 ## 2. Package map
@@ -63,7 +71,7 @@ rather than the model's closing paragraph.
 | `internal/evidence` | The unified ledger: `ev_NNN` records with kind/view/provenance, digest rendering, the append-only `evidence-ledger.jsonl` archive, and the ledger-side hypothesis state machine. | `types`, `util` |
 | `internal/hypothesis` | The assumption stack: tracker with host-side downgrade/cascade rules, prompt digest rendering. | `types`, `util` |
 | `internal/goal` | The task declaration: strict JSON draft parsing, target intake (hash/format sniff), acceptance criteria evaluated against the ledger. | `types`, `evidence` |
-| `internal/security` | Command safety patterns (`policy.go`) and the tier × mode approval gate (`approval.go`). | `types` |
+| `internal/security` | Command safety patterns (`policy.go`), the tier × mode approval gate (`approval.go`), and the task capability sandbox (`capability.go`). | `types` |
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
@@ -467,6 +475,17 @@ The gate runs **twice**, deliberately:
    (`core/shell.go:58`). This is the only place a safety pattern can be seen, and
    the reason it is a *question* rather than a refusal is that the operator typed
    the shell escape themselves.
+
+Before both of these, an accepted `/goal` declaration adds a third, coarser
+layer: the task capability sandbox (`security/capability.go`). It answers a
+different question — not "is this command safe" but "does this task's contract
+allow this *kind* of action at all" — network and device tooling is
+deny-by-default until the declaration's constraints or an operator `/cap` grant
+says otherwise. A sandbox denial is a `DeniedError`, never a prompt: the model
+is expected to ask the operator, not to retry. Operator `!shell` escapes skip
+the sandbox entirely, because the operator is the authority there. When no
+declaration is armed the sandbox is inert and merely records actions as
+`unmanaged`, preserving pre-declaration behavior.
 
 ![Security: the approval gate](diagrams/04-approval-gate.svg)
 

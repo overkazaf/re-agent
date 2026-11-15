@@ -182,6 +182,13 @@ func runCommandTool() types.Tool {
 			if tc.Remote != nil && target != "" {
 				label = "ssh " + target
 			}
+			// The task sandbox decides first: a capability the task does not
+			// hold is a boundary, not a prompt.
+			if tc.Sandbox != nil {
+				if err := tc.Sandbox.Authorize(label, command); err != nil {
+					return types.ToolResult{}, err
+				}
+			}
 			// The tier gate already ran in the loop; this is the command-specific
 			// pass, where a safety pattern turns into a prompt instead of a flat
 			// refusal.

@@ -452,6 +452,9 @@ type ToolContext struct {
 	RemoteHost string
 	// PhaseLedger supplies phase-gate counts without coupling tools to the evidence package.
 	PhaseLedger any
+	// Sandbox is the task capability gate. Nil means no task scope is active
+	// and commands run under the base policy alone.
+	Sandbox SandboxGate
 	// OnPlan lets the update_plan tool publish into the live pane.
 	OnPlan func([]PlanStep, PlanUpdateMeta)
 	// Hypotheses is the live assumption stack. Nil means hypothesis tracking
@@ -468,6 +471,15 @@ func (tc ToolContext) Context() context.Context {
 		return context.Background()
 	}
 	return tc.Ctx
+}
+
+// SandboxGate is the task capability gate the agent's commands pass through.
+// Kept as an interface here so types stays import-clean; the concrete
+// implementation lives in internal/security.
+type SandboxGate interface {
+	// Authorize decides one agent command. A nil return allows it; a
+	// *security-style denial error names the missing capability.
+	Authorize(tool, command string) error
 }
 
 type ToolResult struct {

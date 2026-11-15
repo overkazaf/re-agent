@@ -34,6 +34,7 @@ var SlashCommandSections = []HelpSection{
 		{"/workflow", "[off|auto|specialist|caveman|research|writeup|ctf|reverse [sample]|engineering]", "Pick RE workflow mode; reverse [sample] skips the picker"},
 		{"/phase", "[next|<phase-name>]", "Show or advance the RE workflow phase"},
 		{"/goal", "[<objective>|show|accept|clear]", "Draft, arm, or clear the task declaration and its acceptance gates"},
+		{"/cap", "[show|network on|off|device on <id>|off]", "Inspect or adjust the task capability sandbox"},
 		{"/tasks", "[auto|collapse|expand|toggle]", "Fold or expand the live task list"},
 		{"/think", "[auto|collapse|expand|toggle]", "Fold or expand the streamed reasoning"},
 		{"/queue", "[list|add|edit|cancel|clear|run]", "Manage queued prompts"},

@@ -49,6 +49,13 @@ func remoteExecTool() types.Tool {
 			if target == "" {
 				return types.ToolResult{}, fmt.Errorf("no remote host selected: use /remote use <name> or --remote <name>")
 			}
+			// Remote execution is network by transport: the task sandbox
+			// gates it before any approval prompt.
+			if tc.Sandbox != nil {
+				if err := tc.Sandbox.Authorize("remote_exec", command); err != nil {
+					return types.ToolResult{}, err
+				}
+			}
 			concerns, err := security.CommandConcerns(command, tc.Policy)
 			if err != nil {
 				return types.ToolResult{}, err

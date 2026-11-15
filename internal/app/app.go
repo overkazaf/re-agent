@@ -20,6 +20,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/mcp"
 	"github.com/overkazaf/re-agent/internal/providers"
 	"github.com/overkazaf/re-agent/internal/remote"
+	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/skills"
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
@@ -49,6 +50,9 @@ type State struct {
 	Workflow    workflow.Mode
 	REState     *workflow.REState
 	Ledger      *evidence.Ledger
+	// Sandbox is the task capability gate; it activates with an accepted
+	// /goal declaration and expires with it.
+	Sandbox *security.Sandbox
 	// GoalDraft holds the /goal declaration awaiting operator review; the
 	// active one lives on the loop (Loop.Goal).
 	GoalDraft    *goal.Declaration
@@ -256,9 +260,11 @@ func Run(argv []string) error {
 		remoteStore.SetCurrent(args.Remote)
 		remoteHost = args.Remote
 	}
+	sandbox := security.NewSandbox()
 	toolContext := &types.ToolContext{
 		Workspace: workspace, SessionDir: sessionDir, Policy: policy,
 		Remote: remoteManager, RemoteHost: remoteHost,
+		Sandbox: sandbox,
 	}
 	ledger, err := evidence.Open(sessionDir)
 	if err != nil {
@@ -289,6 +295,12 @@ func Run(argv []string) error {
 			}
 			if err := loop.Restore(loaded); err != nil {
 				return err
+			}
+			// A resumed task keeps its capability scope: the declaration
+			// came back with the session, so its constraints re-arm the
+			// sandbox exactly as they did at /goal accept.
+			if restored := loop.Goal(); restored != nil && restored.Accepted {
+				sandbox.Activate(restored.Objective.Constraints)
 			}
 			_ = session.AppendEvent(map[string]any{
 				"type": "resumed_from", "file": resumeTarget.File, "messages": len(loaded.Messages),
@@ -323,6 +335,7 @@ func Run(argv []string) error {
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
 		SessionMeta: sessionMeta,
 		Ledger:      ledger,
+		Sandbox:     sandbox,
 		Remote:      remoteManager, RemoteStore: remoteStore,
 		RefreshMs: args.RefreshMs,
 	}

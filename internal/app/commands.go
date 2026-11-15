@@ -15,7 +15,6 @@ import (
 	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
-	"github.com/overkazaf/re-agent/internal/evidence"
 	"github.com/overkazaf/re-agent/internal/knowledge"
 	"github.com/overkazaf/re-agent/internal/providers"
 	"github.com/overkazaf/re-agent/internal/remote"
@@ -325,6 +324,8 @@ func handleCommand(line string, state *State) error {
 		return nil
 	case "/goal":
 		return handleGoalCommand(arg, state)
+	case "/cap":
+		return handleCapCommand(arg, state)
 	case "/audit":
 		fmt.Println(ui.RenderNotice("running the adversarial audit on a second model…"))
 		report, err := state.Loop.Audit(context.Background(), nil)
@@ -715,11 +716,15 @@ func handleNewSession(state *State) error {
 	}
 	state.Session = session
 	state.Loop.NewSession(session)
-	if ledger, err := evidence.Open(state.ToolContext.SessionDir); err == nil {
-		state.Ledger = ledger
-		state.ToolContext.PhaseLedger = ledger
-	} else {
-		return err
+	// One ledger instance for the whole app lifetime: /new resets it in
+	// place, so the loop's writer and the phase-gate reader can never split.
+	// The durable archive on disk is untouched (evidence is append-only).
+	if state.Ledger != nil {
+		state.Ledger.Reset()
+	}
+	// Capabilities are task-scoped: they expire with the session's task.
+	if state.Sandbox != nil {
+		state.Sandbox.Deactivate()
 	}
 	state.Queue.Clear()
 

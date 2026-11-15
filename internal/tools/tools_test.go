@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 )
 
@@ -363,6 +364,42 @@ func TestRunCommandRespectsThePolicy(t *testing.T) {
 	tool := Find(CreateReverseTools(), "run_command")
 	if _, err := tool.Execute(map[string]any{"command": "curl https://example.com"}, tc); err == nil {
 		t.Fatal("a network command must be refused with no one to ask")
+	}
+}
+
+// The sandbox gates before the base policy: an activated task with no network
+// grant refuses curl even under yolo approvals, while an in-scope command and
+// (once granted) the device tool both pass through to execution.
+func TestRunCommandGoesThroughTheTaskSandbox(t *testing.T) {
+	tc := testContext(t)
+	sandbox := security.NewSandbox()
+	sandbox.Activate(map[string]string{"filesystem": "workspace-only"})
+	tc.Sandbox = sandbox
+	tool := Find(CreateReverseTools(), "run_command")
+
+	_, err := tool.Execute(map[string]any{"command": "printf in-scope"}, tc)
+	if err != nil {
+		t.Fatalf("in-scope command must pass the sandbox: %v", err)
+	}
+	_, err = tool.Execute(map[string]any{"command": "curl https://example.com"}, tc)
+	if err == nil || !security.IsDenied(err) {
+		t.Fatalf("network must be denied before any approval tier: %v", err)
+	}
+	_, err = tool.Execute(map[string]any{"command": "adb devices"}, tc)
+	if err == nil || !security.IsDenied(err) {
+		t.Fatalf("device must be denied by default: %v", err)
+	}
+	sandbox.Grant(security.CapDevice, "operator", "test-device")
+	if _, err := tool.Execute(map[string]any{"command": "adb devices"}, tc); err == nil || !strings.Contains(err.Error(), "device") {
+		// adb may be absent on the host; either way the sandbox must not be
+		// the layer that refuses it anymore.
+		if err != nil && security.IsDenied(err) {
+			t.Fatalf("granted device must clear the sandbox: %v", err)
+		}
+	}
+	records := sandbox.Actions()
+	if len(records) < 4 || records[1].Decision != security.DecisionDenied {
+		t.Fatalf("action log should carry the denials: %+v", records)
 	}
 }
 
