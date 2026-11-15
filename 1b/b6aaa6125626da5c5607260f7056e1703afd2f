@@ -1,0 +1,49 @@
+README.zh-CN.md
+  5f2cc24b3fdeed40 350
+docs/index.zh-CN.html
+  5f2cc24b3fdeed40 7,37,53,100-117,204-207,234
+docs/index.html
+  5f2cc24b3fdeed40 7,39,56,161-186,564-569,665,678,997,1001-1002
+README.md
+  5f2cc24b3fdeed40 762
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "1bb6aaa6125626da5c5607260f7056e1703afd2f",
+  "prompts": {
+    "5f2cc24b3fdeed40": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4acb68b1-2b7f-4b1f-bd91-54d1e268750a",
+        "model": "<synthetic>"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 68,
+      "total_deletions": 13,
+      "accepted_lines": 68,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/index.zh-CN.html": {
+          "additions": 26,
+          "deletions": 5,
+          "accepted_lines": 26
+        },
+        "docs/index.html": {
+          "additions": 40,
+          "deletions": 8,
+          "accepted_lines": 40
+        },
+        "README.md": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "README.zh-CN.md": {
+          "additions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
