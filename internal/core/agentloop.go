@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/overkazaf/re-agent/internal/evidence"
+	"github.com/overkazaf/re-agent/internal/hypothesis"
 	"github.com/overkazaf/re-agent/internal/plan"
 	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/util"
+	"github.com/overkazaf/re-agent/internal/verify"
 )
 
 // DefaultContextBudgetTokens fits comfortably inside the smallest context we
@@ -58,24 +61,22 @@ type LoopEvent struct {
 	Preview  string                 `json:"preview"`
 }
 
-func observationFromResult(call types.ToolCall, result types.ToolResult) types.Observation {
-	artifact, digest := "", ""
-	if details, ok := result.Details.(map[string]any); ok {
-		if value, ok := details["artifact"].(string); ok {
+// provenanceFromResult pulls the artifact path and digest a tool stashed in
+// its details, so the evidence record carries what it touched, not just what
+// it printed.
+func provenanceFromResult(details any) (artifact, digest string) {
+	if mapped, ok := details.(map[string]any); ok {
+		if value, ok := mapped["artifact"].(string); ok {
 			artifact = value
 		}
-		if value, ok := details["sha256"].(string); ok {
+		if value, ok := mapped["sha256"].(string); ok {
 			digest = value
 		}
 	}
 	if artifact != "" && digest == "" {
 		digest = tools.FileSHA256(artifact)
 	}
-	return types.Observation{
-		CallID: call.ID, Tool: call.Name, Arguments: call.Arguments,
-		Output: previewOf(result.Content), Artifact: artifact, SHA256: digest,
-		IsError: result.IsError, Details: result.Details,
-	}
+	return artifact, digest
 }
 
 type LoopOptions struct {
@@ -86,7 +87,9 @@ type LoopOptions struct {
 	SystemPrompt string
 	RolePrompts  map[types.AgentRole]string
 	Session      *Session
-	OnEvidence   func(types.Observation)
+	// Evidence is the host-owned, file-backed ledger; nil means the loop keeps
+	// an in-memory one.
+	Evidence *evidence.Ledger
 }
 
 type AgentLoop struct {
@@ -96,23 +99,51 @@ type AgentLoop struct {
 	// last saved list, but the app resets it at the start of a new user task so
 	// a fresh run never opens with stale steps.
 	planTracker plan.Tracker
-	emit        func(LoopEvent)
+	// The evidence ledger and hypothesis stack live outside the transcript so
+	// compaction cannot take them; the stack is re-injected into the system
+	// prompt on every request instead. The arbitrator cross-checks the two
+	// after every tool result.
+	evidence   *evidence.Ledger
+	hypotheses *hypothesis.Tracker
+	arbiter    *verify.Arbitrator
+	emit       func(LoopEvent)
 	// lastProviderName is whoever answered last, so `/compact` defaults to the
 	// model that holds the context.
 	lastProviderName string
 }
 
 func NewAgentLoop(options LoopOptions) *AgentLoop {
-	loop := &AgentLoop{options: options, emit: func(LoopEvent) {}}
+	loop := &AgentLoop{
+		options:    options,
+		emit:       func(LoopEvent) {},
+		evidence:   evidence.New(),
+		hypotheses: hypothesis.New(),
+	}
 	// The host-side update_plan tool publishes through the same path as the CLI
 	// stream events, so both sources dedupe and persist identically.
 	options.ToolContext.OnPlan = func(steps []types.PlanStep, meta types.PlanUpdateMeta) {
 		loop.publishPlan(steps, meta)
 	}
-	if options.OnEvidence != nil {
-		onEvidence := options.OnEvidence
-		options.ToolContext.OnEvidence = onEvidence
+	// The hypothesis tools mutate the loop's own tracker, and every successful
+	// mutation snapshots the stack into the session event stream. The
+	// arbitrator challenges through the same decorator, so its auto-challenges
+	// persist exactly like model-driven ones. When the host injected a
+	// file-backed ledger, the loop records into that one so the phase gates,
+	// the HUD, and the durable archive all read the same records.
+	if options.Evidence != nil {
+		loop.evidence = options.Evidence
 	}
+	persistingStack := &persistingHypotheses{
+		store: loop.hypotheses,
+		onSave: func(hypotheses []types.Hypothesis) {
+			_ = loop.options.Session.AppendEvent(map[string]any{"type": "hypotheses", "hypotheses": hypotheses})
+		},
+	}
+	options.ToolContext.Hypotheses = persistingStack
+	loop.arbiter = verify.New(loop.evidence, persistingStack, func(record types.EvidenceRecord) {
+		_ = loop.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": record})
+	})
+	options.ToolContext.Arbitrator = loop.arbiter
 	return loop
 }
 
@@ -120,8 +151,21 @@ func (l *AgentLoop) History() []types.Message { return l.messages }
 
 func (l *AgentLoop) Plan() *types.PlanSnapshot { return l.planTracker.Current() }
 
+// Hypotheses exposes the assumption stack for the HUD and the app commands.
+func (l *AgentLoop) Hypotheses() []types.Hypothesis { return l.hypotheses.List() }
+
+// Evidence exposes the ledger for the HUD and the app commands.
+func (l *AgentLoop) Evidence() []types.EvidenceRecord { return l.evidence.List() }
+
 // ResetPlan clears the live task list without touching transcript history.
 func (l *AgentLoop) ResetPlan() { l.planTracker.Reset() }
+
+// ResetAnalysis clears the evidence ledger and the hypothesis stack alongside
+// the task list when a new user task starts.
+func (l *AgentLoop) ResetAnalysis() {
+	l.evidence.Reset()
+	l.hypotheses.Reset()
+}
 
 // NewSession switches the live transcript to a fresh session file and clears
 // the working history, task list, and last-provider pointer. The old transcript
@@ -130,6 +174,7 @@ func (l *AgentLoop) NewSession(session *Session) {
 	l.options.Session = session
 	l.messages = nil
 	l.planTracker.Reset()
+	l.ResetAnalysis()
 	l.lastProviderName = ""
 }
 
@@ -145,18 +190,29 @@ func (l *AgentLoop) AddContext(text string) error {
 	return l.options.Session.AppendMessage(message)
 }
 
-// Restore loads a previous session's transcript into this loop. The messages
-// are replayed into the *new* session file too, so the resumed log is
-// self-contained and can itself be resumed.
-func (l *AgentLoop) Restore(messages []types.Message, snapshot *types.PlanSnapshot) error {
-	l.messages = append([]types.Message{}, messages...)
+// Restore loads a previous session into this loop: transcript, task list, and
+// the metacognition state. Everything is replayed into the *new* session file
+// too, so the resumed log is self-contained and can itself be resumed.
+func (l *AgentLoop) Restore(loaded Loaded) error {
+	l.messages = append([]types.Message{}, loaded.Messages...)
 	for _, message := range l.messages {
 		if err := l.options.Session.AppendMessage(message); err != nil {
 			return err
 		}
 	}
-	if snapshot != nil {
-		l.publishPlan(snapshot.Steps, types.PlanUpdateMeta{Source: snapshot.Source, Note: snapshot.Note})
+	if loaded.Plan != nil {
+		l.publishPlan(loaded.Plan.Steps, types.PlanUpdateMeta{Source: loaded.Plan.Source, Note: loaded.Plan.Note})
+	}
+	if len(loaded.Evidence) > 0 {
+		l.evidence.Load(loaded.Evidence)
+		for _, record := range loaded.Evidence {
+			_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": record})
+		}
+	}
+	if len(loaded.Hypotheses) > 0 {
+		l.hypotheses.Load(loaded.Hypotheses)
+		l.options.ToolContext.Hypotheses.(*persistingHypotheses).store = l.hypotheses
+		_ = l.options.Session.AppendEvent(map[string]any{"type": "hypotheses", "hypotheses": loaded.Hypotheses})
 	}
 	return nil
 }
@@ -554,7 +610,9 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					message = "Interrupted by operator."
 				}
 				emit(LoopEvent{Type: "tool_end", Name: call.Name, OK: false, Ms: types.NowMs() - startedAt, Preview: message})
-				resultMessage := l.pushToolResult(call, []types.ContentBlock{types.TextBlock(message)}, true, nil)
+				errorBlocks := []types.ContentBlock{types.TextBlock(message)}
+				evidenceID, stamped := l.recordEvidence(call, errorBlocks, true, nil)
+				resultMessage := l.pushToolResult(call, stamped, true, withEvidenceID(nil, evidenceID))
 				if options.Isolated {
 					runMessages = append(runMessages, resultMessage)
 				}
@@ -563,14 +621,17 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 					Type: "tool_end", Name: call.Name, OK: !result.IsError,
 					Ms: types.NowMs() - startedAt, Preview: previewOf(result.Content),
 				})
-				if callContext.OnEvidence != nil {
-					callContext.OnEvidence(observationFromResult(call, result))
-				}
-				resultMessage := l.pushToolResult(call, result.Content, result.IsError, result.Details)
+				evidenceID, stamped := l.recordEvidence(call, result.Content, result.IsError, result.Details)
+				resultMessage := l.pushToolResult(call, stamped, result.IsError, withEvidenceID(result.Details, evidenceID))
 				if options.Isolated {
 					runMessages = append(runMessages, resultMessage)
 				}
 			}
+			// The arbitrator runs after every real tool result: a contradiction
+			// the model did not notice still becomes evidence and a challenge.
+			// Findings are not echoed into the transcript — the challenge is
+			// visible through the stack digest the next turn already carries.
+			l.arbiter.Review()
 			// A tool call that finished right as the operator hit ^C still
 			// counts: the remaining calls in this batch are the ones to skip.
 			if ctx.Err() != nil {
@@ -604,6 +665,9 @@ func (l *AgentLoop) systemPrompt(role types.AgentRole) string {
 		if prompt := strings.TrimSpace(l.options.RolePrompts[role]); prompt != "" {
 			parts = append(parts, prompt)
 		}
+	}
+	if section := l.hypothesisStackSection(); section != "" {
+		parts = append(parts, section)
 	}
 	return strings.Join(parts, "\n\n")
 }

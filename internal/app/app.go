@@ -264,18 +264,10 @@ func Run(argv []string) error {
 	loop := core.NewAgentLoop(core.LoopOptions{
 		Config: agentConfig, Providers: providerMap, Tools: registry,
 		ToolContext: toolContext, SystemPrompt: systemPrompt, RolePrompts: rolePrompts, Session: session,
-		OnEvidence: func(observation types.Observation) {
-			kind := evidence.KindToolObservation
-			if observation.Tool == "verify_artifact" {
-				kind = evidence.KindVerification
-			}
-			_, _ = ledger.AddEvidence(evidence.EvidenceRecord{
-				Kind: kind, Source: observation.Tool,
-				ToolCallID: observation.CallID, Artifact: observation.Artifact,
-				SHA256: observation.SHA256, Summary: observation.Output,
-				UntrustedInput: true,
-			})
-		},
+		// The loop records every tool result into this same file-backed
+		// ledger, so the phase gates, the /audit packet, and the durable
+		// evidence-ledger.jsonl all read one stream of records.
+		Evidence: ledger,
 	})
 
 	if args.ListSessions {
@@ -291,7 +283,7 @@ func Run(argv []string) error {
 			if err != nil {
 				return err
 			}
-			if err := loop.Restore(loaded.Messages, loaded.Plan); err != nil {
+			if err := loop.Restore(loaded); err != nil {
 				return err
 			}
 			_ = session.AppendEvent(map[string]any{
@@ -393,6 +385,7 @@ func runOneShot(state *State, prompt string, viz ui.VizMode) error {
 		state.ToolContext.Confirm = createApprover(state, nil, nil)
 	}
 	state.Loop.ResetPlan()
+	state.Loop.ResetAnalysis()
 	startedAt := types.NowMs()
 	var slowest int64
 	// Plan lines describe a transition, so they need the previous snapshot —

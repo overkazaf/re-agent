@@ -60,7 +60,7 @@ func EvidenceManagerTool() types.Tool {
 					return errorResult("text is required"), nil
 				}
 				record, err := ledger.AddEvidence(evidence.EvidenceRecord{
-					Kind: evidence.KindAuditFinding, Source: "auditor", Summary: text,
+					Kind: string(evidence.KindAuditFinding), Source: "auditor", Summary: text,
 				})
 				if err != nil {
 					return types.ToolResult{}, err

@@ -50,6 +50,8 @@ final report.
 | `internal/util` | Argument coercion, `ResolveInside` path containment, `Clip`/`Truncate`, `ErrInterrupted`, `IsAbort`. | — |
 | `internal/assets` | `go:embed` of `prompts/system.md` + `skills/`, and project-root resolution (`$OXAF_RE_HOME` → exe dir → cwd, walking up 6 levels). | — |
 | `internal/plan` | The task-list tracker: sanitize untrusted steps, carry step timings, suppress no-op updates. | `types`, `util` |
+| `internal/evidence` | The evidence ledger: `ev_NNN` records of tool output with provenance, digest rendering. | `types`, `util` |
+| `internal/hypothesis` | The assumption stack: tracker with host-side downgrade/cascade rules, prompt digest rendering. | `types`, `util` |
 | `internal/security` | Command safety patterns (`policy.go`) and the tier × mode approval gate (`approval.go`). | `types` |
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
 | `internal/evidence` | The append-only evidence ledger (`evidence-ledger.jsonl`), the hypothesis state machine with versioned revisions, and audit records. | — |
@@ -60,7 +62,7 @@ final report.
 | `internal/tools` | The 24-tool built-in registry, the subprocess runner (`process.go`), the output-spill budget (`output.go`). | `knowledge`, `plan`, `security`, `skills`, `types`, `util` |
 | `internal/mcp` | stdio JSON-RPC 2.0 client (`client.go`) and the wrapper that turns server tools into `types.Tool` (`tools.go`). | `auth`, `tools`, `types` |
 | `internal/providers` | The five adapters, the CLI JSONL stream normalizer (`stream.go`), usage extraction. | `auth`, `config`, `types`, `util` |
-| `internal/core` | The loop, `LoopEvent`, context budgeting, the append-only session, the `!` shell escape. | `plan`, `security`, `tools`, `types`, `util` |
+| `internal/core` | The loop, `LoopEvent`, context budgeting, the append-only session, the `!` shell escape, the evidence ledger and hypothesis stack wiring. | `evidence`, `hypothesis`, `plan`, `security`, `tools`, `types`, `util` |
 | `internal/ui` | Theme + width math, the live pane, the HUD, the dataflow diagram, trace lines, plan box, markdown, palette, splash. | `auth`, `core`, `plan`, `types` |
 | `internal/app` | Argument parsing, the REPL, slash commands, the queued prompt controller, the raw-mode line editor, one-shot `--print` mode. | everything above |
 
@@ -681,6 +683,73 @@ identically.
 
 ---
 
+## The evidence ledger and the hypothesis stack
+
+Two host-side stores sit beside the transcript, and both outlive compaction
+because neither lives inside the message history (`internal/core/metacog.go`).
+
+**Evidence** (`internal/evidence`): every real tool result becomes an `ev_NNN`
+record — source tool, clipped excerpt, error flag, tool-call id — appended to
+the session as an `evidence` event and stamped into the result text the model
+sees (`[evidence ev_007 saved]`), so a later hypothesis can cite it. Host-state
+tools (`update_plan`, `hypothesis_*`) are skipped: bookkeeping is not evidence
+about the target.
+
+**Hypotheses** (`internal/hypothesis`): the assumption stack. Claims arrive
+through the `hypothesis_create` / `hypothesis_update` / `hypothesis_list`
+tools, but the mutation rules are host logic, not model discretion:
+contradicting evidence halves confidence (the same evidence twice is
+idempotent), a claim that drops below 0.25 is marked `reevaluate`, and every
+hypothesis transitively derived from a rejected or revised one is
+cascade-marked the same way. The stack is injected into every request's system
+prompt, so a downgrade cannot hide in a buried transcript line. Each successful
+mutation snapshots the whole stack as a `hypotheses` event; `LoadSession`
+returns both stores in `Loaded` and `Restore` seeds them back, numbering
+continuing past the restored ids.
+
+**Arbitration** (`internal/verify`): a deterministic pass that cross-checks
+the ledger against the stack. The loop runs it after every real tool result —
+findings are not echoed into the transcript; the challenge is visible through
+the stack digest the next turn already carries. `evidence_review` exposes the
+same pass on demand. Four rules:
+
+| Rule | Trigger | Action |
+|---|---|---|
+| `dangling-citation` | a claim cites an `ev_NNN` that is not in the ledger | synthesizes a `verification` record (id keyed by `arbiter:<hyp>:<ev>` so re-review is idempotent across restarts) and challenges |
+| `error-support` | a claim cites a record flagged `IsError` | challenges with the erroring record |
+| `runtime-contradiction` | a dynamic, erroring record shares a subject token with a claim but is not attached to it | challenges with that record |
+| `single-view` | confidence ≥ 0.8 backed only by on-disk (static) evidence while an unattached opposite-view record shares the subject | advisory only — no mutation |
+
+Records carry a `kind`: `dynamic` (`run_command`, `remote_exec`), `static`
+(everything else), or `verification` (synthesized by the arbitrator or the
+auditor). The auto-challenge routes through the same persisting stack
+decorator as model-driven mutations, so it snapshots to the session JSONL
+identically.
+
+**Adversarial audit** (`internal/core/auditor.go`, `/audit`): where the
+arbitrator's rules are deterministic, the audit brings a second model's
+judgment. The loop packs the stack digest and the ledger digest into an
+isolated, tool-free run (`Isolated` + `FreshSession`, the same primitives the
+delegated workflow uses) on a different provider seat: the configured
+`auditProvider`, else any provider outside the planner/executor seats and
+whoever answered last, else the executor. The auditor's reply is parsed for
+strict verdict lines — `AUDIT H-001 CHALLENGE ev_003 <reason>` / `AUDIT H-001
+SUPPORT ev_001 <reason>` — and each verdict becomes a real stack mutation
+through the same Challenge/Support transitions, with the same confidence
+halving and cascade as model-driven ones. An objection without a named record
+is synthesized into the ledger as a `verification` record keyed by the reason
+hash (`audit:<hyp>:<hash8>`), so a repeat audit reuses the record and the
+tracker's per-record idempotency absorbs the repeat. Findings are tagged
+`adversarial-audit` in the `audit` session event; the run restores
+`lastProviderName` so `/compact` does not drift onto the audit seat.
+
+The point of the layer: a contradiction is handled by a deterministic state
+transition, not by the model noticing its own inconsistency — and when
+judgment is needed, it comes from a fresh context that never saw the
+narrative being judged.
+
+---
+
 ## 10. MCP
 
 `internal/mcp/client.go` is a from-scratch JSON-RPC 2.0 client over stdio,
@@ -750,13 +819,16 @@ reconciles them in `MarshalJSON`/`UnmarshalJSON`; the unmarshaller tries both
 encodings regardless of role, because a hand-edited log may disagree with
 itself.
 
-**`type: "event"`** — everything else. All six shapes currently written:
+**`type: "event"`** — everything else. All event shapes currently written:
 
 | `data.type` | Written at | Payload |
 | --- | --- | --- |
 | `compaction` | mechanical pass trimmed the view (`agentloop.go:306`) | `tokensBefore`, `tokensAfter`, `dropped`, `elided` |
 | `compaction` + `"mode":"summary"` | `/compact` (`agentloop.go:174`) | `provider`, `tokensBefore`, `tokensAfter` |
 | `plan` | a task list actually changed (`agentloop.go:225`) | `source`, `note`, `steps[]` |
+| `evidence` | a real tool result was filed in the ledger (`core/metacog.go`), or the arbitrator synthesized a verification record (`core/agentloop.go`) | `record`: `id` (`ev_NNN`), `source`, `kind` (`static\|dynamic\|verification`), `excerpt`, `isError`, `toolCallId`, `bytes` |
+| `hypotheses` | a hypothesis mutation succeeded — model-driven, arbitrator challenge, or audit verdict (`core/metacog.go`) | `hypotheses[]`: whole-stack snapshot, last one wins on load |
+| `audit` | an adversarial audit pass ran (`/audit`, `core/auditor.go`) | `provider`, `findings[]`: `rule` (`adversarial-audit`), `hypothesisId`, `evidenceId`, `action` (`challenge\|support`), `applied`, `message` |
 | `interrupted` | `noteInterrupted` (`agentloop.go:214`) | — |
 | `max_turns_reached` | the loop hit its ceiling (`agentloop.go:439`) | `maxTurns` |
 | `resumed_from` | `--resume` / `/resume` (`app/app.go:187`, `commands.go:225`) | `file`, `messages` |

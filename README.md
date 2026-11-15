@@ -15,7 +15,7 @@ modes, queued prompts, session resume, and a live view of every turn.
 
 **Language:** English | [中文](README.zh-CN.md)
 
-**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg)
+**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg) · [Design analysis (blog)](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)
 
 <p align="center">
   <img src="docs/shots/dashboard.png" alt="0xAF-Re live dashboard: FLOW / TOOLS / PLAN / THINK / TELE" width="900">
@@ -73,6 +73,7 @@ Three principles shape it:
 | **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
 | **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 9 structured phases with evidence gates, hacker-mode HUD, and ledger-backed hypothesis/evidence tracking. |
 | **Evidence loop** | Every completed tool result lands in an append-only `evidence-ledger.jsonl`; `verify_artifact` turns build/replay/diff runs into `verification_result` records; every hypothesis status change keeps a versioned record; reverse phases gate on evidence, verification, and audit before writeup. |
+| **Metacognition layer** | Evidence ledger (`ev_NNN`) + hypothesis stack (`H-NNN`): every tool result is stamped and cited; contradictions halve a claim's confidence and cascade to derived claims — enforced by host code. (See [How 0xAF-Re differs from REA](#how-0xaf-re-differs-from-rea).) |
 | **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
 | **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
 | **Reference context** | `--context "know:…"` seeds the system prompt from the knowledge base, `--context "file:…"` from a workspace file, raw notes pass through. |
@@ -120,14 +121,74 @@ or browse the [full diagram index](docs/diagrams/).
 | Terminal surface | Keep queueing, slash commands, shell escapes, and live HUD in one workspace. |
 | Agent loop | Route planner/executor/researcher seats, compact context, stream events, and persist JSONL sessions. |
 | Evidence line | Every completed tool result appends to `evidence-ledger.jsonl` beside the session; `verify_artifact` writes build/replay/diff outcomes as `verification_result`; `evidence_manager` keeps hypotheses with versioned status revisions. Reverse phase gates read this ledger, making verification and audit hard preconditions for writeup instead of adjectives in the report. |
+| Metacognition layer | Keep evidence (`ev_NNN`) and assumptions (`H-NNN`) as host state outside the transcript: stamp every tool result, inject the hypothesis stack into the system prompt, and downgrade/cascade deterministically. A rule-based arbitrator cross-checks the ledger against the stack after every tool result; `/audit` re-judges the stack from a second model in a context-isolated run. |
 | Workflow modes | Use specialist routes when available; otherwise split RE tasks into bounded local-evidence executor packets. |
 | Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
 | Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |
 
-If you build agents, 0xAF-Re also works as a reference implementation: the code
-fits in one reading, and the parts that actually cost time in production —
-provider routing, tool governance, live telemetry, context compaction — are all
-there. The full design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+## Developer Highlights
+
+If you build agents, 0xAF-Re is a compact RE-focused reference implementation:
+one Go binary with provider routing, tool governance, live telemetry,
+prompt/skill overrides, queueing, and audit logs. It is small enough to read,
+but opinionated enough to show the parts most agent demos skip. The full
+design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+- **Single-file install feel:** one static binary, one Go dependency, no Node or
+  browser runtime in the critical path.
+- **Composable model seats:** planner, executor, and researcher can use
+  different providers, models, and editable prompts.
+- **Evidence-first workflows:** specialist routes use GPT Cyber / CC CVP / Grok
+  style subscriptions directly; caveman mode isolates ordinary executors to
+  read-only local evidence packets.
+- **Metacognition as host state:** the evidence ledger and hypothesis stack live
+  outside the transcript, so contradictions survive compaction and `--resume`
+  replays them; downgrade and cascade rules are deterministic Go, not prompt
+  etiquette.
+- **Visible agent loop:** HUD, trace lines, token/timing telemetry, task state,
+  and JSONL sessions make each turn debuggable.
+- **Hackable surface area:** built-in RE tools, MCP tools, skills, knowledge
+  import, project-local overrides, and runtime queue editing.
+
+### How 0xAF-Re differs from REA
+
+[REA](https://github.com/morluto/rea) pioneered several ideas this project
+adopts — an evidence ledger for tool observations, provider isolation with no
+silent fallback, and pairing static and runtime views. 0xAF-Re started as a
+different shape (a self-contained agent rather than an MCP tool server) and now
+closes the loop by making evidence and assumptions *first-class host state*.
+The full design rationale lives in the [blog
+analysis](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/).
+
+| Dimension | REA (MCP tool server) | 0xAF-Re (terminal agent) |
+| --- | --- | --- |
+| Shape | Exposes Ghidra/IDA/LLDB-style tools to any MCP-capable agent host. | One Go binary owns the loop, the seats, the policy gate, and the tools. |
+| Evidence | Evidence ledger with integrity policy; results recorded and kept available. | Same idea, wired into the loop: every tool result is auto-stamped `ev_NNN`, capped to a 400-char excerpt, injected back with its id, and persisted as a session event — so citations survive compaction and `--resume`. |
+| Hypotheses | Implicit; the reasoning narrative lives in the model's context. | Explicit `hypothesis_create/update/list` tools back a host-side stack: `challenge` halves confidence, below 0.25 the row needs re-examination, and reject/revise cascades to derived rows. |
+| Context pressure | Evidence accumulates in the host; the client agent still holds the narrative. | Ledger digests and the hypothesis stack are injected per turn, while raw history keeps eliding — state is not a casualty of compaction. |
+| Audit / verification | Not built in. | Built in: `/audit` re-judges the stack from a second model in a context-isolated, tool-free run; a deterministic arbitrator cross-checks static vs dynamic claims after every tool result; reverse phase gates require a `verification_result` and an `audit_finding` before writeup. |
+
+In short: REA gives an external agent *honest tools*; 0xAF-Re keeps honest
+tools *and* makes the agent's own beliefs inspectable, downgradable, and
+recoverable — the parts of the analysis that usually live (and die) in a
+vanished context window.
+
+## Project Motivation
+
+0xAF-Re grew out of daily authorized RE/CTF work where coding-agent risk
+controls tightened and general models became more cautious around
+reverse-engineering language. The goal is not to hide intent. The agent keeps
+work local, authorized, and auditable, then improves the experience by splitting
+roles and composing models.
+
+- **Model composition:** use one model for planning, another for tool execution,
+  and a researcher role for background context.
+- **Specialist routes:** GPT Cyber, Claude Code CVP, Grok, or similar
+  security-research-friendly routes make `workflow auto` smoother.
+- **Ordinary-provider path:** caveman mode narrows the task into local evidence
+  packets so cautious executors can still collect file facts safely.
+- **Roadmap:** local models and reproducible benchmark cases will be added so
+  provider/workflow quality can be measured and improved over time.
 
 ## Install
 
@@ -721,6 +782,7 @@ Where 0xAF-Re is heading:
 ## More Docs
 
 - [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html): exportable Cocoon AI-style overview of the design.
+- [Design analysis (blog)](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/): the write-up that motivated the metacognition layer, including the REA comparison and the challenge-based regression plan.
 - [Architecture deep dive](docs/ARCHITECTURE.md): package map, turn sequence,
   context budget, approval gate, data formats, invariants, and extension points.
 - [Architecture diagrams](docs/diagrams/): visual index for the core runtime.

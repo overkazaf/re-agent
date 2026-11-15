@@ -112,11 +112,14 @@ type AgentConfig struct {
 	ExecutorProvider   string `json:"executorProvider"`
 	ResearcherProvider string `json:"researcherProvider,omitempty"`
 	// KnowledgeProvider answers `/know` lookups; falls back to the executor.
-	KnowledgeProvider string                      `json:"knowledgeProvider,omitempty"`
-	DefaultRole       AgentRole                   `json:"defaultRole"`
-	MaxTurns          int                         `json:"maxTurns"`
-	Providers         map[string]*ProviderConfig  `json:"providers"`
-	MCPServers        map[string]*MCPServerConfig `json:"mcpServers,omitempty"`
+	KnowledgeProvider string `json:"knowledgeProvider,omitempty"`
+	// AuditProvider runs the adversarial audit (`/audit`); empty picks a
+	// provider outside the main seats automatically.
+	AuditProvider string                      `json:"auditProvider,omitempty"`
+	DefaultRole   AgentRole                   `json:"defaultRole"`
+	MaxTurns      int                         `json:"maxTurns"`
+	Providers     map[string]*ProviderConfig  `json:"providers"`
+	MCPServers    map[string]*MCPServerConfig `json:"mcpServers,omitempty"`
 	// CompactionStrategy: "summary" (default) folds history through an LLM;
 	// "snapcompact" archives dropped history as PNG frames a vision model reads.
 	CompactionStrategy string `json:"compactionStrategy,omitempty"`
@@ -258,6 +261,97 @@ type PlanUpdateMeta struct {
 	Note   string
 }
 
+// --- hypotheses & evidence ----------------------------------------------------
+
+// HypothesisStatus tracks where a claim stands in the analysis. `reevaluate`
+// is set by the tracker, never declared: when a hypothesis a claim depends on
+// is revised or falls, its dependents are cascade-marked for re-examination.
+type HypothesisStatus string
+
+const (
+	HypActive     HypothesisStatus = "active"
+	HypRevised    HypothesisStatus = "revised"
+	HypRejected   HypothesisStatus = "rejected"
+	HypReevaluate HypothesisStatus = "reevaluate"
+)
+
+// Hypothesis is one explicit, reviewable claim about the target — the unit the
+// planner reasons with instead of prose buried in the transcript.
+type Hypothesis struct {
+	ID         string  `json:"id"` // H-001
+	Claim      string  `json:"claim"`
+	Confidence float64 `json:"confidence"` // 0..1
+	// Supporting/Contradicting hold evidence record ids (ev_NNN).
+	Supporting    []string `json:"supporting,omitempty"`
+	Contradicting []string `json:"contradicting,omitempty"`
+	// DependsOn lists parent hypothesis ids; Derived is the backlink the
+	// cascade walks.
+	DependsOn []string         `json:"dependsOn,omitempty"`
+	Derived   []string         `json:"derived,omitempty"`
+	Status    HypothesisStatus `json:"status"`
+	// Note carries the latest challenge/revision reason.
+	Note      string `json:"note,omitempty"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
+}
+
+// HypothesisStore is the surface the hypothesis_* tools and the loop share.
+// Implementations own the mutation rules (confidence downgrade, cascade).
+type HypothesisStore interface {
+	Create(claim string, confidence float64, evidence []string, dependsOn []string) (Hypothesis, error)
+	Support(id, evidenceID string) (Hypothesis, error)
+	Challenge(id, evidenceID, note string) (Hypothesis, error)
+	Revise(id, claim, note string) (Hypothesis, error)
+	Reject(id, note string) (Hypothesis, error)
+	Get(id string) (Hypothesis, bool)
+	List() []Hypothesis
+}
+
+// EvidenceRecord is one referenceable unit of tool output: the provenance tag
+// every hypothesis citation points at. Full output stays in the transcript and
+// spilled artifacts; the record keeps a clipped excerpt and the coordinates.
+type EvidenceRecord struct {
+	ID      string `json:"id"` // ev_001
+	Source  string `json:"source"`
+	Kind    string `json:"kind,omitempty"`  // record class: tool_observation | runtime_trace | verification_result | audit_finding | …
+	View    string `json:"view,omitempty"`  // static | dynamic | ""
+	Excerpt string `json:"excerpt"`         // clipped raw output, enough to recognize the record by
+	Summary string `json:"summary,omitempty"` // host/model-authored one-liner (audit findings, marked claims)
+
+	IsError    bool     `json:"isError,omitempty"`
+	ToolCallID string   `json:"toolCallId,omitempty"`
+	Artifact   string   `json:"artifact,omitempty"`
+	SHA256     string   `json:"sha256,omitempty"`
+	Supports   []string `json:"supports,omitempty"`
+	Contradicts []string `json:"contradicts,omitempty"`
+	// UntrustedInput marks records whose text may carry content planted by the
+	// target (poisoned names, hidden prompts): data to quote, never orders.
+	UntrustedInput bool `json:"untrustedInput,omitempty"`
+	Bytes          int  `json:"bytes"`
+	CreatedAt      int64 `json:"createdAt"`
+}
+
+// Finding is one arbitration outcome: how the evidence ledger and the
+// hypothesis stack disagree. Applied findings already mutated the stack (a
+// challenge ran); advisory findings only report.
+type Finding struct {
+	Rule         string `json:"rule"`
+	HypothesisID string `json:"hypothesisId"`
+	EvidenceID   string `json:"evidenceId,omitempty"`
+	// Action is what the finding did to the stack: "challenge" or "support"
+	// (audit verdicts); empty for advisory-only rules.
+	Action  string `json:"action,omitempty"`
+	Applied bool   `json:"applied"`
+	Message string `json:"message"`
+}
+
+// Arbitrator cross-checks the ledger against the stack. Implemented by
+// internal/verify; exposed to tools via ToolContext so the model can ask for
+// an explicit review, while the loop runs it automatically after tool results.
+type Arbitrator interface {
+	Review() []Finding
+}
+
 // --- approval ----------------------------------------------------------------
 
 // ApprovalTier states how much trust a call needs: reads are cheap, exec can do
@@ -347,9 +441,13 @@ type ToolContext struct {
 	PhaseLedger any
 	// OnPlan lets the update_plan tool publish into the live pane.
 	OnPlan func([]PlanStep, PlanUpdateMeta)
-	// OnEvidence records a completed tool observation in the evidence ledger.
-	// It must not fail the tool turn; persistence errors are surfaced by the host.
-	OnEvidence func(Observation)
+	// Hypotheses is the live assumption stack. Nil means hypothesis tracking
+	// is unavailable and the hypothesis_* tools report that instead of
+	// silently dropping claims.
+	Hypotheses HypothesisStore
+	// Arbitrator cross-checks the evidence ledger against the stack. Nil when
+	// arbitration is unavailable; the evidence_review tool reports that.
+	Arbitrator Arbitrator
 }
 
 func (tc ToolContext) Context() context.Context {
@@ -365,16 +463,8 @@ type ToolResult struct {
 	Details any
 }
 
-type Observation struct {
-	CallID    string
-	Tool      string
-	Arguments map[string]any
-	Output    string
-	Artifact  string
-	SHA256    string
-	IsError   bool
-	Details   any
-}
+// Text returns the concatenated text blocks — the same view Message.Text gives.
+func (r ToolResult) Text() string { return TextFromBlocks(r.Content) }
 
 // Risk is what a tool can do; the approval tier is derived from it.
 type Risk string

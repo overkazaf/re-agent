@@ -699,7 +699,7 @@ func (m *SessionManager) Resume(idOrPath string) (SessionInfo, error) {
 	if s == nil {
 		return SessionInfo{}, fmt.Errorf("session vanished: %s", info.ID)
 	}
-	if err := s.loop.Restore(loaded.Messages, loaded.Plan); err != nil {
+	if err := s.loop.Restore(loaded); err != nil {
 		m.CloseSession(info.ID)
 		// assemble already wrote a session header to disk; a half-restored
 		// transcript is noise, not history — remove it.

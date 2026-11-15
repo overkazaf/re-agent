@@ -12,7 +12,7 @@ func TestLedgerRoundTripAndHypothesisTransitions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err := ledger.AddEvidence(EvidenceRecord{Kind: KindToolObservation, Source: "strings", Summary: "AES import"})
+	record, err := ledger.AddEvidence(EvidenceRecord{Kind: string(KindToolObservation), Source: "strings", Summary: "AES import"})
 	if err != nil {
 		t.Fatal(err)
 	}
