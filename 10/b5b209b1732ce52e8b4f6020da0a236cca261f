@@ -1,0 +1,263 @@
+internal/core/metacog_test.go
+  33b306bd55b68234 1-245
+internal/hypothesis/render.go
+  33b306bd55b68234 1-69
+internal/core/agentloop.go
+  33b306bd55b68234 10-11,17,64-69,72,79,90-92,102-109,116-121,127-146,154-158,163-169,177,193-197,203-209,212-215,613-615,624-625,630-634,669-670
+internal/tools/hypothesis.go
+  33b306bd55b68234 1-183
+internal/app/audit_test.go
+  33b306bd55b68234 1-73
+internal/evidence/ledger.go
+  33b306bd55b68234 1-15,23,28-30,46-71,111-112,118-120,122-126,133-137,142-144,150,162,168,172,184-188,193,206-212,223-225,228-264,266-267,269-270,274-371,375-376,378,382,400,415,419,436-437,443-444,465-466,471-483,492-496
+internal/core/auditor.go
+  33b306bd55b68234 1-235
+internal/core/session.go
+  33b306bd55b68234 50-53,195-198,203-204,210-213
+internal/hypothesis/tracker.go
+  33b306bd55b68234 1-317
+docs/diagrams/0xaf-re-agent-architecture.zh-CN.html
+  33b306bd55b68234 51,115,153-154,168,170,190-192,198-199,201,203-235,238,240,244-263,269-323,325-326,329,334,336-337,340-342,345,347-350,352-354,356-358,360-362,364-366,368,372,374-382,385,391-392,395-396,399-400,403-404,408,447,472
+internal/core/arbitrator_test.go
+  33b306bd55b68234 1-137
+internal/tools/evidence_review.go
+  33b306bd55b68234 1-44
+internal/verify/arbitrator_test.go
+  33b306bd55b68234 1-144
+internal/types/types.go
+  33b306bd55b68234 115-122,264-354,444-450,466-467
+internal/verify/arbitrator.go
+  33b306bd55b68234 1-238
+internal/tools/ledger_tools.go
+  33b306bd55b68234 63
+internal/core/metacog.go
+  33b306bd55b68234 1-179
+internal/app/repl.go
+  33b306bd55b68234 213
+internal/tools/tools_test.go
+  33b306bd55b68234 87
+gui/manager.go
+  33b306bd55b68234 702
+internal/hypothesis/tracker_test.go
+  33b306bd55b68234 1-233
+internal/tools/registry.go
+  33b306bd55b68234 50-53
+internal/tools/hypothesis_test.go
+  33b306bd55b68234 1-120
+README.zh-CN.md
+  33b306bd55b68234 8,62,108,113-154,692
+docs/diagrams/0xaf-re-agent-architecture.html
+  33b306bd55b68234 51,115,153-155,169,171,189,191-192,199-200,204-236,249,253-264,271-322,349-351,353-355,357-359,361-363,365-367,369,376-383,386,396-397,400-401,404-405
+internal/ui/help.go
+  33b306bd55b68234 92-94
+internal/evidence/ledger_test.go
+  33b306bd55b68234 1-101
+README.md
+  33b306bd55b68234 18,76,124,129-191,785
+internal/tools/evidence_review_test.go
+  33b306bd55b68234 1-77
+internal/app/app.go
+  33b306bd55b68234 267-270,286,388
+internal/core/auditor_test.go
+  33b306bd55b68234 1-216
+internal/ui/ui_test.go
+  33b306bd55b68234 688-711
+internal/app/commands.go
+  33b306bd55b68234 323-330,351
+internal/evidence/evidence_test.go
+  33b306bd55b68234 15
+docs/ARCHITECTURE.md
+  33b306bd55b68234 53-54,65,686-752,822,829-831
+internal/ui/ui.go
+  33b306bd55b68234 320-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "10b5b209b1732ce52e8b4f6020da0a236cca261f",
+  "prompts": {
+    "33b306bd55b68234": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdd5578c-330a-4450-b8b3-ee843a287df9",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 3965,
+      "total_deletions": 665,
+      "accepted_lines": 3909,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/hypothesis/render.go": {
+          "additions": 69,
+          "accepted_lines": 69
+        },
+        "README.md": {
+          "additions": 67,
+          "deletions": 5,
+          "accepted_lines": 67
+        },
+        "internal/evidence/evidence.go": {
+          "deletions": 319
+        },
+        "internal/tools/evidence_review_test.go": {
+          "additions": 77,
+          "accepted_lines": 77
+        },
+        "internal/tools/hypothesis_test.go": {
+          "additions": 120,
+          "accepted_lines": 120
+        },
+        "internal/core/session.go": {
+          "additions": 14,
+          "deletions": 1,
+          "accepted_lines": 14
+        },
+        "internal/hypothesis/tracker_test.go": {
+          "additions": 233,
+          "accepted_lines": 233
+        },
+        "internal/core/metacog_test.go": {
+          "additions": 245,
+          "accepted_lines": 245
+        },
+        "internal/core/agentloop.go": {
+          "additions": 93,
+          "deletions": 29,
+          "accepted_lines": 93
+        },
+        "internal/core/metacog.go": {
+          "additions": 190,
+          "deletions": 11,
+          "accepted_lines": 179
+        },
+        "internal/tools/evidence_review.go": {
+          "additions": 44,
+          "accepted_lines": 44
+        },
+        "internal/evidence/evidence_test.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/verify/arbitrator.go": {
+          "additions": 250,
+          "deletions": 12,
+          "accepted_lines": 238
+        },
+        "internal/tools/ledger_tools.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/ui/ui_test.go": {
+          "additions": 24,
+          "accepted_lines": 24
+        },
+        "internal/ui/help.go": {
+          "additions": 3,
+          "accepted_lines": 3
+        },
+        "internal/hypothesis/tracker.go": {
+          "additions": 317,
+          "accepted_lines": 317
+        },
+        "internal/tools/tools_test.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "docs/ARCHITECTURE.md": {
+          "additions": 74,
+          "deletions": 2,
+          "accepted_lines": 74
+        },
+        "internal/app/audit_test.go": {
+          "additions": 73,
+          "accepted_lines": 73
+        },
+        "docs/diagrams/0xaf-re-agent-architecture.zh-CN.html": {
+          "additions": 171,
+          "deletions": 119,
+          "accepted_lines": 171
+        },
+        "internal/app/app.go": {
+          "additions": 6,
+          "deletions": 13,
+          "accepted_lines": 6
+        },
+        "internal/verify/arbitrator_test.go": {
+          "additions": 150,
+          "deletions": 6,
+          "accepted_lines": 144
+        },
+        "README.zh-CN.md": {
+          "additions": 46,
+          "deletions": 4,
+          "accepted_lines": 46
+        },
+        "internal/types/types.go": {
+          "additions": 108,
+          "deletions": 18,
+          "accepted_lines": 108
+        },
+        "internal/core/auditor_test.go": {
+          "additions": 217,
+          "deletions": 1,
+          "accepted_lines": 216
+        },
+        "internal/ui/ui.go": {
+          "additions": 31,
+          "accepted_lines": 31
+        },
+        "internal/tools/hypothesis.go": {
+          "additions": 183,
+          "accepted_lines": 183
+        },
+        "internal/evidence/ledger_test.go": {
+          "additions": 104,
+          "deletions": 3,
+          "accepted_lines": 101
+        },
+        "internal/app/commands.go": {
+          "additions": 9,
+          "deletions": 1,
+          "accepted_lines": 9
+        },
+        "internal/evidence/ledger.go": {
+          "additions": 515,
+          "deletions": 19,
+          "accepted_lines": 496
+        },
+        "gui/manager.go": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "internal/core/arbitrator_test.go": {
+          "additions": 140,
+          "deletions": 3,
+          "accepted_lines": 137
+        },
+        "docs/diagrams/0xaf-re-agent-architecture.html": {
+          "additions": 147,
+          "deletions": 95,
+          "accepted_lines": 147
+        },
+        "internal/core/auditor.go": {
+          "additions": 236,
+          "deletions": 1,
+          "accepted_lines": 235
+        },
+        "internal/tools/registry.go": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "internal/app/repl.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        }
+      }
+    }
+  }
+}
