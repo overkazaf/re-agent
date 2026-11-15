@@ -16,6 +16,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/evidence"
+	"github.com/overkazaf/re-agent/internal/goal"
 	"github.com/overkazaf/re-agent/internal/mcp"
 	"github.com/overkazaf/re-agent/internal/providers"
 	"github.com/overkazaf/re-agent/internal/remote"
@@ -35,19 +36,22 @@ type State struct {
 	Session *core.Session
 	// SessionMeta is replayed into every new session file (`/new`), so the
 	// transcript header carries the same agent/workspace/policy context.
-	SessionMeta  map[string]any
-	Tools        []types.Tool
-	ToolContext  *types.ToolContext
-	Role         types.AgentRole
-	Provider     string
-	Skills       []skills.Skill
-	MCP          []mcp.Connection
-	Flow         ui.VizMode
-	Splash       *ui.SplashContext
-	Providers    map[string]types.Provider
-	Workflow     workflow.Mode
-	REState      *workflow.REState
-	Ledger       *evidence.Ledger
+	SessionMeta map[string]any
+	Tools       []types.Tool
+	ToolContext *types.ToolContext
+	Role        types.AgentRole
+	Provider    string
+	Skills      []skills.Skill
+	MCP         []mcp.Connection
+	Flow        ui.VizMode
+	Splash      *ui.SplashContext
+	Providers   map[string]types.Provider
+	Workflow    workflow.Mode
+	REState     *workflow.REState
+	Ledger      *evidence.Ledger
+	// GoalDraft holds the /goal declaration awaiting operator review; the
+	// active one lives on the loop (Loop.Goal).
+	GoalDraft    *goal.Declaration
 	Queue        *taskQueue
 	PlanDisplay  ui.PlanDisplayMode
 	ThinkDisplay ui.ThinkDisplayMode

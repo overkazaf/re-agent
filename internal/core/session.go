@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/overkazaf/re-agent/internal/goal"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,6 +52,8 @@ type Loaded struct {
 	// assumption stack recorded as session events, seeded back on resume.
 	Evidence   []types.EvidenceRecord
 	Hypotheses []types.Hypothesis
+	// Goal is the last accepted task declaration, if the session had one.
+	Goal *goal.Declaration
 }
 
 // Session is an append-only JSONL transcript.
@@ -196,6 +199,9 @@ func LoadSession(file string) (Loaded, error) {
 				// hypothesis snapshots (last one wins).
 				Record     types.EvidenceRecord `json:"record"`
 				Hypotheses []types.Hypothesis   `json:"hypotheses"`
+				// Goal events carry the accepted task declaration (last wins; a
+				// null declaration means it was cleared).
+				Goal *goal.Declaration `json:"declaration"`
 			}
 			if err := json.Unmarshal(entry.Data, &event); err != nil {
 				continue
@@ -211,6 +217,8 @@ func LoadSession(file string) (Loaded, error) {
 				loaded.Evidence = append(loaded.Evidence, event.Record)
 			case event.Type == "hypotheses" && len(event.Hypotheses) > 0:
 				loaded.Hypotheses = event.Hypotheses
+			case event.Type == "goal":
+				loaded.Goal = event.Goal
 			}
 		}
 	}

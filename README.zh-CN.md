@@ -59,6 +59,7 @@
 | **双模型路由** | planner / executor / researcher 三个座位，可固定、可按角色，运行中可切换。 |
 | **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`。`reverse` 模式**交互式**：样本类型选择器、9 个带证据闸门的结构化阶段、hacker 风格 HUD，以及落在证据账本上的假设/证据追踪。 |
 | **证据闭环** | 每个完成的工具结果都写入 append-only 的 `evidence-ledger.jsonl`；`verify_artifact` 把构建/回放/差分运行记成 `verification_result`；假设每次状态变化都留版本记录；reverse 各阶段在进入 writeup 前用证据、验证和审计记录做闸门。 |
+| **任务声明** | `/goal <目标>` 把一句话需求变成带范围的契约——目标文件哈希与格式由宿主钉死，验收标准（build_pass、replay_pass、differential_cases…）在 writeup 前对照证据账本逐条检查。 |
 | **元认知层** | 证据账本（`ev_NNN`）+ 假设栈（`H-NNN`）：每个工具结果自动入库并被引用；矛盾证据会把判断置信度减半，并级联到派生判断——全部由宿主代码强制。（见 [0xAF-Re 与 REA 的架构差异](#0xaf-re-与-rea-的架构差异)） |
 | **会话恢复** | append-only JSONL 转录；`--resume <hash|id>` / `--continue` / `/sessions`；崩溃自动修复悬挂工具调用；`/new` 开新会话。 |
 | **上下文压缩** | 每次请求机械裁剪 + `/compact`；可选 `snapcompact` 把被丢弃历史渲染成 PNG 帧，视觉模型直接读回。 |
@@ -340,6 +341,8 @@ accepted and exits 0, otherwise rejected and exit 1.
 | 不打断当前轮，先把下一个问题排上 | `/queue add <text>` |
 | 修改还没执行的排队任务 | `/queue edit <id> <text>` |
 | 换掉这个会话后续使用的模型 | `/model executor <name>` |
+| 把一句话目标变成可检查的任务契约 | `/goal <目标>` 起草，`/goal accept` 生效 |
+| 对照证据账本看验收标准过没过 | `/goal show` |
 
 跑完之后 `/session` 会打印 JSONL 路径。plan 快照、工具调用、结果和 token 计数
 全都按顺序在里面——这才是让一次运行**可审计**而不只是"看着挺唬人"的原因。

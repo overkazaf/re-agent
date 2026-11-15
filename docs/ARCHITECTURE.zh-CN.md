@@ -45,11 +45,21 @@ provider、本地逆向工具、MCP 工具、session JSONL、实时 HUD 和 work
 模型没有 tool call 时，本次 operator 请求结束。触发中断、到达 `maxTurns` 或
 provider 返回错误时，也会停止当前 run。
 
-逆向模式在这个循环外还有一条证据线：每次工具结果会写入
-`evidence-ledger.jsonl`；`verify_artifact` 会把构建、回放和差分结果写成
-`verification_result`；`evidence_manager` 维护带版本历史的假设状态。
-reverse workflow 的阶段推进会检查这些记录，验证和审计不再是报告里的形容词，
-而是进入 writeup 前的硬条件。
+逆向模式在这个循环外还有一条证据线：每次工具结果都会被打标入库
+（`internal/core/metacog.go`），生成带类别（`tool_observation` / `runtime_trace` /
+`verification_result` / `audit_finding`）、视角（static / dynamic）和
+artifact/sha256 溯源的 `ev_NNN` 记录，并追加到会话级 `evidence-ledger.jsonl`
+（`internal/evidence/ledger.go`）。`verify_artifact` 把构建、回放和差分结果连同
+通过数写成 `verification_result`；`evidence_manager` 维护账本侧假设与审计记录；
+仲裁器在每次工具结果后交叉核对账本与假设栈。reverse workflow 的阶段推进会检查
+这些记录，验证和审计不再是报告里的形容词，而是进入 writeup 前的硬条件。
+
+在此之上是任务声明（`/goal`，`internal/goal`）：模型把目标起草成一份带范围的
+契约——目标文件、任务意图、交付物、约束和验收清单；宿主自己完成文件哈希与格式
+识别，操作员用 `/goal accept` 批准生效。生效后声明随每个 system prompt 注入，
+writeup 闸门会把每条验收标准（build_pass、replay_pass >= 0.95、
+differential_cases、evidence_count、audit_finding）对着账本重新检查——
+「完成」是宿主评定的契约，不是模型报告的结尾段。
 
 ---
 
@@ -61,7 +71,8 @@ reverse workflow 的阶段推进会检查这些记录，验证和审计不再是
 | `internal/util` | 路径收敛、参数转换、截断、通用错误判断。 |
 | `internal/assets` | 嵌入 `prompts/` 和 `skills/`，并解析项目根目录或 `OXAF_RE_HOME`。 |
 | `internal/config` | 默认配置、`agent.config.json` 合并、UI 偏好、provider model 覆盖。 |
-| `internal/evidence` | append-only 证据账本、假设状态机和审计记录。 |
+| `internal/evidence` | 统一证据账本：带类别/视角/溯源的 `ev_NNN` 记录、摘要渲染、append-only `evidence-ledger.jsonl` 归档、账本侧假设状态机。 |
+| `internal/goal` | 任务声明：严格 JSON 草案解析、目标采样（哈希/格式识别）、按账本评估验收标准。 |
 | `internal/auth` | 环境变量、`.env`、本地 secrets、CLI 登录状态探测。 |
 | `internal/skills` | 读取内置 skills 和本地覆盖，生成 prompt catalog。 |
 | `internal/knowledge` | 本地 RE 知识库搜索、上下文打包、引用检查。 |

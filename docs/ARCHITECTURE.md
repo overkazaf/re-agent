@@ -28,17 +28,27 @@ feed it, tools are called by it, `ui` renders the `LoopEvent`s it emits, and
 `core.Session` is the disk record of what it did.
 
 Reverse work adds a second, evidence loop beside this one. Every completed tool
-call appends its result to `evidence-ledger.jsonl`, an append-only ledger opened
-per session
-(`internal/evidence/evidence.go:98`); the loop feeds it through the `OnEvidence`
-hook (`internal/core/agentloop.go:566` → `internal/app/app.go:267`).
-`verify_artifact` (`internal/tools/verify.go:39`) builds, replays, and diffs an
-artifact, landing the outcome as a `verification_result` record;
-`evidence_manager` (`internal/tools/ledger_tools.go:11`) keeps hypotheses with
-versioned state transitions and audit findings. The reverse workflow's phase
-gates check these records (`internal/workflow/phase.go:43`), so verification
-and audit are hard preconditions for reaching writeup — not adjectives in the
-final report.
+call is stamped into the evidence ledger (`internal/core/metacog.go`), which
+mints `ev_NNN` records with kind (`tool_observation` / `runtime_trace` /
+`verification_result` / `audit_finding`), view (static / dynamic), and
+artifact/sha256 provenance, and appends them to the session-scoped
+`evidence-ledger.jsonl` (`internal/evidence/ledger.go`). `verify_artifact`
+(`internal/tools/verify.go`) builds, replays, and diffs an artifact, landing
+the outcome — with its pass counts — as a `verification_result` record;
+`evidence_manager` keeps ledger-side hypotheses and audit findings; the
+arbitrator re-checks the ledger against the hypothesis stack after every tool
+result. The reverse workflow's phase gates check these records
+(`internal/workflow/phase.go`), so verification and audit are hard
+preconditions for reaching writeup — not adjectives in the final report.
+
+On top of that sits the task declaration (`/goal`, `internal/goal`): the model
+drafts a scoped contract — target file, objective, deliverables, constraints,
+and an acceptance list — the host hashes and identifies the target itself, and
+the operator arms it with `/goal accept`. Once armed, the declaration rides
+every system prompt and the writeup gate re-checks each acceptance criterion
+(build_pass, replay_pass >= 0.95, differential_cases, evidence_count,
+audit_finding) against the ledger, so "done" is a host-evaluated contract
+rather than the model's closing paragraph.
 
 ---
 
@@ -50,11 +60,11 @@ final report.
 | `internal/util` | Argument coercion, `ResolveInside` path containment, `Clip`/`Truncate`, `ErrInterrupted`, `IsAbort`. | — |
 | `internal/assets` | `go:embed` of `prompts/system.md` + `skills/`, and project-root resolution (`$OXAF_RE_HOME` → exe dir → cwd, walking up 6 levels). | — |
 | `internal/plan` | The task-list tracker: sanitize untrusted steps, carry step timings, suppress no-op updates. | `types`, `util` |
-| `internal/evidence` | The evidence ledger: `ev_NNN` records of tool output with provenance, digest rendering. | `types`, `util` |
+| `internal/evidence` | The unified ledger: `ev_NNN` records with kind/view/provenance, digest rendering, the append-only `evidence-ledger.jsonl` archive, and the ledger-side hypothesis state machine. | `types`, `util` |
 | `internal/hypothesis` | The assumption stack: tracker with host-side downgrade/cascade rules, prompt digest rendering. | `types`, `util` |
+| `internal/goal` | The task declaration: strict JSON draft parsing, target intake (hash/format sniff), acceptance criteria evaluated against the ledger. | `types`, `evidence` |
 | `internal/security` | Command safety patterns (`policy.go`) and the tier × mode approval gate (`approval.go`). | `types` |
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
-| `internal/evidence` | The append-only evidence ledger (`evidence-ledger.jsonl`), the hypothesis state machine with versioned revisions, and audit records. | — |
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
 | `internal/skills` | Loads embedded skills plus `skills/<name>/SKILL.md` overrides, builds the system-prompt catalog. | `assets`, `util` |

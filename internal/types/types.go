@@ -313,22 +313,35 @@ type HypothesisStore interface {
 type EvidenceRecord struct {
 	ID      string `json:"id"` // ev_001
 	Source  string `json:"source"`
-	Kind    string `json:"kind,omitempty"`  // record class: tool_observation | runtime_trace | verification_result | audit_finding | …
-	View    string `json:"view,omitempty"`  // static | dynamic | ""
-	Excerpt string `json:"excerpt"`         // clipped raw output, enough to recognize the record by
+	Kind    string `json:"kind,omitempty"`    // record class: tool_observation | runtime_trace | verification_result | audit_finding | …
+	View    string `json:"view,omitempty"`    // static | dynamic | ""
+	Excerpt string `json:"excerpt"`           // clipped raw output, enough to recognize the record by
 	Summary string `json:"summary,omitempty"` // host/model-authored one-liner (audit findings, marked claims)
 
-	IsError    bool     `json:"isError,omitempty"`
-	ToolCallID string   `json:"toolCallId,omitempty"`
-	Artifact   string   `json:"artifact,omitempty"`
-	SHA256     string   `json:"sha256,omitempty"`
-	Supports   []string `json:"supports,omitempty"`
+	IsError     bool     `json:"isError,omitempty"`
+	ToolCallID  string   `json:"toolCallId,omitempty"`
+	Artifact    string   `json:"artifact,omitempty"`
+	SHA256      string   `json:"sha256,omitempty"`
+	Supports    []string `json:"supports,omitempty"`
 	Contradicts []string `json:"contradicts,omitempty"`
 	// UntrustedInput marks records whose text may carry content planted by the
 	// target (poisoned names, hidden prompts): data to quote, never orders.
 	UntrustedInput bool `json:"untrustedInput,omitempty"`
 	Bytes          int  `json:"bytes"`
-	CreatedAt      int64 `json:"createdAt"`
+	// Verification carries the numbers of a verify_artifact run — the only
+	// record class allowed to hold them — so acceptance criteria can be
+	// checked from the ledger without re-running anything.
+	Verification *VerificationStats `json:"verification,omitempty"`
+	CreatedAt    int64              `json:"createdAt"`
+}
+
+// VerificationStats is the checkable summary of one build/replay/diff run.
+type VerificationStats struct {
+	Build  bool `json:"build"`
+	Passed int  `json:"passed"`
+	Total  int  `json:"total"`
+	// ID is the evidence id of the run, filled when the record is filed.
+	ID string `json:"id,omitempty"`
 }
 
 // Finding is one arbitration outcome: how the evidence ledger and the

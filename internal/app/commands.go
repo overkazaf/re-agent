@@ -257,6 +257,9 @@ func handleCommand(line string, state *State) error {
 			}
 			state.Workflow = workflow.Reverse
 			state.REState = workflow.NewREState(selected.Key)
+			// An accepted /goal declaration keeps gating writeup inside the
+			// workflow, so the contract survives mode switches.
+			attachAcceptanceGate(state)
 			fmt.Println(ui.RenderNotice(workflow.Status(state.Workflow, state.Config, state.Provider)))
 			fmt.Println(ui.RenderNotice("sample=" + selected.Key + " phase=" + string(state.REState.Phase) + " — send your first task"))
 			return nil
@@ -320,6 +323,8 @@ func handleCommand(line string, state *State) error {
 			"compacted via %s: ≈%d → ≈%d tokens (full transcript kept in %s)",
 			result.Provider, result.TokensBefore, result.TokensAfter, state.Session.File)))
 		return nil
+	case "/goal":
+		return handleGoalCommand(arg, state)
 	case "/audit":
 		fmt.Println(ui.RenderNotice("running the adversarial audit on a second model…"))
 		report, err := state.Loop.Audit(context.Background(), nil)

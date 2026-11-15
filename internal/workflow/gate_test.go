@@ -1,6 +1,9 @@
 package workflow
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 type fakeLedger struct {
 	evidence map[string]int
@@ -49,5 +52,29 @@ func TestPhaseGatesRequireEvidenceVerificationAndAudit(t *testing.T) {
 	state.Phase = PhaseAudit
 	if err := CheckPhaseGate(state, ledger); err == nil {
 		t.Fatal("writeup gate should require audit finding")
+	}
+}
+
+func TestWriteupGateChecksAcceptanceCriteria(t *testing.T) {
+	state := NewREState("elf")
+	ledger := fakeLedger{evidence: map[string]int{"audit_finding": 1}}
+	state.Phase = PhaseAudit
+
+	// No declaration armed: the base gate decides alone.
+	if err := CheckPhaseGate(state, ledger); err != nil {
+		t.Fatalf("writeup gate failed without a declaration: %v", err)
+	}
+
+	// An accepted declaration with unmet criteria blocks writeup.
+	state.Acceptance = func() []string { return []string{"replay_pass >= 0.95", "build_pass"} }
+	err := CheckPhaseGate(state, ledger)
+	if err == nil || !strings.Contains(err.Error(), "replay_pass >= 0.95") {
+		t.Fatalf("writeup gate should list unmet criteria, got %v", err)
+	}
+
+	// All criteria holding lets the phase through.
+	state.Acceptance = func() []string { return nil }
+	if err := CheckPhaseGate(state, ledger); err != nil {
+		t.Fatalf("writeup gate failed with all criteria met: %v", err)
 	}
 }

@@ -73,6 +73,7 @@ Three principles shape it:
 | **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
 | **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 9 structured phases with evidence gates, hacker-mode HUD, and ledger-backed hypothesis/evidence tracking. |
 | **Evidence loop** | Every completed tool result lands in an append-only `evidence-ledger.jsonl`; `verify_artifact` turns build/replay/diff runs into `verification_result` records; every hypothesis status change keeps a versioned record; reverse phases gate on evidence, verification, and audit before writeup. |
+| **Task declarations** | `/goal <objective>` turns a raw ask into a scoped contract — target hash and format pinned host-side, acceptance criteria (build_pass, replay_pass, differential_cases…) checked against the evidence ledger before writeup. |
 | **Metacognition layer** | Evidence ledger (`ev_NNN`) + hypothesis stack (`H-NNN`): every tool result is stamped and cited; contradictions halve a claim's confidence and cascade to derived claims — enforced by host code. (See [How 0xAF-Re differs from REA](#how-0xaf-re-differs-from-rea).) |
 | **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
 | **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
@@ -751,6 +752,9 @@ Inside the REPL:
 | `/retool burp template mobile` | emit a Burp mobile/API capture checklist |
 | `/phase` | show RE workflow phase, hypotheses, and evidence |
 | `/phase next` | advance to the next RE phase |
+| `/goal <objective>` | draft a task declaration: target, deliverables, acceptance gates |
+| `/goal accept` | arm the declaration — it rides every prompt and gates writeup |
+| `/goal show` / `/goal clear` | review acceptance status against the ledger / drop the declaration |
 | `/queue list` | show queued prompts |
 | `/queue edit <id> <text>` | edit queued work before it runs |
 | `/queue cancel <id>` | cancel queued work |

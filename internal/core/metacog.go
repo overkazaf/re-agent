@@ -10,6 +10,7 @@ import (
 
 	"github.com/overkazaf/re-agent/internal/evidence"
 	"github.com/overkazaf/re-agent/internal/hypothesis"
+	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 )
 
@@ -125,22 +126,39 @@ func (l *AgentLoop) recordEvidence(call types.ToolCall, content []types.ContentB
 		return "", content
 	}
 	artifact, digest := "", ""
+	var verification *types.VerificationStats
 	if details != nil {
 		artifact, digest = provenanceFromResult(details)
+		verification = verificationFromDetails(details)
 	}
 	record := l.evidence.Add(evidence.Input{
-		Source:     call.Name,
-		Kind:       string(kindFor(call.Name)),
-		View:       viewFor(call.Name),
-		Text:       types.TextFromBlocks(content),
-		IsError:    isError,
-		ToolCallID: call.ID,
-		Artifact:   artifact,
-		SHA256:     digest,
+		Source:       call.Name,
+		Kind:         string(kindFor(call.Name)),
+		View:         viewFor(call.Name),
+		Text:         types.TextFromBlocks(content),
+		IsError:      isError,
+		ToolCallID:   call.ID,
+		Artifact:     artifact,
+		SHA256:       digest,
+		Verification: verification,
 	})
 	// The ledger is a provenance layer; never fail a run over persistence.
 	_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": record})
 	return record.ID, stampEvidence(content, record.ID)
+}
+
+// verificationFromDetails lifts a verify_artifact run's numbers out of the
+// tool details, so acceptance criteria can be checked from the ledger.
+func verificationFromDetails(details any) *types.VerificationStats {
+	mapped, ok := details.(map[string]any)
+	if !ok {
+		return nil
+	}
+	run, ok := mapped["verification"].(tools.VerificationResult)
+	if !ok {
+		return nil
+	}
+	return &types.VerificationStats{Build: run.Build, Passed: run.Passed, Total: run.Total}
 }
 
 // stampEvidence appends the evidence id to the result text: one extra line on

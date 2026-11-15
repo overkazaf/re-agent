@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -70,6 +71,13 @@ func CheckPhaseGate(state *REState, ledger PhaseLedger) error {
 		if ledger.Count("audit_finding") == 0 {
 			return fmt.Errorf("cannot enter writeup: record an audit finding before delivery")
 		}
+		// An accepted /goal declaration adds its own gates: every acceptance
+		// criterion must hold against the evidence ledger before the run may
+		// deliver. The callback is wired by the app layer; nil means no
+		// declaration is active.
+		if pending := state.PendingAcceptance(); len(pending) > 0 {
+			return fmt.Errorf("cannot enter writeup: acceptance criteria not met: %s", strings.Join(pending, "; "))
+		}
 	}
 	return nil
 }
@@ -95,6 +103,21 @@ type REState struct {
 	Hypotheses []Hypothesis
 	Evidence   []Evidence
 	StartedAt  time.Time
+	// Acceptance, when set, returns the unmet acceptance criteria of the
+	// active task declaration (empty = all hold or none armed). The writeup
+	// gate calls it; the app layer wires it to the loop's goal state.
+	Acceptance func() []string
+}
+
+// PendingAcceptance reads the acceptance callback under the state lock.
+func (s *REState) PendingAcceptance() []string {
+	s.mu.Lock()
+	callback := s.Acceptance
+	s.mu.Unlock()
+	if callback == nil {
+		return nil
+	}
+	return callback()
 }
 
 func NewREState(sampleType string) *REState {

@@ -102,10 +102,12 @@ type AgentLoop struct {
 	// The evidence ledger and hypothesis stack live outside the transcript so
 	// compaction cannot take them; the stack is re-injected into the system
 	// prompt on every request instead. The arbitrator cross-checks the two
-	// after every tool result.
+	// after every tool result. The goal state carries the accepted task
+	// declaration the same way.
 	evidence   *evidence.Ledger
 	hypotheses *hypothesis.Tracker
 	arbiter    *verify.Arbitrator
+	goal       goalState
 	emit       func(LoopEvent)
 	// lastProviderName is whoever answered last, so `/compact` defaults to the
 	// model that holds the context.
@@ -175,6 +177,11 @@ func (l *AgentLoop) NewSession(session *Session) {
 	l.messages = nil
 	l.planTracker.Reset()
 	l.ResetAnalysis()
+	// A fresh session is a fresh task: the old declaration does not carry
+	// over (a resumed session re-seeds it from the goal events instead).
+	l.goal.mu.Lock()
+	l.goal.declaration = nil
+	l.goal.mu.Unlock()
 	l.lastProviderName = ""
 }
 
@@ -213,6 +220,11 @@ func (l *AgentLoop) Restore(loaded Loaded) error {
 		l.hypotheses.Load(loaded.Hypotheses)
 		l.options.ToolContext.Hypotheses.(*persistingHypotheses).store = l.hypotheses
 		_ = l.options.Session.AppendEvent(map[string]any{"type": "hypotheses", "hypotheses": loaded.Hypotheses})
+	}
+	if loaded.Goal != nil {
+		// SetGoal re-records the declaration into the new session file, so the
+		// resumed log stays self-contained like the rest of the state.
+		l.SetGoal(loaded.Goal)
 	}
 	return nil
 }
@@ -665,6 +677,9 @@ func (l *AgentLoop) systemPrompt(role types.AgentRole) string {
 		if prompt := strings.TrimSpace(l.options.RolePrompts[role]); prompt != "" {
 			parts = append(parts, prompt)
 		}
+	}
+	if section := l.goalSection(); section != "" {
+		parts = append(parts, section)
 	}
 	if section := l.hypothesisStackSection(); section != "" {
 		parts = append(parts, section)

@@ -67,6 +67,9 @@ type Input struct {
 	ToolCallID string
 	Artifact   string
 	SHA256     string
+	// Verification is set only by replay runs (verify_artifact); the ledger
+	// stamps the record id into it so reports can cite the run.
+	Verification *types.VerificationStats
 }
 
 type HypothesisStatus string
@@ -231,17 +234,23 @@ func (l *Ledger) Add(input Input) types.EvidenceRecord {
 		kind = string(KindToolObservation)
 	}
 	record := types.EvidenceRecord{
-		ID:         fmt.Sprintf("ev_%03d", l.next),
-		Source:     strings.TrimSpace(input.Source),
-		Kind:       kind,
-		View:       strings.TrimSpace(input.View),
-		Excerpt:    util.Truncate(sanitize(input.Text), excerptChars),
-		IsError:    input.IsError,
-		ToolCallID: input.ToolCallID,
-		Artifact:   input.Artifact,
-		SHA256:     input.SHA256,
-		Bytes:      len(input.Text),
-		CreatedAt:  types.NowMs(),
+		ID:           fmt.Sprintf("ev_%03d", l.next),
+		Source:       strings.TrimSpace(input.Source),
+		Kind:         kind,
+		View:         strings.TrimSpace(input.View),
+		Excerpt:      util.Truncate(sanitize(input.Text), excerptChars),
+		IsError:      input.IsError,
+		ToolCallID:   input.ToolCallID,
+		Artifact:     input.Artifact,
+		SHA256:       input.SHA256,
+		Verification: input.Verification,
+		Bytes:        len(input.Text),
+		CreatedAt:    types.NowMs(),
+	}
+	if record.Verification != nil {
+		copied := *record.Verification
+		copied.ID = record.ID
+		record.Verification = &copied
 	}
 	l.records = append(l.records, record)
 	l.byID[record.ID] = true
