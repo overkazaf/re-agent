@@ -1,0 +1,127 @@
+internal/security/capability.go
+  33b306bd55b68234 1-267
+README.zh-CN.md
+  33b306bd55b68234 63,347-349
+internal/tools/remote.go
+  33b306bd55b68234 52-58
+internal/ui/help.go
+  33b306bd55b68234 37
+README.md
+  33b306bd55b68234 77,759-761
+internal/app/app.go
+  33b306bd55b68234 23,53-55,263,267,299-304,338
+internal/app/sandbox_test.go
+  33b306bd55b68234 1-127
+internal/types/types.go
+  33b306bd55b68234 455-457,476-484
+internal/app/commands.go
+  33b306bd55b68234 327-328,719-727
+internal/tools/files.go
+  33b306bd55b68234 185-191
+internal/app/cap.go
+  33b306bd55b68234 1-114
+docs/ARCHITECTURE.zh-CN.md
+  33b306bd55b68234 64-69,86,230-237
+internal/security/capability_test.go
+  33b306bd55b68234 1-155
+internal/tools/tools_test.go
+  33b306bd55b68234 9,370-405
+internal/app/goal.go
+  33b306bd55b68234 147-152,154,168-171
+docs/ARCHITECTURE.md
+  33b306bd55b68234 53-60,74,479-489
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "53ad9cbe50717e3f27732c1e2ded1ddf1f2b03d8",
+  "prompts": {
+    "33b306bd55b68234": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdd5578c-330a-4450-b8b3-ee843a287df9",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 828,
+      "total_deletions": 31,
+      "accepted_lines": 806,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "internal/tools/remote.go": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "internal/app/commands.go": {
+          "additions": 14,
+          "deletions": 9,
+          "accepted_lines": 12
+        },
+        "internal/app/cap.go": {
+          "additions": 122,
+          "deletions": 8,
+          "accepted_lines": 114
+        },
+        "internal/app/goal.go": {
+          "additions": 13,
+          "deletions": 2,
+          "accepted_lines": 11
+        },
+        "internal/app/app.go": {
+          "additions": 14,
+          "deletions": 1,
+          "accepted_lines": 13
+        },
+        "internal/ui/help.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "docs/ARCHITECTURE.zh-CN.md": {
+          "additions": 15,
+          "deletions": 1,
+          "accepted_lines": 15
+        },
+        "internal/types/types.go": {
+          "additions": 12,
+          "accepted_lines": 12
+        },
+        "README.zh-CN.md": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "internal/tools/tools_test.go": {
+          "additions": 37,
+          "accepted_lines": 37
+        },
+        "internal/app/sandbox_test.go": {
+          "additions": 134,
+          "deletions": 7,
+          "accepted_lines": 127
+        },
+        "docs/ARCHITECTURE.md": {
+          "additions": 20,
+          "deletions": 1,
+          "accepted_lines": 20
+        },
+        "internal/tools/files.go": {
+          "additions": 7,
+          "accepted_lines": 7
+        },
+        "internal/security/capability_test.go": {
+          "additions": 155,
+          "accepted_lines": 155
+        },
+        "README.md": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "internal/security/capability.go": {
+          "additions": 269,
+          "deletions": 2,
+          "accepted_lines": 267
+        }
+      }
+    }
+  }
+}
