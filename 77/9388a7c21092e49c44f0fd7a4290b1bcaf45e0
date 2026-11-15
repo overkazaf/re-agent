@@ -1,0 +1,151 @@
+internal/core/metacog.go
+  33b306bd55b68234 13,129,132,135-143,150-161
+internal/ui/help.go
+  33b306bd55b68234 36
+internal/evidence/ledger.go
+  33b306bd55b68234 70-72,237-253
+internal/goal/declaration.go
+  33b306bd55b68234 1-399
+internal/app/goal.go
+  33b306bd55b68234 1-255
+README.md
+  33b306bd55b68234 76,755-757
+internal/types/types.go
+  33b306bd55b68234 316-318,321-325,331-344
+internal/goal/declaration_test.go
+  33b306bd55b68234 1-161
+README.zh-CN.md
+  33b306bd55b68234 62,344-345
+docs/ARCHITECTURE.zh-CN.md
+  33b306bd55b68234 48-55,57-62,74-75
+internal/core/goalstate_test.go
+  33b306bd55b68234 1-121
+internal/core/session.go
+  33b306bd55b68234 10,55-56,202-204,220-221
+internal/core/agentloop.go
+  33b306bd55b68234 105-106,110,180-184,224-228,681-683
+internal/core/goalstate.go
+  33b306bd55b68234 1-92
+internal/app/commands.go
+  33b306bd55b68234 260-262,326-327
+internal/app/app.go
+  33b306bd55b68234 19,39-54
+internal/workflow/gate_test.go
+  33b306bd55b68234 3-6,57-78
+internal/workflow/phase.go
+  33b306bd55b68234 5,74-80,106-120
+docs/ARCHITECTURE.md
+  33b306bd55b68234 31-42,44-51,63,65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "779388a7c21092e49c44f0fd7a4290b1bcaf45e0",
+  "prompts": {
+    "33b306bd55b68234": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bdd5578c-330a-4450-b8b3-ee843a287df9",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 1336,
+      "total_deletions": 157,
+      "accepted_lines": 1242,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "README.zh-CN.md": {
+          "additions": 3,
+          "accepted_lines": 3
+        },
+        "internal/app/commands.go": {
+          "additions": 5,
+          "accepted_lines": 5
+        },
+        "docs/ARCHITECTURE.md": {
+          "additions": 23,
+          "deletions": 13,
+          "accepted_lines": 23
+        },
+        "README.md": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "internal/evidence/ledger.go": {
+          "additions": 20,
+          "deletions": 11,
+          "accepted_lines": 20
+        },
+        "internal/core/metacog.go": {
+          "additions": 26,
+          "deletions": 8,
+          "accepted_lines": 26
+        },
+        "internal/workflow/gate_test.go": {
+          "additions": 28,
+          "deletions": 1,
+          "accepted_lines": 28
+        },
+        "internal/app/app.go": {
+          "additions": 20,
+          "deletions": 16,
+          "accepted_lines": 18
+        },
+        "internal/core/agentloop.go": {
+          "additions": 16,
+          "deletions": 1,
+          "accepted_lines": 16
+        },
+        "internal/workflow/phase.go": {
+          "additions": 24,
+          "deletions": 1,
+          "accepted_lines": 23
+        },
+        "internal/goal/declaration_test.go": {
+          "additions": 161,
+          "accepted_lines": 161
+        },
+        "internal/core/goalstate_test.go": {
+          "additions": 123,
+          "deletions": 2,
+          "accepted_lines": 121
+        },
+        "internal/app/goal.go": {
+          "additions": 268,
+          "deletions": 13,
+          "accepted_lines": 255
+        },
+        "internal/goal/declaration.go": {
+          "additions": 468,
+          "deletions": 69,
+          "accepted_lines": 399
+        },
+        "docs/ARCHITECTURE.zh-CN.md": {
+          "additions": 17,
+          "deletions": 6,
+          "accepted_lines": 17
+        },
+        "internal/ui/help.go": {
+          "additions": 1,
+          "accepted_lines": 1
+        },
+        "internal/core/session.go": {
+          "additions": 9,
+          "deletions": 1,
+          "accepted_lines": 8
+        },
+        "internal/core/goalstate.go": {
+          "additions": 95,
+          "deletions": 3,
+          "accepted_lines": 92
+        },
+        "internal/types/types.go": {
+          "additions": 25,
+          "deletions": 12,
+          "accepted_lines": 22
+        }
+      }
+    }
+  }
+}
