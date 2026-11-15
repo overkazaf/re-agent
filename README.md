@@ -759,6 +759,7 @@ Inside the REPL:
 | `/cap` | show the task capability scope and the action log tail |
 | `/cap network on\|off` | grant or withdraw network access for this task (operator action) |
 | `/cap device on <id>\|off` | grant or withdraw device access for this task |
+| `/audit` | adversarial audit: a second model re-judges the hypothesis stack in a context-isolated, tool-free run |
 | `/queue list` | show queued prompts |
 | `/queue edit <id> <text>` | edit queued work before it runs |
 | `/queue cancel <id>` | cancel queued work |

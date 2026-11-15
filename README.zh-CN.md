@@ -347,6 +347,7 @@ accepted and exits 0, otherwise rejected and exit 1.
 | 看任务的能力范围与动作日志 | `/cap` |
 | 运行中给这个任务开/关网络 | `/cap network on\|off` |
 | 运行中给这个任务开/关设备 | `/cap device on <id>\|off` |
+| 让第二个模型对抗复核当前假设栈 | `/audit` |
 
 跑完之后 `/session` 会打印 JSONL 路径。plan 快照、工具调用、结果和 token 计数
 全都按顺序在里面——这才是让一次运行**可审计**而不只是"看着挺唬人"的原因。

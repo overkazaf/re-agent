@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>0xAF-Re - 终端里的逆向工程 Agent</title>
-<meta name="description" content="0xAF-Re 是一个面向授权本地逆向与 CTF 的 agent：多模型角色、GPT Cyber/Claude Code CVP/Grok specialist 路由、caveman 证据包、28 个内置工具和实时可视化。">
+<meta name="description" content="0xAF-Re 是一个面向授权本地逆向与 CTF 的 agent：多模型角色、GPT Cyber/Claude Code CVP/Grok specialist 路由、caveman 证据包、32 个内置工具和实时可视化。">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -34,7 +34,7 @@
   <h1>会展示过程的<br>逆向工程 Agent。</h1>
   <p class="hero__lede">
     0xAF-Re 在终端里把 <strong>planner</strong>、<strong>executor</strong>
-    和 <strong>researcher</strong> 分开调度，配 28 个内置逆向/CTF 工具。
+    和 <strong>researcher</strong> 分开调度，配 32 个内置逆向/CTF 工具。
     它能做 APK、ELF、Web/WASM、Frida hook、radare2/JADX/Ghidra/Burp/mitmproxy/Unicorn/unidbg
     工作流；有 GPT Cyber、Claude Code CVP、Grok 等更适配安全研究的 route 时体验更顺，
     普通 provider 则可走 caveman 本地证据包。一个静态 Go 二进制，不需要 JS runtime。
@@ -50,7 +50,7 @@
   <div class="hero__cta">
     <span class="pill"><b>36 ms</b> 启动</span>
     <span class="pill"><b>9 MB</b> 二进制</span>
-    <span class="pill"><b>28</b> 工具</span>
+    <span class="pill"><b>32</b> 工具</span>
     <span class="pill"><b>8</b> provider</span>
     <span class="pill"><b>9</b> workflow</span>
   </div>
@@ -95,6 +95,24 @@
         <h4>后续可评测</h4>
         <p>
           计划加入本地模型和具体评测样例：同一个 artifact、同一套 workflow、不同 provider，对比完成率、证据质量、耗时和人工修正量，用结果推动迭代。
+        </p>
+      </article>
+      <article class="card">
+        <h4>任务先声明，再开工</h4>
+        <p>
+          <code class="inline">/goal</code> 把一句话目标变成钉死的契约：目标哈希与格式由宿主固定，build 通过、replay 一致、证据数量这些验收标准在 writeup 前对照账本逐条检查，过不了就写不了报告。
+        </p>
+      </article>
+      <article class="card">
+        <h4>能力跟着任务走</h4>
+        <p>
+          声明生效时同时拉起任务级沙箱：网络与设备访问默认拒绝，<code class="inline">/cap</code> 运行中单项授权/收回，每条被闸门过的命令连同决策和来源进动作日志，任务结束授权一起过期。
+        </p>
+      </article>
+      <article class="card">
+        <h4>结论要经得起复核</h4>
+        <p>
+          证据（<code class="inline">ev_NNN</code>）和假设（<code class="inline">H-NNN</code>）放在 transcript 之外的宿主状态里：矛盾让置信度减半并级联到派生结论，确定性仲裁器在每次工具结果后交叉核对，<code class="inline">/audit</code> 再把假设栈交给第二个模型做隔离会话的对抗复核。
         </p>
       </article>
     </div>
@@ -183,7 +201,10 @@
       hypothesis → verify → audit → writeup。每次完成的工具结果和假设状态都会写进 append-only 的
       <code class="inline">evidence-ledger.jsonl</code>；阶段推进有硬闸门 —— 进入 audit 前必须先跑
       <code class="inline">verify_artifact</code>，进入 writeup 前必须留下 audit 记录，
-      没有被验证过的结论到不了报告。
+      没有被验证过的结论到不了报告。账本之外还有三层宿主管的控制：
+      <code class="inline">/goal</code> 钉死任务契约并对照证据检查验收标准，
+      <code class="inline">/cap</code> 按任务闸网络与设备访问、动作全程留痕，
+      <code class="inline">/audit</code> 在报告出来前把假设栈交给第二个模型做隔离复核。
     </p>
   </div>
 </section>
@@ -210,7 +231,7 @@
 <section id="arsenal">
   <div class="wrap">
     <p class="label">工具</p>
-    <h2>28 个内置工具，粗筛不必花 token。</h2>
+    <h2>32 个内置工具，粗筛不必花 token。</h2>
     <pre class="block">/tools                         <span class="c">列出内置工具</span>
 /skills                        <span class="c">列出内置逆向 skill</span>
 /retool inventory              <span class="c">检查 radare2、JADX、Ghidra、Burp、mitmproxy、angr 等工具</span>
