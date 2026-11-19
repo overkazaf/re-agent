@@ -81,6 +81,12 @@ func TestAppSessionLifecycle(t *testing.T) {
 	if _, err := app.GetState("gui-missing"); err == nil {
 		t.Fatal("GetState on an unknown session must error")
 	}
+	if app.Interrupt(info.ID) {
+		t.Fatal("Interrupt on an idle session should return false")
+	}
+	if app.Interrupt("gui-missing") {
+		t.Fatal("Interrupt on an unknown session should return false")
+	}
 	if err := app.CloseSession(info.ID); err != nil {
 		t.Fatalf("CloseSession: %v", err)
 	}

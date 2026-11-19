@@ -19,8 +19,8 @@ func RenderREPicker(items []REPickerItem, width int) []string {
 
 	var lines []string
 
-	title := "TARGET SELECT"
-	titleW := len(title)
+	title := Truncate("TARGET SELECT", maxOf(inner-4, 4))
+	titleW := DisplayWidth(title)
 	headPad := inner - titleW - 4
 	if headPad < 0 {
 		headPad = 0
@@ -31,15 +31,22 @@ func RenderREPicker(items []REPickerItem, width int) []string {
 
 	for i, item := range items {
 		num := fmt.Sprintf("[%d]", i+1)
-		desc := " — " + item.Desc
-		plainW := len(num) + 1 + len(item.Label) + len(desc)
+		prefixPlain := num + " " + item.Label
+		prefixW := DisplayWidth(prefixPlain)
+		if prefixW >= inner {
+			clipped := Truncate(prefixPlain, inner)
+			lines = append(lines, reBoxLine(C.Bold(clipped), DisplayWidth(clipped), inner))
+			continue
+		}
+		desc := Truncate(" — "+item.Desc, inner-prefixW)
+		plainW := prefixW + DisplayWidth(desc)
 		painted := C.Bold(C.Accent(num)) + " " + C.Bold(item.Label) + C.Muted(desc)
 		lines = append(lines, reBoxLine(painted, plainW, inner))
 	}
 
 	lines = append(lines, reBoxLine("", 0, inner))
-	hint := "enter number or type name, [s] skip"
-	lines = append(lines, reBoxLine(C.Muted(hint), len(hint), inner))
+	hint := Truncate("enter number or type name, [s] skip", inner)
+	lines = append(lines, reBoxLine(C.Muted(hint), DisplayWidth(hint), inner))
 	lines = append(lines, C.Accent("╰"+strings.Repeat("─", inner+2)+"╯"))
 
 	return lines
@@ -53,8 +60,8 @@ func RenderREPromptMenu(sampleLabel string, prompts []string, width int) []strin
 
 	var lines []string
 
-	title := "SUGGESTED PROMPTS — " + sampleLabel
-	titleW := len(title)
+	title := Truncate("SUGGESTED PROMPTS — "+sampleLabel, maxOf(inner-4, 4))
+	titleW := DisplayWidth(title)
 	headPad := inner - titleW - 4
 	if headPad < 0 {
 		headPad = 0
@@ -65,14 +72,16 @@ func RenderREPromptMenu(sampleLabel string, prompts []string, width int) []strin
 
 	for i, prompt := range prompts {
 		num := fmt.Sprintf("[%d]", i+1)
-		plainW := len(num) + 1 + len(prompt)
-		painted := C.Bold(C.Accent(num)) + " " + prompt
+		numW := DisplayWidth(num)
+		body := Truncate(prompt, maxOf(inner-numW-1, 1))
+		plainW := numW + 1 + DisplayWidth(body)
+		painted := C.Bold(C.Accent(num)) + " " + body
 		lines = append(lines, reBoxLine(painted, plainW, inner))
 	}
 
 	lines = append(lines, reBoxLine("", 0, inner))
-	hint := "enter number to start, [s] skip, [c] custom prompt"
-	lines = append(lines, reBoxLine(C.Muted(hint), len(hint), inner))
+	hint := Truncate("enter number to start, [s] skip, [c] custom prompt", inner)
+	lines = append(lines, reBoxLine(C.Muted(hint), DisplayWidth(hint), inner))
 	lines = append(lines, C.Accent("╰"+strings.Repeat("─", inner+2)+"╯"))
 
 	return lines

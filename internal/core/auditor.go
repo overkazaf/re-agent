@@ -32,7 +32,10 @@ type AuditReport struct {
 //	AUDIT H-001 SUPPORT - the claim is consistent with the packet
 const auditVerdictPattern = `(?im)^AUDIT\s+(H-\d+)\s+(CHALLENGE|SUPPORT)\s+(\S+)\s+(.+)$`
 
-var auditVerdictRe = regexp.MustCompile(auditVerdictPattern)
+var (
+	auditVerdictRe = regexp.MustCompile(auditVerdictPattern)
+	auditAttemptRe = regexp.MustCompile(`(?im)^AUDIT\s+`)
+)
 
 // auditSystemPrompt tells the auditor seat what it is for. It is deliberately
 // format-strict: verdict lines are the only channel back into the stack.
@@ -144,12 +147,37 @@ func (l *AgentLoop) Audit(ctx context.Context, onEvent func(LoopEvent)) (AuditRe
 			report.Findings = append(report.Findings, *finding)
 		}
 	}
+	// Ensure a valid audit pass leaves an audit_finding record even when all
+	// verdicts cited existing tool records or the auditor confirmed a sound
+	// stack in prose (ignoring replies with malformed/rejected AUDIT lines).
+	if l.evidence.Count(evidence.KindAuditFinding) == 0 {
+		trimmed := strings.TrimSpace(verdict)
+		if len(report.Findings) > 0 || (trimmed != "" && !auditAttemptRe.MatchString(trimmed)) {
+			l.recordAuditPassSummary(providerName, trimmed)
+		}
+	}
 	// The audit report is an event, not transcript lore: replay shows what the
 	// second model concluded and what it changed.
 	_ = l.options.Session.AppendEvent(map[string]any{
 		"type": "audit", "provider": providerName, "findings": report.Findings,
 	})
 	return report, nil
+}
+
+func (l *AgentLoop) recordAuditPassSummary(providerName, summary string) {
+	key := "audit:summary:" + reasonHash(summary)
+	for _, record := range l.evidence.List() {
+		if record.ToolCallID == key {
+			return
+		}
+	}
+	record := l.evidence.Add(evidence.Input{
+		Source:     "audit",
+		Kind:       string(evidence.KindAuditFinding),
+		Text:       fmt.Sprintf("[%s] %s", providerName, summary),
+		ToolCallID: key,
+	})
+	_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": record})
 }
 
 // applyVerdict turns one parsed line into a stack mutation. Unknown

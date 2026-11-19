@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/overkazaf/re-agent/internal/assets"
 	"github.com/overkazaf/re-agent/internal/knowledge"
 	"github.com/overkazaf/re-agent/internal/plan"
 	"github.com/overkazaf/re-agent/internal/security"
@@ -524,10 +525,11 @@ func listSkillsTool() types.Tool {
 func readSkillTool() types.Tool {
 	return types.Tool{
 		Name:        "read_skill",
-		Description: "Read one project-local built-in skill by name or tag.",
+		Description: "Read one built-in reverse engineering skill by name or tag, or read a companion script/resource inside that skill.",
 		Risk:        types.RiskRead,
 		Parameters: objectSchema(map[string]any{
 			"name": map[string]any{"type": "string", "description": "Skill name or tag."},
+			"file": map[string]any{"type": "string", "description": "Optional companion file inside the skill (e.g. scripts/arm64_emulator.py)."},
 		}, "name"),
 		Execute: func(args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
 			name := util.AsString(args["name"])
@@ -535,8 +537,24 @@ func readSkillTool() types.Tool {
 			if skill == nil {
 				return errorResult("Skill not found: " + name), nil
 			}
-			return textResult(util.Clip(skill.Body, tc.Policy.MaxReadBytes),
-				map[string]any{"name": skill.Name, "path": skill.Path}), nil
+			if relFile := strings.TrimSpace(util.AsString(args["file"])); relFile != "" {
+				dirName := skill.DirName
+				if dirName == "" {
+					dirName = skill.Name
+				}
+				content, sourcePath, err := assets.ReadSkillFile(dirName, relFile)
+				if err != nil {
+					return errorResult(err.Error()), nil
+				}
+				return textResult(util.Clip(content, tc.Policy.MaxReadBytes),
+					map[string]any{"name": skill.Name, "file": relFile, "path": sourcePath}), nil
+			}
+			body := skill.Body
+			if len(skill.Files) > 0 {
+				body += "\n\n---\nCompanion files (readable via read_skill with file=...):\n- " + strings.Join(skill.Files, "\n- ")
+			}
+			return textResult(util.Clip(body, tc.Policy.MaxReadBytes),
+				map[string]any{"name": skill.Name, "path": skill.Path, "files": skill.Files}), nil
 		},
 	}
 }

@@ -569,10 +569,8 @@ def deobfuscate_ollvm(bv, func):
 
 ## Usage
 
-```
-/ollvm-deobfuscation
-
-[Provide binary path and function address]
+```text
+/skill ollvm-deobfuscation <binary path and function address>
 ```
 
 This will:

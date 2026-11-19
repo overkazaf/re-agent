@@ -32,6 +32,7 @@ func runREPicker(state *State) (prompt string, ok bool) {
 	choice := strings.TrimSpace(raw)
 	if choice == "s" || choice == "S" {
 		state.REState = workflow.NewREState("generic")
+		attachAcceptanceGate(state)
 		return "", true
 	}
 
@@ -47,6 +48,7 @@ func runREPicker(state *State) (prompt string, ok bool) {
 	}
 
 	state.REState = workflow.NewREState(selected.Key)
+	attachAcceptanceGate(state)
 
 	shorts := make([]string, len(selected.Prompts))
 	for i, p := range selected.Prompts {

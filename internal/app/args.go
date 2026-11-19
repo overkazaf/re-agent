@@ -16,7 +16,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
-const Version = buildinfo.Version
+var Version = buildinfo.Version
 
 type authCommand struct {
 	Action   string // login | status | logout

@@ -2,8 +2,6 @@ package tools
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -297,13 +295,12 @@ func stringsTool() types.Tool {
 					output = result.Stderr
 				}
 			} else {
-				// No strings(1) here: the in-process extractor covers the same
-				// ground for the sizes this tool is used on.
+				// No strings(1) here: extract both ASCII and UTF-16LE wide strings.
 				data, readErr := readPrefix(target, tc.Policy.MaxReadBytes)
 				if readErr != nil {
 					return types.ToolResult{}, readErr
 				}
-				output = strings.Join(extractPrintableStrings(data, minLength), "\n")
+				output = strings.Join(extractAllStrings(data, minLength), "\n")
 			}
 			if output == "" {
 				output = "(no strings)"
@@ -339,30 +336,12 @@ func hexdumpTool() types.Tool {
 			if offset < 0 {
 				offset = 0
 			}
-			length := clampInt(util.AsInt(args["length"], 512), 1, 4096)
-			options := RunOptions{Cwd: tc.Workspace, TimeoutMs: tc.Policy.CommandTimeoutMs, Ctx: tc.Context()}
-			result, err := Run([]string{
-				"xxd", "-g", "1", "-s", strconv.Itoa(offset), "-l", strconv.Itoa(length), target,
-			}, options)
-			if err != nil || result.Code != 0 {
-				fallback, fallbackErr := Run([]string{
-					"od", "-Ax", "-tx1", "-N", strconv.Itoa(length), "-j", strconv.Itoa(offset), target,
-				}, options)
-				if fallbackErr == nil && fallback.Code == 0 {
-					result = fallback
-				} else if err != nil {
-					// Neither tool is installed: dump in process.
-					data, readErr := readRange(target, int64(offset), length)
-					if readErr != nil {
-						return types.ToolResult{}, readErr
-					}
-					return textResult(hexdumpText(data, offset), map[string]any{"offset": offset, "length": length}), nil
-				}
+			length := clampInt(util.AsInt(args["length"], 512), 1, 8192)
+			data, readErr := readRange(target, int64(offset), length)
+			if readErr != nil {
+				return types.ToolResult{}, readErr
 			}
-			return types.ToolResult{
-				Content: CommandOutput("hexdump "+relative(tc.Workspace, target), result),
-				Details: map[string]any{"exit": result.Code, "offset": offset, "length": length},
-			}, nil
+			return textResult(hexdumpText(data, offset), map[string]any{"offset": offset, "length": len(data)}), nil
 		},
 	}
 }
@@ -378,15 +357,17 @@ func hashFileTool() types.Tool {
 			if err != nil {
 				return types.ToolResult{}, err
 			}
-			data, err := os.ReadFile(target)
+			info, err := os.Stat(target)
 			if err != nil {
 				return types.ToolResult{}, err
 			}
-			sum := sha256.Sum256(data)
-			digest := hex.EncodeToString(sum[:])
+			digest, err := sha256File(target)
+			if err != nil {
+				return types.ToolResult{}, err
+			}
 			return textResult(
-				fmt.Sprintf("sha256  %s\nsize    %d", digest, len(data)),
-				map[string]any{"sha256": digest, "size": len(data)},
+				fmt.Sprintf("sha256  %s\nsize    %d", digest, info.Size()),
+				map[string]any{"sha256": digest, "size": info.Size()},
 			), nil
 		},
 	}
@@ -395,7 +376,7 @@ func hashFileTool() types.Tool {
 func extractSymbolsTool() types.Tool {
 	return types.Tool{
 		Name:        "extract_symbols",
-		Description: "Try common symbol/import table tools: nm, readelf, objdump, and otool.",
+		Description: "Extract imported and defined symbols cross-platform (ELF/PE/Mach-O native parsers first, falling back to nm/readelf/objdump/otool).",
 		Risk:        types.RiskRead,
 		Parameters: objectSchema(map[string]any{
 			"path":     map[string]any{"type": "string"},
@@ -406,27 +387,26 @@ func extractSymbolsTool() types.Tool {
 			if err != nil {
 				return types.ToolResult{}, err
 			}
-			rel := relative(tc.Workspace, target)
-			attempts := [][]string{
-				{"nm", "-an", target},
-				{"readelf", "-Ws", target},
-				{"objdump", "-t", target},
-				{"otool", "-Iv", target},
-			}
-			labels := []string{"nm -an " + rel, "readelf -Ws " + rel, "objdump -t " + rel, "otool -Iv " + rel}
-			var chunks []string
-			for i, command := range attempts {
-				result, err := Run(command, RunOptions{
-					Cwd: tc.Workspace, TimeoutMs: tc.Policy.CommandTimeoutMs, Ctx: tc.Context(),
-				})
-				if err != nil {
-					continue
+			body, ok := extractNativeSymbols(target)
+			if !ok {
+				rel := relative(tc.Workspace, target)
+				attempts := [][]string{
+					{"nm", "-an", target},
+					{"readelf", "-Ws", target},
+					{"objdump", "-T", target},
+					{"otool", "-Iv", target},
 				}
-				if strings.TrimSpace(result.Stdout) != "" {
-					chunks = append(chunks, fmt.Sprintf("$ %s\n%s", labels[i], result.Stdout))
+				labels := []string{"nm -an " + rel, "readelf -Ws " + rel, "objdump -T " + rel, "otool -Iv " + rel}
+				for i, command := range attempts {
+					result, runErr := Run(command, RunOptions{
+						Cwd: tc.Workspace, TimeoutMs: tc.Policy.CommandTimeoutMs, Ctx: tc.Context(),
+					})
+					if runErr == nil && result.Code == 0 && strings.TrimSpace(result.Stdout) != "" {
+						body = fmt.Sprintf("$ %s\n%s", labels[i], result.Stdout)
+						break
+					}
 				}
 			}
-			body := strings.Join(chunks, "\n\n")
 			if body == "" {
 				body = "No symbols/imports extracted by available tools."
 			}

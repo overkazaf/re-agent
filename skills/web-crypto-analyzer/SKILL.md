@@ -421,10 +421,8 @@ function createToken(payload, secret) {
 
 ## Usage
 
-```
-/web-crypto-analyzer
-
-[Paste JavaScript code or URL for analysis]
+```text
+/skill web-crypto-analyzer <JavaScript file or snippet>
 ```
 
 This will:

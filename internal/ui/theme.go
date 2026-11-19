@@ -414,20 +414,32 @@ func Truncate(value string, width int) string {
 	return out.String() + "…"
 }
 
-// ElidePath middle-elides a path so both the head and the filename stay readable.
+// ElidePath elides a long path from the left using display-column math so UTF-8
+// and CJK filenames stay valid and fit the target width.
 func ElidePath(value string, width int) string {
 	home := os.Getenv("HOME")
 	compact := value
 	if home != "" && strings.HasPrefix(value, home) {
 		compact = "~" + value[len(home):]
 	}
-	if len(compact) <= width {
+	if DisplayWidth(compact) <= width {
 		return compact
 	}
 	if width < 3 {
-		return compact
+		return Truncate(compact, width)
 	}
-	return "…" + compact[len(compact)-(width-2):]
+	runes := []rune(compact)
+	var tail []rune
+	used := 0
+	for i := len(runes) - 1; i >= 0; i-- {
+		w := CharWidth(runes[i])
+		if used+w > width-1 {
+			break
+		}
+		tail = append([]rune{runes[i]}, tail...)
+		used += w
+	}
+	return "…" + string(tail)
 }
 
 type cell struct {

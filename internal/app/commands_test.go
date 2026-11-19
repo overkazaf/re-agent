@@ -52,3 +52,26 @@ func TestRemoteOffClearsTheExecutionTarget(t *testing.T) {
 		store.SetCurrent("lab")
 	}
 }
+
+func TestParseDecodeAndRetoolCommandsSupportExtendedArgs(t *testing.T) {
+	rc4Args, err := parseDecodeCommand("rc4 secret 01020304")
+	if err != nil {
+		t.Fatalf("parseDecodeCommand rc4: %v", err)
+	}
+	if rc4Args["mode"] != "rc4" || rc4Args["key"] != "secret" || rc4Args["input"] != "01020304" {
+		t.Fatalf("unexpected rc4 args: %#v", rc4Args)
+	}
+
+	b32Args, err := parseDecodeCommand("b32 MZXW6===")
+	if err != nil || b32Args["mode"] != "base32" {
+		t.Fatalf("unexpected base32 args: %#v, err=%v", b32Args, err)
+	}
+
+	retoolArgs, err := parseRetoolCommand("unicorn template sample.so template=jni host=127.0.0.1 port=8080")
+	if err != nil {
+		t.Fatalf("parseRetoolCommand: %v", err)
+	}
+	if retoolArgs["template"] != "jni" || retoolArgs["host"] != "127.0.0.1" || retoolArgs["port"] != 8080 {
+		t.Fatalf("unexpected retool args: %#v", retoolArgs)
+	}
+}

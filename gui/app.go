@@ -78,6 +78,10 @@ func (a *App) SendPrompt(id, text string) error {
 	return a.manager.SendPrompt(id, text)
 }
 
+func (a *App) Interrupt(id string) bool {
+	return a.manager.Interrupt(id)
+}
+
 func (a *App) SendCommand(id, line string) (CommandResultDTO, error) {
 	return a.manager.SendCommand(id, line)
 }

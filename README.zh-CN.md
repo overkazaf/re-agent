@@ -106,8 +106,8 @@
 | --- | --- |
 | 终端交互层 | 把任务队列、斜杠命令、shell escape 和 live HUD 放在同一个工作区策略下。 |
 | Agent loop | 路由 planner/executor/researcher，压缩上下文，流式输出事件，并持久化 JSONL session。 |
-| 证据线 | 每个完成的工具结果追加写入 session 旁的 `evidence-ledger.jsonl`；`verify_artifact` 把构建、回放和差分结果写成 `verification_result`；`evidence_manager` 维护带版本历史的假设状态。reverse 阶段闸门读取这份账本，验证和审计是进入 writeup 前的硬条件，不是报告里的形容词。 |
-| 元认知层 | 把证据（`ev_NNN`）和判断（`H-NNN`）作为转录之外的宿主状态：每个工具结果自动打标入库，假设栈注入 system prompt，降级与级联由确定性代码执行。规则化的证据仲裁器在每次工具结果后交叉核对账本与假设栈；`/audit` 把假设栈交给第二个模型做上下文隔离的对抗审计。 |
+| 证据线 | 每个完成的工具结果追加写入 session 旁的 `evidence-ledger.jsonl`（`ev_NNN`）；`verify_artifact` 把构建、回放和差分结果写成 `verification_result`；`hypothesis_create`/`hypothesis_update`/`hypothesis_list` 维护统一的宿主侧假设栈（`H-NNN`）。reverse 阶段闸门读取这份账本与假设栈，验证和审计是进入 writeup 前的硬条件，不是报告里的形容词。 |
+| 元认知层 | 把证据（`ev_NNN`）和判断（`H-NNN`）作为转录之外的宿主状态：每个工具结果自动打标入库，账本摘要与假设栈注入 system prompt，降级与级联由确定性代码执行。规则化的证据仲裁器在每次工具结果后交叉核对账本与假设栈；`/audit` 把假设栈交给第二个模型做上下文隔离的对抗审计。 |
 | Workflow 模式 | 有 specialist route 就直接用；没有时把 RE 任务拆成有边界的本地证据 executor packet。 |
 | 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
 | 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |
@@ -119,7 +119,7 @@
 任务队列和审计日志。它不像 demo 那样只展示聊天，而是把 agent 真正落地时麻烦的部分也摊开。
 完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。
 
-- **安装像单文件工具:** 一个静态二进制，一个 Go 依赖，关键路径不需要 Node 或浏览器 runtime。
+- **安装像单文件工具:** 单个静态二进制内置 prompts 与 skills，核心链路不需要 Node 或 Python 运行时。
 - **模型座位可组合:** planner、executor、researcher 可以接不同 provider、不同模型和不同 prompt。
 - **证据优先 workflow:** 有 GPT Cyber / Claude Code CVP / Grok 类订阅就直走 specialist；
   普通模型走 caveman，只拿只读本地证据包。
@@ -235,18 +235,21 @@ claude auth status --text
 | 离线检查线路 | `0xaf --smoke` |
 | 进入 demo 工作区 | `0xaf --workspace ./demos/reverse-lab` |
 | 识别未知文件 | `/scan ./chall` |
+| 深度解析 ELF/PE/Mach-O 头部与构造函数 | `/inspect ./chall` |
+| 检测加壳、反调试与反 Frida 特征 | `/anti ./chall` |
+| 二进制字节差分与指令 patch 识别 | `/diff ./orig ./patched` |
 | 查看二进制保护 | `/mitigations ./chall` |
 | 找加壳、压缩或加密区段 | `/entropy ./chall` |
 | 从 blob 里挖内嵌文件 | `/carve ./blob` |
 | 解 token 或 flag-like 字符串 | `/decode auto ZmxhZ3s...` |
-| 检查 APK | `/apk ./app.apk` |
+| 检查 APK（清单解析 + native 库 + 壳特征） | `/apk ./app.apk` |
 | 检查本地逆向工具 | `/retool inventory` |
 | 准备移动/API 抓包 | `/retool mitmproxy template api.example.test` |
 | 让 planner 给 solve 思路 | `0xaf --role planner -p "粗筛 ./chall 并给下一步"` |
 | 跑隔离本地证据模式 | `0xaf --workflow caveman -p "粗筛 ./app.apk"` |
 
-最快路径不需要模型：`/scan`、`/decode`、`/entropy`、`/mitigations`、`/carve`、`/apk`
-都是本地工具直出。
+最快路径不需要模型：`/scan`、`/inspect`、`/anti`、`/diff`、`/decode`、`/entropy`、
+`/mitigations`、`/carve`、`/apk` 都是本地工具直出。
 
 ## 实战案例：完整解一道题
 
@@ -342,11 +345,15 @@ accepted and exits 0, otherwise rejected and exit 1.
 | 不打断当前轮，先把下一个问题排上 | `/queue add <text>` |
 | 修改还没执行的排队任务 | `/queue edit <id> <text>` |
 | 换掉这个会话后续使用的模型 | `/model executor <name>` |
+
+回合间隙在普通提示符下还可以随时用宿主控制命令约束与复核任务：
+
+| 你想要 | 在提示符输入 |
+| --- | --- |
 | 把一句话目标变成可检查的任务契约 | `/goal <目标>` 起草，`/goal accept` 生效 |
 | 对照证据账本看验收标准过没过 | `/goal show` |
 | 看任务的能力范围与动作日志 | `/cap` |
-| 运行中给这个任务开/关网络 | `/cap network on\|off` |
-| 运行中给这个任务开/关设备 | `/cap device on <id>\|off` |
+| 给当前任务开/关网络或设备权限 | `/cap network on\|off` · `/cap device on <id>\|off` |
 | 让第二个模型对抗复核当前假设栈 | `/audit` |
 
 跑完之后 `/session` 会打印 JSONL 路径。plan 快照、工具调用、结果和 token 计数
@@ -419,9 +426,9 @@ workflow 需要显式打开。默认 `off` 会原样发送 prompt。
 1. **样本类型选择器** —— APK、SO/ELF 共享库、dylib/Mach-O、ELF、PE/DLL、固件 blob 或 PCAP，每种都带预设起始 prompt。
 2. **结构化阶段** —— triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup。提示符标签显示当前阶段：`0xAF[apk|triage] ▸`。
 3. **hacker 风格 HUD** —— live dashboard 里的专用 RE 覆盖层，显示阶段进度、假设数（H:N）和证据数（E:N）。
-4. **阶段控制** —— `/phase` 看状态，`/phase next` 前进，`/phase <name>` 跳到指定阶段。
-5. **模型驱动状态** —— 模型调用 `update_re_state` 推进阶段、记录假设、留痕证据、修正结论。`advance` 动作会对照证据账本做闸门检查：进 static 要有工具观测，进 dynamic 要有记录在案的假设，进 verify 要有运行时 trace 或足够的静态证据，进 audit 要有 `verify_artifact` 结果，进 writeup 要有审计发现。
-6. **证据账本** —— 每个完成的工具结果都追加到 session JSONL 旁的 `evidence-ledger.jsonl`，假设/证据追踪跨重启保留。`verify_artifact` 构建 artifact、用固定输入回放、把 stdout 与期望输出做差分（记为 `verification_result`）；`evidence_manager` 把假设在带版本的状态间迁移（open → supported / weakened / rejected / retired / verified），并用 supports/contradicts 关联证据记录。
+4. **阶段控制** —— `/phase` 看状态，`/phase next` 前进，`/phase <name>` 跳到指定阶段（会自动检查中间所有阶段的证据闸门）。
+5. **模型驱动状态** —— 模型调用 `hypothesis_create`/`hypothesis_update` 管理假设、调用 `evidence_review` 核查证据、调用 `verify_artifact` 执行构建/回放/差分验证，并通过 `update_re_state` 推进阶段。阶段推进对照统一证据账本与假设栈做硬闸门检查：进 `static` 要有工具观测，进 `dynamic` 要有记录在案的假设，进 `verify` 要有运行时 trace 或至少 3 条静态观测，进 `audit` 要有 `verify_artifact` 结果，进 `writeup` 要有 `audit_finding`（以及生效的 `/goal` 验收标准）。
+6. **证据账本** —— 每个完成的工具结果都追加到 session JSONL 旁的 `evidence-ledger.jsonl`，`ev_NNN` 证据溯源与 `H-NNN` 假设状态在上下文压缩和 `--resume` 后完整保留。`verify_artifact` 构建 artifact、用固定参数/stdin 回放并对比期望输出（记为 `verification_result`）；`hypothesis_update` 对矛盾证据做确定性置信度减半并级联到依赖假设。
 
 “跑隔离本地证据模式”指的就是 `caveman` workflow。它不是单纯改写 prompt，
 而是宿主把一次请求拆成两个模型调用：
@@ -664,15 +671,22 @@ REPL 内：
 | --- | --- |
 | `/help` | 命令面板 |
 | `/scan <path>` | 本地 CTF/file 粗筛 |
+| `/inspect <binary>` | 纯 Go 深度解析 ELF/PE/Mach-O 头部、构造函数、区段熵与导入导出表 |
+| `/anti <binary>` | 检测壳特征、反调试、反 Frida、Root/越狱检测与内联系统调用 |
+| `/diff <fileA> <fileB>` | 二进制字节差分与 x86/ARM64 patch 识别 |
 | `/hex <file> [offset] [len]` | 十六进制查看指定窗口，支持 `0x` 偏移 |
 | `/r2 <file> [-w]` | 把终端交给交互式 radare2 会话 |
-| `/decode auto <text>` | 尝试常见编码 |
-| `/mitigations <path>` | 查看二进制保护 |
+| `/decode auto <text>` | 尝试常见编码（base64/base32/hex/url/rot13/xor/zlib/gzip/rc4） |
+| `/mitigations <path>` | 查看二进制保护（ELF/PE/Mach-O） |
 | `/retool inventory` | 检查 radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg 可用性 |
 | `/retool angr template ./chall` | 生成 angr 符号执行 harness |
 | `/retool frida template android_ssl_pinning` | 生成常见 Frida SSL/crypto/root/debug/native 模板 |
 | `/retool mitmproxy template api.example.test` | 生成带 host 过滤的 mitmproxy 抓包 addon |
 | `/retool burp template mobile` | 生成 Burp 移动/API 抓包检查清单 |
+| `/phase` / `/phase next` | 查看或推进逆向 workflow 阶段、假设与证据 |
+| `/goal <目标>` / `/goal accept` | 起草并启用带验收闸门的任务声明 |
+| `/cap` | 查看或调整任务级网络/设备能力沙箱 |
+| `/audit` | 让第二个模型在隔离会话中对抗审计假设栈 |
 | `/queue list` | 查看待执行任务 |
 | `/queue edit <id> <text>` | 修改尚未执行的任务 |
 | `/queue cancel <id>` | 取消尚未执行的任务 |
@@ -681,7 +695,7 @@ REPL 内：
 | `/think expand` / `/think collapse` | 折叠或展开流式推理，运行中可用 |
 | `/prompt edit <role>` | 编辑 system、planner、executor、researcher prompt |
 | `/new` | 清掉当前会话，开新会话做任务（旧 transcript 仍留在磁盘上） |
-| `/sessions` / `/continue` / `/resume <id>` | 续接历史会话 |
+| `/sessions` / `/resume [id]` | 列出或续接最近/指定历史会话（CLI 启动可用 `-c` / `--continue`） |
 | `!<command>` | 在工作区内按当前策略跑 shell 命令 |
 
 ## 未来设想

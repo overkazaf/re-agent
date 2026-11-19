@@ -20,6 +20,7 @@ export interface SessionInfo {
   planner: string
   executor: string
   lifecycle: LifecycleState
+  history?: LoopEvent[]
 }
 
 export interface SessionSummaryDTO {
@@ -50,6 +51,7 @@ export interface ApprovalDTO {
   risk: 'read' | 'write' | 'network' | 'exec'
   summary: string
   argsPreview: string
+  concerns?: string[]
 }
 
 // ---------- tokens ----------
@@ -178,7 +180,7 @@ export interface TickDTO {
 
 // ---------- loop events (transcript stream) ----------
 export type LoopEventType =
-  | 'turn' | 'wire' | 'compaction' | 'progress' | 'plan' | 'reply' | 'tool_start' | 'tool_end'
+  | 'user' | 'turn' | 'wire' | 'compaction' | 'progress' | 'plan' | 'reply' | 'tool_start' | 'tool_end'
 
 export interface ProviderProgress {
   kind: string // status | thinking | text | tool | usage | plan

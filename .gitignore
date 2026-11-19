@@ -1,7 +1,10 @@
 # build output
-bin/
-0xaf
+/bin/
+/0xaf
+/import-knowledge
 *.exe
+/.gocache/
+/.claude/
 
 # runtime state — transcripts and spilled tool output can contain anything
 sessions/
@@ -21,11 +24,10 @@ knowledge/reverse-index.json
 # python dev tooling
 __pycache__/
 
-# rust build output (crate sources live elsewhere for now)
-crates/**/target/
-
-# GUI frontend
+# GUI frontend & native app bundles
+gui/build/bin/
 gui/frontend/node_modules/
 gui/frontend/dist/
+gui/frontend/e2e-artifacts/
 gui/frontend/wailsjs/
 gui/frontend/package.json.md5

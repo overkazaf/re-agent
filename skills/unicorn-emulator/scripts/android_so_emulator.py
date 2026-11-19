@@ -365,6 +365,9 @@ class AndroidSOEmulator:
     HEAP_SIZE = 0x10000000  # 256MB
     JNI_ENV_BASE = 0xC0000000
     LIBC_BASE = 0xD0000000
+    JNI_STUB_OFFSET = 0x1000
+    PLT_STUB_OFFSET = 0x4000
+    STOP_ADDR = 0xDEAD0000
 
     def __init__(self, so_path, is_64bit=False):
         """
@@ -431,9 +434,9 @@ class AndroidSOEmulator:
         # 创建JNI函数表
         jni_func_table = self.JNI_ENV_BASE + 0x1000
 
-        # 写入函数指针（每个指向libc区域的不同位置）
+        # 写入函数指针（独立 JNI stub 区间，避免与 PLT stub 冲突）
         for i in range(256):
-            func_addr = self.LIBC_BASE + 0x1000 + i * 4
+            func_addr = self.LIBC_BASE + self.JNI_STUB_OFFSET + i * 4
             if self.is_64bit:
                 self.mu.mem_write(jni_func_table + i * 8, struct.pack('<Q', func_addr))
             else:
@@ -453,6 +456,8 @@ class AndroidSOEmulator:
 
     def _hook_unmapped(self, mu, access, address, size, value, user_data):
         """未映射内存处理"""
+        if (address & ~0xFFF) == (self.STOP_ADDR & ~0xFFF):
+            return False
         access_type = {UC_MEM_READ: "READ", UC_MEM_WRITE: "WRITE", UC_MEM_FETCH: "FETCH"}.get(access, "?")
         print(f"[!] Unmapped {access_type} at 0x{address:08x}")
 
@@ -464,22 +469,21 @@ class AndroidSOEmulator:
             return False
 
     def _hook_code(self, mu, address, size, user_data):
-        """LIBC区域的代码执行Hook（用于模拟libc函数）"""
-        # 检查是否是libc函数调用
-        offset = address - self.LIBC_BASE - 0x1000
-        if 0 <= offset < 256 * 4:
-            func_index = offset // 4
-            if address in self.plt_symbols:
-                func_name = self.plt_symbols[address]
-                result = self.libc.handle_call(func_name)
-            else:
-                # 可能是JNI调用
-                result = self.jni.handle_jni_call(func_index)
+        """LIBC/JNI 区域的代码执行Hook（分别路由 PLT 与 JNI 调用）"""
+        handled = False
+        result = 0
+        if address in self.plt_symbols:
+            func_name = self.plt_symbols[address]
+            result = self.libc.handle_call(func_name)
+            handled = True
+        else:
+            jni_off = address - (self.LIBC_BASE + self.JNI_STUB_OFFSET)
+            if 0 <= jni_off < 256 * 4 and jni_off % 4 == 0:
+                result = self.jni.handle_jni_call(jni_off // 4)
+                handled = True
 
-            # 设置返回值并返回
+        if handled:
             self.mu.reg_write(self.REG_RET, result & (0xFFFFFFFFFFFFFFFF if self.is_64bit else 0xFFFFFFFF))
-
-            # 返回到调用者
             lr = self.mu.reg_read(self.REG_LR)
             self.mu.reg_write(self.REG_PC, lr)
 
@@ -530,11 +534,10 @@ class AndroidSOEmulator:
                 self.symbols[sym.name] = addr
                 # print(f"[*] Symbol: {sym.name} @ 0x{addr:08x}")
 
-        # 解析PLT（用于外部函数调用）
+        # 解析PLT（独立 PLT stub 区间）
         for reloc in binary.relocations:
             if reloc.symbol and reloc.symbol.name:
-                # 为每个导入函数创建跳转stub
-                stub_addr = self.LIBC_BASE + 0x1000 + len(self.plt_symbols) * 4
+                stub_addr = self.LIBC_BASE + self.PLT_STUB_OFFSET + len(self.plt_symbols) * 4
                 self.plt_symbols[stub_addr] = reloc.symbol.name
 
                 # 在重定位地址写入stub地址
@@ -644,17 +647,17 @@ class AndroidSOEmulator:
             self.set_arg(i, arg)
             print(f"[*] Arg{i}: 0x{arg:x}")
 
-        # 设置返回地址
-        self.mu.reg_write(self.REG_LR, 0)
+        # 设置返回地址到未映射哨兵 STOP_ADDR
+        self.mu.reg_write(self.REG_LR, self.STOP_ADDR)
 
         print(f"[*] Starting emulation...")
         self.instruction_count = 0
 
         try:
-            self.mu.emu_start(func_addr, 0, timeout=timeout)
+            self.mu.emu_start(func_addr, self.STOP_ADDR, timeout=timeout)
         except UcError as e:
             pc = self.mu.reg_read(self.REG_PC)
-            if e.errno == UC_ERR_FETCH_UNMAPPED and pc == 0:
+            if e.errno == UC_ERR_FETCH_UNMAPPED and (pc & ~1) == self.STOP_ADDR:
                 pass  # 正常返回
             else:
                 print(f"[-] Emulation error at PC=0x{pc:08x}: {e}")
@@ -718,19 +721,19 @@ def main():
     so_file = sys.argv[args_start]
     func_name = sys.argv[args_start + 1]
 
+    # 创建模拟器
+    emu = AndroidSOEmulator(so_file, is_64bit)
+
     # 解析参数（支持十六进制和字符串）
     call_args = []
     for arg in sys.argv[args_start + 2:]:
         try:
             call_args.append(int(arg, 0))
         except ValueError:
-            # 字符串参数 - 需要分配内存并写入
-            print(f"[*] String argument: {arg}")
-            # 暂时作为0处理，后续需要在调用前分配
-            call_args.append(0)
-
-    # 创建模拟器
-    emu = AndroidSOEmulator(so_file, is_64bit)
+            str_addr = emu.malloc(len(arg.encode('utf-8')) + 1)
+            emu.write_string(str_addr, arg)
+            print(f"[*] String argument {arg!r} -> 0x{str_addr:x}")
+            call_args.append(str_addr)
 
     # 列出可用符号
     emu.list_symbols(func_name)

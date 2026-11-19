@@ -31,6 +31,7 @@ class ARM64Emulator:
     HEAP_SIZE = 0x1000000   # 16MB
     DATA_BASE = 0xA00000000000
     DATA_SIZE = 0x1000000   # 16MB
+    STOP_ADDR = 0xDEAD0000
 
     def __init__(self):
         """初始化模拟器"""
@@ -72,6 +73,8 @@ class ARM64Emulator:
 
     def _hook_unmapped(self, mu, access, address, size, value, user_data):
         """处理未映射内存访问"""
+        if (address & ~0xFFF) == (self.STOP_ADDR & ~0xFFF):
+            return False
         access_type = "READ" if access == UC_MEM_READ else "WRITE" if access == UC_MEM_WRITE else "FETCH"
         print(f"[!] Unmapped {access_type} at 0x{address:016x}, size={size}")
 
@@ -215,16 +218,16 @@ class ARM64Emulator:
             X0寄存器的值
         """
         self.set_args(*args)
-        self.mu.reg_write(UC_ARM64_REG_LR, 0)
+        self.mu.reg_write(UC_ARM64_REG_LR, self.STOP_ADDR)
 
         print(f"[*] Calling function at 0x{address:016x}")
         print(f"[*] Arguments: {[hex(a) for a in args]}")
 
         try:
             self.instruction_count = 0
-            self.mu.emu_start(address, 0, timeout=timeout, count=count)
+            self.mu.emu_start(address, self.STOP_ADDR, timeout=timeout, count=count)
         except UcError as e:
-            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_ARM64_REG_PC) == 0:
+            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_ARM64_REG_PC) == self.STOP_ADDR:
                 pass
             else:
                 print(f"[-] Emulation error: {e}")

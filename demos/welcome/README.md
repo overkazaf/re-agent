@@ -15,7 +15,7 @@ or a real reverse-engineering target.
 From the project root:
 
 ```bash
-bun src/cli.ts --workspace ./demos/welcome \
+0xaf --workspace ./demos/welcome \
   -p "Triage this workspace. List files, identify the challenge, and propose a first solve plan." \
   --role planner
 ```
@@ -23,7 +23,7 @@ bun src/cli.ts --workspace ./demos/welcome \
 Then ask for a solve:
 
 ```bash
-bun src/cli.ts --workspace ./demos/welcome \
+0xaf --workspace ./demos/welcome \
   -p "Recover the expected token from chall.js, verify it with a local command, and explain the check."
 ```
 
@@ -38,6 +38,6 @@ In the REPL, try the direct tools:
 Writes are disabled by default. When you want the agent to create notes:
 
 ```bash
-bun src/cli.ts --workspace ./demos/welcome --write \
+0xaf --workspace ./demos/welcome --write \
   -p "Create notes/solve.md with the triage, verification command, and recovered token."
 ```

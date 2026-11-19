@@ -1,12 +1,12 @@
-// WS4 RE workflow HUD: seven-phase strip ▸TRI → STA → DYN → EVD → INT →
-// HYP → WRU (current = ▸ + accent bold, past = muted, future = faint),
+// WS4 RE workflow HUD: nine-phase strip ▸TRI → STA → DYN → EVI → IFC →
+// HYP → VER → AUD → WRI (current = ▸ + accent bold, past = muted, future = faint),
 // H:N / E:N counters, phase progress bar. Mirrors internal/ui/rehud.go.
 import type { CSSProperties } from 'react'
 import type { ReDTO } from '../../lib/types'
 import { GlowText, PanelBox } from '../crt'
 
-// Glyphs match the TUI strip exactly (internal/ui/rehud.go:19).
-const PHASES = ['TRI', 'STA', 'DYN', 'EVI', 'IFC', 'HYP', 'WRI']
+// Glyphs match workflow.PhaseCodes / internal/ui/rehud.go exactly.
+const PHASES = ['TRI', 'STA', 'DYN', 'EVI', 'IFC', 'HYP', 'VER', 'AUD', 'WRI']
 const BAR_W = 14
 
 export function REHudPanel({ re, style }: { re: ReDTO | null; style?: CSSProperties }) {
@@ -70,5 +70,5 @@ export function REHudPanel({ re, style }: { re: ReDTO | null; style?: CSSPropert
 
 function filled(re: ReDTO): number {
   if (re.phaseCount <= 0) return 0
-  return Math.min(BAR_W, Math.max(0, Math.round((re.phaseIndex * BAR_W) / re.phaseCount)))
+  return Math.min(BAR_W, Math.max(0, Math.round(((re.phaseIndex + 1) * BAR_W) / re.phaseCount)))
 }

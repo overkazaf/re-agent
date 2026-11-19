@@ -26,6 +26,16 @@ function trunc(s: string, max = 110): string {
   return s.length > max ? `${s.slice(0, max)}…` : s
 }
 
+function summarizeArgs(args: Record<string, unknown> | null): string {
+  if (!args) return ''
+  const parts: string[] = []
+  for (const [k, v] of Object.entries(args)) {
+    if (v === undefined || v === null || v === '') continue
+    parts.push(`${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`)
+  }
+  return parts.join(' ')
+}
+
 // Stable React keys across the ring buffer: once LOOP_LIMIT drops rows from
 // the head, index-based keys would reassign every row; event object identity
 // survives the slice, so hand out a monotonic seq per object instead.
@@ -92,6 +102,17 @@ function traceRow(ev: LoopEvent, ts: number, origin: number | null): ReactNode {
   const time = <span style={{ color: 'var(--faint)', flex: '0 0 62px', fontSize: 10, paddingTop: 1 }}>{t}</span>
 
   switch (ev.type) {
+    case 'user':
+      return (
+        <div style={{ ...rowStyle, alignItems: 'flex-start' }}>
+          {time}
+          <div style={{ flex: 1, minWidth: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>› you </span>
+            <span style={{ color: 'var(--text)' }}>{ev.text}</span>
+          </div>
+        </div>
+      )
+
     case 'turn':
       return (
         <div style={rowStyle}>
@@ -136,7 +157,7 @@ function traceRow(ev: LoopEvent, ts: number, origin: number | null): ReactNode {
           {time}
           <span style={{ color: 'var(--warn)' }}>⚙ {ev.name}</span>
           <span style={{ color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {trunc(ev.preview || ev.text, 90)}
+            {trunc(ev.preview || ev.text || summarizeArgs(ev.args), 90)}
           </span>
         </div>
       )

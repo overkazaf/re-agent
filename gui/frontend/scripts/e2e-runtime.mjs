@@ -381,7 +381,7 @@ function installShim() {
           // emits its own tick; /workflow off clears the strip
           const words = line.trim().split(/\s+/)
           if (words[0] === '/workflow' && words[1] === 'reverse' && words.length === 3) {
-            s.re = { sampleType: words[2], phase: 'triage', phaseIndex: 0, phaseCount: 7, hypotheses: 0, evidence: 0 }
+            s.re = { sampleType: words[2], phase: 'triage', phaseIndex: 0, phaseCount: 9, hypotheses: 0, evidence: 0 }
             emitTick(id, tickOf(s))
             return { ok: true, notices: [{ level: 'info', text: `workflow=reverse sample=${words[2]}` }] }
           }

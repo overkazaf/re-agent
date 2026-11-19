@@ -80,6 +80,20 @@ func TestSystemPromptIncludesTags(t *testing.T) {
 	}
 }
 
+func TestFindPrefersExactSkillNameOverEarlierTagMatch(t *testing.T) {
+	list := []Skill{
+		{Name: "android-apk-frida", DirName: "android-apk-frida", Tags: []string{"android", "jadx", "unidbg"}},
+		{Name: "jadx", DirName: "jadx", Tags: []string{"jadx", "dex"}},
+		{Name: "unidbg", DirName: "unidbg", Tags: []string{"unidbg", "so"}},
+	}
+	if got := Find(list, "jadx"); got == nil || got.Name != "jadx" {
+		t.Fatalf("expected exact jadx skill, got %+v", got)
+	}
+	if got := Find(list, "unidbg"); got == nil || got.Name != "unidbg" {
+		t.Fatalf("expected exact unidbg skill, got %+v", got)
+	}
+}
+
 func writeSkill(t *testing.T, root, name, body string) {
 	t.Helper()
 	dir := filepath.Join(root, name)

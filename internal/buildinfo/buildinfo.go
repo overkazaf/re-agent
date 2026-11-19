@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-const Version = "0.1.19"
+// Version is the base release string and can be overridden at link time with:
+//
+//	-ldflags "-X github.com/overkazaf/re-agent/internal/buildinfo.Version=0.1.21"
+var Version = "0.1.21"
 
 // Commit can be set by release builds with:
 //

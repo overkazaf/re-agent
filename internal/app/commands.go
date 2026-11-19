@@ -15,6 +15,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
+	"github.com/overkazaf/re-agent/internal/evidence"
 	"github.com/overkazaf/re-agent/internal/knowledge"
 	"github.com/overkazaf/re-agent/internal/providers"
 	"github.com/overkazaf/re-agent/internal/remote"
@@ -128,6 +129,22 @@ func handleCommand(line string, state *State) error {
 			return fmt.Errorf("usage: /scan <path>")
 		}
 		return runDirectTool("ctf_triage", map[string]any{"path": arg}, state)
+	case "/inspect":
+		if arg == "" {
+			return fmt.Errorf("usage: /inspect <binary>")
+		}
+		return runDirectTool("binary_inspect", map[string]any{"path": arg}, state)
+	case "/anti":
+		if arg == "" {
+			return fmt.Errorf("usage: /anti <binary>")
+		}
+		return runDirectTool("anti_analysis", map[string]any{"path": arg}, state)
+	case "/diff":
+		pathA, pathB := splitFirstToken(arg)
+		if pathA == "" || pathB == "" {
+			return fmt.Errorf("usage: /diff <fileA> <fileB>")
+		}
+		return runDirectTool("binary_diff", map[string]any{"pathA": pathA, "pathB": pathB}, state)
 	case "/decode":
 		args, err := parseDecodeCommand(arg)
 		if err != nil {
@@ -208,33 +225,55 @@ func handleCommand(line string, state *State) error {
 		if state.REState == nil {
 			return fmt.Errorf("no active RE session — enter /workflow reverse first")
 		}
+		snap := state.REState.Snapshot()
+		var hyps []types.Hypothesis
+		var evCount int
+		if state.Loop != nil {
+			hyps = state.Loop.Hypotheses()
+			evCount = len(state.Loop.Evidence())
+		} else if state.Ledger != nil {
+			evCount = len(state.Ledger.Evidence())
+		}
+		activeHyps := activeLoopHypotheses(hyps)
 		if arg == "" {
-			fmt.Println(ui.RenderNotice(fmt.Sprintf(
-				"phase=%s [%d/%d] hypotheses=%d evidence=%d sample=%s",
-				state.REState.Phase, workflow.PhaseIndex(state.REState.Phase)+1, len(workflow.Phases),
-				len(state.REState.Hypotheses), len(state.REState.Evidence), state.REState.SampleType,
-			)))
-			for i, h := range state.REState.Hypotheses {
-				status := "active"
-				if h.Revised != "" {
-					status = "revised → " + h.Revised
-				}
-				fmt.Printf("  [H%d] %s (%s)\n", i, h.Text, status)
+			emitNoticeTo(state, nil, fmt.Sprintf(
+				"phase=%s [%d/%d] hypotheses=%d (%d active) evidence=%d sample=%s",
+				snap.Phase, workflow.PhaseIndex(snap.Phase)+1, len(workflow.Phases),
+				len(hyps), activeHyps, evCount, snap.SampleType,
+			))
+			for _, h := range hyps {
+				fmt.Printf("  [%s] %.0f%% (%s) %s\n", h.ID, h.Confidence*100, h.Status, h.Claim)
 			}
-			for i, e := range state.REState.Evidence {
-				fmt.Printf("  [E%d] %s\n", i, e.Text)
+			if state.Ledger != nil {
+				if digest := state.Ledger.Digest(8); digest != "" {
+					for _, line := range strings.Split(digest, "\n") {
+						fmt.Printf("  %s\n", line)
+					}
+				}
 			}
 			return nil
 		}
 		switch arg {
 		case "next":
-			state.REState.AdvancePhase()
-			fmt.Println(ui.RenderNotice("phase → " + string(state.REState.Phase)))
+			if state.Ledger != nil {
+				if gateErr := workflow.CheckPhaseGate(state.REState, state.Ledger, activeHyps); gateErr != nil {
+					emitNoticeTo(state, nil, "gate override — "+gateErr.Error())
+				}
+			}
+			next := state.REState.AdvancePhase()
+			emitNoticeTo(state, nil, "phase → "+string(next))
 		default:
+			if state.Ledger != nil {
+				if gateErr := workflow.CheckPhaseGatesTo(state.REState, workflow.Phase(arg), state.Ledger, activeHyps); gateErr != nil {
+					if strings.HasPrefix(gateErr.Error(), "cannot enter ") {
+						emitNoticeTo(state, nil, "gate override — "+gateErr.Error())
+					}
+				}
+			}
 			if err := state.REState.SkipTo(workflow.Phase(arg)); err != nil {
 				return err
 			}
-			fmt.Println(ui.RenderNotice("phase → " + string(state.REState.Phase)))
+			emitNoticeTo(state, nil, "phase → "+string(state.REState.Snapshot().Phase))
 		}
 		return nil
 	case "/workflow":
@@ -357,6 +396,15 @@ func handleCommand(line string, state *State) error {
 		if err := state.Loop.Restore(loaded); err != nil {
 			return err
 		}
+		state.GoalDraft = nil
+		if restored := state.Loop.Goal(); restored != nil && restored.Accepted {
+			if state.Sandbox != nil {
+				state.Sandbox.Activate(restored.Objective.Constraints)
+			}
+		} else if state.Sandbox != nil {
+			state.Sandbox.Deactivate()
+		}
+		attachAcceptanceGate(state)
 		_ = state.Session.AppendEvent(map[string]any{
 			"type": "resumed_from", "file": target.File, "messages": len(loaded.Messages),
 		})
@@ -722,7 +770,11 @@ func handleNewSession(state *State) error {
 	if state.Ledger != nil {
 		state.Ledger.Reset()
 	}
-	// Capabilities are task-scoped: they expire with the session's task.
+	// Capabilities and task declarations are task-scoped: they expire with the session's task.
+	state.GoalDraft = nil
+	if state.REState != nil {
+		state.REState.Acceptance = nil
+	}
 	if state.Sandbox != nil {
 		state.Sandbox.Deactivate()
 	}
@@ -1160,11 +1212,43 @@ func runDirectTool(name string, args map[string]any, state *State) error {
 	if tool == nil {
 		return fmt.Errorf("tool not found: %s", name)
 	}
-	result, err := tool.Execute(args, *state.ToolContext)
+	ctx := *state.ToolContext
+	if ctx.Confirm == nil && state.editor != nil && state.editor.Interactive() {
+		ctx.Confirm = createApprover(state, nil, nil)
+	}
+	result, err := tool.Execute(args, ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Println(types.TextFromBlocks(result.Content))
+	text := types.TextFromBlocks(result.Content)
+	fmt.Println(text)
+	if !result.IsError {
+		view := string(evidence.ViewStatic)
+		if name == "run_command" || name == "remote_exec" {
+			view = string(evidence.ViewDynamic)
+		}
+		var recID string
+		if state.Ledger != nil {
+			rec := state.Ledger.Add(evidence.Input{
+				Source: name,
+				Kind:   string(evidence.KindToolObservation),
+				View:   view,
+				Text:   text,
+			})
+			recID = rec.ID
+		}
+		if state.Loop != nil {
+			snippet := text
+			if len(snippet) > core.ShellContextMaxChars {
+				snippet = snippet[:core.ShellContextMaxChars] + "\n…[truncated]"
+			}
+			tag := name
+			if recID != "" {
+				tag += " · " + recID
+			}
+			_ = state.Loop.AddContext(fmt.Sprintf("[operator tool · %s]\n%s", tag, snippet))
+		}
+	}
 	return nil
 }
 
@@ -1192,9 +1276,9 @@ func parseRetoolCommand(arg string) (map[string]any, error) {
 			continue
 		}
 		switch key {
-		case "rules", "address", "symbol", "arch":
+		case "rules", "address", "symbol", "arch", "template", "host":
 			args[key] = value
-		case "timeoutMs", "maxBytes", "lines":
+		case "timeoutMs", "maxBytes", "lines", "port":
 			if parsed, err := strconv.Atoi(value); err == nil {
 				args[key] = parsed
 			}
@@ -1204,18 +1288,21 @@ func parseRetoolCommand(arg string) (map[string]any, error) {
 }
 
 var cliDecodeAliases = map[string]string{
-	"b64": "base64", "b64url": "base64url", "urldecode": "url", "xorbf": "xor_bruteforce",
+	"b64": "base64", "b64url": "base64url", "b32": "base32",
+	"urldecode": "url", "xorbf": "xor_bruteforce",
+	"inflate": "zlib", "gunzip": "gzip",
 }
 
 var cliDecodeModes = map[string]bool{
-	"auto": true, "base64": true, "base64url": true, "hex": true,
-	"url": true, "rot13": true, "xor": true, "xor_bruteforce": true,
+	"auto": true, "base64": true, "base64url": true, "base32": true,
+	"hex": true, "url": true, "rot13": true, "xor": true, "xor_bruteforce": true,
+	"zlib": true, "gzip": true, "rc4": true,
 }
 
 func parseDecodeCommand(arg string) (map[string]any, error) {
 	trimmed := strings.TrimSpace(arg)
 	if trimmed == "" {
-		return nil, fmt.Errorf("usage: /decode [auto|base64|base64url|hex|url|rot13|xor|xor_bruteforce] <input>")
+		return nil, fmt.Errorf("usage: /decode [auto|base64|base64url|base32|hex|url|rot13|xor|xor_bruteforce|zlib|gzip|rc4] <input>")
 	}
 	first, rest := splitFirstToken(trimmed)
 	mode := first
@@ -1228,7 +1315,7 @@ func parseDecodeCommand(arg string) (map[string]any, error) {
 	if rest == "" && mode != "rot13" {
 		return nil, fmt.Errorf("usage: /decode %s <input>", mode)
 	}
-	if mode != "xor" {
+	if mode != "xor" && mode != "rc4" {
 		input := rest
 		if input == "" {
 			input = trimmed
@@ -1237,7 +1324,7 @@ func parseDecodeCommand(arg string) (map[string]any, error) {
 	}
 	key, input := splitFirstToken(rest)
 	if key == "" || input == "" {
-		return nil, fmt.Errorf("usage: /decode xor <key> <input>")
+		return nil, fmt.Errorf("usage: /decode %s <key> <input>", mode)
 	}
 	return map[string]any{"mode": mode, "key": key, "input": input}, nil
 }

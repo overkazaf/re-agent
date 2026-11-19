@@ -924,11 +924,8 @@ Content-Type: application/json
 
 ## Usage
 
-```
-/re-writeup [type]
-
-Types: ctf, malware, algorithm, mobile, protocol, vulnerability
-Target: [Description of the target]
+```text
+/skill re-writeup <type: ctf|malware|algorithm|mobile|protocol|vulnerability> <target>
 ```
 
 The assistant will:

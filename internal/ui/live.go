@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/overkazaf/re-agent/internal/types"
 	"golang.org/x/term"
@@ -209,7 +210,11 @@ func (p *LivePane) PushThinking(delta string) {
 	// Keep enough tail to fill an expanded window (24 wrapped rows) on a wide
 	// terminal; the HUD only ever renders the last few rows of this.
 	if len(p.thinking) > thinkBufferMax {
-		p.thinking = p.thinking[len(p.thinking)-thinkBufferKeep:]
+		cut := len(p.thinking) - thinkBufferKeep
+		for cut < len(p.thinking) && !utf8.RuneStart(p.thinking[cut]) {
+			cut++
+		}
+		p.thinking = p.thinking[cut:]
 	}
 	p.mu.Unlock()
 	p.render()

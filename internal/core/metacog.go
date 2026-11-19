@@ -14,8 +14,10 @@ import (
 	"github.com/overkazaf/re-agent/internal/types"
 )
 
-// maxStackDigest caps the hypothesis digest injected per request.
-const maxStackDigest = 16
+const (
+	maxStackDigest  = 16
+	maxLedgerDigest = 20
+)
 
 // persistingHypotheses decorates the tracker so every successful mutation
 // snapshots the whole stack into the session event stream, the same bargain
@@ -64,6 +66,20 @@ func (p *persistingHypotheses) saveOn(err error) {
 	}
 }
 
+// evidenceLedgerSection renders the recent evidence digest injected into every
+// request so tool provenance survives mechanical message compaction.
+func (l *AgentLoop) evidenceLedgerSection() string {
+	digest := l.evidence.Digest(maxLedgerDigest)
+	if digest == "" {
+		return ""
+	}
+	return strings.Join([]string{
+		"## Evidence ledger",
+		"",
+		digest,
+	}, "\n")
+}
+
 // hypothesisStackSection renders the digest injected into every request.
 func (l *AgentLoop) hypothesisStackSection() string {
 	digest := hypothesis.Digest(l.hypotheses.List(), maxStackDigest)
@@ -84,7 +100,11 @@ func (l *AgentLoop) hypothesisStackSection() string {
 // isHostStateTool reports whether a tool's output is host bookkeeping rather
 // than evidence about the target.
 func isHostStateTool(name string) bool {
-	return name == "update_plan" || strings.HasPrefix(name, "hypothesis_")
+	switch name {
+	case "update_plan", "update_re_state", "evidence_review", "list_skills", "read_skill":
+		return true
+	}
+	return strings.HasPrefix(name, "hypothesis_")
 }
 
 // dynamicTools are the tools whose output observes the target at runtime, as

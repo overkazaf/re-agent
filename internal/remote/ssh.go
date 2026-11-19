@@ -44,6 +44,9 @@ type connState struct {
 }
 
 func NewManager(store *Store) *Manager {
+	if store == nil {
+		store = EmptyStore()
+	}
 	return &Manager{store: store, conns: map[string]*connState{}}
 }
 
@@ -197,22 +200,23 @@ func runOnClient(ctx context.Context, client *ssh.Client, command string, pty bo
 
 func (m *Manager) client(ctx context.Context, host Host) (*ssh.Client, error) {
 	m.mu.Lock()
-	if state, ok := m.conns[host.Name]; ok {
+	if state, ok := m.conns[host.Name]; ok && state.client != nil {
 		client := state.client
-		err := state.err
 		m.mu.Unlock()
-		if client != nil {
-			return client, nil
-		}
-		return nil, fmt.Errorf("ssh %s: %w", host.Name, err)
+		return client, nil
 	}
 	m.mu.Unlock()
 
-	// Lazy dial on first use (also records the connection for the status bar).
+	// Lazy dial on first use or reconnect after a dropped keepalive.
 	if err := m.Connect(ctx, host.Name); err != nil {
 		return nil, err
 	}
-	return m.client(ctx, host)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if state, ok := m.conns[host.Name]; ok && state.client != nil {
+		return state.client, nil
+	}
+	return nil, fmt.Errorf("ssh %s: connection unavailable", host.Name)
 }
 
 // Close terminates every background connection.

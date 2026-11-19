@@ -45,18 +45,18 @@ var SlashCommandSections = []HelpSection{
 		{"/sessions", "", "List recent sessions"},
 		{"/resume", "[hash|id]", "Load a previous session's history"},
 		{"/policy", "", "Show the active safety policy"},
-		{"/approval", "[mode|tool <n> allow|deny]", "Show or change tool approval (yolo/write/always-ask)"},
+		{"/approval", "[yolo|safe|write|always-ask|tool <n> allow|deny|reset]", "Show or change tool approval policy"},
 		{"/exit", "", "Quit"},
 		{"/quit", "", "Quit"},
 	}},
 	{"routing", []HelpEntry{
 		{"/role", "planner|executor|researcher|auto", "Pick which side of the deck answers"},
 		{"/agent", "<name>|auto", "Pin one provider for the next prompts"},
-		{"/model", "<provider|planner|executor|researcher> <model>", "Override a provider model for this session"},
+		{"/model", "[<provider|planner|executor|researcher> <model>]", "Show or override a provider model for this session"},
 		{"/planner", "<name>", "Set the planner provider"},
 		{"/executor", "<name>", "Set the executor provider"},
 		{"/researcher", "<name>", "Set the researcher provider"},
-		{"/effort", "<provider> <level>", "Set reasoning effort (minimal…max)"},
+		{"/effort", "<provider> [level]", "Show or set reasoning effort (minimal…max)"},
 		{"/providers", "", "List configured providers"},
 	}},
 	{"auth", []HelpEntry{
@@ -69,20 +69,23 @@ var SlashCommandSections = []HelpSection{
 		{"/tools", "", "List reverse/CTF tools"},
 		{"/mcp", "", "Show MCP servers and the tools they contribute"},
 		{"/scan", "<path>", "Fast CTF triage on an artifact or directory"},
+		{"/inspect", "<binary>", "Deep cross-platform ELF/PE/Mach-O structural inspection"},
+		{"/anti", "<binary>", "Detect packers, anti-debug APIs, direct syscalls, and RWX sections"},
+		{"/diff", "<fileA> <fileB>", "Compare binary patches with x86/ARM64 instruction diffs"},
 		{"/mitigations", "<binary>", "Summarize native binary protections"},
 		{"/entropy", "<file>", "Sliding-window entropy scan"},
 		{"/findbytes", "<file> <needle>", "Find text/hex offsets with context"},
 		{"/carve", "<file>", "Locate embedded file signatures"},
 		{"/hex", "<file> [offset] [len]", "Hex view of a file window (0x offsets welcome)"},
 		{"/r2", "<file> [-w]", "Hand the terminal to an interactive radare2 session"},
-		{"/apk", "<apk>", "Inspect APK structure and packer/framework hints"},
+		{"/apk", "<apk>", "Inspect APK structure, manifest, and packer/framework hints"},
 		{"/retool", "[tool action path]", "Use common RE tools: radare2, JADX, Ghidra, Unicorn, unidbg"},
-		{"/decode", "[mode] <input>", "Decode base64/hex/url/rot13/xor candidates"},
+		{"/decode", "[mode] [key] <input>", "Decode base64/base32/hex/url/rot13/xor/rc4/zlib/gzip"},
 		{"/hook", "[java|native|objc] <target>", "Generate a Frida hook scaffold"},
 		{"/plan", "", "Reprint the current task list"},
 		{"/read", "<path>", "Read a file without the model"},
 		{"/run", "<command>", "Run a local command without the model"},
-		{"/remote", "[list|add|rm|use|off]", "Manage saved SSH hosts and remote mode"},
+		{"/remote", "[list|add|rm|use|connect|off]", "Manage saved SSH hosts and remote mode"},
 	}},
 	{"skills & knowledge", []HelpEntry{
 		{"/skills", "", "List built-in reverse engineering skills"},
@@ -127,12 +130,14 @@ func HelpText() string {
 	out = append(out,
 		"",
 		C.Faint("CLI"),
-		"  "+C.Muted("0xaf --version"),
-		"  "+C.Muted("0xaf --welcome"),
-		"  "+C.Muted("0xaf --workspace ./ctf"),
-		"  "+C.Muted(`0xaf -p "triage ./chall" --role planner`),
-		"  "+C.Muted(`0xaf --agent claude --effort high -p "..."`),
-		"  "+C.Muted("0xaf auth status"),
+		"  "+C.Muted("0xaf --version  ·  0xaf --welcome  ·  0xaf --smoke"),
+		"  "+C.Muted("0xaf --workspace ./ctf --workflow reverse"),
+		"  "+C.Muted(`0xaf -p "triage ./chall" --role planner --planner codex --executor claude`),
+		"  "+C.Muted(`0xaf --agent claude --model claude=sonnet --effort high -C ./notes.md -p "..."`),
+		"  "+C.Muted("0xaf --resume [id]  ·  0xaf -c  ·  0xaf --sessions"),
+		"  "+C.Muted("0xaf --write --allow-network --approval safe --remote <host>"),
+		"  "+C.Muted("0xaf --flow full|flow|trace|off --refresh calm|off --theme deck|amber|matrix|mono"),
+		"  "+C.Muted("0xaf auth status | login <provider> | logout <provider>"),
 		"",
 	)
 	return strings.Join(out, "\n") + "\n"
@@ -164,6 +169,22 @@ var promptActions = []string{"list", "show", "path", "edit", "set", "reset", "re
 
 var workflowModes = []string{"off", "auto", "specialist", "caveman", "research", "writeup", "ctf", "reverse", "engineering"}
 
+var sampleTypeKeys = []string{"apk", "so", "elf", "pe", "macho", "js", "wasm", "firmware", "generic"}
+
+var phaseTargets = []string{"next", "triage", "static", "dynamic", "evidence", "interface", "hypothesis", "verify", "audit", "writeup"}
+
+var goalActions = []string{"show", "accept", "clear"}
+
+var capTargets = []string{"show", "network", "device", "reset"}
+
+var approvalTargets = []string{"yolo", "safe", "write", "always-ask", "tool", "reset"}
+
+var remoteActions = []string{"list", "add", "rm", "use", "connect", "off"}
+
+var refreshModes = []string{"normal", "calm", "off"}
+
+var decodeModes = []string{"auto", "base64", "base64url", "base32", "hex", "url", "rot13", "xor", "xor_bruteforce", "zlib", "gzip", "rc4"}
+
 var taskModes = []string{"auto", "collapse", "expand", "toggle"}
 
 // thinkModes mirrors taskModes. /think also accepts off/on as aliases for
@@ -175,10 +196,11 @@ var queueActions = []string{"list", "add", "edit", "cancel", "clear", "run"}
 var retoolNames = []string{
 	"inventory", "radare2", "rizin", "jadx", "apktool", "binwalk", "yara", "ghidra",
 	"gdb", "lldb", "objdump", "readelf", "nm", "apkid", "aapt", "frida", "unicorn", "unidbg",
+	"angr", "burp", "mitmproxy",
 }
 
 var providerArgCommands = map[string]bool{
-	"/planner": true, "/executor": true, "/researcher": true, "/login": true, "/logout": true,
+	"/planner": true, "/executor": true, "/researcher": true, "/login": true, "/logout": true, "/compact": true,
 }
 
 func SlashCompletions(line string, providerNames, skillNames []string) []CompletionItem {
@@ -205,7 +227,7 @@ func SlashCompletions(line string, providerNames, skillNames []string) []Complet
 		head = strings.TrimRight(line, " \t")
 		argIndex = len(words)
 	}
-	pool := argumentPool(command, argIndex, providerNames, skillNames)
+	pool := argumentPool(command, argIndex, words, providerNames, skillNames)
 	if len(pool) == 0 {
 		return nil
 	}
@@ -249,7 +271,7 @@ func commandCompletions(fragment string) []CompletionItem {
 	return out
 }
 
-func argumentPool(command string, argIndex int, providerNames, skillNames []string) []CompletionItem {
+func argumentPool(command string, argIndex int, words, providerNames, skillNames []string) []CompletionItem {
 	simple := func(values []string, description string) []CompletionItem {
 		out := make([]CompletionItem, 0, len(values))
 		for _, value := range values {
@@ -257,24 +279,58 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 		}
 		return out
 	}
-	if argIndex != 1 && command != "/effort" && command != "/prompt" {
-		if command != "/model" {
-			return nil
-		}
-	}
-	if command == "/model" {
+	switch command {
+	case "/model":
 		if argIndex == 1 {
 			return simple(append([]string{"active", "planner", "executor", "researcher"}, providerNames...), "provider")
 		}
 		return nil
-	}
-	if command == "/prompt" {
+	case "/prompt":
 		if argIndex == 1 {
 			return simple(promptActions, "prompt action")
 		}
 		if argIndex == 2 {
 			return simple(promptTargets, "prompt target")
 		}
+		return nil
+	case "/effort":
+		if argIndex == 1 {
+			return simple(providerNames, "provider")
+		}
+		if argIndex == 2 {
+			var efforts []string
+			for _, effort := range types.ReasoningEfforts {
+				efforts = append(efforts, string(effort))
+			}
+			return simple(efforts, "reasoning effort")
+		}
+		return nil
+	case "/workflow":
+		if argIndex == 1 {
+			return simple(workflowModes, "workflow mode")
+		}
+		if argIndex == 2 && len(words) >= 2 && words[1] == "reverse" {
+			return simple(sampleTypeKeys, "sample type")
+		}
+		return nil
+	case "/cap":
+		if argIndex == 1 {
+			return simple(capTargets, "capability")
+		}
+		if argIndex == 2 && len(words) >= 2 && (words[1] == "network" || words[1] == "device") {
+			return simple([]string{"on", "off"}, "toggle")
+		}
+		return nil
+	case "/approval":
+		if argIndex == 1 {
+			return simple(approvalTargets, "approval policy")
+		}
+		if argIndex == 3 && len(words) >= 2 && words[1] == "tool" {
+			return simple([]string{"allow", "deny"}, "tool override")
+		}
+		return nil
+	}
+	if argIndex != 1 {
 		return nil
 	}
 	switch command {
@@ -286,8 +342,12 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 			modes = append(modes, string(mode))
 		}
 		return simple(modes, "visualization")
-	case "/workflow":
-		return simple(workflowModes, "workflow mode")
+	case "/refresh":
+		return simple(refreshModes, "refresh interval")
+	case "/phase":
+		return simple(phaseTargets, "RE phase")
+	case "/goal":
+		return simple(goalActions, "goal action")
 	case "/tasks":
 		return simple(taskModes, "task display")
 	case "/think":
@@ -302,18 +362,10 @@ func argumentPool(command string, argIndex int, providerNames, skillNames []stri
 		return simple(skillNames, "built-in skill")
 	case "/retool":
 		return simple(retoolNames, "reverse toolkit")
-	case "/effort":
-		if argIndex == 1 {
-			return simple(providerNames, "provider")
-		}
-		if argIndex == 2 {
-			var efforts []string
-			for _, effort := range types.ReasoningEfforts {
-				efforts = append(efforts, string(effort))
-			}
-			return simple(efforts, "reasoning effort")
-		}
-		return nil
+	case "/decode":
+		return simple(decodeModes, "decode mode")
+	case "/remote":
+		return simple(remoteActions, "remote action")
 	}
 	if providerArgCommands[command] {
 		return simple(providerNames, "provider")

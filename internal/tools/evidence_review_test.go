@@ -8,9 +8,16 @@ import (
 	"github.com/overkazaf/re-agent/internal/types"
 )
 
-type stubArbitrator struct{ findings []types.Finding }
+type stubArbitrator struct {
+	findings []types.Finding
+	audits   []string
+}
 
 func (s *stubArbitrator) Review() []types.Finding { return s.findings }
+func (s *stubArbitrator) RecordAudit(summary string) types.EvidenceRecord {
+	s.audits = append(s.audits, summary)
+	return types.EvidenceRecord{ID: "ev_099", Kind: "audit_finding", Excerpt: summary}
+}
 
 func reviewTestContext(t *testing.T, arbiter types.Arbitrator) types.ToolContext {
 	t.Helper()
@@ -56,6 +63,18 @@ func TestEvidenceReviewToolReportsFindings(t *testing.T) {
 	}
 	if details, ok := result.Details.(map[string]any); !ok || details["total"] != 2 || details["applied"] != 1 {
 		t.Fatalf("details should carry counts: %#v", result.Details)
+	}
+}
+
+func TestEvidenceReviewToolRecordsAuditSummary(t *testing.T) {
+	tool := Find(CreateReverseTools(), "evidence_review")
+	stub := &stubArbitrator{}
+	result, err := tool.Execute(map[string]any{"summary": "all static claims confirmed by replay"}, reviewTestContext(t, stub))
+	if err != nil || result.IsError {
+		t.Fatalf("unexpected error: %+v / %v", result, err)
+	}
+	if len(stub.audits) != 1 || !strings.Contains(result.Text(), "ev_099") {
+		t.Fatalf("expected audit summary to be recorded, got: %s", result.Text())
 	}
 }
 

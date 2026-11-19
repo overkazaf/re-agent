@@ -277,66 +277,41 @@ func WrapReverseWithPhase(prompt string, state *REState) string {
 	if state == nil {
 		return wrapReverse(prompt, Reverse)
 	}
+	snap := state.Snapshot()
 	return strings.Join([]string{
 		"0xAF-Re workflow mode: reverse",
-		fmt.Sprintf("Sample type: %s | Current phase: %s", state.SampleType, state.Phase),
+		fmt.Sprintf("Sample type: %s | Current phase: %s [%d/%d]", snap.SampleType, snap.Phase, PhaseIndex(snap.Phase)+1, len(Phases)),
 		"",
-		phasePromptBlock(state),
-		"",
-		reStateBlock(state),
+		phasePromptBlock(snap.Phase),
 		"",
 		"Original user task:",
 		strings.TrimSpace(prompt),
 	}, "\n")
 }
 
-func phasePromptBlock(state *REState) string {
-	switch state.Phase {
+func phasePromptBlock(phase Phase) string {
+	switch phase {
 	case PhaseTriage:
-		return "PHASE: TRIAGE\nGoal: identify file type, architecture, packer, protections, and basic metadata.\nDo: file_info, strings, entropy_scan, binary_mitigations. Report a quick summary.\nThen: call update_re_state to advance to 'static' when triage is complete."
+		return "PHASE: TRIAGE\nGoal: identify file type, architecture, packer, protections, and basic metadata.\nDo: ctf_triage, binary_inspect, binary_mitigations, anti_analysis, entropy_scan. Report a concise summary.\nThen: call update_re_state(action=\"advance\") to enter 'static' when triage is complete."
 	case PhaseStatic:
-		return "PHASE: STATIC ANALYSIS\nGoal: disassemble/decompile key routines, map imports/exports, identify algorithms.\nDo: focused disassembly, decompilation, symbol analysis, string cross-references.\nThen: record hypotheses with update_re_state, advance to 'dynamic' when ready."
+		return "PHASE: STATIC ANALYSIS\nGoal: inspect sections/initializers/imports/exports, disassemble/decompile key routines, and map candidate algorithms.\nDo: binary_inspect, extract_symbols, reverse_toolkit (radare2/ghidra/jadx), find_bytes.\nThen: record falsifiable claims via hypothesis_create (citing ev_NNN), then call update_re_state(action=\"advance\") to enter 'dynamic'."
 	case PhaseDynamic:
-		return "PHASE: DYNAMIC ANALYSIS\nGoal: observe runtime behavior, hook functions, capture I/O, verify static findings.\nDo: run in lab, set breakpoints, attach hooks (Frida/GDB), capture traffic.\nThen: record observations as evidence, advance to 'evidence'."
+		return "PHASE: DYNAMIC ANALYSIS\nGoal: observe runtime behavior, hook/emulate functions, capture I/O, and test static claims.\nDo: run in lab, attach hooks/debuggers or Unicorn/unidbg harnesses, and challenge/support claims with hypothesis_update.\nThen: call update_re_state(action=\"advance\") to enter 'evidence'."
 	case PhaseEvidence:
-		return "PHASE: EVIDENCE PRODUCTION\nGoal: compile and verify all collected evidence into a structured evidence table.\nDo: organize findings by offset/address, verify each with a minimal command, rate confidence.\nThen: advance to 'interface' when the evidence table is solid."
+		return "PHASE: EVIDENCE PRODUCTION\nGoal: consolidate proven offsets, addresses, constants, and input/output pairs.\nDo: verify critical observations with minimal commands and ensure every hypothesis cites supporting ev_NNN IDs.\nThen: call update_re_state(action=\"advance\") to enter 'interface'."
 	case PhaseInterface:
-		return "PHASE: INTERFACE RECOVERY\nGoal: reconstruct the target's interface — data models, protocol, API surface.\nDo: build client stubs, request builders, data models from evidence.\nThen: advance to 'hypothesis' to validate and revise."
+		return "PHASE: INTERFACE RECOVERY\nGoal: reconstruct the target's algorithm, protocol, or checker into a standalone local solver/reproducer.\nDo: write clean solver/stub/test artifacts from verified evidence.\nThen: call update_re_state(action=\"advance\") to enter 'hypothesis'."
 	case PhaseHypothesis:
-		return "PHASE: HYPOTHESIS REVISION\nGoal: review all hypotheses against evidence, revise or confirm each.\nDo: for each hypothesis, check supporting/contradicting evidence, update confidence.\nThen: advance to 'writeup' when the analysis is converged."
+		return "PHASE: HYPOTHESIS REVISION\nGoal: reconcile all claims in the hypothesis stack against static and dynamic evidence.\nDo: call hypothesis_list and hypothesis_update to support, challenge, revise, or reject claims.\nThen: call update_re_state(action=\"advance\") to enter 'verify' once claims converge."
 	case PhaseVerification:
-		return "PHASE: VERIFICATION\nGoal: prove that candidate artifacts reproduce the recovered behavior.\nDo: build the artifact, replay fixed inputs, compare exact expected outputs, and record failures.\nThen: call verify_artifact; advance only after at least one verification result passes."
+		return "PHASE: VERIFICATION\nGoal: prove that candidate artifacts reproduce the recovered behavior on fixed inputs.\nDo: call verify_artifact to build and replay test cases against expected outputs.\nThen: call update_re_state(action=\"advance\") to enter 'audit' after verification passes."
 	case PhaseAudit:
-		return "PHASE: AUDIT\nGoal: check conclusions against the evidence ledger, verification results, action scope, and remaining unknowns.\nDo: identify unsupported claims, contradictions, missing tests, and overreach. Do not invent new evidence.\nThen: advance only when every delivered conclusion is either verified or explicitly degraded."
+		return "PHASE: AUDIT\nGoal: audit conclusions against the evidence ledger, verification stats, capability scope, and remaining unknowns.\nDo: call evidence_review with a concise audit summary (or ask the operator to run /audit) to file an audit_finding.\nThen: call update_re_state(action=\"advance\") to enter 'writeup' when every conclusion is verified or explicitly bounded."
 	case PhaseWriteup:
-		return "PHASE: WRITEUP\nGoal: produce the final report — background, method, findings, PoC, verification, evidence IDs, gaps, next steps.\nDo: cite evidence IDs for every material claim, separate verified from unverified statements, and include replay commands and environment."
+		return "PHASE: WRITEUP\nGoal: produce the final report — background, method, findings, PoC, verification, evidence IDs, gaps, next steps.\nDo: cite ev_NNN and H-NNN IDs for every material claim, separate verified facts from open unknowns, and include reproducible commands."
 	default:
 		return ""
 	}
-}
-
-func reStateBlock(state *REState) string {
-	var parts []string
-	if len(state.Hypotheses) > 0 {
-		parts = append(parts, "Active hypotheses:")
-		for i, h := range state.Hypotheses {
-			line := fmt.Sprintf("  [H%d] %s", i, h.Text)
-			if h.Revised != "" {
-				line += fmt.Sprintf(" → REVISED: %s", h.Revised)
-			}
-			parts = append(parts, line)
-		}
-	}
-	if len(state.Evidence) > 0 {
-		parts = append(parts, "Collected evidence:")
-		for i, e := range state.Evidence {
-			parts = append(parts, fmt.Sprintf("  [E%d] %s", i, e.Text))
-		}
-	}
-	if len(parts) == 0 {
-		return "No hypotheses or evidence recorded yet."
-	}
-	return strings.Join(parts, "\n")
 }
 
 func wrapEngineering(prompt string, requested Mode) string {

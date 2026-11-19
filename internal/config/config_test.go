@@ -15,6 +15,8 @@ func TestLoadMergesOverDefaults(t *testing.T) {
 	body := `{
 	  "plannerProvider": "deepseek",
 	  "researcherProvider": "deepseek",
+	  "compactionStrategy": "snapcompact",
+	  "auditProvider": "local",
 	  "providers": {
 	    "deepseek": { "model": "deepseek-reasoner" },
 	    "local": { "type": "openai-chat", "model": "llama", "baseUrl": "http://localhost:1234/v1" }
@@ -35,6 +37,12 @@ func TestLoadMergesOverDefaults(t *testing.T) {
 	}
 	if config.ResearcherProvider != "deepseek" {
 		t.Fatalf("researcher provider not merged: %s", config.ResearcherProvider)
+	}
+	if config.CompactionStrategy != "snapcompact" {
+		t.Fatalf("compactionStrategy not merged: %s", config.CompactionStrategy)
+	}
+	if config.AuditProvider != "local" {
+		t.Fatalf("auditProvider not merged: %s", config.AuditProvider)
 	}
 	// A partial provider block overlays the default field by field.
 	deepseek := config.Providers["deepseek"]

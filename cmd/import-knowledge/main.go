@@ -17,16 +17,15 @@ import (
 )
 
 func defaultRoots() []string {
-	home, _ := os.UserHomeDir()
+	raw := strings.TrimSpace(os.Getenv("OXAF_KNOWLEDGE_ROOTS"))
+	if raw == "" {
+		return nil
+	}
 	var out []string
-	for _, base := range []string{"reverse-engineering", "reverse_engineering"} {
-		root := filepath.Join(home, "frida", base)
-		out = append(out,
-			filepath.Join(root, "android_reversing", "docs"),
-			filepath.Join(root, "web_reversing", "docs"),
-			filepath.Join(root, "README.md"),
-			filepath.Join(root, "QUICK_START.md"),
-		)
+	for _, part := range filepath.SplitList(raw) {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			out = append(out, trimmed)
+		}
 	}
 	return out
 }
@@ -48,31 +47,43 @@ func run(argv []string) error {
 	if len(roots) == 0 {
 		roots = defaultRoots()
 	}
+	if len(roots) == 0 {
+		return fmt.Errorf("usage: import-knowledge <dir-or-md>... (or set OXAF_KNOWLEDGE_ROOTS)")
+	}
+	var cleanRoots []string
 	var files []string
 	for _, root := range roots {
-		info, err := os.Stat(root)
+		absRoot, err := filepath.Abs(root)
+		if err != nil {
+			absRoot = filepath.Clean(root)
+		}
+		info, err := os.Stat(absRoot)
 		if err != nil {
 			continue
 		}
+		cleanRoots = append(cleanRoots, absRoot)
 		if info.IsDir() {
-			walk(root, &files)
+			walk(absRoot, &files)
 			continue
 		}
-		if isMarkdown(root) {
-			files = append(files, root)
+		if isMarkdown(absRoot) {
+			files = append(files, absRoot)
 		}
+	}
+	if len(cleanRoots) == 0 {
+		return fmt.Errorf("none of the provided paths exist: %s", strings.Join(roots, ", "))
 	}
 	sort.Strings(files)
 
 	var entries []knowledge.Entry
 	for _, file := range files {
-		if entry, ok := entryFor(file); ok {
+		if entry, ok := entryFor(file, cleanRoots); ok {
 			entries = append(entries, entry)
 		}
 	}
 	index := knowledge.Index{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
-		SourceRoots: roots,
+		SourceRoots: cleanRoots,
 		Entries:     entries,
 	}
 	out := assets.KnowledgeIndexPath()
@@ -110,7 +121,7 @@ func walk(dir string, out *[]string) {
 	}
 }
 
-func entryFor(file string) (knowledge.Entry, bool) {
+func entryFor(file string, roots []string) (knowledge.Entry, bool) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return knowledge.Entry{}, false
@@ -120,11 +131,7 @@ func entryFor(file string) (knowledge.Entry, bool) {
 	if title == "" {
 		title = strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	}
-	relative := relativeKnowledgePath(file)
-	source := "frida/reverse_engineering"
-	if strings.Contains(file, "/frida/reverse-engineering/") {
-		source = "frida/reverse-engineering"
-	}
+	relative, source := relativeKnowledgePath(file, roots)
 	preview := stripMarkdown(text)
 	if len(preview) > 2400 {
 		preview = preview[:2400]
@@ -135,7 +142,7 @@ func entryFor(file string) (knowledge.Entry, bool) {
 		Path:    file,
 		Source:  source,
 		Kind:    "markdown",
-		Tags:    tagsFor(file, text),
+		Tags:    tagsFor(relative, text),
 		Summary: summarize(text),
 		Preview: preview,
 	}, true
@@ -202,7 +209,7 @@ var keywords = []string{
 	"drm", "flutter", "unity", "native", "proxy", "captcha", "fingerprint",
 }
 
-func tagsFor(file, text string) []string {
+func tagsFor(relativePath, text string) []string {
 	bag := map[string]bool{}
 	var order []string
 	add := func(tag string) {
@@ -212,7 +219,7 @@ func tagsFor(file, text string) []string {
 		bag[tag] = true
 		order = append(order, tag)
 	}
-	for _, part := range splitRE.Split(strings.ToLower(relativeKnowledgePath(file)), -1) {
+	for _, part := range splitRE.Split(strings.ToLower(relativePath), -1) {
 		if len(part) > 2 {
 			add(part)
 		}
@@ -229,13 +236,18 @@ func tagsFor(file, text string) []string {
 	return order
 }
 
-func relativeKnowledgePath(file string) string {
-	for _, marker := range []string{"/frida/reverse-engineering/", "/frida/reverse_engineering/"} {
-		if index := strings.Index(file, marker); index >= 0 {
-			return file[index+len(marker):]
+func relativeKnowledgePath(file string, roots []string) (string, string) {
+	for _, root := range roots {
+		rel, err := filepath.Rel(root, file)
+		if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			source := filepath.Base(root)
+			if rel == "." {
+				return filepath.Base(file), source
+			}
+			return filepath.Join(source, rel), source
 		}
 	}
-	return file
+	return filepath.Base(file), filepath.Base(filepath.Dir(file))
 }
 
 func slug(value string) string {

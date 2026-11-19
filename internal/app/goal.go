@@ -139,6 +139,22 @@ func acceptGoal(state *State) error {
 		return fmt.Errorf("no draft to accept — start one with /goal <objective>")
 	}
 	declaration := state.GoalDraft
+	if strings.TrimSpace(declaration.Target.File) != "" && state.ToolContext != nil && state.ToolContext.Workspace != "" {
+		path, err := util.ResolveInside(state.ToolContext.Workspace, declaration.Target.File)
+		if err != nil {
+			return fmt.Errorf("cannot accept declaration: target %q is outside the workspace", declaration.Target.File)
+		}
+		if declaration.Target.SHA256 == "" {
+			declaration.Target.SHA256 = tools.FileSHA256(path)
+			if format, arch, sniffErr := goal.Sniff(path); sniffErr == nil {
+				declaration.Target.Format = format
+				declaration.Target.Arch = arch
+			}
+		}
+		if declaration.Target.SHA256 == "" {
+			return fmt.Errorf("cannot accept declaration: target %q does not exist inside the workspace", declaration.Target.File)
+		}
+	}
 	declaration.Accepted = true
 	declaration.CreatedAt = time.Now().UnixMilli()
 	state.GoalDraft = nil

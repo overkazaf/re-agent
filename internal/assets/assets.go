@@ -5,17 +5,16 @@
 package assets
 
 import (
-	"embed"
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
-)
 
-//go:embed embedded/prompts embedded/skills
-var embedded embed.FS
+	reagent "github.com/overkazaf/re-agent"
+)
 
 const rootEnv = "OXAF_RE_HOME"
 
@@ -107,7 +106,7 @@ func Prompt(name string) PromptDoc {
 			return PromptDoc{Name: name, Text: string(data), Path: candidate.path, Source: candidate.source}
 		}
 	}
-	if data, err := embedded.ReadFile(embeddedPromptPath(name)); err == nil {
+	if data, err := reagent.EmbeddedFS.ReadFile(embeddedPromptPath(name)); err == nil {
 		return PromptDoc{Name: name, Text: string(data), Path: "embedded:" + embeddedPromptPath(name), Source: "embedded"}
 	}
 	return PromptDoc{Name: name, Text: fallbackPrompt(name), Source: "fallback"}
@@ -115,7 +114,7 @@ func Prompt(name string) PromptDoc {
 
 func DefaultPrompt(name string) PromptDoc {
 	name = normalizePromptName(name)
-	if data, err := embedded.ReadFile(embeddedPromptPath(name)); err == nil {
+	if data, err := reagent.EmbeddedFS.ReadFile(embeddedPromptPath(name)); err == nil {
 		return PromptDoc{Name: name, Text: string(data), Path: "embedded:" + embeddedPromptPath(name), Source: "embedded"}
 	}
 	return PromptDoc{Name: name, Text: fallbackPrompt(name), Source: "fallback"}
@@ -149,21 +148,21 @@ func EnsureEditablePrompt(name string) (string, error) {
 	if name == "" {
 		return "", fmt.Errorf("empty prompt name")
 	}
-	path := EditablePromptPath(name)
-	if _, err := os.Stat(path); err == nil {
-		return path, nil
+	target := EditablePromptPath(name)
+	if _, err := os.Stat(target); err == nil {
+		return target, nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 		return "", err
 	}
 	seed := Prompt(name).Text
 	if strings.TrimSpace(seed) == "" {
 		seed = fallbackPrompt(name)
 	}
-	if err := os.WriteFile(path, []byte(ensureTrailingNewline(seed)), 0o600); err != nil {
+	if err := os.WriteFile(target, []byte(ensureTrailingNewline(seed)), 0o600); err != nil {
 		return "", err
 	}
-	return path, nil
+	return target, nil
 }
 
 // SkillsDir is the on-disk skills directory, or "" when only the embedded
@@ -181,7 +180,7 @@ func SkillsDir() string {
 // EmbeddedSkills returns name -> SKILL.md body for the built-in skills.
 func EmbeddedSkills() map[string]string {
 	out := map[string]string{}
-	entries, err := fs.ReadDir(embedded, "embedded/skills")
+	entries, err := fs.ReadDir(reagent.EmbeddedFS, "skills")
 	if err != nil {
 		return out
 	}
@@ -189,7 +188,7 @@ func EmbeddedSkills() map[string]string {
 		if !entry.IsDir() {
 			continue
 		}
-		data, err := embedded.ReadFile("embedded/skills/" + entry.Name() + "/SKILL.md")
+		data, err := reagent.EmbeddedFS.ReadFile("skills/" + entry.Name() + "/SKILL.md")
 		if err != nil {
 			continue
 		}
@@ -198,15 +197,84 @@ func EmbeddedSkills() map[string]string {
 	return out
 }
 
-// KnowledgeIndexPath is where the imported reverse-engineering corpus lives.
-func KnowledgeIndexPath() string {
-	root := Root()
-	if root == "" {
-		if cwd, err := os.Getwd(); err == nil {
-			root = cwd
+// ListSkillFiles returns companion files (excluding SKILL.md) inside a skill
+// directory, merging embedded and on-disk files so standalone binaries work
+// identically to a repository checkout.
+func ListSkillFiles(skillDirName string) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(rel string) {
+		rel = strings.TrimPrefix(filepath.ToSlash(rel), "/")
+		if rel == "" || rel == "SKILL.md" || seen[rel] {
+			return
+		}
+		seen[rel] = true
+		out = append(out, rel)
+	}
+	embRoot := path.Join("skills", skillDirName)
+	_ = fs.WalkDir(reagent.EmbeddedFS, embRoot, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		add(strings.TrimPrefix(p, embRoot+"/"))
+		return nil
+	})
+	if skillsRoot := SkillsDir(); skillsRoot != "" {
+		diskRoot := filepath.Join(skillsRoot, skillDirName)
+		_ = filepath.WalkDir(diskRoot, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			if rel, relErr := filepath.Rel(diskRoot, p); relErr == nil {
+				add(rel)
+			}
+			return nil
+		})
+	}
+	return out
+}
+
+// ReadSkillFile reads a companion file (such as scripts/arm64_emulator.py)
+// inside a skill directory, checking disk overrides before embedded assets.
+func ReadSkillFile(skillDirName, relFile string) (string, string, error) {
+	cleaned := path.Clean(strings.TrimLeft(filepath.ToSlash(strings.TrimSpace(relFile)), "/"))
+	if cleaned == "." || cleaned == "" || strings.HasPrefix(cleaned, "..") {
+		return "", "", fmt.Errorf("invalid skill file path: %s", relFile)
+	}
+	if skillsRoot := SkillsDir(); skillsRoot != "" {
+		diskBase := filepath.Join(skillsRoot, skillDirName)
+		candidate := filepath.Join(diskBase, filepath.FromSlash(cleaned))
+		if rel, err := filepath.Rel(diskBase, candidate); err == nil && !strings.HasPrefix(rel, "..") {
+			if data, err := os.ReadFile(candidate); err == nil {
+				return string(data), candidate, nil
+			}
 		}
 	}
-	return filepath.Join(root, "knowledge", "reverse-index.json")
+	embPath := path.Join("skills", skillDirName, cleaned)
+	data, err := reagent.EmbeddedFS.ReadFile(embPath)
+	if err != nil {
+		return "", "", fmt.Errorf("skill file %q not found in %s", cleaned, skillDirName)
+	}
+	return string(data), "embedded:" + embPath, nil
+}
+
+// KnowledgeIndexPath is where the imported reverse-engineering corpus lives.
+// Inside a project checkout (or $OXAF_RE_HOME), knowledge/reverse-index.json
+// wins if present or when writing inside the repo; standalone binaries use
+// ~/.0xaf-re-agent/knowledge/reverse-index.json instead of polluting random cwds.
+func KnowledgeIndexPath() string {
+	if root := Root(); root != "" {
+		repoIndex := filepath.Join(root, "knowledge", "reverse-index.json")
+		if _, err := os.Stat(repoIndex); err == nil {
+			return repoIndex
+		}
+		userIndex := filepath.Join(userConfigDir(), "knowledge", "reverse-index.json")
+		if _, err := os.Stat(userIndex); err == nil {
+			return userIndex
+		}
+		return repoIndex
+	}
+	return filepath.Join(userConfigDir(), "knowledge", "reverse-index.json")
 }
 
 type promptCandidate struct {
@@ -233,7 +301,7 @@ func promptRelativePath(name string) string {
 }
 
 func embeddedPromptPath(name string) string {
-	return "embedded/prompts/" + promptRelativePath(name)
+	return "prompts/" + promptRelativePath(name)
 }
 
 func normalizePromptName(name string) string {

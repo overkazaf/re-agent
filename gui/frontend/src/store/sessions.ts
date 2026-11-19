@@ -231,14 +231,16 @@ function pushToast(tone: StoreToast['tone'], text: string): void {
 }
 
 function freshRuntime(info: SessionInfo): SessionRuntime {
+  const history = Array.isArray(info.history) ? info.history.slice(-LOOP_LIMIT) : []
+  const now = Date.now()
   return {
     info,
     lifecycle: info.lifecycle,
     latestTick: null,
     thinkLines: [],
-    loopBuffer: [],
-    loopTs: [],
-    firstLoopTs: null,
+    loopBuffer: history,
+    loopTs: history.map(() => now),
+    firstLoopTs: history.length > 0 ? now : null,
     pendingApproval: null,
     notices: [],
   }
@@ -275,6 +277,7 @@ export const actions = {
       putRuntime(info)
       activeId = info.id
       commit()
+      void actions.getState(info.id)
       pushToast('ok', `session ${info.id} started · ${info.workflow || 'no workflow'}`)
       return { ok: true, value: info }
     } catch (err) {
@@ -291,6 +294,7 @@ export const actions = {
       putRuntime(info)
       activeId = info.id
       commit()
+      void actions.getState(info.id)
       pushToast('ok', `resumed ${info.id}`)
       return { ok: true, value: info }
     } catch (err) {

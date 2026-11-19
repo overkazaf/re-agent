@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -16,6 +18,9 @@ import (
 // adjusts it, and clearing the task expires every capability.
 func TestGoalLifecycleDrivesTheCapabilitySandbox(t *testing.T) {
 	state := testStateWithSandbox(t)
+	if err := os.WriteFile(filepath.Join(state.ToolContext.Workspace, "chall.elf"), []byte("\x7fELF"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	state.GoalDraft = &goal.Declaration{
 		RawGoal: "recover the license check",
@@ -88,6 +93,34 @@ func TestSandboxReactivatesFromAResumedDeclaration(t *testing.T) {
 	}
 	if state.Sandbox.Active() != true {
 		t.Fatal("resumed declaration should reactivate the sandbox")
+	}
+}
+
+func TestAcceptGoalRejectsMissingOrOutsideTarget(t *testing.T) {
+	state := testStateWithSandbox(t)
+
+	state.GoalDraft = &goal.Declaration{
+		RawGoal: "inspect missing target",
+		Target:  goal.Target{File: "missing.elf"},
+		Objective: goal.Objective{
+			Primary:    "inspect_missing",
+			Acceptance: []goal.Criterion{{Kind: goal.KindBuildPass}},
+		},
+	}
+	if err := acceptGoal(state); err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("expected missing target rejection, got: %v", err)
+	}
+
+	state.GoalDraft = &goal.Declaration{
+		RawGoal: "inspect outside target",
+		Target:  goal.Target{File: "../escape.elf"},
+		Objective: goal.Objective{
+			Primary:    "inspect_outside",
+			Acceptance: []goal.Criterion{{Kind: goal.KindBuildPass}},
+		},
+	}
+	if err := acceptGoal(state); err == nil || !strings.Contains(err.Error(), "outside the workspace") {
+		t.Fatalf("expected outside workspace rejection, got: %v", err)
 	}
 }
 

@@ -30,8 +30,8 @@ Use this for authorized mobile app, WebView, browser, API, or CTF traffic analys
 
 ## Handoff Rules
 
-- Browser JavaScript or WebView assets: read `web-crypto-analyzer` or `web-wasm-crypto`.
-- API signature or token logic: read `api-signature-crack`.
+- Browser JavaScript or WebView assets: read `web-crypto-analyzer` or `wasm-reverser`.
+- API signature or token logic: read `analyze-sign`.
 - APK classes or Java crypto: read `android-apk-frida` and `jadx`.
 - Native signing function: read `radare2-reverse`, `unidbg`, or `unicorn-emulator`.
 - If trusted lab interception is blocked, prefer debug builds or authorized instrumentation and keep the proxy capture scoped.

@@ -1,10 +1,11 @@
 BIN := bin
 GOFLAGS ?=
-LDFLAGS := -s -w
+GIT_COMMIT := $(shell git rev-parse HEAD 2>/dev/null)
+LDFLAGS := -s -w $(if $(GIT_COMMIT),-X github.com/overkazaf/re-agent/internal/buildinfo.Commit=$(GIT_COMMIT))
 
 .PHONY: all build install test vet fmt clean cross gui gui-dev
 
-WAILS ?= $(HOME)/go/bin/wails
+WAILS ?= $(shell command -v wails 2>/dev/null || echo $(HOME)/go/bin/wails)
 
 all: build
 
@@ -34,7 +35,7 @@ cross:
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(BIN)/0xaf-darwin-arm64 ./cmd/0xaf
 
 clean:
-	rm -rf $(BIN)
+	rm -rf $(BIN) gui/build/bin gui/frontend/dist
 
 # Desktop GUI (Wails v2). CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 gui:

@@ -257,10 +257,28 @@ func runRadare2Action(action string, args map[string]any, tc types.ToolContext) 
 		return runRECommand("reverse_toolkit", []string{"rabin2", "-s", target}, "rabin2 -s "+rel, args, tc, "")
 	case "imports":
 		return runRECommand("reverse_toolkit", []string{"rabin2", "-i", target}, "rabin2 -i "+rel, args, tc, "")
+	case "exports":
+		return runRECommand("reverse_toolkit", []string{"rabin2", "-E", target}, "rabin2 -E "+rel, args, tc, "")
+	case "relocs":
+		return runRECommand("reverse_toolkit", []string{"rabin2", "-R", target}, "rabin2 -R "+rel, args, tc, "")
 	case "strings":
 		return runRECommand("reverse_toolkit", []string{"rabin2", "-zz", target}, "rabin2 -zz "+rel, args, tc, "")
 	case "functions":
-		return runRECommand("reverse_toolkit", []string{"r2", "-q", "-2", "-A", "-c", "afl", "-c", "q", target}, "r2 -A afl "+rel, args, tc, "")
+		return runRECommand("reverse_toolkit", []string{"r2", "-q", "-2", "-c", "aa; afl", "-c", "q", target}, "r2 aa afl "+rel, args, tc, "")
+	case "xrefs":
+		address := strings.TrimSpace(util.AsString(args["address"], util.AsString(args["symbol"], "main")))
+		if !safeRetoolToken(address) {
+			return errorResult("radare2 xrefs address must be a simple address or symbol"), nil
+		}
+		cmd := fmt.Sprintf("aa; axt @ %s", address)
+		return runRECommand("reverse_toolkit", []string{"r2", "-q", "-2", "-c", cmd, "-c", "q", target}, "r2 "+cmd+" "+rel, args, tc, "")
+	case "decompile":
+		address := strings.TrimSpace(util.AsString(args["address"], util.AsString(args["symbol"], "main")))
+		if !safeRetoolToken(address) {
+			return errorResult("radare2 decompile address must be a simple address or symbol"), nil
+		}
+		cmd := fmt.Sprintf("aa; pdc @ %s", address)
+		return runRECommand("reverse_toolkit", []string{"r2", "-q", "-2", "-c", cmd, "-c", "q", target}, "r2 "+cmd+" "+rel, args, tc, "")
 	case "disasm":
 		address := util.AsString(args["address"], "entry0")
 		if strings.TrimSpace(address) == "" {
@@ -270,8 +288,8 @@ func runRadare2Action(action string, args map[string]any, tc types.ToolContext) 
 			return errorResult("radare2 disasm address must be a simple address or symbol"), nil
 		}
 		lines := clampInt(util.AsInt(args["lines"], 80), 1, 2000)
-		cmd := fmt.Sprintf("pd %d @ %s", lines, address)
-		return runRECommand("reverse_toolkit", []string{"r2", "-q", "-2", "-A", "-c", cmd, "-c", "q", target}, "r2 -A "+cmd+" "+rel, args, tc, "")
+		cmd := fmt.Sprintf("aa; pd %d @ %s", lines, address)
+		return runRECommand("reverse_toolkit", []string{"r2", "-q", "-2", "-c", cmd, "-c", "q", target}, "r2 "+cmd+" "+rel, args, tc, "")
 	}
 	return errorResult("unsupported radare2 action: " + action), nil
 }
@@ -387,16 +405,81 @@ func runGhidraAction(action string, args map[string]any, tc types.ToolContext) (
 	if err != nil {
 		return types.ToolResult{}, err
 	}
-	if action != "analyze" && action != "import" {
+	if action != "analyze" && action != "import" && action != "decompile" {
 		return errorResult("unsupported ghidra action: " + action), nil
 	}
 	outDir, err := retoolOutputDir(tc, "ghidra-"+filepath.Base(target))
 	if err != nil {
 		return types.ToolResult{}, err
 	}
+	scriptPath := filepath.Join(outDir, "ExportSummary.java")
+	reportPath := filepath.Join(outDir, "decompiled_summary.txt")
+	focus := strings.TrimSpace(util.AsString(args["symbol"], util.AsString(args["address"], "")))
+	_ = os.WriteFile(scriptPath, []byte(ghidraExportJavaScript()), 0o644)
+
 	timeoutSec := maxInt(1, timeoutForRE(args, tc)/1000)
-	command := []string{"analyzeHeadless", outDir, "project", "-import", target, "-overwrite", "-analysisTimeoutPerFile", strconv.Itoa(timeoutSec)}
-	return runRECommand("reverse_toolkit", command, "analyzeHeadless "+outDir+" project -import "+rel, args, tc, outDir)
+	command := []string{
+		"analyzeHeadless", outDir, "project", "-import", target, "-overwrite",
+		"-analysisTimeoutPerFile", strconv.Itoa(timeoutSec),
+		"-scriptPath", outDir, "-postScript", "ExportSummary.java", reportPath, focus,
+	}
+	res, err := runRECommand("reverse_toolkit", command, "analyzeHeadless "+outDir+" project -import "+rel, args, tc, outDir)
+	if err == nil && !res.IsError {
+		if exported, rErr := os.ReadFile(reportPath); rErr == nil && len(exported) > 0 {
+			spilled := SpillIfLarge(string(exported)+"\n\n"+res.Text(), SpillOptions{Context: tc, Label: "ghidra-" + filepath.Base(target)})
+			return textResult(spilled.Text, map[string]any{"outputDir": outDir, "report": reportPath, "artifact": spilled.Artifact}), nil
+		}
+	}
+	return res, err
+}
+
+func ghidraExportJavaScript() string {
+	return `import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileResults;
+import ghidra.app.script.GhidraScript;
+import ghidra.program.model.listing.Function;
+import ghidra.program.model.listing.FunctionIterator;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+
+public class ExportSummary extends GhidraScript {
+    @Override
+    public void run() throws Exception {
+        String[] sargs = getScriptArgs();
+        if (sargs.length < 1) return;
+        String focus = sargs.length > 1 ? sargs[1].trim() : "";
+        DecompInterface ifc = new DecompInterface();
+        ifc.openProgram(currentProgram);
+        try (PrintWriter out = new PrintWriter(new FileWriter(sargs[0]))) {
+            out.println("GHIDRA HEADLESS SUMMARY: " + currentProgram.getName());
+            FunctionIterator iter = currentProgram.getFunctionManager().getFunctions(true);
+            int count = 0;
+            int decompiled = 0;
+            while (iter.hasNext() && !monitor.isCancelled()) {
+                Function fn = iter.next();
+                if (fn.isThunk() || fn.isExternal()) continue;
+                count++;
+                if (count <= 120) {
+                    out.printf("  0x%s  %s (%d bytes)%n", fn.getEntryPoint(), fn.getName(), fn.getBody().getNumAddresses());
+                }
+                boolean match = !focus.isEmpty() && (fn.getName().equalsIgnoreCase(focus) || ("0x" + fn.getEntryPoint().toString()).equalsIgnoreCase(focus));
+                boolean defaultPick = focus.isEmpty() && (fn.getName().equals("main") || fn.getName().equals("JNI_OnLoad") || fn.getName().startsWith("Java_") || decompiled < 3);
+                if (match || defaultPick) {
+                    DecompileResults res = ifc.decompileFunction(fn, 20, monitor);
+                    if (res != null && res.decompileCompleted() && res.getDecompiledFunction() != null) {
+                        out.println("\n--- DECOMPILED: " + fn.getName() + " @ 0x" + fn.getEntryPoint() + " ---");
+                        out.println(res.getDecompiledFunction().getC());
+                        decompiled++;
+                    }
+                }
+            }
+            out.println("\ntotal non-thunk functions: " + count);
+        } finally {
+            ifc.dispose();
+        }
+    }
+}
+`
 }
 
 func runGDBAction(action string, args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
@@ -432,7 +515,12 @@ func runObjdumpAction(action string, args map[string]any, tc types.ToolContext) 
 	case "info", "headers":
 		return runRECommand("reverse_toolkit", []string{"objdump", "-x", target}, "objdump -x "+rel, args, tc, "")
 	case "disasm":
-		return runRECommand("reverse_toolkit", []string{"objdump", "-d", "-Mintel", target}, "objdump -d -Mintel "+rel, args, tc, "")
+		argv := []string{"objdump", "-d"}
+		if isX86Binary(target) {
+			argv = append(argv, "-Mintel")
+		}
+		argv = append(argv, target)
+		return runRECommand("reverse_toolkit", argv, strings.Join(argv[:len(argv)-1], " ")+" "+rel, args, tc, "")
 	case "symbols":
 		return runRECommand("reverse_toolkit", []string{"objdump", "-t", target}, "objdump -t "+rel, args, tc, "")
 	}
@@ -835,6 +923,11 @@ func runRECommand(toolName string, command []string, label string, args map[stri
 	if label == "" {
 		label = commandDisplay(command)
 	}
+	if tc.Sandbox != nil {
+		if err := tc.Sandbox.Authorize(toolName, label); err != nil {
+			return types.ToolResult{}, err
+		}
+	}
 	if err := security.RequestApproval(types.ApprovalRequest{
 		Tool: toolName, Tier: types.TierExec, Summary: label,
 	}, tc); err != nil {
@@ -903,6 +996,18 @@ var retoolTokenRE = regexp.MustCompile(`^[A-Za-z0-9_.$:+\-]+$`)
 
 func safeRetoolToken(value string) bool {
 	return retoolTokenRE.MatchString(strings.TrimSpace(value))
+}
+
+func isX86Binary(target string) bool {
+	header, err := readPrefix(target, 64)
+	if err != nil || len(header) < 20 {
+		return false
+	}
+	if string(header[:4]) == "\x7fELF" {
+		m := uint16(header[18]) | uint16(header[19])<<8
+		return m == 3 || m == 62
+	}
+	return false
 }
 
 func commandDisplay(command []string) string {
@@ -1034,7 +1139,9 @@ STACK_SIZE = 0x100000
 
 code = open(CODE_PATH, "rb").read()
 mu = Uc(%s, %s)
-mu.mem_map(BASE & ~0xfff, ((len(code) + 0xfff) & ~0xfff) or 0x1000)
+page_base = BASE & ~0xfff
+map_size = (((BASE - page_base) + len(code) + 0xfff) & ~0xfff) or 0x1000
+mu.mem_map(page_base, map_size)
 mu.mem_write(BASE, code)
 mu.mem_map(STACK, STACK_SIZE)
 mu.reg_write(%s, STACK + STACK_SIZE // 2)

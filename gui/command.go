@@ -139,13 +139,21 @@ func (m *SessionManager) SendCommand(id, line string) (CommandResultDTO, error) 
 		runErr = app.RunCommand(line, s.state)
 		s.state.NoticeSink = nil
 	})
+	if s.state.Session != nil && s.state.Session != s.core {
+		s.core = s.state.Session
+	}
 	pushDisplays(s) // /tasks, /think mutated the state — fold it into the HUD strip
-	// /workflow reverse <sample> wrote a fresh state.REState (and /workflow off
-	// cleared it) — mirror it into the session field the tool binding, prompt
-	// wrapper, and RE strip read. A change needs its own tick: SendCommand
-	// otherwise emits none, so the strip would lag until the next turn.
-	if syncREState(s) {
+	// /workflow, /phase, /new, /goal, /cap, /audit, /tasks, /think mutate state
+	// read by the dashboard strip; emit an immediate tick so the UI never lags
+	// until the next turn.
+	reChanged := syncREState(s)
+	switch strings.ToLower(command[0]) {
+	case "/workflow", "/phase", "/new", "/goal", "/cap", "/audit", "/tasks", "/think":
 		m.emitTick(s)
+	default:
+		if reChanged {
+			m.emitTick(s)
+		}
 	}
 
 	for _, line := range strings.Split(strings.TrimRight(stdout, "\n"), "\n") {

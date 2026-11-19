@@ -562,10 +562,8 @@ const BrowserHooks = {
 
 ## Usage
 
-```
-/browser-hook
-
-[Describe what you want to intercept or paste code to analyze]
+```text
+/skill browser-hook <target API or code to intercept>
 ```
 
 This will:

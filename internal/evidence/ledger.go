@@ -49,8 +49,7 @@ const (
 	ViewDynamic = "dynamic"
 )
 
-// EvidenceRecord is the shared record type; the alias keeps older call sites
-// that predate the move into types.
+// EvidenceRecord is the shared record type.
 type EvidenceRecord = types.EvidenceRecord
 
 // excerptChars is how much of an output a record keeps. The full text stays in
@@ -72,45 +71,6 @@ type Input struct {
 	Verification *types.VerificationStats
 }
 
-type HypothesisStatus string
-
-const (
-	HypothesisOpen      HypothesisStatus = "open"
-	HypothesisSupported HypothesisStatus = "supported"
-	HypothesisWeakened  HypothesisStatus = "weakened"
-	HypothesisRejected  HypothesisStatus = "rejected"
-	HypothesisRetired   HypothesisStatus = "retired"
-	HypothesisVerified  HypothesisStatus = "verified"
-)
-
-func ValidHypothesisStatus(value string) bool {
-	switch HypothesisStatus(value) {
-	case HypothesisOpen, HypothesisSupported, HypothesisWeakened,
-		HypothesisRejected, HypothesisRetired, HypothesisVerified:
-		return true
-	}
-	return false
-}
-
-type HypothesisRevision struct {
-	Status     HypothesisStatus `json:"status"`
-	Note       string           `json:"note,omitempty"`
-	EvidenceID string           `json:"evidenceId,omitempty"`
-	Relation   string           `json:"relation,omitempty"`
-	At         int64            `json:"at"`
-}
-
-type HypothesisRecord struct {
-	ID          string               `json:"id"`
-	Text        string               `json:"text"`
-	Status      HypothesisStatus     `json:"status"`
-	Supports    []string             `json:"supports,omitempty"`
-	Contradicts []string             `json:"contradicts,omitempty"`
-	Revisions   []HypothesisRevision `json:"revisions"`
-	CreatedAt   int64                `json:"createdAt"`
-	UpdatedAt   int64                `json:"updatedAt"`
-}
-
 // fileEvent is the JSONL envelope of the durable archive.
 type fileEvent struct {
 	Type string          `json:"type"`
@@ -127,14 +87,10 @@ type Ledger struct {
 	next    int
 	records []types.EvidenceRecord
 	byID    map[string]bool
-
-	hypotheses      map[string]HypothesisRecord
-	hypothesisOrder []string
-	nextHypothesis  int
 }
 
 func New() *Ledger {
-	return &Ledger{byID: map[string]bool{}, hypotheses: map[string]HypothesisRecord{}}
+	return &Ledger{byID: map[string]bool{}}
 }
 
 // Open attaches the durable JSONL archive in sessionDir and replays it.
@@ -166,19 +122,12 @@ func (l *Ledger) loadFile() error {
 		if err := json.Unmarshal([]byte(line), &evt); err != nil {
 			return fmt.Errorf("read evidence ledger %s: %w", l.file, err)
 		}
-		switch evt.Type {
-		case "evidence":
+		if evt.Type == "evidence" {
 			var record types.EvidenceRecord
 			if err := json.Unmarshal(evt.Data, &record); err != nil {
 				return err
 			}
 			l.indexRecord(record)
-		case "hypothesis":
-			var record HypothesisRecord
-			if err := json.Unmarshal(evt.Data, &record); err != nil {
-				return err
-			}
-			l.indexHypothesis(record)
 		}
 	}
 	return nil
@@ -208,19 +157,15 @@ func (l *Ledger) appendFile(evtType string, payload any) error {
 
 func (l *Ledger) indexRecord(record types.EvidenceRecord) {
 	if !l.byID[record.ID] {
+		if record.Excerpt == "" && record.Summary != "" {
+			record.Excerpt = util.Truncate(sanitize(record.Summary), excerptChars)
+		}
 		l.records = append(l.records, record)
 		l.byID[record.ID] = true
 		if n := parseIDNumber(record.ID); n > l.next {
 			l.next = n
 		}
 	}
-}
-
-func (l *Ledger) indexHypothesis(record HypothesisRecord) {
-	if _, exists := l.hypotheses[record.ID]; !exists {
-		l.hypothesisOrder = append(l.hypothesisOrder, record.ID)
-	}
-	l.hypotheses[record.ID] = record
 }
 
 // Add records one piece of evidence. It never fails: a record with a clipped
@@ -269,6 +214,9 @@ func (l *Ledger) AddEvidence(record types.EvidenceRecord) (types.EvidenceRecord,
 	if strings.TrimSpace(record.Kind) == "" {
 		record.Kind = string(KindToolObservation)
 	}
+	if record.Excerpt == "" && record.Summary != "" {
+		record.Excerpt = util.Truncate(sanitize(record.Summary), excerptChars)
+	}
 	if record.CreatedAt == 0 {
 		record.CreatedAt = types.NowMs()
 	}
@@ -297,11 +245,11 @@ func (l *Ledger) List() []types.EvidenceRecord {
 	return append([]types.EvidenceRecord{}, l.records...)
 }
 
-// Evidence is the List alias the manager tool and the HUD read.
+// Evidence is the List alias read by status commands and the HUD.
 func (l *Ledger) Evidence() []types.EvidenceRecord { return l.List() }
 
-// Count reports how many records carry the given kind. The phase gates pass
-// plain strings; hosts may pass a Kind.
+// Count reports how many non-error records carry the given kind (audit_finding
+// and verification_result count regardless, as verification stats track build/pass).
 func (l *Ledger) Count(kind any) int {
 	wanted := ""
 	switch value := kind.(type) {
@@ -348,8 +296,12 @@ func (l *Ledger) Digest(max int) string {
 		if record.View != "" {
 			kind += "/" + record.View
 		}
+		body := record.Excerpt
+		if body == "" {
+			body = record.Summary
+		}
 		lines = append(lines, fmt.Sprintf("%s [%s%s]%s %s",
-			record.ID, record.Source, kind, flag, record.Excerpt))
+			record.ID, record.Source, kind, flag, body))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -365,7 +317,7 @@ func (l *Ledger) Load(records []types.EvidenceRecord) {
 	}
 }
 
-// Reset clears the live ledger for a fresh session or task. The durable
+// Reset clears the live ledger for a fresh session (`/new`). The durable
 // archive on disk is never rewritten — evidence is append-only.
 func (l *Ledger) Reset() {
 	l.mu.Lock()
@@ -377,99 +329,6 @@ func (l *Ledger) Reset() {
 
 // File is the durable archive path, empty for an in-memory ledger.
 func (l *Ledger) File() string { return l.file }
-
-func (l *Ledger) AddHypothesis(text string) (HypothesisRecord, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.nextHypothesis++
-	now := types.NowMs()
-	record := HypothesisRecord{
-		ID: fmt.Sprintf("H-%04d", l.nextHypothesis), Text: text,
-		Status: HypothesisOpen, CreatedAt: now, UpdatedAt: now,
-		Revisions: []HypothesisRevision{{Status: HypothesisOpen, At: now}},
-	}
-	if err := l.appendFile("hypothesis", record); err != nil {
-		return HypothesisRecord{}, err
-	}
-	l.indexHypothesis(record)
-	return record, nil
-}
-
-func (l *Ledger) UpdateHypothesis(id string, status HypothesisStatus, note, evidenceID, relation string) (HypothesisRecord, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	record, ok := l.hypotheses[id]
-	if !ok {
-		return HypothesisRecord{}, fmt.Errorf("unknown hypothesis: %s", id)
-	}
-	if !ValidHypothesisStatus(string(status)) {
-		return HypothesisRecord{}, fmt.Errorf("invalid hypothesis status: %s", status)
-	}
-	if evidenceID != "" {
-		if !l.byID[evidenceID] {
-			return HypothesisRecord{}, fmt.Errorf("unknown evidence: %s", evidenceID)
-		}
-		switch relation {
-		case "supports":
-			record.Supports = appendUnique(record.Supports, evidenceID)
-		case "contradicts":
-			record.Contradicts = appendUnique(record.Contradicts, evidenceID)
-		case "":
-			break
-		default:
-			return HypothesisRecord{}, fmt.Errorf("invalid evidence relation: %s", relation)
-		}
-	}
-	record.Status = status
-	record.UpdatedAt = types.NowMs()
-	record.Revisions = append(record.Revisions, HypothesisRevision{
-		Status: status, Note: note, EvidenceID: evidenceID, Relation: relation, At: record.UpdatedAt,
-	})
-	if err := l.appendFile("hypothesis", record); err != nil {
-		return HypothesisRecord{}, err
-	}
-	l.indexHypothesis(record)
-	return record, nil
-}
-
-func (l *Ledger) Hypotheses() []HypothesisRecord {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	out := make([]HypothesisRecord, 0, len(l.hypothesisOrder))
-	for _, id := range l.hypothesisOrder {
-		out = append(out, l.hypotheses[id])
-	}
-	return out
-}
-
-// HasHypothesisStatus reports whether any ledger hypothesis holds one of the
-// given statuses. The phase gates pass plain strings.
-func (l *Ledger) HasHypothesisStatus(statuses ...any) bool {
-	wanted := map[HypothesisStatus]bool{}
-	for _, status := range statuses {
-		if value, ok := status.(HypothesisStatus); ok {
-			wanted[value] = true
-		} else if value, ok := status.(string); ok {
-			wanted[HypothesisStatus(value)] = true
-		}
-	}
-	for _, record := range l.Hypotheses() {
-		if wanted[record.Status] {
-			return true
-		}
-	}
-	return false
-}
-
-func (l *Ledger) OpenHypotheses() []HypothesisRecord {
-	var out []HypothesisRecord
-	for _, record := range l.Hypotheses() {
-		if record.Status == HypothesisOpen {
-			out = append(out, record)
-		}
-	}
-	return out
-}
 
 func SortRecords(records []types.EvidenceRecord) []types.EvidenceRecord {
 	out := append([]types.EvidenceRecord{}, records...)
@@ -488,15 +347,6 @@ func parseIDNumber(id string) int {
 		return 0
 	}
 	return n
-}
-
-func appendUnique(values []string, value string) []string {
-	for _, existing := range values {
-		if existing == value {
-			return values
-		}
-	}
-	return append(values, value)
 }
 
 var (

@@ -16,10 +16,12 @@ import (
 
 type Skill struct {
 	Name        string
+	DirName     string
 	Description string
 	Path        string
 	Body        string
 	Tags        []string
+	Files       []string
 }
 
 // Load reads every skill directory. Missing or unreadable skills are skipped
@@ -32,6 +34,7 @@ func loadFrom(dir string, embedded map[string]string) []Skill {
 	byName := map[string]Skill{}
 	for name, body := range embedded {
 		skill := parse(name, "embedded:skills/"+name+"/SKILL.md", body)
+		skill.Files = assets.ListSkillFiles(name)
 		byName[strings.ToLower(skill.Name)] = skill
 	}
 	if dir != "" {
@@ -47,6 +50,7 @@ func loadFrom(dir string, embedded map[string]string) []Skill {
 					continue
 				}
 				skill := parse(entry.Name(), skillPath, string(data))
+				skill.Files = assets.ListSkillFiles(entry.Name())
 				byName[strings.ToLower(skill.Name)] = skill
 			}
 		}
@@ -76,15 +80,23 @@ func parse(dirName, path, body string) Skill {
 	if tagSource == "" {
 		tagSource = dirName
 	}
-	return Skill{Name: name, Description: description, Path: path, Body: body, Tags: splitTags(tagSource)}
+	return Skill{Name: name, DirName: dirName, Description: description, Path: path, Body: body, Tags: splitTags(tagSource)}
 }
 
+// Find resolves an exact skill name (or directory name) before falling back to
+// tags, so broad tag lists (e.g. "jadx" on android-apk-frida) never shadow a
+// dedicated skill with that exact name.
 func Find(list []Skill, name string) *Skill {
-	needle := strings.ToLower(name)
+	needle := strings.ToLower(strings.TrimSpace(name))
+	if needle == "" {
+		return nil
+	}
 	for i := range list {
-		if strings.ToLower(list[i].Name) == needle {
+		if strings.ToLower(list[i].Name) == needle || strings.ToLower(list[i].DirName) == needle {
 			return &list[i]
 		}
+	}
+	for i := range list {
 		for _, tag := range list[i].Tags {
 			if strings.ToLower(tag) == needle {
 				return &list[i]

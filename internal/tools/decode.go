@@ -2,9 +2,13 @@ package tools
 
 import (
 	"bytes"
+	"compress/gzip"
+	"compress/zlib"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/url"
 	"regexp"
 	"sort"
@@ -16,17 +20,20 @@ import (
 	"github.com/overkazaf/re-agent/internal/util"
 )
 
-var decodeModes = []string{"auto", "base64", "base64url", "hex", "url", "rot13", "xor", "xor_bruteforce"}
+var decodeModes = []string{
+	"auto", "base64", "base64url", "base32", "hex", "url", "rot13",
+	"zlib", "gzip", "xor", "xor_bruteforce", "rc4",
+}
 
 func ctfDecodeTool() types.Tool {
 	return types.Tool{
 		Name:        "ctf_decode",
-		Description: "Decode common CTF encodings and small XOR layers: auto, base64, base64url, hex, URL, ROT13, XOR with key, or single-byte XOR brute force.",
+		Description: "Decode common CTF/RE encodings and stream ciphers: auto, base64, base64url, base32, hex, URL, ROT13, zlib, gzip, XOR with key, single-byte XOR brute force, or RC4 with key.",
 		Risk:        types.RiskRead,
 		Parameters: objectSchema(map[string]any{
-			"input":          map[string]any{"type": "string", "description": "Text to decode."},
+			"input":          map[string]any{"type": "string", "description": "Text or hex:/base64: payload to decode."},
 			"mode":           map[string]any{"type": "string", "enum": decodeModes, "default": "auto"},
-			"key":            map[string]any{"type": "string", "description": "XOR key as text, decimal byte, or 0xNN."},
+			"key":            map[string]any{"type": "string", "description": "XOR or RC4 key as text, decimal byte, 0xNN, or hex:..."},
 			"maxOutputBytes": map[string]any{"type": "number", "default": 4096},
 		}, "input"),
 		Execute: func(args map[string]any, tc types.ToolContext) (types.ToolResult, error) {
@@ -108,35 +115,78 @@ func decodeCandidates(input, mode, key string, maxBytes int) ([]decodeCandidate,
 	}
 	tryRot13 := func() { add("rot13", []byte(rot13(input))) }
 
+	tryBase32 := func() {
+		if decoded, ok := decodeBase32(input); ok {
+			add("base32", decoded)
+		}
+	}
+	tryZlib := func() {
+		for _, raw := range binaryPayloadInputs(input) {
+			if out, ok := inflateZlib(raw, maxBytes); ok {
+				add("zlib", out)
+			}
+		}
+	}
+	tryGzip := func() {
+		for _, raw := range binaryPayloadInputs(input) {
+			if out, ok := inflateGzip(raw, maxBytes); ok {
+				add("gzip", out)
+			}
+		}
+	}
+
 	switch mode {
 	case "auto":
 		tryBase64("base64")
 		tryBase64("base64url")
+		tryBase32()
 		tryHex()
 		tryURL()
 		tryRot13()
-		for _, candidate := range singleByteXorCandidates(inputBytesForXor(input), 3) {
-			if candidate.score >= 1.4 {
-				add(candidate.label, candidate.bytes)
+		tryZlib()
+		tryGzip()
+		for _, raw := range binaryPayloadInputs(input) {
+			for _, candidate := range singleByteXorCandidates(raw, 3) {
+				if candidate.score >= 1.4 {
+					add(candidate.label, candidate.bytes)
+				}
 			}
 		}
 	case "base64", "base64url":
 		tryBase64(mode)
+	case "base32":
+		tryBase32()
 	case "hex":
 		tryHex()
 	case "url":
 		tryURL()
 	case "rot13":
 		tryRot13()
+	case "zlib":
+		tryZlib()
+	case "gzip":
+		tryGzip()
 	case "xor":
 		keyBytes, ok := parseXorKey(key)
 		if !ok {
 			return nil, fmt.Errorf("ctf_decode mode=xor requires key as text, decimal byte, 0xNN, or hex:...")
 		}
-		add("xor key="+key, xorBytes(inputBytesForXor(input), keyBytes))
+		for _, raw := range binaryPayloadInputs(input) {
+			add("xor key="+key, xorBytes(raw, keyBytes))
+		}
 	case "xor_bruteforce":
-		for _, candidate := range singleByteXorCandidates(inputBytesForXor(input), 8) {
-			add(candidate.label, candidate.bytes)
+		for _, raw := range binaryPayloadInputs(input) {
+			for _, candidate := range singleByteXorCandidates(raw, 8) {
+				add(candidate.label, candidate.bytes)
+			}
+		}
+	case "rc4":
+		keyBytes, ok := parseXorKey(key)
+		if !ok {
+			return nil, fmt.Errorf("ctf_decode mode=rc4 requires key as text, 0xNN, or hex:...")
+		}
+		for _, raw := range binaryPayloadInputs(input) {
+			add("rc4 key="+key, rc4Crypt(raw, keyBytes))
 		}
 	}
 
@@ -243,11 +293,92 @@ func parseXorKey(value string) ([]byte, bool) {
 	return []byte(trimmed), true
 }
 
-func inputBytesForXor(input string) []byte {
-	if decoded, ok := decodeHex(input); ok {
-		return decoded
+func binaryPayloadInputs(input string) [][]byte {
+	trimmed := strings.TrimSpace(input)
+	if hexKeyRE.MatchString(trimmed) {
+		if decoded, ok := decodeHex(trimmed[4:]); ok {
+			return [][]byte{decoded}
+		}
 	}
-	return []byte(input)
+	if strings.HasPrefix(strings.ToLower(trimmed), "base64:") {
+		if decoded, ok := decodeBase64(trimmed[7:], "base64"); ok {
+			return [][]byte{decoded}
+		}
+	}
+	var out [][]byte
+	if decoded, ok := decodeHex(trimmed); ok {
+		out = append(out, decoded)
+	}
+	if decoded, ok := decodeBase64(trimmed, "base64"); ok && len(trimmed) >= 8 {
+		out = append(out, decoded)
+	}
+	out = append(out, []byte(input))
+	return out
+}
+
+func decodeBase32(input string) ([]byte, bool) {
+	normalized := strings.ToUpper(whitespaceRE.ReplaceAllString(input, ""))
+	if len(normalized) < 4 {
+		return nil, false
+	}
+	for len(normalized)%8 != 0 {
+		normalized += "="
+	}
+	decoded, err := base32.StdEncoding.DecodeString(normalized)
+	if err != nil || len(decoded) == 0 {
+		return nil, false
+	}
+	return decoded, true
+}
+
+func inflateZlib(raw []byte, maxBytes int) ([]byte, bool) {
+	r, err := zlib.NewReader(bytes.NewReader(raw))
+	if err != nil {
+		return nil, false
+	}
+	defer r.Close()
+	out, err := io.ReadAll(io.LimitReader(r, int64(maxBytes)))
+	if err != nil || len(out) == 0 {
+		return nil, false
+	}
+	return out, true
+}
+
+func inflateGzip(raw []byte, maxBytes int) ([]byte, bool) {
+	r, err := gzip.NewReader(bytes.NewReader(raw))
+	if err != nil {
+		return nil, false
+	}
+	defer r.Close()
+	out, err := io.ReadAll(io.LimitReader(r, int64(maxBytes)))
+	if err != nil || len(out) == 0 {
+		return nil, false
+	}
+	return out, true
+}
+
+func rc4Crypt(data, key []byte) []byte {
+	if len(key) == 0 || len(data) == 0 {
+		return nil
+	}
+	var s [256]byte
+	for i := 0; i < 256; i++ {
+		s[i] = byte(i)
+	}
+	j := byte(0)
+	for i := 0; i < 256; i++ {
+		j += s[i] + key[i%len(key)]
+		s[i], s[j] = s[j], s[i]
+	}
+	out := make([]byte, len(data))
+	var x, y byte
+	for k, b := range data {
+		x++
+		y += s[x]
+		s[x], s[y] = s[y], s[x]
+		out[k] = b ^ s[s[x]+s[y]]
+	}
+	return out
 }
 
 func xorBytes(input, key []byte) []byte {

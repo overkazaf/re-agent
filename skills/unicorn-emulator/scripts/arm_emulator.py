@@ -31,6 +31,7 @@ class ARM32Emulator:
     HEAP_SIZE = 0x100000  # 1MB
     DATA_BASE = 0xA0000000
     DATA_SIZE = 0x100000  # 1MB
+    STOP_ADDR = 0xDEAD0000
 
     def __init__(self, mode=UC_MODE_ARM):
         """
@@ -83,6 +84,8 @@ class ARM32Emulator:
 
     def _hook_unmapped(self, mu, access, address, size, value, user_data):
         """处理未映射内存访问"""
+        if (address & ~0xFFF) == (self.STOP_ADDR & ~0xFFF):
+            return False
         access_type = "READ" if access == UC_MEM_READ else "WRITE" if access == UC_MEM_WRITE else "FETCH"
         print(f"[!] Unmapped {access_type} at 0x{address:08x}, size={size}")
 
@@ -254,8 +257,8 @@ class ARM32Emulator:
         # 设置参数
         self.set_args(*args)
 
-        # 设置返回地址（返回到地址0时停止）
-        self.mu.reg_write(UC_ARM_REG_LR, 0)
+        # 设置返回地址到未映射的哨兵地址 STOP_ADDR
+        self.mu.reg_write(UC_ARM_REG_LR, self.STOP_ADDR)
 
         # 计算实际执行地址（Thumb模式需要+1）
         exec_addr = address
@@ -267,10 +270,9 @@ class ARM32Emulator:
 
         try:
             self.instruction_count = 0
-            self.mu.emu_start(exec_addr, 0, timeout=timeout, count=count)
+            self.mu.emu_start(exec_addr, self.STOP_ADDR, timeout=timeout, count=count)
         except UcError as e:
-            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_ARM_REG_PC) == 0:
-                # 正常返回（跳转到地址0）
+            if e.errno == UC_ERR_FETCH_UNMAPPED and (self.mu.reg_read(UC_ARM_REG_PC) & ~1) == self.STOP_ADDR:
                 pass
             else:
                 print(f"[-] Emulation error: {e}")

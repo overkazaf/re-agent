@@ -15,12 +15,13 @@ import (
 	"time"
 
 	"github.com/overkazaf/re-agent/internal/auth"
+	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/types"
 )
 
 const protocolVersion = "2024-11-05"
 
-var clientInfo = map[string]any{"name": "0xaf-re-agent", "version": "0.1.5"}
+var clientInfo = map[string]any{"name": "0xaf-re-agent", "version": buildinfo.Version}
 
 type ToolInfo struct {
 	Name        string         `json:"name"`

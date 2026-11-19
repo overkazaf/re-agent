@@ -73,6 +73,12 @@ type Store struct {
 	data plainStore
 }
 
+// EmptyStore returns an initialized in-memory store pointed at the default path.
+// Used when remote.json cannot be read/decrypted and --remote was not requested.
+func EmptyStore() *Store {
+	return &Store{path: storePath(), data: plainStore{Hosts: []Host{}}}
+}
+
 // Load reads and decrypts the store. A missing file yields an empty store.
 func Load() (*Store, error) {
 	return LoadFrom(storePath())

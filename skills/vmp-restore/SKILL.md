@@ -590,10 +590,8 @@ struct VMContext {
 
 ## Usage
 
-```
-/vmp-restore
-
-[Provide binary path and VM entry point address]
+```text
+/skill vmp-restore <binary path and VM entry address>
 ```
 
 This will:

@@ -20,7 +20,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version-file: go.mod
+      - name: Verify vet and tests
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          mkdir -p gui/frontend/dist
+          touch gui/frontend/dist/index.html
+          go vet ./...
+          go test ./...
       - name: Build binaries
         run: |
           mkdir -p dist

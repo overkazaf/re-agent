@@ -17,6 +17,6 @@ text artifacts so a new user can practice the normal 0xAF-Re loop:
 From the project root:
 
 ```bash
-bun src/cli.ts --welcome
-bun src/cli.ts --workspace ./demos/welcome
+0xaf --welcome
+0xaf --workspace ./demos/welcome
 ```

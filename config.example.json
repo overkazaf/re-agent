@@ -5,6 +5,8 @@
   "researcherProvider": "codex",
   "defaultRole": "auto",
   "maxTurns": 8,
+  "compactionStrategy": "summary",
+  "auditProvider": "",
   "providers": {
     "codex": {
       "type": "cli-tmux",
@@ -13,11 +15,10 @@
       "cliCommand": "codex",
       "cliArgs": [
         "exec",
+        "--json",
         "--skip-git-repo-check",
         "--sandbox",
         "read-only",
-        "--ask-for-approval",
-        "never",
         "--output-last-message",
         "{output}",
         "-"
@@ -30,9 +31,18 @@
       "label": "Claude Code tmux",
       "model": "claude-code-cli",
       "cliCommand": "claude",
-      "cliArgs": ["-p", "--output-format", "text", "--permission-mode", "default"],
+      "cliArgs": [
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--include-partial-messages",
+        "--permission-mode",
+        "default"
+      ],
       "cliTimeoutMs": 600000,
-      "cliUnsetEnv": ["ANTHROPIC_API_KEY", "ANTHROPIC_OAUTH_TOKEN"]
+      "cliUnsetEnv": ["ANTHROPIC_API_KEY", "ANTHROPIC_OAUTH_TOKEN"],
+      "cliResumeSession": true
     },
     "codex-api": {
       "type": "openai-responses",

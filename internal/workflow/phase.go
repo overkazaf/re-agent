@@ -27,6 +27,11 @@ var Phases = []Phase{
 	PhaseAudit, PhaseWriteup,
 }
 
+// PhaseCodes are the 3-letter HUD chips paired 1:1 with Phases.
+var PhaseCodes = []string{
+	"TRI", "STA", "DYN", "EVI", "IFC", "HYP", "VER", "AUD", "WRI",
+}
+
 func PhaseIndex(p Phase) int {
 	for i, v := range Phases {
 		if v == p {
@@ -38,30 +43,55 @@ func PhaseIndex(p Phase) int {
 
 type PhaseLedger interface {
 	Count(kind any) int
-	HasHypothesisStatus(statuses ...any) bool
 }
 
-func CheckPhaseGate(state *REState, ledger PhaseLedger) error {
-	if ledger == nil {
-		return nil
-	}
-	index := PhaseIndex(state.Phase)
+// CheckPhaseGate validates the transition from state.Phase to the next phase
+// against the evidence ledger and the live hypothesis stack count.
+func CheckPhaseGate(state *REState, ledger PhaseLedger, hypothesisCount int) error {
+	snap := state.Snapshot()
+	index := PhaseIndex(snap.Phase)
 	if index < 0 || index >= len(Phases)-1 {
 		return nil
 	}
-	target := Phases[index+1]
+	return checkTargetGate(state, Phases[index+1], ledger, hypothesisCount)
+}
+
+// CheckPhaseGatesTo validates every intermediate gate between state.Phase and
+// target so skip_to cannot bypass verification, audit, or acceptance criteria.
+func CheckPhaseGatesTo(state *REState, target Phase, ledger PhaseLedger, hypothesisCount int) error {
+	snap := state.Snapshot()
+	cur := PhaseIndex(snap.Phase)
+	tgt := PhaseIndex(target)
+	if tgt < 0 {
+		return fmt.Errorf("unknown phase: %s", target)
+	}
+	if tgt <= cur {
+		return fmt.Errorf("cannot rewind from %s to %s", snap.Phase, target)
+	}
+	for i := cur + 1; i <= tgt; i++ {
+		if err := checkTargetGate(state, Phases[i], ledger, hypothesisCount); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkTargetGate(state *REState, target Phase, ledger PhaseLedger, hypothesisCount int) error {
+	if ledger == nil {
+		return nil
+	}
 	switch target {
 	case PhaseStatic:
 		if ledger.Count("tool_observation") == 0 {
 			return fmt.Errorf("cannot enter static: collect at least one tool observation and record the sample hash/type")
 		}
 	case PhaseDynamic:
-		if !ledger.HasHypothesisStatus("open", "supported", "weakened", "rejected", "verified") {
-			return fmt.Errorf("cannot enter dynamic: record at least one hypothesis with its minimal test")
+		if hypothesisCount == 0 {
+			return fmt.Errorf("cannot enter dynamic: record at least one falsifiable claim via hypothesis_create first")
 		}
 	case PhaseVerification:
 		if ledger.Count("runtime_trace") == 0 && ledger.Count("tool_observation") < 3 {
-			return fmt.Errorf("cannot enter verify: collect runtime observations or a sufficient static evidence set")
+			return fmt.Errorf("cannot enter verify: collect runtime observations or at least 3 static observations")
 		}
 	case PhaseAudit:
 		if ledger.Count("verification_result") == 0 {
@@ -69,12 +99,8 @@ func CheckPhaseGate(state *REState, ledger PhaseLedger) error {
 		}
 	case PhaseWriteup:
 		if ledger.Count("audit_finding") == 0 {
-			return fmt.Errorf("cannot enter writeup: record an audit finding before delivery")
+			return fmt.Errorf("cannot enter writeup: record an audit_finding via evidence_review(summary=...) or /audit before delivery")
 		}
-		// An accepted /goal declaration adds its own gates: every acceptance
-		// criterion must hold against the evidence ledger before the run may
-		// deliver. The callback is wired by the app layer; nil means no
-		// declaration is active.
 		if pending := state.PendingAcceptance(); len(pending) > 0 {
 			return fmt.Errorf("cannot enter writeup: acceptance criteria not met: %s", strings.Join(pending, "; "))
 		}
@@ -82,34 +108,19 @@ func CheckPhaseGate(state *REState, ledger PhaseLedger) error {
 	return nil
 }
 
-type Hypothesis struct {
-	Text    string
-	Revised string
-	At      time.Time
-}
-
-type Evidence struct {
-	Text string
-	At   time.Time
-}
-
-// REState is the reverse-mode progress tracker. Methods lock because the tool
-// goroutine writes during a turn while observers (the GUI's 90ms tick) read
-// concurrently; Snapshot is the sanctioned read path.
+// REState tracks the reverse-mode phase and sample type. Hypotheses and
+// evidence live in their single canonical stores (hypothesis.Tracker and
+// evidence.Ledger), never duplicated here.
 type REState struct {
 	mu         sync.Mutex
 	SampleType string
 	Phase      Phase
-	Hypotheses []Hypothesis
-	Evidence   []Evidence
 	StartedAt  time.Time
 	// Acceptance, when set, returns the unmet acceptance criteria of the
-	// active task declaration (empty = all hold or none armed). The writeup
-	// gate calls it; the app layer wires it to the loop's goal state.
+	// active task declaration (empty = all hold or none armed).
 	Acceptance func() []string
 }
 
-// PendingAcceptance reads the acceptance callback under the state lock.
 func (s *REState) PendingAcceptance() []string {
 	s.mu.Lock()
 	callback := s.Acceptance
@@ -128,13 +139,14 @@ func NewREState(sampleType string) *REState {
 	}
 }
 
-func (s *REState) AdvancePhase() {
+func (s *REState) AdvancePhase() Phase {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	idx := PhaseIndex(s.Phase)
 	if idx >= 0 && idx < len(Phases)-1 {
 		s.Phase = Phases[idx+1]
 	}
+	return s.Phase
 }
 
 func (s *REState) SkipTo(target Phase) error {
@@ -152,37 +164,13 @@ func (s *REState) SkipTo(target Phase) error {
 	return nil
 }
 
-func (s *REState) AddHypothesis(text string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Hypotheses = append(s.Hypotheses, Hypothesis{Text: text, At: time.Now()})
-}
-
-func (s *REState) AddEvidence(text string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Evidence = append(s.Evidence, Evidence{Text: text, At: time.Now()})
-}
-
-func (s *REState) ReviseHypothesis(index int, revised string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if index >= 0 && index < len(s.Hypotheses) {
-		s.Hypotheses[index].Revised = revised
-	}
-}
-
-// Snapshot returns a locked copy for concurrent readers. Hypotheses/Evidence
-// ride as slice headers — observers only take len(), never index, so the copy
-// stays valid even if the writer appends afterwards.
+// Snapshot returns a locked value copy for concurrent readers (TUI/GUI ticks).
 func (s *REState) Snapshot() REState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return REState{
 		SampleType: s.SampleType,
 		Phase:      s.Phase,
-		Hypotheses: s.Hypotheses[:len(s.Hypotheses):len(s.Hypotheses)],
-		Evidence:   s.Evidence[:len(s.Evidence):len(s.Evidence)],
 		StartedAt:  s.StartedAt,
 	}
 }

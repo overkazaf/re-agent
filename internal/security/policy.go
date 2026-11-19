@@ -47,16 +47,29 @@ var destructivePatterns = []namedPattern{
 	{`/>\s*\/dev\/(?:sd|disk|rdisk)/i`, regexp.MustCompile(`(?i)>\s*/dev/(?:sd|disk|rdisk)`)},
 }
 
-var sensitivePatterns = []namedPattern{
+// sensitiveCommandPatterns flag shell commands touching host credentials or
+// secret-like environment variables so the approval prompt asks first.
+var sensitiveCommandPatterns = []namedPattern{
 	{`/\.ssh\b/i`, regexp.MustCompile(`(?i)\.ssh\b`)},
 	{`/\.aws\b/i`, regexp.MustCompile(`(?i)\.aws\b`)},
 	{`/\.gnupg\b/i`, regexp.MustCompile(`(?i)\.gnupg\b`)},
 	{`/keychain/i`, regexp.MustCompile(`(?i)keychain`)},
 	{`/id_rsa/i`, regexp.MustCompile(`(?i)id_rsa`)},
 	{`/id_ed25519/i`, regexp.MustCompile(`(?i)id_ed25519`)},
-	{`/password/i`, regexp.MustCompile(`(?i)password`)},
-	{`/secret/i`, regexp.MustCompile(`(?i)secret`)},
-	{`/token/i`, regexp.MustCompile(`(?i)token`)},
+	{`/\.netrc\b/i`, regexp.MustCompile(`(?i)\.netrc\b`)},
+	{`/\.env\b/i`, regexp.MustCompile(`(?i)(^|[/\\])\.env(\.[A-Za-z0-9_-]+)?($|\s)`)},
+}
+
+// sensitivePathPatterns guard workspace file reads against real credential
+// stores without blocking legitimate RE targets like check_password or TokenManager.java.
+var sensitivePathPatterns = []namedPattern{
+	{`/\.ssh\b/i`, regexp.MustCompile(`(?i)(^|[/\\])\.ssh([/\\]|$)`)},
+	{`/\.aws\b/i`, regexp.MustCompile(`(?i)(^|[/\\])\.aws([/\\]|$)`)},
+	{`/\.gnupg\b/i`, regexp.MustCompile(`(?i)(^|[/\\])\.gnupg([/\\]|$)`)},
+	{`/keychain/i`, regexp.MustCompile(`(?i)\.keychain(-db)?$`)},
+	{`/id_rsa/i`, regexp.MustCompile(`(?i)(^|[/\\])id_(rsa|dsa|ecdsa|ed25519)(\.pub)?$`)},
+	{`/\.netrc\b/i`, regexp.MustCompile(`(?i)(^|[/\\])\.netrc$`)},
+	{`/\.env\b/i`, regexp.MustCompile(`(?i)(^|[/\\])\.env(\.[A-Za-z0-9_-]+)?$`)},
 }
 
 // CommandConcerns lists everything about a command that deserves a second look,
@@ -81,7 +94,7 @@ func CommandConcerns(command string, policy *types.ExecutionPolicy) ([]string, e
 		}
 	}
 	if !policy.AllowSensitive {
-		for _, pattern := range sensitivePatterns {
+		for _, pattern := range sensitiveCommandPatterns {
 			if pattern.re.MatchString(compact) {
 				concerns = append(concerns, fmt.Sprintf("sensitive/secret-like token %s (--allow-sensitive to stop asking)", pattern.label))
 			}
@@ -106,7 +119,7 @@ func ValidatePathRead(pathValue string, policy *types.ExecutionPolicy) error {
 	if policy.AllowSensitive {
 		return nil
 	}
-	for _, pattern := range sensitivePatterns {
+	for _, pattern := range sensitivePathPatterns {
 		if pattern.re.MatchString(pathValue) {
 			return fmt.Errorf("sensitive path blocked by policy: %s", pathValue)
 		}

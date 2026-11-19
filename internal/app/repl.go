@@ -64,7 +64,8 @@ func repl(state *State) error {
 	for {
 		var prompt string
 		if state.Workflow == workflow.Reverse && state.REState != nil {
-			prompt = ui.REPhasePromptLabel(string(state.REState.Phase), state.REState.SampleType)
+			snap := state.REState.Snapshot()
+			prompt = ui.REPhasePromptLabel(string(snap.Phase), snap.SampleType)
 		} else {
 			prompt = ui.PromptLabel(state.Config, state.Role, state.Provider)
 		}
@@ -207,10 +208,9 @@ func runTurn(state *State, line string) bool {
 	if viz == "" {
 		viz = "full"
 	}
-	// A new prompt is a new operator task. Keep the transcript, but do not open
-	// the live HUD with the previous task's plan still attached.
+	// A new prompt is a new operator task. Keep the transcript, evidence ledger,
+	// and hypothesis stack across the session, resetting only the per-turn plan.
 	state.Loop.ResetPlan()
-	state.Loop.ResetAnalysis()
 	// The dataflow model is mutated by events and read by the pane every frame.
 	flow := ui.NewFlowModel(routeLabel(state))
 	flow.Begin(routeLabel(state))
@@ -251,13 +251,20 @@ func runTurn(state *State, line string) bool {
 		if pane == nil || state.REState == nil {
 			return
 		}
+		snap := state.REState.Snapshot()
+		var hyps int
+		var evCount int
+		if state.Loop != nil {
+			hyps = activeLoopHypotheses(state.Loop.Hypotheses())
+			evCount = len(state.Loop.Evidence())
+		}
 		pane.SetREState(&ui.REHudModel{
-			SampleType: state.REState.SampleType,
-			Phase:      string(state.REState.Phase),
-			PhaseIndex: workflow.PhaseIndex(state.REState.Phase),
+			SampleType: snap.SampleType,
+			Phase:      string(snap.Phase),
+			PhaseIndex: workflow.PhaseIndex(snap.Phase),
 			PhaseCount: len(workflow.Phases),
-			Hypotheses: len(state.REState.Hypotheses),
-			Evidence:   len(state.REState.Evidence),
+			Hypotheses: hyps,
+			Evidence:   evCount,
 		})
 	}
 	paneOptions.OnFrame = func() {
@@ -894,6 +901,16 @@ func runShellEscape(state *State, line string) error {
 	// Best-effort: a transcript write must not lose the output already shown.
 	_ = state.Loop.AddContext(core.ShellContextMessage(result, core.ShellContextMaxChars))
 	return nil
+}
+
+func activeLoopHypotheses(hyps []types.Hypothesis) int {
+	count := 0
+	for _, h := range hyps {
+		if h.Status != types.HypRejected {
+			count++
+		}
+	}
+	return count
 }
 
 func sortStrings(values []string) {

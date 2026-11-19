@@ -409,10 +409,8 @@ __wbg_*       // JavaScript glue functions
 
 ## Usage
 
-```
-/wasm-reverser
-
-[Provide WASM URL or paste base64-encoded WASM binary]
+```text
+/skill wasm-reverser <path to .wasm binary>
 ```
 
 This will:

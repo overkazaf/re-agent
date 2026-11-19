@@ -52,7 +52,7 @@ func dashboardState(frame int) *ui.FlowState {
 	model := ui.NewFlowModel("deepseek")
 	model.Begin("deepseek")
 	now := int64(time.Now().UnixMilli()) - int64(1600+frame*160)
-	model.Apply(core.LoopEvent{Type: "wire", Phase: "send", Provider: "deepseek", Model: "deepseek-chat", Messages: 3, Tokens: 3600, Tools: 23})
+	model.Apply(core.LoopEvent{Type: "wire", Phase: "send", Provider: "deepseek", Model: "deepseek-chat", Messages: 3, Tokens: 3600, Tools: 34})
 	model.Apply(core.LoopEvent{Type: "plan", Snapshot: &types.PlanSnapshot{Source: "codex", Note: "first pass", Steps: []types.PlanStep{
 		{Text: "triage: file/arch/packer", Status: types.StepCompleted, StartedAt: now - 5000, CompletedAt: now - 1000},
 		{Text: "定位校验函数并复现", Status: types.StepInProgress, StartedAt: now - 1000},

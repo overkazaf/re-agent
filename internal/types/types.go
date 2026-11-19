@@ -363,6 +363,7 @@ type Finding struct {
 // an explicit review, while the loop runs it automatically after tool results.
 type Arbitrator interface {
 	Review() []Finding
+	RecordAudit(summary string) EvidenceRecord
 }
 
 // --- approval ----------------------------------------------------------------
@@ -603,14 +604,6 @@ type Provider interface {
 	Name() string
 	Config() *ProviderConfig
 	Complete(input ProviderInput) (ProviderResponse, error)
-}
-
-type RunOptions struct {
-	Role         AgentRole
-	ProviderName string
-	MaxTurns     int
-	Ctx          context.Context
-	OnEvent      func(any)
 }
 
 type RunResult struct {

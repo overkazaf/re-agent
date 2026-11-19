@@ -203,7 +203,6 @@ func Run(argv []string) error {
 	registry := tools.CreateReverseTools()
 	registry = append(registry, tools.CreateRemoteTools()...)
 	registry = append(registry, tools.VerifyArtifactTool())
-	registry = append(registry, tools.EvidenceManagerTool())
 	registry = append(registry, tools.UpdateREStateTool(&state.REState))
 	// MCP servers join the same registry as the built-ins; a server that will
 	// not start is reported and skipped, never fatal.
@@ -246,9 +245,17 @@ func Run(argv []string) error {
 
 	// Remote mode: an encrypted host store plus a background SSH manager. The
 	// connection is dialed lazily per host and reused for the whole session.
+	// If remote.json is unreadable or bound to another machine and --remote was
+	// not requested, fall back to an in-memory store rather than blocking local RE.
 	remoteStore, err := remote.Load()
 	if err != nil {
-		return err
+		if args.Remote != "" {
+			return err
+		}
+		if !args.Smoke && !args.ListSessions {
+			fmt.Println(ui.RenderNotice(fmt.Sprintf("remote store unavailable: %s", err)))
+		}
+		remoteStore = remote.EmptyStore()
 	}
 	remoteManager := remote.NewManager(remoteStore)
 	defer remoteManager.Close()
@@ -402,7 +409,6 @@ func runOneShot(state *State, prompt string, viz ui.VizMode) error {
 		state.ToolContext.Confirm = createApprover(state, nil, nil)
 	}
 	state.Loop.ResetPlan()
-	state.Loop.ResetAnalysis()
 	startedAt := types.NowMs()
 	var slowest int64
 	// Plan lines describe a transition, so they need the previous snapshot —

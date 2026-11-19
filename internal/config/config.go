@@ -167,6 +167,12 @@ func merge(base, next *types.AgentConfig) *types.AgentConfig {
 	if next.MaxTurns != 0 {
 		out.MaxTurns = next.MaxTurns
 	}
+	if next.CompactionStrategy != "" {
+		out.CompactionStrategy = next.CompactionStrategy
+	}
+	if next.AuditProvider != "" {
+		out.AuditProvider = next.AuditProvider
+	}
 
 	providers := map[string]*types.ProviderConfig{}
 	for name, provider := range base.Providers {

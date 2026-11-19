@@ -65,6 +65,14 @@ func TestValidatePathReadAndWrites(t *testing.T) {
 	if err := ValidatePathRead("/tmp/chall.bin", locked); err != nil {
 		t.Fatalf("an ordinary path must be readable: %v", err)
 	}
+	for _, reTarget := range []string{"/workspace/check_password", "/workspace/src/TokenManager.java", "/workspace/secret_level.bin"} {
+		if err := ValidatePathRead(reTarget, locked); err != nil {
+			t.Fatalf("legitimate RE artifact %q must not be blocked as host credential: %v", reTarget, err)
+		}
+	}
+	if err := ValidatePathRead("/workspace/.env", locked); err == nil {
+		t.Fatal(".env file should still be blocked by default")
+	}
 	if err := ValidatePathRead("/home/me/.aws/credentials",
 		&types.ExecutionPolicy{AllowSensitive: true}); err != nil {
 		t.Fatalf("--allow-sensitive must lift the block: %v", err)

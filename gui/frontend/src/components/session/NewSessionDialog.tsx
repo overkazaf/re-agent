@@ -30,7 +30,7 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
   const [workspace, setWorkspace] = useState('')
   const [role, setRole] = useState('auto')
   const [workflow, setWorkflow] = useState('auto')
-  const [mock, setMock] = useState(true)
+  const [mock, setMock] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

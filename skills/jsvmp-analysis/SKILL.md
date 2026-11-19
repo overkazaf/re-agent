@@ -606,10 +606,8 @@ const geetestPatterns = {
 
 ## Usage
 
-```
-/jsvmp-analysis
-
-[Paste JSVMP-protected JavaScript code]
+```text
+/skill jsvmp-analysis <path to JSVMP-protected JavaScript file>
 ```
 
 This will:

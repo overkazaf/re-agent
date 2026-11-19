@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/util"
 )
@@ -39,14 +40,14 @@ type CaseResult struct {
 func VerifyArtifactTool() types.Tool {
 	return types.Tool{
 		Name:        "verify_artifact",
-		Description: "Build and replay a local artifact with fixed inputs, then compare stdout with expected output. Records pass/fail counts and artifact hash.",
+		Description: "Build and replay a local artifact with fixed inputs (argv or stdin), then compare stdout with expected output. Records pass/fail counts and artifact hash.",
 		Risk:        types.RiskExecute,
 		Parameters: objectSchema(map[string]any{
 			"artifact":     map[string]any{"type": "string", "description": "Workspace-relative artifact path."},
 			"buildCommand": map[string]any{"type": "string", "description": "Optional build/check command run before replay."},
 			"cases": map[string]any{
 				"type":        "array",
-				"description": "Replay cases. Each case has name, command, optional input, and expected or expectedFile.",
+				"description": "Replay cases. Each case has name, command, optional input (fed to stdin), and expected or expectedFile.",
 				"items":       map[string]any{"type": "object"},
 			},
 		}, "artifact", "cases"),
@@ -59,7 +60,10 @@ func VerifyArtifactTool() types.Tool {
 			result := VerificationResult{Artifact: relative(tc.Workspace, artifact), SHA256: FileSHA256(artifact), Build: true}
 
 			if buildCommand, _ := args["buildCommand"].(string); strings.TrimSpace(buildCommand) != "" {
-				build, err := RunShellForVerification(buildCommand, tc)
+				if err := authorizeVerificationCommand(buildCommand, tc); err != nil {
+					return types.ToolResult{}, err
+				}
+				build, err := RunShellForVerification(buildCommand, "", tc)
 				if err != nil {
 					result.Build = false
 					return verificationResult(result, build, err)
@@ -70,6 +74,9 @@ func VerifyArtifactTool() types.Tool {
 			for _, rawCase := range rawCases {
 				values, _ := rawCase.(map[string]any)
 				test := parseVerificationCase(values)
+				if err := authorizeVerificationCommand(test.Command, tc); err != nil {
+					return types.ToolResult{}, err
+				}
 				if test.ExpectedFile != "" {
 					expectedPath, err := util.ResolveInside(tc.Workspace, test.ExpectedFile)
 					if err != nil {
@@ -83,9 +90,9 @@ func VerifyArtifactTool() types.Tool {
 					}
 					test.Expected = string(expectedData)
 				}
-				actual, err := RunShellForVerification(test.Command, tc)
+				actual, err := RunShellForVerification(test.Command, test.Input, tc)
 				if err != nil {
-					result.Details = append(result.Details, CaseResult{Name: test.Name, Expected: test.Expected, Error: err.Error()})
+					result.Details = append(result.Details, CaseResult{Name: test.Name, Expected: test.Expected, Actual: actual, Error: err.Error()})
 					continue
 				}
 				passed := strings.TrimSpace(actual) == strings.TrimSpace(test.Expected)
@@ -114,12 +121,36 @@ func VerifyArtifactTool() types.Tool {
 	}
 }
 
-func RunShellForVerification(command string, tc types.ToolContext) (string, error) {
+func authorizeVerificationCommand(command string, tc types.ToolContext) error {
+	if tc.Sandbox != nil {
+		if err := tc.Sandbox.Authorize("verify_artifact", command); err != nil {
+			return err
+		}
+	}
+	if tc.Policy == nil {
+		return nil
+	}
+	concerns, err := security.CommandConcerns(command, tc.Policy)
+	if err != nil {
+		return err
+	}
+	return security.RequestApproval(types.ApprovalRequest{
+		Tool: "verify_artifact", Tier: types.TierExec, Summary: command, Concerns: concerns,
+	}, tc)
+}
+
+func RunShellForVerification(command, stdin string, tc types.ToolContext) (string, error) {
 	argv, err := ShellCommand(command)
 	if err != nil {
 		return "", err
 	}
-	result, err := Run(argv, RunOptions{Cwd: tc.Workspace, TimeoutMs: tc.Policy.CommandTimeoutMs, Ctx: tc.Context()})
+	timeoutMs := 30_000
+	if tc.Policy != nil && tc.Policy.CommandTimeoutMs > 0 {
+		timeoutMs = tc.Policy.CommandTimeoutMs
+	}
+	result, err := Run(argv, RunOptions{
+		Cwd: tc.Workspace, TimeoutMs: timeoutMs, Stdin: stdin, Ctx: tc.Context(),
+	})
 	if err != nil {
 		return strings.TrimSpace(result.Stdout + "\n" + result.Stderr), err
 	}

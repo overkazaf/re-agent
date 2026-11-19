@@ -289,8 +289,8 @@ class AndroidEmulator:
 
 ## Example Usage
 
-```
-/unicorn-emulator arm64 decrypt_func 0x1234 --args "0xdeadbeef,16"
+```text
+/skill unicorn-emulator Emulate arm64 decrypt_func at 0x1234 with args 0xdeadbeef, 16
 ```
 
 This will generate a complete emulation script for the specified function.

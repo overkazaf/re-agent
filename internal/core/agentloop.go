@@ -259,6 +259,7 @@ func (l *AgentLoop) Compact(providerName string, ctx context.Context) (CompactRe
 	// the model to summarize: local and lossless, the vision model reads them
 	// back. Only when the provider accepts images; otherwise the text summary.
 	if l.compactionUsesSnapcompact(provider.Config()) {
+		archivedCount := len(l.messages)
 		replacement := SnapcompactMarker(l.messages)
 		if hasImageBlock(replacement.Blocks) {
 			l.messages = []types.Message{replacement}
@@ -271,7 +272,7 @@ func (l *AgentLoop) Compact(providerName string, ctx context.Context) (CompactRe
 				"tokensBefore": tokensBefore, "tokensAfter": tokensAfter,
 			})
 			summary := fmt.Sprintf("archived %d messages as %d snapcompact frame(s)",
-				len(l.messages), countImageBlocks(replacement.Blocks))
+				archivedCount, countImageBlocks(replacement.Blocks))
 			return CompactResult{
 				Provider: providerName, TokensBefore: tokensBefore,
 				TokensAfter: tokensAfter, Summary: summary,
@@ -448,10 +449,7 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 	if options.Tools != nil {
 		turnTools = options.Tools
 	}
-	systemPrompt := l.systemPrompt(effectiveRole)
-	if strings.TrimSpace(options.SystemPrompt) != "" {
-		systemPrompt = strings.TrimSpace(options.SystemPrompt)
-	}
+	overrideSystem := strings.TrimSpace(options.SystemPrompt)
 
 	userMessage := types.UserMessage(prompt)
 	l.messages = append(l.messages, userMessage)
@@ -512,8 +510,13 @@ func (l *AgentLoop) Run(prompt string, options RunOptions) (types.RunResult, err
 			Tokens: view.TokensAfter, Tools: len(turnTools),
 		})
 
+		turnSystem := overrideSystem
+		if turnSystem == "" {
+			turnSystem = l.systemPrompt(effectiveRole)
+		}
+
 		response, err := provider.Complete(types.ProviderInput{
-			System:       systemPrompt,
+			System:       turnSystem,
 			Messages:     view.Messages,
 			Tools:        turnTools,
 			Workspace:    l.options.ToolContext.Workspace,
@@ -679,6 +682,9 @@ func (l *AgentLoop) systemPrompt(role types.AgentRole) string {
 		}
 	}
 	if section := l.goalSection(); section != "" {
+		parts = append(parts, section)
+	}
+	if section := l.evidenceLedgerSection(); section != "" {
 		parts = append(parts, section)
 	}
 	if section := l.hypothesisStackSection(); section != "" {

@@ -81,8 +81,9 @@ func text(result types.ToolResult) string { return types.TextFromBlocks(result.C
 func TestRegistryIsComplete(t *testing.T) {
 	want := []string{
 		"list_files", "read_file", "write_file", "grep", "run_command", "file_info",
-		"strings", "hexdump", "hash_file", "extract_symbols", "ctf_triage", "ctf_decode",
-		"entropy_scan", "binary_mitigations", "find_bytes", "carve_artifacts", "reverse_toolkit",
+		"strings", "hexdump", "hash_file", "extract_symbols", "binary_inspect",
+		"ctf_triage", "ctf_decode", "entropy_scan", "binary_mitigations",
+		"anti_analysis", "binary_diff", "find_bytes", "carve_artifacts", "reverse_toolkit",
 		"apk_inspect", "frida_hook_template", "list_skills", "read_skill", "knowledge_search",
 		"knowledge_read", "update_plan",
 		"hypothesis_create", "hypothesis_update", "hypothesis_list", "evidence_review",

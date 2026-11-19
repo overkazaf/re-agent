@@ -33,6 +33,7 @@ class X86Emulator:
     HEAP_SIZE = 0x1000000   # 16MB
     DATA_BASE = 0x20000000
     DATA_SIZE = 0x1000000   # 16MB
+    STOP_ADDR = 0xDEAD0000
 
     def __init__(self):
         """初始化x86模拟器"""
@@ -66,6 +67,8 @@ class X86Emulator:
 
     def _hook_unmapped(self, mu, access, address, size, value, user_data):
         """未映射内存处理"""
+        if (address & ~0xFFF) == (self.STOP_ADDR & ~0xFFF):
+            return False
         access_type = {UC_MEM_READ: "READ", UC_MEM_WRITE: "WRITE", UC_MEM_FETCH: "FETCH"}.get(access, "UNKNOWN")
         print(f"[!] Unmapped {access_type} at 0x{address:08x}, size={size}")
 
@@ -160,16 +163,16 @@ class X86Emulator:
             self.push(arg)
 
         # 压入返回地址
-        self.push(0)
+        self.push(self.STOP_ADDR)
 
         print(f"[*] Calling function at 0x{address:08x}")
         print(f"[*] Arguments: {[hex(a) for a in args]}")
 
         try:
             self.instruction_count = 0
-            self.mu.emu_start(address, 0, timeout=timeout, count=count)
+            self.mu.emu_start(address, self.STOP_ADDR, timeout=timeout, count=count)
         except UcError as e:
-            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_X86_REG_EIP) == 0:
+            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_X86_REG_EIP) == self.STOP_ADDR:
                 pass
             else:
                 print(f"[-] Error: {e}")
@@ -227,6 +230,7 @@ class X64Emulator:
     HEAP_SIZE = 0x10000000   # 256MB
     DATA_BASE = 0x20000000000
     DATA_SIZE = 0x10000000   # 256MB
+    STOP_ADDR = 0xDEAD0000
 
     def __init__(self):
         """初始化x64模拟器"""
@@ -259,6 +263,8 @@ class X64Emulator:
 
     def _hook_unmapped(self, mu, access, address, size, value, user_data):
         """未映射内存处理"""
+        if (address & ~0xFFF) == (self.STOP_ADDR & ~0xFFF):
+            return False
         print(f"[!] Unmapped access at 0x{address:016x}")
         page_start = address & ~0xFFF
         try:
@@ -357,16 +363,16 @@ class X64Emulator:
                 self.push(arg)
 
         # 压入返回地址
-        self.push(0)
+        self.push(self.STOP_ADDR)
 
         print(f"[*] Calling function at 0x{address:016x}")
         print(f"[*] Arguments: {[hex(a) for a in args]}")
 
         try:
             self.instruction_count = 0
-            self.mu.emu_start(address, 0, timeout=timeout, count=count)
+            self.mu.emu_start(address, self.STOP_ADDR, timeout=timeout, count=count)
         except UcError as e:
-            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_X86_REG_RIP) == 0:
+            if e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_X86_REG_RIP) == self.STOP_ADDR:
                 pass
             else:
                 print(f"[-] Error: {e}")
@@ -396,12 +402,12 @@ class X64Emulator:
             else:
                 self.push(arg)
 
-        self.push(0)
+        self.push(self.STOP_ADDR)
 
         try:
-            self.mu.emu_start(address, 0, timeout=timeout, count=count)
+            self.mu.emu_start(address, self.STOP_ADDR, timeout=timeout, count=count)
         except UcError as e:
-            if not (e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_X86_REG_RIP) == 0):
+            if not (e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(UC_X86_REG_RIP) == self.STOP_ADDR):
                 raise
 
         return self.mu.reg_read(UC_X86_REG_RAX)
@@ -468,9 +474,9 @@ def demo_x86():
     emu.enable_trace(True)
 
     # 直接执行，不通过call
-    emu.push(0)  # 返回地址
+    emu.push(emu.STOP_ADDR)  # 返回地址
     try:
-        emu.mu.emu_start(emu.CODE_BASE, 0)
+        emu.mu.emu_start(emu.CODE_BASE, emu.STOP_ADDR)
     except:
         pass
 

@@ -1,7 +1,7 @@
 ---
 name: android-apk-frida
 description: Android APK/SO reverse workflow with JADX, packer/framework checks, anti-debug/root/frida detection, and Frida hook planning.
-tags: android apk dex jadx frida hook native so unidbg
+tags: android apk dex frida hook jni
 ---
 
 # Android APK + Frida
@@ -10,19 +10,19 @@ Use this for APK, DEX, Android native `.so`, Java method hooks, JNI tracing, or 
 
 ## Workflow
 
-1. Run `apk_inspect` on the APK to identify DEX files, native libs, packers, and frameworks.
-2. Use `ctf_triage` on interesting `.dex`, `.so`, assets, or extracted blobs.
-3. Search decompiled sources for crypto, token, sign, encrypt, decrypt, login, root, emulator, debug, and frida.
-4. Use `frida_hook_template` to generate a hook scaffold only after class/method/module targets are known.
-5. If native code is involved, combine `extract_symbols`, `binary_mitigations`, and JNI name search.
+1. Run `apk_inspect` (`/apk`) on the APK to identify package/application class (from binary `AndroidManifest.xml`), DEX count, native `.so` ABIs, packers, and frameworks.
+2. Run `binary_inspect` (`/inspect`) and `anti_analysis` (`/anti`) on extracted native `.so` libraries to map `.init_array` constructors, `JNI_OnLoad`, `Java_*` exports, and anti-Frida/anti-debug checks.
+3. Decompile with `/retool jadx summary app.apk` (or `jadx -d jadx_out app.apk`) and search sources for crypto, token, sign, encrypt, decrypt, login, root, emulator, debug, and frida.
+4. Use `frida_hook_template` (`/hook`) to generate a hook scaffold only after class/method/module targets are known.
+5. Verify recovered algorithms with `verify_artifact` or offline emulation (`unidbg` / `unicorn-emulator`).
 
 ## Handoff Rules
 
 - Mostly Java/Dex or manifest/resource analysis: read `jadx`.
-- Native `.so` static analysis, xrefs, or patching: read `radare2-reverse` or `native-pwn-re`.
+- Native `.so` static analysis, `.init_array`, or JNI registration: read `analyze-so`, `radare2-reverse`, or `native-pwn-re`.
 - JNI signature or app signing function emulation: read `unidbg`.
 - Small isolated native function emulation: read `unicorn-emulator`.
-- Browser/API signature logic found in WebView assets: read `web-wasm-crypto`.
+- Browser/API signature logic found in WebView assets: read `web-crypto-analyzer` or `wasm-reverser`.
 
 ## JADX Fast Path
 

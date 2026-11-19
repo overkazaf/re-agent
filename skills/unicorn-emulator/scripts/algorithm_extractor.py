@@ -88,6 +88,7 @@ class AlgorithmExtractor:
     OUTPUT_SIZE = 0x10000
     KEY_BASE = 0xB0000000
     KEY_SIZE = 0x1000
+    STOP_ADDR = 0xDEAD0000
 
     def __init__(self, is_64bit=False):
         """初始化"""
@@ -104,7 +105,8 @@ class AlgorithmExtractor:
             self.REG_LR = UC_ARM64_REG_LR
             self.REG_RET = UC_ARM64_REG_X0
             self.ARG_REGS = [
-                UC_ARM64_REG_X0, UC_ARM64_REG_X1, UC_ARM64_REG_X2, UC_ARM64_REG_X3
+                UC_ARM64_REG_X0, UC_ARM64_REG_X1, UC_ARM64_REG_X2, UC_ARM64_REG_X3,
+                UC_ARM64_REG_X4, UC_ARM64_REG_X5, UC_ARM64_REG_X6, UC_ARM64_REG_X7
             ]
             self.ptr_size = 8
         else:
@@ -139,6 +141,8 @@ class AlgorithmExtractor:
 
     def _hook_unmapped(self, mu, access, address, size, value, user_data):
         """未映射内存"""
+        if (address & ~0xFFF) == (self.STOP_ADDR & ~0xFFF):
+            return False
         page_start = address & ~0xFFF
         try:
             self.mu.mem_map(page_start, 0x1000, UC_PROT_ALL)
@@ -253,21 +257,27 @@ class AlgorithmExtractor:
         # 清空输出区域
         self.mu.mem_write(self.OUTPUT_BASE, b'\x00' * output_size)
 
-        # 设置参数
+        # 设置参数（超出寄存器的参数写入栈）
         args = [input_addr, input_len, key_addr, key_len, self.OUTPUT_BASE]
-        for i, arg in enumerate(args[:len(self.ARG_REGS)]):
-            self.mu.reg_write(self.ARG_REGS[i], arg)
+        sp = self.mu.reg_read(self.REG_SP)
+        for i, arg in enumerate(args):
+            if i < len(self.ARG_REGS):
+                self.mu.reg_write(self.ARG_REGS[i], arg)
+            else:
+                off = (i - len(self.ARG_REGS)) * self.ptr_size
+                fmt = '<Q' if self.is_64bit else '<I'
+                self.mu.mem_write(sp + off, struct.pack(fmt, arg))
 
-        self.mu.reg_write(self.REG_LR, 0)
+        self.mu.reg_write(self.REG_LR, self.STOP_ADDR)
 
         print(f"\n[*] Calling encrypt function at 0x{func_addr:08x}")
         self.instruction_count = 0
         self.trace_log = []
 
         try:
-            self.mu.emu_start(func_addr, 0, timeout=10000000)
+            self.mu.emu_start(func_addr, self.STOP_ADDR, timeout=10000000)
         except UcError as e:
-            if not (e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(self.REG_PC) == 0):
+            if not (e.errno == UC_ERR_FETCH_UNMAPPED and (self.mu.reg_read(self.REG_PC) & ~1) == self.STOP_ADDR):
                 raise
 
         result = self.mu.reg_read(self.REG_RET)
@@ -292,14 +302,14 @@ class AlgorithmExtractor:
         self.mu.reg_write(self.ARG_REGS[1], input_len)
         self.mu.reg_write(self.ARG_REGS[2], self.OUTPUT_BASE)
 
-        self.mu.reg_write(self.REG_LR, 0)
+        self.mu.reg_write(self.REG_LR, self.STOP_ADDR)
 
         print(f"\n[*] Calling hash function at 0x{func_addr:08x}")
 
         try:
-            self.mu.emu_start(func_addr, 0, timeout=10000000)
+            self.mu.emu_start(func_addr, self.STOP_ADDR, timeout=10000000)
         except UcError as e:
-            if not (e.errno == UC_ERR_FETCH_UNMAPPED and self.mu.reg_read(self.REG_PC) == 0):
+            if not (e.errno == UC_ERR_FETCH_UNMAPPED and (self.mu.reg_read(self.REG_PC) & ~1) == self.STOP_ADDR):
                 raise
 
         return self.get_output(digest_size)

@@ -13,6 +13,9 @@
 package goal
 
 import (
+	"debug/elf"
+	"debug/macho"
+	"debug/pe"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -349,47 +352,63 @@ func Sniff(path string) (format, arch string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer handle.Close()
 	n, err := handle.Read(header)
+	handle.Close()
 	if err != nil && n == 0 {
 		return "", "", err
 	}
 	header = header[:n]
 	switch {
-	case len(header) >= 20 && string(header[:4]) == "\x7fELF":
+	case len(header) >= 4 && string(header[:4]) == "\x7fELF":
 		format = "ELF"
-		class := ""
-		if header[4] == 1 {
-			class = "32"
-		} else if header[4] == 2 {
-			class = "64"
-		}
-		machine := uint16(header[18]) | uint16(header[19])<<8
-		switch machine {
-		case 0x03:
-			arch = "i386"
-		case 0x28:
-			arch = "arm"
-		case 0x3E:
-			arch = "x86_64"
-		case 0xB7:
-			arch = "aarch64"
-		case 0xF3:
-			arch = "riscv"
-		case 0x08:
-			arch = "mips"
-		default:
-			arch = fmt.Sprintf("machine-0x%x", machine)
-		}
-		if class != "" && arch != "" {
-			arch += "-" + class + "bit"
+		if f, elfErr := elf.Open(path); elfErr == nil {
+			defer f.Close()
+			bits := ""
+			switch f.Class {
+			case elf.ELFCLASS32:
+				bits = "-32bit"
+			case elf.ELFCLASS64:
+				bits = "-64bit"
+			}
+			arch = strings.TrimPrefix(f.Machine.String(), "EM_") + bits
 		}
 	case len(header) >= 2 && string(header[:2]) == "MZ":
 		format = "PE"
-	case len(header) >= 4 && (string(header[:4]) == "\xcf\xfa\xed\xfe" || string(header[:4]) == "\xce\xfa\xed\xfe" || string(header[:4]) == "\xca\xfe\xba\xbe" || string(header[:4]) == "\xbe\xba\xfe\xca"):
-		format = "Mach-O"
+		if f, peErr := pe.Open(path); peErr == nil {
+			defer f.Close()
+			switch f.Machine {
+			case 0x14c:
+				arch = "x86"
+			case 0x8664:
+				arch = "x86_64"
+			case 0xaa64:
+				arch = "arm64"
+			case 0x1c0, 0x1c4:
+				arch = "arm"
+			}
+		}
+	case len(header) >= 4 && (string(header[:4]) == "\xcf\xfa\xed\xfe" || string(header[:4]) == "\xce\xfa\xed\xfe" || string(header[:4]) == "\xfe\xed\xfa\xcf" || string(header[:4]) == "\xfe\xed\xfa\xce" || string(header[:4]) == "\xca\xfe\xba\xbe"):
+		if fat, fatErr := macho.OpenFat(path); fatErr == nil {
+			defer fat.Close()
+			format = "Mach-O"
+			var cpus []string
+			for _, a := range fat.Arches {
+				cpus = append(cpus, a.Cpu.String())
+			}
+			arch = strings.Join(cpus, "+")
+		} else if mf, mErr := macho.Open(path); mErr == nil {
+			defer mf.Close()
+			format = "Mach-O"
+			arch = mf.Cpu.String()
+		} else {
+			format = "data"
+		}
+	case len(header) >= 4 && string(header[:4]) == "\x00asm":
+		format = "WASM"
+		arch = "wasm32"
 	case len(header) >= 4 && string(header[:4]) == "dex\n":
 		format = "DEX"
+		arch = "dalvik"
 	case len(header) >= 4 && string(header[:4]) == "PK\x03\x04":
 		format = "ZIP/APK"
 	default:

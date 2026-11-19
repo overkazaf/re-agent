@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/overkazaf/re-agent/internal/core"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
 	"github.com/overkazaf/re-agent/internal/workflow"
@@ -21,13 +22,14 @@ type StartOptions struct {
 
 // SessionInfo describes a live GUI session after creation or resume.
 type SessionInfo struct {
-	ID        string `json:"id"`
-	Workspace string `json:"workspace"`
-	Role      string `json:"role"`
-	Workflow  string `json:"workflow"`
-	Planner   string `json:"planner"`
-	Executor  string `json:"executor"`
-	Lifecycle string `json:"lifecycle"` // idle | running | awaiting_approval | closed
+	ID        string           `json:"id"`
+	Workspace string           `json:"workspace"`
+	Role      string           `json:"role"`
+	Workflow  string           `json:"workflow"`
+	Planner   string           `json:"planner"`
+	Executor  string           `json:"executor"`
+	Lifecycle string           `json:"lifecycle"` // idle | running | awaiting_approval | closed
+	History   []core.LoopEvent `json:"history,omitempty"`
 }
 
 // SessionSummaryDTO mirrors core.ListSessions summaries for the resume picker.
@@ -54,11 +56,12 @@ type CommandResultDTO struct {
 
 // ApprovalDTO is a pending tool approval pushed to the frontend.
 type ApprovalDTO struct {
-	RequestID   string `json:"requestID"`
-	ToolName    string `json:"toolName"`
-	Risk        string `json:"risk"` // read | write | network | exec
-	Summary     string `json:"summary"`
-	ArgsPreview string `json:"argsPreview"`
+	RequestID   string   `json:"requestID"`
+	ToolName    string   `json:"toolName"`
+	Risk        string   `json:"risk"` // read | write | network | exec
+	Summary     string   `json:"summary"`
+	ArgsPreview string   `json:"argsPreview"`
+	Concerns    []string `json:"concerns"`
 }
 
 // TokenUsage aliases core's tagged struct — identical wire format, zero mapping.
@@ -177,9 +180,9 @@ type RESamplePromptDTO struct {
 }
 
 type RESampleTypeDTO struct {
-	Key     string               `json:"key"`
-	Label   string               `json:"label"`
-	Desc    string               `json:"desc"`
+	Key     string              `json:"key"`
+	Label   string              `json:"label"`
+	Desc    string              `json:"desc"`
 	Prompts []RESamplePromptDTO `json:"prompts"`
 }
 

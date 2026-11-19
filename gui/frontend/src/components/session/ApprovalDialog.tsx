@@ -88,7 +88,17 @@ export function ApprovalDialog({
         <GlowText tone="accent">⚙ {approval.toolName}</GlowText>
       </div>
 
-      <div style={{ color: 'var(--muted)', fontSize: 12 }}>{approval.summary}</div>
+      {approval.summary && approval.summary !== approval.argsPreview && (
+        <div style={{ color: 'var(--muted)', fontSize: 12 }}>{approval.summary}</div>
+      )}
+
+      {approval.concerns && approval.concerns.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, color: 'var(--warn)' }}>
+          {approval.concerns.map((c, idx) => (
+            <div key={idx}>⚠ {c}</div>
+          ))}
+        </div>
+      )}
 
       <pre
         style={{

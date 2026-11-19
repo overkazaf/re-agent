@@ -15,7 +15,7 @@ import unicodedata
 from PIL import Image, ImageDraw, ImageFont
 
 SGR_RE = re.compile(r"\x1b\[([0-9;]*)m")
-CLEAR_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+CLEAR_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-ln-z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
 ESC_RE = re.compile(r"\x1b")
 
 BG = (11, 15, 20)      # #0b0f14 terminal background

@@ -50,8 +50,9 @@ provider 返回错误时，也会停止当前 run。
 `verification_result` / `audit_finding`）、视角（static / dynamic）和
 artifact/sha256 溯源的 `ev_NNN` 记录，并追加到会话级 `evidence-ledger.jsonl`
 （`internal/evidence/ledger.go`）。`verify_artifact` 把构建、回放和差分结果连同
-通过数写成 `verification_result`；`evidence_manager` 维护账本侧假设与审计记录；
-仲裁器在每次工具结果后交叉核对账本与假设栈。reverse workflow 的阶段推进会检查
+通过数写成 `verification_result`；`hypothesis_create`/`hypothesis_update`/`hypothesis_list`
+维护唯一的宿主侧假设栈（`internal/hypothesis`），`evidence_review` 检索已入库证据；
+仲裁器（`internal/verify`）在每次工具结果后交叉核对账本与假设栈。reverse workflow 的阶段推进会检查
 这些记录，验证和审计不再是报告里的形容词，而是进入 writeup 前的硬条件。
 
 在此之上是任务声明（`/goal`，`internal/goal`）：模型把目标起草成一份带范围的
@@ -75,22 +76,25 @@ differential_cases、evidence_count、audit_finding）对着账本重新检查�
 | --- | --- |
 | `internal/types` | 全局数据模型：message、tool、provider、plan、policy、approval。应尽量保持零依赖。 |
 | `internal/util` | 路径收敛、参数转换、截断、通用错误判断。 |
-| `internal/assets` | 嵌入 `prompts/` 和 `skills/`，并解析项目根目录或 `OXAF_RE_HOME`。 |
+| `embed.go` / `internal/assets` | 根模块 `go:embed` 单源嵌入 `prompts/` 与 `skills/`，并解析项目根目录或 `OXAF_RE_HOME`。 |
 | `internal/config` | 默认配置、`agent.config.json` 合并、UI 偏好、provider model 覆盖。 |
-| `internal/evidence` | 统一证据账本：带类别/视角/溯源的 `ev_NNN` 记录、摘要渲染、append-only `evidence-ledger.jsonl` 归档、账本侧假设状态机。 |
+| `internal/evidence` | 统一证据账本：带类别/视角/溯源的 `ev_NNN` 记录、摘要渲染、append-only `evidence-ledger.jsonl` 归档。 |
+| `internal/hypothesis` | 唯一宿主侧假设栈（`H-NNN`）：确定性降级与级联规则、prompt 摘要渲染。 |
+| `internal/verify` | 规则化证据仲裁器：交叉核对静/动态证据与活跃假设，并记录审计结论。 |
 | `internal/goal` | 任务声明：严格 JSON 草案解析、目标采样（哈希/格式识别）、按账本评估验收标准。 |
 | `internal/auth` | 环境变量、`.env`、本地 secrets、CLI 登录状态探测。 |
 | `internal/skills` | 读取内置 skills 和本地覆盖，生成 prompt catalog。 |
 | `internal/knowledge` | 本地 RE 知识库搜索、上下文打包、引用检查。 |
-| `internal/workflow` | `off` / `auto` / `specialist` / `caveman` 的选择、包装和委派逻辑。 |
+| `internal/workflow` | `off` / `auto` / `specialist` / `caveman` / `reverse`（9 阶段证据闸门）的选择、包装和委派逻辑。 |
 | `internal/security` | 命令风险分级和 tier x mode 审批规则，以及任务能力沙箱（capability.go）。 |
 | `internal/plan` | 任务列表 tracker：清洗步骤、记录状态、统计进度。 |
-| `internal/tools` | 24 个内置工具、子进程运行器、输出 spill 预算。 |
+| `internal/tools` | 34 个内置工具（`CreateReverseTools` 31 个 + 组合层 `remote_exec` / `verify_artifact` / `update_re_state` 3 个）、子进程运行器、输出 spill 预算。 |
 | `internal/mcp` | stdio JSON-RPC client，并把 MCP server tools 包装成统一 tool。 |
 | `internal/providers` | Anthropic、OpenAI Responses、OpenAI-compatible Chat、CLI tmux、mock adapter。 |
-| `internal/core` | Agent loop、context compaction、session、`!` shell escape。 |
-| `internal/ui` | HUD、live pane、flow 图、trace、markdown、palette、splash。 |
+| `internal/core` | Agent loop、context compaction（含 `snapcompact`）、session、`!` shell escape、元认知与 `/audit` 接线。 |
+| `internal/ui` | HUD、9 阶段 RE HUD、live pane、flow 图、trace、markdown、palette、splash。 |
 | `internal/app` | CLI 参数、REPL、slash commands、队列、line editor、`--print`。 |
+| `gui` | Wails v2 桌面端后端，与 CLI 共用同一套 `core.AgentLoop`、34 个内置工具、session 目录与安全审批引擎。 |
 
 依赖方向的原则很简单：`app` 是组合根；`core` 调 tools/provider，但不依赖
 UI；`ui` 消费 `core.LoopEvent`；工具通过 `types.ToolContext` 回调计划或审批，
@@ -199,14 +203,14 @@ session JSONL 是完整记录；发给 provider 的只是预算内视图。
 
 ## 7. 工具、MCP 与输出预算
 
-内置 registry 有 24 个工具，覆盖：
+内置 registry 共提供 **34 个工具**（`CreateReverseTools` 31 个 + 组合层注入 3 个），CLI 与桌面 GUI 完全对齐，覆盖：
 
 - 文件：list/read/write/grep/file info/hexdump/hash。
-- 二进制：strings、symbols/imports、entropy、mitigations、find bytes、carve。
-- CTF：triage、decode。
-- Android/RE：APK inspect、Frida hook template、reverse toolkit。
-- 知识库与 skills：skill list/read、knowledge search/read。
-- 元工具：update plan。
+- 二进制：strings、symbols/imports、深度结构解析（`binary_inspect`）、反调试/壳检测（`anti_analysis`）、字节与指令 patch 差分（`binary_diff`）、entropy、mitigations、find bytes、carve。
+- CTF：triage、decode（支持 base64/base32/hex/url/rot13/xor/zlib/gzip/rc4）。
+- Android/RE：APK inspect（含纯 Go 二进制 AXML 清单解析）、Frida hook template、reverse toolkit。
+- 知识库与 skills：skill list/read（支持辅助脚本与参考文件）、knowledge search/read。
+- 元认知、验证与远程：`update_plan`、`hypothesis_create`/`hypothesis_update`/`hypothesis_list`、`evidence_review`、`verify_artifact`、`update_re_state`、`remote_exec`。
 
 `reverse_toolkit` 包装常见外部工具的固定动作，例如 radare2/rizin、JADX、
 apktool、binwalk、YARA、Ghidra headless、gdb/lldb、objdump/readelf/nm、
@@ -292,7 +296,7 @@ provider、model、时间和必要的 metadata。
 恢复路径：
 
 - `/sessions` 列出历史。
-- `/continue` 接上最近 session。
+- `/resume`（无参）或 CLI `-c` / `--continue` 接上最近 session。
 - `/resume <id>` 接指定 session。
 
 session repair 会检查 tool call 与 tool result 的关系，避免缺失结果把下一轮 provider

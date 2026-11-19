@@ -106,7 +106,6 @@ type FlowState struct {
 	Endpoint       string
 	Messages       int
 	SentTokens     int
-	ToolsAvailable int
 	Usage          types.TokenUsage
 	PendingCalls   int
 	ActiveTool     string
@@ -121,14 +120,9 @@ type FlowState struct {
 	CompactedElide int
 	HasCompacted   bool
 	Plan           *planBadge
-	// PlanFrame is the frame when the last plan update landed — it drives the
-	// flash without a clock.
-	PlanFrame    int
-	HasPlanFrame bool
-	// PlanKind is what that update did, so the flash can pick a colour.
-	PlanKind string // open | write | step
-	Error    string
-	Frame    int
+	PlanKind       string // open | write | step
+	Error          string
+	Frame          int
 	// Packets holds offsets (in cells) per wire, oldest first.
 	Packets [edgeCount][]int
 	Since   int64
@@ -170,25 +164,6 @@ func (m *FlowModel) Begin(name string) {
 	m.state.Stage = stageSend
 }
 
-// SeedPlan adopts a plan that predates this turn. Deliberately not Apply: the
-// list did not just change, so it must not flash as though it had.
-func (m *FlowModel) SeedPlan(snapshot *types.PlanSnapshot) {
-	if snapshot == nil {
-		return
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	done := 0
-	for _, step := range snapshot.Steps {
-		if step.Status == types.StepCompleted {
-			done++
-		}
-	}
-	m.state.Plan = &planBadge{Done: done, Total: len(snapshot.Steps), Source: snapshot.Source}
-	m.state.HasPlanFrame = false
-	m.state.PlanKind = ""
-}
-
 func (m *FlowModel) End(stage FlowStage, detail string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -225,7 +200,6 @@ func (m *FlowModel) Apply(event core.LoopEvent) {
 			state.Endpoint = event.Endpoint
 			state.Messages = event.Messages
 			state.SentTokens = event.Tokens
-			state.ToolsAvailable = event.Tools
 			state.Since = now
 		} else {
 			if event.Usage != nil {
@@ -302,8 +276,6 @@ func (m *FlowModel) Apply(event core.LoopEvent) {
 		}
 		previous := state.Plan
 		state.Plan = &planBadge{Done: done, Total: len(event.Snapshot.Steps), Source: event.Snapshot.Source}
-		state.PlanFrame = state.Frame
-		state.HasPlanFrame = true
 		switch {
 		case previous == nil:
 			state.PlanKind = "open"

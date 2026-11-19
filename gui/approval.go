@@ -68,6 +68,8 @@ func (b *ApprovalBridge) Confirm(sessionID string, ctx context.Context, request 
 	b.mu.Lock()
 	id := fmt.Sprintf("apr-%04d", b.nextID)
 	b.nextID++
+	concerns := make([]string, len(request.Concerns))
+	copy(concerns, request.Concerns)
 	pending := &pendingApproval{
 		sessionID: sessionID,
 		dto: ApprovalDTO{
@@ -78,6 +80,7 @@ func (b *ApprovalBridge) Confirm(sessionID string, ctx context.Context, request 
 			// path for exec/write tools); it feeds both dialog fields.
 			Summary:     request.Summary,
 			ArgsPreview: request.Summary,
+			Concerns:    concerns,
 		},
 		reply: make(chan types.ApprovalDecision, 1),
 	}

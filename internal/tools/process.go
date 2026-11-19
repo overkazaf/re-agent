@@ -25,6 +25,7 @@ type RunOptions struct {
 	Cwd       string
 	TimeoutMs int
 	Env       []string
+	Stdin     string
 	Ctx       context.Context
 }
 
@@ -36,6 +37,7 @@ func Run(command []string, options RunOptions) (CommandResult, error) {
 		Cwd:       options.Cwd,
 		TimeoutMs: options.TimeoutMs,
 		Env:       options.Env,
+		Stdin:     options.Stdin,
 		Ctx:       options.Ctx,
 	})
 	return CommandResult{Code: result.Code, Stdout: result.Stdout, Stderr: result.Stderr}, err
@@ -53,6 +55,7 @@ type StreamOptions struct {
 	Cwd       string
 	TimeoutMs int
 	Env       []string
+	Stdin     string
 	Ctx       context.Context
 	// OnChunk is called with each decoded chunk as it arrives, for live echoing.
 	OnChunk func(stream string, text string)
@@ -163,6 +166,9 @@ func Stream(command []string, options StreamOptions) (StreamedResult, error) {
 	cmd.Dir = options.Cwd
 	if options.Env != nil {
 		cmd.Env = options.Env
+	}
+	if options.Stdin != "" {
+		cmd.Stdin = strings.NewReader(options.Stdin)
 	}
 	// A process group lets a killed child shell take its children with it.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

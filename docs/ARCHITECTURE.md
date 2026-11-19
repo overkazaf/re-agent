@@ -32,14 +32,15 @@ call is stamped into the evidence ledger (`internal/core/metacog.go`), which
 mints `ev_NNN` records with kind (`tool_observation` / `runtime_trace` /
 `verification_result` / `audit_finding`), view (static / dynamic), and
 artifact/sha256 provenance, and appends them to the session-scoped
-`evidence-ledger.jsonl` (`internal/evidence/ledger.go`). `verify_artifact`
-(`internal/tools/verify.go`) builds, replays, and diffs an artifact, landing
-the outcome — with its pass counts — as a `verification_result` record;
-`evidence_manager` keeps ledger-side hypotheses and audit findings; the
-arbitrator re-checks the ledger against the hypothesis stack after every tool
-result. The reverse workflow's phase gates check these records
-(`internal/workflow/phase.go`), so verification and audit are hard
-preconditions for reaching writeup — not adjectives in the final report.
+`evidence-ledger.jsonl` (`internal/evidence/ledger.go`). `verify_artifact` (`internal/tools/verify.go`) builds, replays, and diffs an
+artifact, landing the outcome — with its pass counts — as a
+`verification_result` record; `hypothesis_create`/`hypothesis_update`/`hypothesis_list`
+maintain the single host-side assumption stack (`internal/hypothesis`), `evidence_review`
+queries recorded `ev_NNN` items, and the arbitrator (`internal/verify`) re-checks the
+ledger against the hypothesis stack after every tool result. The reverse workflow's
+phase gates check both the ledger and hypothesis stack (`internal/workflow/phase.go`),
+so verification and audit are hard preconditions for reaching writeup — not
+adjectives in the final report.
 
 On top of that sits the task declaration (`/goal`, `internal/goal`): the model
 drafts a scoped contract — target file, objective, deliverables, constraints,
@@ -66,23 +67,25 @@ operator's mid-run lever, and every gated command leaves an `ActionRecord`
 | --- | --- | --- |
 | `internal/types` | The whole data model: `Message`, `Tool`, `Provider`, `PlanStep`, `ExecutionPolicy`, `ApprovalRequest`. JSON wire encoding in `message_json.go`. | — (deliberately nothing) |
 | `internal/util` | Argument coercion, `ResolveInside` path containment, `Clip`/`Truncate`, `ErrInterrupted`, `IsAbort`. | — |
-| `internal/assets` | `go:embed` of `prompts/system.md` + `skills/`, and project-root resolution (`$OXAF_RE_HOME` → exe dir → cwd, walking up 6 levels). | — |
+| `embed.go` / `internal/assets` | Root `go:embed` of `prompts/` + `skills/` (single source of truth), plus project-root resolution (`$OXAF_RE_HOME` → exe dir → cwd, walking up 6 levels). | — |
 | `internal/plan` | The task-list tracker: sanitize untrusted steps, carry step timings, suppress no-op updates. | `types`, `util` |
-| `internal/evidence` | The unified ledger: `ev_NNN` records with kind/view/provenance, digest rendering, the append-only `evidence-ledger.jsonl` archive, and the ledger-side hypothesis state machine. | `types`, `util` |
-| `internal/hypothesis` | The assumption stack: tracker with host-side downgrade/cascade rules, prompt digest rendering. | `types`, `util` |
+| `internal/evidence` | The unified ledger: `ev_NNN` records with kind/view/provenance, digest rendering, and the append-only `evidence-ledger.jsonl` archive. | `types`, `util` |
+| `internal/hypothesis` | The single host-side assumption stack (`H-NNN`): tracker with deterministic downgrade/cascade rules and prompt digest rendering. | `types`, `util` |
+| `internal/verify` | Rule-based arbitrator that cross-checks static/dynamic ledger evidence against active hypotheses and records audit findings. | `evidence`, `hypothesis` |
 | `internal/goal` | The task declaration: strict JSON draft parsing, target intake (hash/format sniff), acceptance criteria evaluated against the ledger. | `types`, `evidence` |
 | `internal/security` | Command safety patterns (`policy.go`), the tier × mode approval gate (`approval.go`), and the task capability sandbox (`capability.go`). | `types` |
 | `internal/config` | `agent.config.json` merged over `Defaults()`; the `~/.0xaf-re-agent/ui.json` preference file; `SetReasoningEffort`. | `types`, `util` |
 | `internal/auth` | Credential discovery (process env → `.env` files → `~/.0xaf-re-agent/secrets.json`), CLI auth probing, `FilteredEnv`. | `types`, `util` |
 | `internal/knowledge` | Search over the imported RE corpus, context packing, answer parsing/citation checking. | `assets`, `util` |
 | `internal/skills` | Loads embedded skills plus `skills/<name>/SKILL.md` overrides, builds the system-prompt catalog. | `assets`, `util` |
-| `internal/workflow` | Explicit `off` / `auto` / `specialist` / `caveman` mode resolution, prompt wrappers, and delegated local-evidence workflow helpers. | `types` |
-| `internal/tools` | The 24-tool built-in registry, the subprocess runner (`process.go`), the output-spill budget (`output.go`). | `knowledge`, `plan`, `security`, `skills`, `types`, `util` |
+| `internal/workflow` | Explicit `off` / `auto` / `specialist` / `caveman` / `reverse` mode resolution, 9-phase evidence gates, prompt wrappers, and delegated local-evidence workflow helpers. | `evidence`, `goal`, `hypothesis`, `types` |
+| `internal/tools` | The 31-tool core registry (`CreateReverseTools`) plus 3 composition-time tools (`remote_exec`, `verify_artifact`, `update_re_state`), the subprocess runner (`process.go`), and the output-spill budget (`output.go`). | `evidence`, `hypothesis`, `knowledge`, `plan`, `remote`, `security`, `skills`, `types`, `util`, `workflow` |
 | `internal/mcp` | stdio JSON-RPC 2.0 client (`client.go`) and the wrapper that turns server tools into `types.Tool` (`tools.go`). | `auth`, `tools`, `types` |
 | `internal/providers` | The five adapters, the CLI JSONL stream normalizer (`stream.go`), usage extraction. | `auth`, `config`, `types`, `util` |
-| `internal/core` | The loop, `LoopEvent`, context budgeting, the append-only session, the `!` shell escape, the evidence ledger and hypothesis stack wiring. | `evidence`, `hypothesis`, `plan`, `security`, `tools`, `types`, `util` |
-| `internal/ui` | Theme + width math, the live pane, the HUD, the dataflow diagram, trace lines, plan box, markdown, palette, splash. | `auth`, `core`, `plan`, `types` |
+| `internal/core` | The loop, `LoopEvent`, context budgeting (`snapcompact` + mechanical elision), the append-only session, the `!` shell escape, the evidence ledger, hypothesis stack, and `/audit` wiring. | `evidence`, `hypothesis`, `plan`, `remote`, `security`, `tools`, `types`, `util`, `verify` |
+| `internal/ui` | Theme + width math, the live pane, the HUD, the 9-phase RE HUD, the dataflow diagram, trace lines, plan box, markdown, palette, splash. | `auth`, `core`, `plan`, `types`, `workflow` |
 | `internal/app` | Argument parsing, the REPL, slash commands, the queued prompt controller, the raw-mode line editor, one-shot `--print` mode. | everything above |
+| `gui` | Wails v2 desktop backend sharing the exact same `core.AgentLoop`, 34-tool registry, session directory, capability sandbox, and approval engine. | `assets`, `auth`, `config`, `core`, `evidence`, `goal`, `hypothesis`, `knowledge`, `mcp`, `plan`, `providers`, `remote`, `security`, `skills`, `tools`, `types`, `workflow` |
 
 ### Why the arrows point this way
 
@@ -540,11 +543,11 @@ Independently of approvals, three hard checks never prompt:
 ## 7. Tools
 
 `tools.CreateReverseTools` (`internal/tools/registry.go:24`) returns the
-built-ins in `/tools` display order. 24 tools; all `read` except three:
+built-ins in `/tools` display order. 31 tools; all `read` except three:
 
 | Risk | Tools |
 | --- | --- |
-| `read` | `list_files` `read_file` `grep` `file_info` `strings` `hexdump` `hash_file` `extract_symbols` `ctf_triage` `ctf_decode` `entropy_scan` `binary_mitigations` `find_bytes` `carve_artifacts` `apk_inspect` `frida_hook_template` `list_skills` `read_skill` `knowledge_search` `knowledge_read` `update_plan` |
+| `read` | `list_files` `read_file` `grep` `file_info` `strings` `hexdump` `hash_file` `extract_symbols` `binary_inspect` `anti_analysis` `binary_diff` `ctf_triage` `ctf_decode` `entropy_scan` `binary_mitigations` `find_bytes` `carve_artifacts` `apk_inspect` `frida_hook_template` `list_skills` `read_skill` `knowledge_search` `knowledge_read` `update_plan` `hypothesis_create` `hypothesis_update` `hypothesis_list` `evidence_review` |
 | `write` | `write_file` |
 | `execute` | `run_command` `reverse_toolkit` |
 
@@ -553,17 +556,17 @@ JADX, apktool, binwalk, YARA, Ghidra headless, gdb/lldb, objdump/readelf/nm,
 APKID/AAPT, Frida templates, Burp/mitmproxy proxy templates, angr, Unicorn,
 and unidbg templates.
 
-`update_plan` is `RiskRead` on purpose: it mutates nothing but the operator's
-view, and prompting for it would be noise.
+`update_plan` and the metacognition state tools (`hypothesis_*`, `evidence_review`)
+are `RiskRead` on purpose: they mutate only host-side session state / HUD views,
+and prompting for them would be noise.
 
-Four more built-ins join at composition time in `app.Run`
-(`internal/app/app.go:196-199`) rather than inside `CreateReverseTools`:
-`remote_exec` (`internal/tools/remote.go:19`), `verify_artifact`
-(`internal/tools/verify.go:39`), `evidence_manager`
-(`internal/tools/ledger_tools.go:11`), and `update_re_state`
-(`internal/tools/restate.go:14`), which only acts inside an active
-`/workflow reverse` session. The model-facing registry is therefore 28
-built-ins plus whatever MCP servers contribute.
+Three more built-ins join at composition time in `app.Run`
+(`internal/app/app.go`) and `gui.Manager` (`gui/manager.go`) rather than inside
+`CreateReverseTools`: `remote_exec` (`internal/tools/remote.go`), `verify_artifact`
+(`internal/tools/verify.go`), and `update_re_state` (`internal/tools/restate.go`,
+which advances/skips phases inside an active `/workflow reverse` session). The
+model-facing registry is therefore **34 built-ins** plus whatever MCP servers
+contribute.
 
 **The process runner** (`internal/tools/process.go:62`). `Stream` is the single
 place a subprocess is born, used by `run_command`, every binary helper, and the

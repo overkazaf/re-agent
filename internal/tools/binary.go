@@ -60,6 +60,13 @@ func ctfTriageTool() types.Tool {
 			if err != nil {
 				return types.ToolResult{}, err
 			}
+			stringScanBuf := sample
+			if info.Size() > int64(len(sample)) {
+				tailLen := int(min64(65536, info.Size()-int64(len(sample))))
+				if tail, tErr := readRange(target, info.Size()-int64(tailLen), tailLen); tErr == nil {
+					stringScanBuf = append(append([]byte{}, sample...), tail...)
+				}
+			}
 			rel := relative(tc.Workspace, target)
 			fileType := "(file unavailable)"
 			if result, err := Run([]string{"file", "-b", target}, RunOptions{
@@ -73,7 +80,7 @@ func ctfTriageTool() types.Tool {
 					fileType = candidate
 				}
 			}
-			found := extractPrintableStrings(sample, 4)
+			found := extractAllStrings(stringScanBuf, 4)
 			classified := classifyStrings(found, clampInt(util.AsInt(args["maxStrings"], 40), 1, 200))
 			digest, err := sha256File(target)
 			if err != nil {
@@ -221,6 +228,9 @@ func binaryMitigationsTool() types.Tool {
 				return types.ToolResult{}, err
 			}
 			rel := relative(tc.Workspace, target)
+			if nativeOut, nativeDetails, ok := analyzeNativeMitigations(target, rel); ok {
+				return textResult(nativeOut, nativeDetails), nil
+			}
 			options := RunOptions{Cwd: tc.Workspace, TimeoutMs: tc.Policy.CommandTimeoutMs, Ctx: tc.Context()}
 			fileType := "(file unavailable)"
 			if result, err := Run([]string{"file", "-b", target}, options); err == nil {
@@ -233,7 +243,7 @@ func binaryMitigationsTool() types.Tool {
 				}
 			}
 			symbols := collectSymbols(target, tc)
-			readelf, _ := Run([]string{"readelf", "-h", "-l", "-d", "-s", target}, options)
+			readelf, _ := Run([]string{"readelf", "-W", "-h", "-l", "-d", "-s", target}, options)
 			otool, _ := Run([]string{"otool", "-hv", "-l", "-Iv", target}, options)
 			combined := strings.Join([]string{fileType, symbols, readelf.Stdout, otool.Stdout}, "\n")
 
@@ -292,7 +302,7 @@ func findBytesTool() types.Tool {
 			if err != nil {
 				return types.ToolResult{}, err
 			}
-			data, err := os.ReadFile(target)
+			data, _, err := readBoundedFile(target, maxBinaryAnalyzeBytes)
 			if err != nil {
 				return types.ToolResult{}, err
 			}
@@ -342,7 +352,7 @@ func carveArtifactsTool() types.Tool {
 			if err != nil {
 				return types.ToolResult{}, err
 			}
-			data, err := os.ReadFile(target)
+			data, _, err := readBoundedFile(target, maxBinaryAnalyzeBytes)
 			if err != nil {
 				return types.ToolResult{}, err
 			}
@@ -431,9 +441,22 @@ func apkInspectTool() types.Tool {
 				fmt.Sprintf("native libs: %d", len(libs)),
 				"packers: " + joinOr(packers, "none detected"),
 				"frameworks: " + joinOr(frameworks, "native/unknown"),
-				"",
-				"dex files:",
 			}
+			if manifest := parseAPKManifestHints(target); manifest != nil {
+				if manifest.Package != "" {
+					out = append(out, "package: "+manifest.Package)
+				}
+				if manifest.Application != "" {
+					out = append(out, "application: "+manifest.Application)
+				}
+				if len(manifest.Permissions) > 0 {
+					out = append(out, "permissions: "+strings.Join(capStrings(manifest.Permissions, 12), ", "))
+				}
+				if len(manifest.Components) > 0 {
+					out = append(out, "components: "+strings.Join(capStrings(manifest.Components, 10), ", "))
+				}
+			}
+			out = append(out, "", "dex files:")
 			out = append(out, bullets(dex, "- none")...)
 			out = append(out, "", "native libs:")
 			shownLibs := libs
@@ -796,17 +819,29 @@ var magicSignatures = []struct {
 	extension string
 }{
 	{"ELF", []byte{0x7f, 0x45, 0x4c, 0x46}, "elf"},
-	{"PE/MZ", []byte("MZ"), "exe"},
+	{"PE", []byte("MZ"), "exe"},
 	{"DEX", []byte("dex\n"), "dex"},
 	{"ZIP/APK/JAR", []byte{0x50, 0x4b, 0x03, 0x04}, "zip"},
 	{"PNG", []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, "png"},
 	{"JPEG", []byte{0xff, 0xd8, 0xff}, "jpg"},
-	{"GIF", []byte("GIF8"), "gif"},
+	{"GIF89a", []byte("GIF89a"), "gif"},
+	{"GIF87a", []byte("GIF87a"), "gif"},
 	{"PDF", []byte("%PDF-"), "pdf"},
 	{"gzip", []byte{0x1f, 0x8b, 0x08}, "gz"},
-	{"SQLite", []byte("SQLite format 3"), "sqlite"},
+	{"bzip2", []byte("BZh"), "bz2"},
+	{"xz", []byte{0xfd, '7', 'z', 'X', 'Z', 0x00}, "xz"},
+	{"zstd", []byte{0x28, 0xb5, 0x2f, 0xfd}, "zst"},
+	{"lz4", []byte{0x04, 0x22, 0x4d, 0x18}, "lz4"},
+	{"7z", []byte{'7', 'z', 0xbc, 0xaf, 0x27, 0x1c}, "7z"},
+	{"SquashFS LE", []byte("hsqs"), "squashfs"},
+	{"SquashFS BE", []byte("sqsh"), "squashfs"},
+	{"Android Boot", []byte("ANDROID!"), "bootimg"},
+	{"Flattened DTB/FIT", []byte{0xd0, 0x0d, 0xfe, 0xed}, "dtb"},
+	{"SQLite", []byte("SQLite format 3\x00"), "sqlite"},
 	{"Mach-O 64 LE", []byte{0xcf, 0xfa, 0xed, 0xfe}, "macho"},
 	{"Mach-O 64 BE", []byte{0xfe, 0xed, 0xfa, 0xcf}, "macho"},
+	{"Mach-O 32 LE", []byte{0xce, 0xfa, 0xed, 0xfe}, "macho"},
+	{"Mach-O Fat", []byte{0xca, 0xfe, 0xba, 0xbe}, "macho"},
 	{"WASM", []byte{0x00, 0x61, 0x73, 0x6d}, "wasm"},
 }
 
@@ -820,10 +855,18 @@ func carveHits(data []byte) []carveHit {
 				break
 			}
 			absolute := offset + hit
-			hits = append(hits, carveHit{
-				offset: absolute, kind: magic.kind,
-				signature: hex.EncodeToString(magic.signature), extension: magic.extension,
-			})
+			valid := true
+			if magic.kind == "PE" {
+				valid = isPEBytes(data[absolute:])
+			} else if magic.kind == "Mach-O Fat" {
+				valid = isMachOBytes(data[absolute:])
+			}
+			if valid {
+				hits = append(hits, carveHit{
+					offset: absolute, kind: magic.kind,
+					signature: hex.EncodeToString(magic.signature), extension: magic.extension,
+				})
+			}
 			offset = absolute + maxInt(1, len(magic.signature))
 		}
 	}
@@ -866,13 +909,13 @@ func detectApkPackers(entries []string) []string {
 		name    string
 		pattern *regexp.Regexp
 	}{
-		{"360 jiagu", regexp.MustCompile(`libjiagu|qihoo|360`)},
-		{"Tencent Legu", regexp.MustCompile(`libshell|libtup|libexecmain|tencent`)},
-		{"Bangcle", regexp.MustCompile(`libsecexe|libsecmain|libdexhelper|bangcle`)},
-		{"Ijiami", regexp.MustCompile(`ijiami|libexec\.so`)},
-		{"SecNeo", regexp.MustCompile(`(?i)secneo|libDexHelper`)},
-		{"NetEase Yidun", regexp.MustCompile(`libnesec|netease|yidun`)},
-		{"DexGuard/obfuscation", regexp.MustCompile(`dexguard|proguard`)},
+		{"360 Jiagu", regexp.MustCompile(`(^|/)libjiagu[^/]*\.so$|assets/\.appkey`)},
+		{"Tencent Legu", regexp.MustCompile(`(^|/)(libshell[^/]*|libtup|libexecmain)\.so$|assets/tosversion|00O000ll111l\.dex`)},
+		{"Bangcle/SecNeo", regexp.MustCompile(`(^|/)(libsecexe|libsecmain|libdexhelper[^/]*)\.so$|assets/bangcle`)},
+		{"Ijiami", regexp.MustCompile(`assets/ijiami[^/]*|(^|/)libexec\.so$`)},
+		{"NetEase Yidun", regexp.MustCompile(`(^|/)libnesec\.so$|assets/data\.db`)},
+		{"Baidu/Naga/Tongfudun", regexp.MustCompile(`(^|/)(libbaiduprotect|libddog|libedog|libegis)\.so$`)},
+		{"DexGuard", regexp.MustCompile(`assets/dexguard`)},
 	}
 	var out []string
 	for _, check := range checks {

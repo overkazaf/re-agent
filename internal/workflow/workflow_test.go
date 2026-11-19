@@ -209,16 +209,20 @@ func TestWrapReverseNilState(t *testing.T) {
 	}
 }
 
-func TestReStateBlock(t *testing.T) {
-	s := NewREState("elf")
-	block := reStateBlock(s)
-	if !strings.Contains(block, "No hypotheses") {
-		t.Fatal("empty state should say no hypotheses")
+func TestPhasePromptBlocksCoverAllNinePhases(t *testing.T) {
+	if len(Phases) != len(PhaseCodes) || len(Phases) != 9 {
+		t.Fatalf("expected 9 paired phases and codes, got %d phases and %d codes", len(Phases), len(PhaseCodes))
 	}
-	s.AddHypothesis("uses XOR")
-	s.AddEvidence("found XOR loop at 0x4000")
-	block = reStateBlock(s)
-	if !strings.Contains(block, "[H0]") || !strings.Contains(block, "[E0]") {
-		t.Fatal("state block should contain hypothesis and evidence")
+	for _, phase := range Phases {
+		block := phasePromptBlock(phase)
+		if block == "" {
+			t.Fatalf("empty prompt block for phase %s", phase)
+		}
+	}
+	if !strings.Contains(phasePromptBlock(PhaseHypothesis), "'verify'") {
+		t.Fatal("PhaseHypothesis prompt must advance into 'verify'")
+	}
+	if !strings.Contains(phasePromptBlock(PhaseAudit), "'writeup'") {
+		t.Fatal("PhaseAudit prompt must advance into 'writeup'")
 	}
 }

@@ -194,7 +194,7 @@ function ToastStrip({ toast }: { toast: StoreToast }) {
 // ---------- notice log (side rail) ----------
 
 function NoticeLog({ notices }: { notices: NoticeDTO[] }) {
-  const tail = notices.slice(-6)
+  const tail = notices.slice(-20)
   const hasError = tail.some((n) => n.level === 'error')
   return (
     <PanelBox title="notices" accent={hasError ? 'err' : undefined}>
@@ -203,7 +203,16 @@ function NoticeLog({ notices }: { notices: NoticeDTO[] }) {
           ○ quiet — 命令输出与系统消息在此落地
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '2px 0' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+            padding: '2px 0',
+            maxHeight: 240,
+            overflowY: 'auto',
+          }}
+        >
           {tail.map((n, i) => (
             <div
               key={`${i}-${n.text.slice(0, 16)}`}
@@ -213,8 +222,6 @@ function NoticeLog({ notices }: { notices: NoticeDTO[] }) {
                 color: n.level === 'error' ? 'var(--err)' : 'var(--muted)',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
-                maxHeight: 64,
-                overflow: 'hidden',
               }}
               title={n.text}
             >

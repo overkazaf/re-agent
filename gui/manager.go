@@ -17,11 +17,15 @@ import (
 
 	"github.com/overkazaf/re-agent/internal/app"
 	reassets "github.com/overkazaf/re-agent/internal/assets"
+	"github.com/overkazaf/re-agent/internal/auth"
 	"github.com/overkazaf/re-agent/internal/buildinfo"
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/core"
+	"github.com/overkazaf/re-agent/internal/evidence"
 	"github.com/overkazaf/re-agent/internal/mcp"
 	"github.com/overkazaf/re-agent/internal/providers"
+	"github.com/overkazaf/re-agent/internal/remote"
+	"github.com/overkazaf/re-agent/internal/security"
 	"github.com/overkazaf/re-agent/internal/skills"
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
@@ -338,6 +342,7 @@ type session struct {
 	core    *core.Session
 	config  *types.AgentConfig
 	mcp     []mcp.Connection
+	remote  *remote.Manager
 
 	mu        sync.Mutex
 	lifecycle string
@@ -497,6 +502,7 @@ func (m *SessionManager) Start(opts StartOptions) (SessionInfo, error) {
 	if mode != "" && !workflow.IsMode(string(mode)) {
 		return SessionInfo{}, fmt.Errorf("unknown workflow: %s", opts.Workflow)
 	}
+	auth.InitializeSources(agentConfig, workspace)
 	if opts.Mock {
 		// Mirror the --smoke override in internal/app/app.go.
 		agentConfig.PlannerProvider = "mock"
@@ -546,6 +552,9 @@ func (m *SessionManager) assemble(opts StartOptions, agentConfig *types.AgentCon
 	// /phase plus the reverse prompt wrapper read it — same binding app.Run sets
 	// up through the shared State.
 	var reState *workflow.REState
+	if mode == workflow.Reverse {
+		reState = workflow.NewREState("generic")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &session{
 		id: id, ctx: ctx, cancel: cancel,
@@ -562,6 +571,7 @@ func (m *SessionManager) assemble(opts StartOptions, agentConfig *types.AgentCon
 
 	registry := tools.CreateReverseTools()
 	registry = append(registry, tools.CreateRemoteTools()...)
+	registry = append(registry, tools.VerifyArtifactTool())
 	registry = append(registry, tools.UpdateREStateTool(&s.reState))
 	// MCP servers with relative command paths must resolve against the
 	// session's workspace, not the process cwd (/ under LaunchServices).
@@ -601,13 +611,28 @@ func (m *SessionManager) assemble(opts StartOptions, agentConfig *types.AgentCon
 	}
 	s.core = coreSession
 
+	ledger, err := evidence.Open(sessionDir)
+	if err != nil {
+		m.closeConnections(s)
+		cancel()
+		return SessionInfo{}, err
+	}
+	remoteStore, remoteErr := remote.Load()
+	if remoteErr != nil || remoteStore == nil {
+		remoteStore = remote.EmptyStore()
+	}
+	remoteManager := remote.NewManager(remoteStore)
+	s.remote = remoteManager
+	sandbox := security.NewSandbox()
+
 	toolContext := &types.ToolContext{
 		Workspace: workspace, SessionDir: sessionDir, Policy: policy,
+		Remote: remoteManager, Sandbox: sandbox, PhaseLedger: ledger,
 	}
 	loop := core.NewAgentLoop(core.LoopOptions{
 		Config: agentConfig, Providers: providerMap, Tools: registry,
 		ToolContext: toolContext, SystemPrompt: systemPrompt, RolePrompts: rolePrompts,
-		Session: coreSession,
+		Session: coreSession, Evidence: ledger,
 	})
 	// Tool approvals route through the manager approver (the GUI approval
 	// bridge); a session-scoped ctx cancels unanswered prompts on close.
@@ -619,9 +644,10 @@ func (m *SessionManager) assemble(opts StartOptions, agentConfig *types.AgentCon
 	s.state = &app.State{
 		Config: agentConfig, Loop: loop, Session: coreSession, Tools: registry,
 		ToolContext: toolContext, Role: role, Provider: "", Skills: builtInSkills,
-		MCP: connections, Providers: providerMap, Workflow: mode,
+		MCP: connections, Providers: providerMap, Workflow: mode, REState: reState,
 		PlanDisplay: ui.PlanDisplayAuto, ThinkDisplay: ui.ThinkDisplayAuto,
-		SessionMeta: sessionMeta,
+		SessionMeta: sessionMeta, Ledger: ledger, Sandbox: sandbox,
+		Remote: remoteManager, RemoteStore: remoteStore,
 	}
 
 	m.mu.Lock()
@@ -706,6 +732,23 @@ func (m *SessionManager) Resume(idOrPath string) (SessionInfo, error) {
 		_ = os.Remove(s.core.File)
 		return SessionInfo{}, err
 	}
+	if restored := s.loop.Goal(); restored != nil && restored.Accepted && s.state.Sandbox != nil {
+		s.state.Sandbox.Activate(restored.Objective.Constraints)
+	}
+	var history []core.LoopEvent
+	for _, msg := range loaded.Messages {
+		text := strings.TrimSpace(msg.Text())
+		if text == "" {
+			continue
+		}
+		switch msg.Role {
+		case types.MessageUser:
+			history = append(history, core.LoopEvent{Type: "user", Text: text, TextChars: len(text)})
+		case types.MessageAssistant:
+			history = append(history, core.LoopEvent{Type: "reply", Text: text, TextChars: len(text), OK: true})
+		}
+	}
+	info.History = history
 	_ = s.core.AppendEvent(map[string]any{
 		"type": "resumed_from", "file": target.File, "messages": len(loaded.Messages),
 	})
@@ -897,6 +940,7 @@ func (m *SessionManager) runTurn(s *session, prompt string) bool {
 	s.flow.Begin(label)
 	s.hud.beginTurn(activeProviderFor(s.state.Role, s.state.Config, s.state.Provider))
 	m.setLifecycle(s, LifecycleRunning)
+	m.sinkFor().LoopEvent(s.id, core.LoopEvent{Type: "user", Text: prompt, TextChars: len(prompt)})
 	m.emitTick(s)
 
 	turnCtx, cancel := context.WithCancel(s.ctx)
@@ -1131,13 +1175,23 @@ func reHudOf(s *session) *ui.REHudModel {
 	// the update_re_state tool writes this struct on the turn goroutine while
 	// the tick cadence reads it here — snapshot under the state's lock
 	snap := re.Snapshot()
+	var hyps int
+	var evCount int
+	if s.loop != nil {
+		for _, h := range s.loop.Hypotheses() {
+			if h.Status != types.HypRejected {
+				hyps++
+			}
+		}
+		evCount = len(s.loop.Evidence())
+	}
 	return &ui.REHudModel{
 		SampleType: snap.SampleType,
 		Phase:      string(snap.Phase),
 		PhaseIndex: workflow.PhaseIndex(snap.Phase),
 		PhaseCount: len(workflow.Phases),
-		Hypotheses: len(snap.Hypotheses),
-		Evidence:   len(snap.Evidence),
+		Hypotheses: hyps,
+		Evidence:   evCount,
 	}
 }
 
@@ -1186,6 +1240,9 @@ func (m *SessionManager) closeConnections(s *session) {
 		if connection.Client != nil {
 			connection.Client.Close()
 		}
+	}
+	if s.remote != nil {
+		s.remote.Close()
 	}
 }
 

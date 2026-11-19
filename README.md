@@ -1,7 +1,7 @@
 <div align="center">
 
 ![Stars](https://img.shields.io/github/stars/overkazaf/re-agent?style=flat-square&color=58a6ff)
-![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)
 ![Last Commit](https://img.shields.io/github/last-commit/overkazaf/re-agent?style=flat-square&color=58a6ff)
 ![License](https://img.shields.io/github/license/overkazaf/re-agent?style=flat-square&color=58a6ff)
 
@@ -122,8 +122,8 @@ or browse the [full diagram index](docs/diagrams/).
 | --- | --- |
 | Terminal surface | Keep queueing, slash commands, shell escapes, and live HUD in one workspace. |
 | Agent loop | Route planner/executor/researcher seats, compact context, stream events, and persist JSONL sessions. |
-| Evidence line | Every completed tool result appends to `evidence-ledger.jsonl` beside the session; `verify_artifact` writes build/replay/diff outcomes as `verification_result`; `evidence_manager` keeps hypotheses with versioned status revisions. Reverse phase gates read this ledger, making verification and audit hard preconditions for writeup instead of adjectives in the report. |
-| Metacognition layer | Keep evidence (`ev_NNN`) and assumptions (`H-NNN`) as host state outside the transcript: stamp every tool result, inject the hypothesis stack into the system prompt, and downgrade/cascade deterministically. A rule-based arbitrator cross-checks the ledger against the stack after every tool result; `/audit` re-judges the stack from a second model in a context-isolated run. |
+| Evidence line | Every completed tool result appends to `evidence-ledger.jsonl` beside the session (`ev_NNN`); `verify_artifact` writes build/replay/diff outcomes as `verification_result`; `hypothesis_create`/`hypothesis_update`/`hypothesis_list` maintain the single host-side hypothesis stack (`H-NNN`). Reverse phase gates read this ledger and stack, making verification and audit hard preconditions for writeup instead of adjectives in the report. |
+| Metacognition layer | Keep evidence (`ev_NNN`) and assumptions (`H-NNN`) as host state outside the transcript: stamp every tool result, inject the ledger digest and hypothesis stack into the system prompt, and downgrade/cascade deterministically. A rule-based arbitrator cross-checks the ledger against the stack after every tool result; `/audit` re-judges the stack from a second model in a context-isolated run. |
 | Workflow modes | Use specialist routes when available; otherwise split RE tasks into bounded local-evidence executor packets. |
 | Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
 | Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |
@@ -136,8 +136,8 @@ prompt/skill overrides, queueing, and audit logs. It is small enough to read,
 but opinionated enough to show the parts most agent demos skip. The full
 design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-- **Single-file install feel:** one static binary, one Go dependency, no Node or
-  browser runtime in the critical path.
+- **Single-file install feel:** one static binary with embedded prompts & skills,
+  no Node or Python runtime required in the core loop.
 - **Composable model seats:** planner, executor, and researcher can use
   different providers, models, and editable prompts.
 - **Evidence-first workflows:** specialist routes use GPT Cyber / CC CVP / Grok
@@ -276,18 +276,21 @@ Use the built-in demo workspace first, then replace paths with your own files.
 | Verify offline wiring | `0xaf --smoke` |
 | Start a demo workspace | `0xaf --workspace ./demos/reverse-lab` |
 | Identify an unknown file | `/scan ./chall` |
+| Deep ELF/PE/Mach-O header & constructor inspection | `/inspect ./chall` |
+| Detect packers, anti-debug & anti-Frida checks | `/anti ./chall` |
+| Diff two binaries and classify code patches | `/diff ./orig ./patched` |
 | Check binary protections | `/mitigations ./chall` |
 | Find packed or encrypted regions | `/entropy ./chall` |
 | Carve embedded payloads | `/carve ./blob` |
 | Decode a token or flag-like string | `/decode auto ZmxhZ3s...` |
-| Inspect an APK | `/apk ./app.apk` |
+| Inspect an APK (manifest + native libs + packers) | `/apk ./app.apk` |
 | Check local RE tools | `/retool inventory` |
 | Prepare mobile/API traffic capture | `/retool mitmproxy template api.example.test` |
 | Ask for a solve plan | `0xaf --role planner -p "triage ./chall and propose next checks"` |
 | Run delegated local evidence mode | `0xaf --workflow caveman -p "triage ./app.apk"` |
 
-The fast path does not need a model: `/scan`, `/decode`, `/entropy`,
-`/mitigations`, `/carve`, and `/apk` are direct local tools.
+The fast path does not need a model: `/scan`, `/inspect`, `/anti`, `/diff`,
+`/decode`, `/entropy`, `/mitigations`, `/carve`, and `/apk` are direct local tools.
 
 ## Worked Case: solve a challenge end to end
 
@@ -463,9 +466,9 @@ Workflow mode is explicit. Default `off` sends prompts unchanged.
 1. **Sample type picker** — choose from APK, SO/ELF shared lib, dylib/Mach-O, ELF binary, PE/DLL, firmware blob, or PCAP, each with canned starter prompts.
 2. **Structured phases** — triage → static analysis → dynamic analysis → evidence production → interface recovery → hypothesis revision → verification → audit → writeup. The prompt label shows the active phase: `0xAF[apk|triage] ▸`.
 3. **Hacker-mode HUD** — a distinct RE overlay in the live dashboard shows phase progress, hypothesis count (H:N), and evidence count (E:N).
-4. **Phase control** — `/phase` shows status, `/phase next` advances, `/phase <name>` skips to a named phase.
-5. **LLM-driven state** — the model calls `update_re_state` to advance phases, record hypotheses, log evidence, and revise findings as analysis progresses. The `advance` action is gate-checked against the evidence ledger: entering static needs a tool observation, dynamic a recorded hypothesis, verify a runtime trace or a sufficient static evidence set, audit a `verify_artifact` result, writeup an audit finding.
-6. **Evidence ledger** — every completed tool result is appended to `evidence-ledger.jsonl` next to the session JSONL, so hypothesis/evidence tracking survives restarts. `verify_artifact` builds an artifact, replays it with fixed inputs, and diffs stdout against the expected output (`verification_result`); `evidence_manager` moves hypotheses through versioned statuses (open → supported / weakened / rejected / retired / verified) linked to evidence records by supports/contradicts.
+4. **Phase control** — `/phase` shows status, `/phase next` advances, `/phase <name>` jumps to a named phase (enforcing all intermediate phase gates).
+5. **LLM-driven state** — the model calls `hypothesis_create`/`hypothesis_update` to manage claims, `evidence_review` to inspect recorded evidence, `verify_artifact` to run build/replay/diff checks, and `update_re_state` to advance phases as analysis progresses. Phase transitions are gate-checked against the unified evidence ledger and hypothesis tracker: entering `static` needs a tool observation, `dynamic` a recorded hypothesis, `verify` a runtime trace or ≥3 static observations, `audit` a `verify_artifact` result, and `writeup` an `audit_finding` (plus any `/goal` acceptance criteria).
+6. **Evidence ledger** — every completed tool result is appended to `evidence-ledger.jsonl` next to the session JSONL, so `ev_NNN` provenance and `H-NNN` hypothesis tracking survive compaction and `--resume`. `verify_artifact` builds an artifact, replays it with fixed args/stdin, and diffs stdout against expected outputs (`verification_result`), while `hypothesis_update` applies deterministic confidence downgrades and cascades across dependent claims.
 
 The "delegated local evidence mode" demo is the `caveman` workflow. It means the
 host splits one operator request into two model calls:
@@ -742,9 +745,12 @@ Inside the REPL:
 | --- | --- |
 | `/help` | command deck |
 | `/scan <path>` | local CTF/file triage |
+| `/inspect <binary>` | deep pure-Go ELF/PE/Mach-O headers, constructors, sections, imports/exports |
+| `/anti <binary>` | detect packers, anti-debug, anti-Frida, root/jailbreak checks, inline syscalls |
+| `/diff <fileA> <fileB>` | byte-region diff + x86/ARM64 patch classification |
 | `/hex <file> [offset] [len]` | hex view of a window; `0x` offsets accepted |
-| `/decode auto <text>` | try common encodings |
-| `/mitigations <path>` | native binary protections |
+| `/decode auto <text>` | try common encodings (base64/base32/hex/url/rot13/xor/zlib/gzip/rc4) |
+| `/mitigations <path>` | native binary protections (ELF/PE/Mach-O) |
 | `/r2 <file> [-w]` | hand the terminal to an interactive radare2 session |
 | `/retool inventory` | check radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg availability |
 | `/retool angr template ./chall` | emit an angr symbolic execution harness |
@@ -768,7 +774,7 @@ Inside the REPL:
 | `/think expand` / `/think collapse` | fold or expand streamed reasoning, mid-turn |
 | `/prompt edit <role>` | edit system, planner, executor, or researcher prompts |
 | `/new` | clear the live session and start a fresh one (old transcript stays on disk) |
-| `/sessions` / `/continue` / `/resume <id>` | resume prior work |
+| `/sessions` / `/resume [id]` | list sessions or resume most recent / specific id (`-c` / `--continue` on CLI) |
 | `!<command>` | run a workspace shell command under policy |
 
 ## Roadmap

@@ -38,9 +38,9 @@ Custom prompt: Read demos/welcome/chall.js and identify the encoding scheme, key
 The agent enters **triage** phase. The HUD shows:
 
 ```
- ── RE: ELF ──────────────────────────
- ▸TRI → STA → DYN → EVI → IFC → HYP → WRI
- ▰▱▱▱▱▱▱  1/7  H:0 E:0
+ ── RE: ELF ──────────────────────────────────────────────
+ ▸TRI → STA → DYN → EVI → IFC → HYP → VER → AUD → WRI
+ ▰▱▱▱▱▱▱▱▱  1/9  H:0 E:0
 ```
 
 ### Prompt 1 — Triage (automatic from picker)
@@ -61,10 +61,10 @@ then compares it against argv[2].
 Hypothesis: the token is recoverable by applying the same XOR.
 ```
 
-The agent calls `update_re_state` internally:
+Every completed `read_file` / `ctf_triage` result is automatically stamped into `evidence-ledger.jsonl` (`ev_001`), and the agent records its hypothesis via `hypothesis_create`:
 
 ```json
-{"action": "hypothesis", "text": "Token is single-byte XOR with key 0x2a, directly recoverable"}
+{"claim": "Token is single-byte XOR with key 0x2a, directly recoverable", "basis": "static", "evidence": ["ev_001"], "confidence": 0.8}
 ```
 
 ### Prompt 2 — Static analysis: decode
@@ -81,47 +81,42 @@ Agent response:
 ```
 Decoded: 0xaf{warmup_deck}
 
-Evidence logged. The token starts with the expected flag prefix.
+Evidence logged (ev_002). The token starts with the expected flag prefix.
 ```
 
-Agent calls:
+Agent advances the workflow with `update_re_state`:
 
 ```json
 {"action": "advance"}
-{"action": "evidence", "text": "Decoded token: 0xaf{warmup_deck}"}
 ```
 
 HUD:
 
 ```
- ── RE: ELF ──────────────────────────
- TRI → STA → ▸DYN → EVI → IFC → HYP → WRI
- ▰▰▱▱▱▱▱  2/7  H:1 E:1
+ ── RE: ELF ──────────────────────────────────────────────
+ TRI → STA → ▸DYN → EVI → IFC → HYP → VER → AUD → WRI
+ ▰▰▰▱▱▱▱▱▱  3/9  H:1 E:2
 ```
 
-### Prompt 3 — Verify
+### Prompt 3 — Verify & Audit
 
 ```
-0xAF[elf|dynamic] ▸ Run: node demos/welcome/chall.js '0xaf{warmup_deck}' and confirm the output.
+0xAF[elf|dynamic] ▸ Verify '0xaf{warmup_deck}' and a negative input against demos/welcome/chall.js using verify_artifact, then run /audit.
 ```
 
-Agent response:
+Agent calls `verify_artifact` (`replay_command: "node demos/welcome/chall.js"`, positive + negative cases), recording a `verification_result` (`ev_003`), updates `H-001` via `hypothesis_update` (`action: "confirm"`), and `/audit` records an `audit_finding` (`ev_004`):
 
 ```
 $ node demos/welcome/chall.js '0xaf{warmup_deck}'
 accepted
 
-The token is confirmed correct.
-```
-
-```json
-{"action": "evidence", "text": "Verification: node chall.js '0xaf{warmup_deck}' → accepted"}
+Verification passed (2/2 cases) · audit passed (ev_004).
 ```
 
 ### Prompt 4 — Writeup
 
 ```
-0xAF[elf|dynamic] ▸ /phase writeup
+0xAF[elf|audit] ▸ /phase writeup
 
 0xAF[elf|writeup] ▸ Write a solve summary.
 ```
@@ -186,9 +181,11 @@ Hypotheses:
   H2: The ZIP may contain the actual payload
 ```
 
+`hypothesis_create`:
+
 ```json
-{"action": "hypothesis", "text": "PDF at offset 0x21 is a minimal stub (catalog only)"}
-{"action": "hypothesis", "text": "ZIP at offset 0x5F may contain the real payload"}
+{"claim": "PDF at offset 0x21 is a minimal stub (catalog only)", "basis": "static", "evidence": ["ev_001"]}
+{"claim": "ZIP at offset 0x5F may contain the real payload", "basis": "static", "evidence": ["ev_001"]}
 ```
 
 ### Prompt 2 — Static analysis: carve and examine
@@ -220,9 +217,9 @@ Evidence:
   - ZIP marker is incomplete / non-functional
 ```
 
+Tool observations are auto-stamped into `evidence-ledger.jsonl`, and `update_re_state` advances the phase:
+
 ```json
-{"action": "evidence", "text": "PDF carve: minimal 1-object catalog, no hidden content"}
-{"action": "evidence", "text": "ZIP marker: PK header only, no valid central directory"}
 {"action": "advance"}
 ```
 
@@ -251,9 +248,10 @@ Revising hypotheses:
        or a secondary challenge (format identification).
 ```
 
+`hypothesis_update`:
+
 ```json
-{"action": "evidence", "text": "Flag decoded from artifact.txt: flag{demo_reverse_lab_flag}"}
-{"action": "revise", "index": 1, "text": "ZIP is intentional noise, not a payload — flag is in artifact.txt"}
+{"id": "H-002", "action": "revise", "evidence": ["ev_004"], "revised_claim": "ZIP is intentional noise, not a payload — flag is in artifact.txt"}
 ```
 
 ### Prompt 4 — Hypothesis revision & writeup
@@ -302,15 +300,16 @@ Agent response:
 | Command | Purpose |
 |---------|---------|
 | `/workflow reverse` | Enter interactive RE mode with sample picker |
-| `/phase` | Show current phase, hypothesis & evidence counts |
-| `/phase next` | Advance to next phase |
-| `/phase writeup` | Skip directly to writeup phase |
+| `/phase` | Show current phase (1..9), hypothesis & evidence counts |
+| `/phase next` | Advance to next phase (gate-checked against ledger) |
+| `/phase writeup` | Jump to writeup phase once intermediate verification & audit gates pass |
+| `/audit` | Run context-isolated adversarial audit before writeup |
 | `/workflow off` | Exit RE mode |
 
 ## What the Agent Does Automatically
 
-- Calls `update_re_state` tool to log hypotheses and evidence
-- Advances phases when analysis shifts focus
-- Revises hypotheses when new evidence contradicts them
-- Wraps each prompt with phase-specific instructions
-- Shows progress in the HUD overlay
+- Auto-stamps every completed tool result into `evidence-ledger.jsonl` (`ev_NNN`)
+- Calls `hypothesis_create` / `hypothesis_update` to track and downgrade/revise claims (`H-NNN`)
+- Calls `verify_artifact` to turn build/replay/diff runs into `verification_result` records
+- Calls `update_re_state` (`advance` / `skip_to`) with deterministic 9-phase gate checks
+- Wraps each prompt with phase-specific instructions and live HUD progress (`TRI → … → WRI`)
