@@ -28,6 +28,7 @@
 - [上下文压缩](#上下文压缩context-compaction)
 - [远程模式](#远程模式)
 - [Provider 与模型](#provider-与模型)
+- [内置工具（34 个）](#内置工具34-个)
 - [Skills 与知识库](#skills-与知识库)
 - [安全策略](#安全策略)
 - [排错](#排错)
@@ -372,16 +373,17 @@ make gui            # 构建产物 -> gui/build/bin/0xAF-Re GUI.app
 make gui-dev        # 热更新开发模式
 ```
 
-v1 目前提供：
+核心桌面能力：
 
 | 界面 | 能力 |
 | --- | --- |
-| 多 session 并发 | 同时跑多个 agent session，侧栏实时跟踪每个会话的状态（idle / running / awaiting approval） |
-| 实时仪表盘 | 与 TUI 相同的 90ms flow / tools / plan / think / telemetry 五面板，由服务端快照驱动重绘 |
-| 审批门 | 写 / 执行 / 网络类工具调用弹出风险分级的审批对话框；allow / allow-always / deny / deny-always 回写会话策略 |
+| 多 session 并发 | 同时跑多个 agent session，侧栏实时跟踪每个会话的状态（idle / running / awaiting approval），支持回合内一键 `Interrupt` 中断 |
+| 实时仪表盘 + 9 阶段 RE HUD | 与 TUI 相同的 90ms flow / tools / plan / think / telemetry 五面板，叠加 9 阶段逆向进度条（`TRI → … → WRI` 与实时 `H:N` / `E:N` 计数） |
+| 34 工具与沙箱完全对齐 | 与 CLI 共享全部 34 个内置工具（含 `binary_inspect`、`anti_analysis`、`binary_diff`、`verify_artifact`、`remote_exec`）、`evidence-ledger.jsonl`、`/goal` 任务契约、`/cap` 能力沙箱与 `/audit` |
+| 审批门 | 写 / 执行 / 网络类工具调用弹出带命中风险项列表的审批对话框；allow / allow-always / deny / deny-always 回写会话策略 |
 | Prompt 队列 | turn 进行中提交的 prompt 自动排队、按序注入 |
 | 主题 | deck / amber / matrix / mono——全套扫描线 + 辉光，尊重 prefers-reduced-motion |
-| Resume | 会话选择器列出与 CLI 相同的已保存 transcript |
+| Resume | 会话选择器列出并完整恢复历史消息、plan 任务进度、假设栈、证据账本及已生效的 `/goal` 沙箱权限 |
 
 无头冒烟测试（不需要窗口）：
 
@@ -596,14 +598,34 @@ HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--
 
 完整配置可以复制 `config.example.json` 到 `agent.config.json` 后修改。
 
+## 内置工具（34 个）
+
+CLI 与桌面 GUI 暴露完全一致的 **34 个内置工具**（另可叠加任意 MCP server 提供的工具）：
+
+| 分类 | 工具列表 |
+| --- | --- |
+| **文件与搜索**（4） | `list_files` · `read_file` · `write_file` · `grep` |
+| **本地与远程执行**（2） | `run_command` · `remote_exec` |
+| **纯 Go 跨平台二进制分析**（9） | `file_info` · `strings` · `hexdump` · `hash_file` · `extract_symbols` · `binary_inspect`（ELF/PE/Mach-O 头部、构造函数、区段熵、导入导出表） · `anti_analysis`（壳特征、反调试、反 Frida、内联系统调用检测） · `binary_diff`（字节差分 + x86/ARM64 指令 patch 归类） · `binary_mitigations` |
+| **CTF 与固件提取**（5） | `ctf_triage`（头尾采样 + UTF-16LE） · `ctf_decode`（`base64`/`base32`/`hex`/`url`/`rot13`/`xor`/`zlib`/`gzip`/`rc4`） · `entropy_scan` · `find_bytes` · `carve_artifacts`（校验型 ELF/PE/Mach-O/DEX/ZIP/SquashFS/GZIP/XZ/U-Boot/PDF/SQLite 识别） |
+| **外部逆向工具封装**（1） | `reverse_toolkit`（radare2/rizin、Ghidra headless、JADX、apktool、binwalk、YARA、gdb/lldb、objdump/readelf/nm、angr、Unicorn、unidbg、Frida、Burp、mitmproxy） |
+| **移动端逆向**（2） | `apk_inspect`（纯 Go 二进制 `AndroidManifest.xml` AXML 解析 + DEX/SO + 加壳/框架指纹） · `frida_hook_template` |
+| **Skills 与知识库**（4） | `list_skills` · `read_skill`（支持读取附属脚本与参考文件） · `knowledge_search` · `knowledge_read` |
+| **证据、验证与阶段闸门**（6） | `verify_artifact`（编译 + 回放 + 输出差分） · `evidence_review` · `hypothesis_create` · `hypothesis_update` · `hypothesis_list` · `update_re_state` |
+| **任务规划**（1） | `update_plan` |
+
 ## Skills 与知识库
 
-内置 skills 覆盖常见逆向路径：CTF first pass、Android APK + Frida、native pwn/RE、
-Web/WASM crypto、radare2、Ghidra、JADX、Burp/mitmproxy、angr、Unicorn、unidbg 和本地 playbook。
+二进制单源内嵌 **30 个正交逆向 Skills**（`embed.go`），覆盖完整分析链路：
+- **二进制粗筛与原生逆向：** `ctf-first-pass`、`native-pwn-re`、`binary-patching`、`capstone-disassembler`、`keystone-assembler`、`radare2-reverse`、`ghidra`、`gdb`、`re-writeup`
+- **反混淆与密码学分析：** `ollvm-deobfuscation`、`vmp-restore`、`deobfuscate`、`so-string-deobfuscation`、`crypto-identification`、`whitebox-dfa`、`drm-protocol-analysis`
+- **Android / SO 与指令仿真：** `android-apk-frida`、`analyze-so`、`analyze-sign`、`frida-hook-workflow`、`jadx`、`unicorn-emulator`（含 ARM/ARM64/x86/JNI 可执行 Python 仿真模板）、`unidbg`、`qiling-emulator`、`qemu-emulator`
+- **Web / WASM 与协议抓包：** `wasm-reverser`、`web-crypto-analyzer`、`jsvmp-analysis`、`browser-hook`、`proxy-capture`
 
 ```text
 /skills
 /skill android-apk-frida inspect this APK
+/skill whitebox-dfa recover the AES round key from ./wb_encrypt
 /skill proxy-capture capture api.example.test traffic
 ```
 

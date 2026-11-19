@@ -82,7 +82,7 @@
 
   <figure id="architecture-map">
     <div class="fig-head"><span class="num">00</span><h2>Architecture map</h2></div>
-    <figcaption>A Cocoon AI-style overview of the product design: terminal surface, agent loop, workflow modes, provider seats, policy gate, and local evidence layer.</figcaption>
+    <figcaption>A Cocoon AI-style overview of the product design: TUI + Wails Desktop GUI, agent loop, 9 workflow modes, metacognition &amp; phase gates, /goal contracts, /cap sandbox, provider seats, and 34 built-in tools + SSH.</figcaption>
     <div class="frame"><iframe src="0xaf-re-agent-architecture.html" title="0xAF-Re architecture map"></iframe></div>
     <p class="src"><a href="0xaf-re-agent-architecture.html">Open exportable HTML &rarr;</a></p>
   </figure>
@@ -167,21 +167,21 @@
   <!-- main -->
   <rect x="480" y="74" width="160" height="54" rx="6" fill="#0f172a"/>
   <rect x="480" y="74" width="160" height="54" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="560" y="98" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">cmd/0xaf</text>
-  <text x="560" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">entrypoint</text>
+  <text x="560" y="98" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">cmd/0xaf + gui</text>
+  <text x="560" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">CLI &amp; Wails entrypoints</text>
 
   <!-- app -->
   <rect x="400" y="222" width="320" height="60" rx="6" fill="#0f172a"/>
   <rect x="400" y="222" width="320" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="560" y="246" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">app</text>
-  <text x="560" y="264" fill="#94a3b8" font-size="9" text-anchor="middle">args · REPL · commands · editor</text>
+  <text x="560" y="246" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">app / gui.manager</text>
+  <text x="560" y="264" fill="#94a3b8" font-size="9" text-anchor="middle">REPL · Wails bridge · commands · workflow</text>
 
   <!-- runtime row A -->
   <rect x="70" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
   <rect x="70" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
   <text x="220" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">core</text>
-  <text x="220" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">loop · session · compaction</text>
-  <text x="220" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">shell escape</text>
+  <text x="220" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">loop · session · snapcompact</text>
+  <text x="220" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">metacog · /audit · shell escape</text>
 
   <rect x="410" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
   <rect x="410" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
@@ -191,9 +191,9 @@
 
   <rect x="750" y="360" width="300" height="64" rx="6" fill="#0f172a"/>
   <rect x="750" y="360" width="300" height="64" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-  <text x="900" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">tools</text>
-  <text x="900" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">registry · runner · spill</text>
-  <text x="900" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">24 local tools</text>
+  <text x="900" y="384" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">tools + remote</text>
+  <text x="900" y="400" fill="#94a3b8" font-size="9" text-anchor="middle">registry · runner · spill · SSH</text>
+  <text x="900" y="414" fill="#94a3b8" font-size="9" text-anchor="middle">34 built-in tools</text>
 
   <!-- runtime row B -->
   <rect x="70" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
@@ -204,15 +204,15 @@
 
   <rect x="410" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
   <rect x="410" y="450" width="300" height="64" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
-  <text x="560" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">security</text>
-  <text x="560" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">danger patterns</text>
-  <text x="560" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">+ approval gate</text>
+  <text x="560" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">security + goal</text>
+  <text x="560" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">policy · approval · /cap sandbox</text>
+  <text x="560" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">+ /goal contract gates</text>
 
   <rect x="750" y="450" width="300" height="64" rx="6" fill="#0f172a"/>
   <rect x="750" y="450" width="300" height="64" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
-  <text x="900" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">plan</text>
-  <text x="900" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">task-list tracker</text>
-  <text x="900" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">model-reported progress</text>
+  <text x="900" y="474" fill="#f1f5f9" font-size="12" font-weight="700" text-anchor="middle">plan · evidence · hyp · verify</text>
+  <text x="900" y="490" fill="#94a3b8" font-size="9" text-anchor="middle">plan steps · ev_NNN ledger · H-NNN</text>
+  <text x="900" y="504" fill="#94a3b8" font-size="9" text-anchor="middle">arbitrator + 9-phase workflow</text>
 
   <!-- presentation -->
   <rect x="400" y="597" width="320" height="60" rx="6" fill="#0f172a"/>
@@ -361,7 +361,7 @@
 
     <rect x="990"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
     <rect x="990"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
-    <text x="1060" y="106" fill="#f1f5f9">types.Tool</text><text x="1060" y="121" fill="#94a3b8" font-size="8" font-weight="400">24 local + MCP</text>
+    <text x="1060" y="106" fill="#f1f5f9">types.Tool</text><text x="1060" y="121" fill="#94a3b8" font-size="8" font-weight="400">34 local + MCP</text>
 
     <rect x="1147" y="88" width="140" height="42" rx="6" fill="#0f172a"/>
     <rect x="1147" y="88" width="140" height="42" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
@@ -1527,8 +1527,8 @@
   <rect x="830" y="744" width="530" height="104" rx="6" fill="#0f172a"/>
   <rect x="830" y="744" width="530" height="104" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1.3"/>
   <text x="852" y="770" fill="#f1f5f9" font-size="10" font-weight="700">There is no language server for a stripped binary</text>
-  <text x="852" y="790" fill="#cbd5e1" font-size="9">24 tools: triage · entropy · carve · symbols · mitigations · APK · Frida</text>
-  <text x="852" y="808" fill="#cbd5e1" font-size="9">reverse_toolkit fronts radare2 · JADX · Ghidra · gdb · YARA · unidbg</text>
+  <text x="852" y="790" fill="#cbd5e1" font-size="9">34 tools: inspect · anti · diff · triage · carve · mitigations · APK · verify</text>
+  <text x="852" y="808" fill="#cbd5e1" font-size="9">reverse_toolkit fronts radare2 · JADX · Ghidra · gdb · YARA · Unicorn · unidbg</text>
   <text x="852" y="830" fill="#67e8f9" font-size="8">Ground truth is recovered, not queried — which is why every tool is also a slash command.</text>
 
   <!-- ================= ROW 7 · EXTENSION ================= -->

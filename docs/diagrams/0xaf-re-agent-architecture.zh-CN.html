@@ -150,8 +150,8 @@
           <h1>0xAF-Re 架构总图</h1>
         </div>
         <p class="subtitle">
-          终端优先的逆向 agent，带 REA 式元认知层：每个工具结果自动入库为 ev_NNN 证据记录，已提交的判断由宿主强制的假设栈（H-NNN）显式管理；
-          planner / executor / researcher 三席位共享同一份可审计转录。
+          终端 TUI + Wails v2 桌面端双界面逆向 Agent：内置 34 个工具与 30 个 Skills，由宿主强制维护证据账本（ev_NNN）、假设栈（H-NNN）、/goal 任务契约、
+          /cap 能力沙箱、9 阶段逆向硬闸门以及加密的后台远程 SSH 执行。
         </p>
       </div>
       <div class="toolbar" data-export-ignore>
@@ -237,42 +237,43 @@
 
         <!-- 操作终端 -->
         <rect x="36" y="278" width="170" height="184" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6" filter="url(#soft-shadow)"/>
-        <text x="121" y="306" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">操作终端</text>
-        <text x="121" y="331" fill="#94a3b8" font-size="10" text-anchor="middle">REPL / CLI / TTY</text>
-        <text x="62" y="361" fill="#cbd5e1" font-size="10">/scan /r2 /queue</text>
-        <text x="62" y="381" fill="#cbd5e1" font-size="10">/workflow /model</text>
-        <text x="62" y="401" fill="#cbd5e1" font-size="10">/prompt edit role</text>
-        <text x="62" y="431" fill="#22d3ee" font-size="9">turn 内随时干预</text>
+        <text x="121" y="306" fill="#f8fafc" font-size="14" font-weight="700" text-anchor="middle">终端 + 桌面 GUI</text>
+        <text x="121" y="328" fill="#94a3b8" font-size="9.5" text-anchor="middle">REPL / CLI / Wails v2</text>
+        <text x="54" y="356" fill="#cbd5e1" font-size="9.5">/inspect /anti /diff</text>
+        <text x="54" y="376" fill="#cbd5e1" font-size="9.5">/workflow /phase /queue</text>
+        <text x="54" y="396" fill="#cbd5e1" font-size="9.5">/goal /cap /audit /remote</text>
+        <text x="54" y="426" fill="#22d3ee" font-size="9">turn 内实时干预与中断</text>
 
         <!-- 宿主边界 -->
         <rect x="250" y="60" width="760" height="750" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re 宿主 · Go 单二进制</text>
-        <text x="270" y="103" fill="#64748b" font-size="9">状态机、本地策略、流式遥测、内嵌提示词与技能</text>
+        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re 宿主 · Go 单内核 · 34 个内置工具 · 30 个 Skills</text>
+        <text x="270" y="103" fill="#64748b" font-size="9">状态机、/goal 任务契约、/cap 沙箱、snapcompact 视觉压缩、单源内嵌 prompts 与 skills</text>
 
         <rect x="290" y="130" width="205" height="112" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
-        <text x="392" y="157" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">提示词 + 配置</text>
-        <text x="312" y="182" fill="#cbd5e1" font-size="10">角色 system prompt</text>
-        <text x="312" y="200" fill="#cbd5e1" font-size="10">provider / 模型路由</text>
-        <text x="312" y="222" fill="#a78bfa" font-size="9">+ 注入的假设栈摘要</text>
+        <text x="392" y="157" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">提示词 + 任务契约</text>
+        <text x="308" y="182" fill="#cbd5e1" font-size="10">角色 prompt + --context</text>
+        <text x="308" y="200" fill="#cbd5e1" font-size="10">/goal 目标哈希与验收标准</text>
+        <text x="308" y="222" fill="#a78bfa" font-size="9">+ 注入账本与假设栈摘要</text>
 
         <rect x="518" y="148" width="242" height="120" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
         <text x="639" y="175" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent 循环</text>
         <text x="543" y="200" fill="#cbd5e1" font-size="10">按角色路由 provider 与模型</text>
-        <text x="543" y="219" fill="#cbd5e1" font-size="10">压缩上下文、流式事件</text>
+        <text x="543" y="219" fill="#cbd5e1" font-size="10">机械裁剪 + snapcompact 快照</text>
         <text x="543" y="238" fill="#cbd5e1" font-size="10">工具结果并入下一轮</text>
         <text x="543" y="258" fill="#34d399" font-size="9">单一共享转录，JSONL 落盘</text>
 
         <rect x="804" y="130" width="182" height="148" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.7"/>
-        <text x="895" y="158" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Workflow 模式</text>
-        <text x="828" y="186" fill="#cbd5e1" font-size="10">off / auto</text>
-        <text x="828" y="205" fill="#cbd5e1" font-size="10">specialist 路由</text>
-        <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman 分包</text>
-        <text x="828" y="246" fill="#fbbf24" font-size="9">规划后交给隔离执行器</text>
+        <text x="895" y="156" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">9 种 Workflow 模式</text>
+        <text x="820" y="182" fill="#cbd5e1" font-size="9.5">off / auto / specialist</text>
+        <text x="820" y="200" fill="#cbd5e1" font-size="9.5">caveman 隔离证据包</text>
+        <text x="820" y="218" fill="#cbd5e1" font-size="9.5">reverse（9 阶段硬闸门）</text>
+        <text x="820" y="236" fill="#cbd5e1" font-size="9.5">ctf / research / engineering</text>
+        <text x="820" y="256" fill="#fbbf24" font-size="8.5">强制验证与审计后才进 writeup</text>
 
         <!-- 元认知层 -->
         <rect x="270" y="296" width="720" height="190" rx="12" fill="rgba(76, 29, 149, 0.07)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="8 5"/>
-        <text x="284" y="318" fill="#a78bfa" font-size="11" font-weight="700">元认知层 · 新增</text>
-        <text x="284" y="334" fill="#64748b" font-size="9">状态放在转录之外 —— 每轮注入，resume 时重放</text>
+        <text x="284" y="318" fill="#a78bfa" font-size="11" font-weight="700">元认知与证据闭环层</text>
+        <text x="284" y="334" fill="#64748b" font-size="9">状态活在转录之外 —— 每轮动态注入，落盘至 evidence-ledger.jsonl</text>
 
         <rect x="290" y="352" width="205" height="110" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
         <text x="392" y="378" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">证据账本</text>
@@ -302,17 +303,17 @@
         <text x="536" y="594" fill="#cbd5e1" font-size="9">异议合成为 verification 证据记录</text>
 
         <rect x="805" y="516" width="178" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
-        <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">策略闸门</text>
-        <text x="830" y="568" fill="#cbd5e1" font-size="10">读限定在工作区</text>
-        <text x="830" y="586" fill="#cbd5e1" font-size="10">写 / 网络需审批</text>
-        <text x="830" y="604" fill="#cbd5e1" font-size="10">敏感路径检查</text>
-        <text x="830" y="620" fill="#fb7185" font-size="9">不安全的操作直接拒绝</text>
+        <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">能力沙箱 + 策略门</text>
+        <text x="820" y="566" fill="#cbd5e1" font-size="9.5">/cap 任务级网络与设备闸门</text>
+        <text x="820" y="584" fill="#cbd5e1" font-size="9.5">Tier × Mode 分级审批</text>
+        <text x="820" y="602" fill="#cbd5e1" font-size="9.5">工作区边界与敏感路径检查</text>
+        <text x="820" y="618" fill="#fb7185" font-size="9">全程记录 ActionRecord</text>
 
         <rect x="286" y="664" width="220" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
-        <text x="396" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">实时 HUD</text>
-        <text x="310" y="718" fill="#cbd5e1" font-size="10">角色 / provider / 模型</text>
-        <text x="310" y="736" fill="#cbd5e1" font-size="10">计划行与任务状态</text>
-        <text x="310" y="754" fill="#cbd5e1" font-size="10">token、耗时、工具轨迹</text>
+        <text x="396" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">90ms HUD + RE 进度条</text>
+        <text x="304" y="718" fill="#cbd5e1" font-size="10">FLOW / TOOLS / PLAN / TELE</text>
+        <text x="304" y="736" fill="#cbd5e1" font-size="10">9 阶段 RE HUD（TRI..WRI）</text>
+        <text x="304" y="754" fill="#cbd5e1" font-size="10">TUI 与桌面 GUI 同源渲染</text>
 
         <rect x="536" y="664" width="224" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
         <text x="648" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">队列 + 编辑</text>
@@ -346,24 +347,24 @@
 
         <!-- 证据层 -->
         <rect x="180" y="840" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="202" y="865" fill="#fbbf24" font-size="11" font-weight="700">本地证据层</text>
-        <text x="202" y="884" fill="#64748b" font-size="9">事实先在磁盘上采集，再入库打标，回流给循环</text>
+        <text x="202" y="865" fill="#fbbf24" font-size="11" font-weight="700">本地与远程证据层（34 个内置工具 + MCP）</text>
+        <text x="202" y="884" fill="#64748b" font-size="9">先由纯 Go 二进制解析器、外部逆向工具链、产物验证器与 SSH 实验机采集客观事实，入库打标后再回流给模型</text>
 
         <rect x="216" y="906" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="314" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">快速本地工具</text>
-        <text x="238" y="955" fill="#cbd5e1" font-size="9">scan、hex、entropy、carve、apk</text>
+        <text x="314" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">纯 Go 二进制解析</text>
+        <text x="228" y="955" fill="#cbd5e1" font-size="8.8">inspect、anti、diff、carve、apk</text>
 
         <rect x="442" y="906" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="545" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE 工具链</text>
-        <text x="464" y="955" fill="#cbd5e1" font-size="9">r2、Ghidra、JADX、angr、Frida</text>
+        <text x="545" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE 工具链 + SSH</text>
+        <text x="456" y="955" fill="#cbd5e1" font-size="8.8">r2、Ghidra、JADX、Frida、remote_exec</text>
 
         <rect x="678" y="906" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="767" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">实验环境 + 流量</text>
-        <text x="704" y="955" fill="#cbd5e1" font-size="9">Unicorn、unidbg、Burp、mitmproxy</text>
+        <text x="767" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">验证 + 指令仿真</text>
+        <text x="692" y="955" fill="#cbd5e1" font-size="8.8">verify_artifact、Unicorn、unidbg</text>
 
         <rect x="884" y="906" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
-        <text x="973" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">记忆</text>
-        <text x="910" y="955" fill="#cbd5e1" font-size="9">会话、evidence + hyp 事件</text>
+        <text x="973" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">持久化记忆</text>
+        <text x="896" y="955" fill="#cbd5e1" font-size="8.8">JSONL、evidence-ledger、/know</text>
 
         <!-- 图例（所有边界之外） -->
         <g transform="translate(36 48)">
@@ -388,20 +389,20 @@
 
     <section class="cards" aria-label="架构说明">
       <article class="card">
-        <h2><span class="card-dot cyan"></span>终端优先的循环</h2>
-        <p>REPL 就是产品表面：提示词排队、任务实时展开、斜杠命令和裸 shell 逃逸共享同一套工作区策略。</p>
+        <h2><span class="card-dot cyan"></span>双界面共用单内核</h2>
+        <p>终端 REPL 与 Wails v2 桌面端共用同一个 core.AgentLoop、同一套 34 个工具注册表、9 阶段 RE HUD、任务队列与 sessions/ 目录。</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot violet"></span>元认知层（新增）</h2>
-        <p>工具结果变成 ev_NNN 账本记录，已提交的判断变成 H-NNN 假设。一次矛盾就把置信度减半，否定根假设会级联标记所有派生判断 —— 这是宿主代码，不是 prompt 里的美好愿望。每次工具结果后，仲裁器会自动质询悬空引用与运行时矛盾；/audit 让第二个模型在全新上下文里攻击整张假设栈。</p>
+        <h2><span class="card-dot violet"></span>元认知与 9 阶段硬闸门</h2>
+        <p>工具结果自动打标为 ev_NNN 证据，分析结论记为 H-NNN 假设；矛盾置信度自动减半并级联，verify_artifact 验证与 /audit 对抗复核是进入 writeup 的硬前提。</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot emerald"></span>可组合的模型席位</h2>
-        <p>规划器、执行器、研究员是三个独立席位，各自可以指向不同的 provider 和模型，无需重新编译；结果统一回流到同一份共享转录。</p>
+        <h2><span class="card-dot emerald"></span>三席位路由 + snapcompact</h2>
+        <p>规划器、执行器、研究员可运行中独立换模型；机械裁剪配合可选的 snapcompact PNG 视觉帧归档，让长程逆向不断篇。</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot rose"></span>有治理的证据采集</h2>
-        <p>文件事实来自限定范围的本地工具；写盘、网络、敏感路径和破坏性命令都要先过显式策略闸门。</p>
+        <h2><span class="card-dot rose"></span>任务契约、沙箱与远程 SSH</h2>
+        <p>/goal 钉死目标哈希与验收标准；/cap 在 Tier × Mode 审批前强制任务级网络/设备默认拒绝，同时覆盖本地命令与加密保存的远程 SSH 主机。</p>
       </article>
     </section>
 

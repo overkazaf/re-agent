@@ -157,6 +157,8 @@ provider 的策略检查仍然生效；这里做的是把完整规划上下文�
 | `specialist` | 面向 GPT Cyber、CC CVP 或同类授权 RE provider：先计划，再用 skills 和本地工具推进。 |
 | `auto` | 如果 provider/model/label/CLI 名称里能识别 cyber/CVP 标记，就走 `specialist`；否则走 `caveman`。 |
 | `caveman` | 面向普通 provider：host 把一次请求拆成 planner phase 和隔离 executor phase。 |
+| `reverse` | 交互式 9 阶段逆向工作流（`TRI → STA → DYN → EVI → IFC → HYP → VER → AUD → WRI`），由统一证据账本与假设栈强制阶段硬闸门。 |
+| `ctf` / `research` / `writeup` / `engineering` | 分别面向单题夺旗求解、公开资料溯源调研、基于现有证据出报告以及协议/接口工程化还原。 |
 
 delegated caveman 的关键点：
 
@@ -194,7 +196,7 @@ session JSONL 是完整记录；发给 provider 的只是预算内视图。
 - system prompt 单独处理。
 - assistant tool call 与后续 tool result 保持相邻。
 - 大 tool output 会 spill 到 artifact 文件；上下文里保留摘要、头尾和路径。
-- 旧消息可被摘要替换，但最后一段交互尽量保留。
+- 旧消息可被摘要替换，但最后一段交互尽量保留；可选开启 `"compactionStrategy": "snapcompact"` 将被丢弃消息确定性渲染为本地 `<sessionDir>/snapshots/*.png` 视觉快照帧，供多模态模型无损读回。
 - 被截断或中断的 assistant 回复会追加可识别说明，避免下一轮误读。
 
 原则是：磁盘记录要完整，模型上下文要可控，工具证据要能按路径重新读取。
@@ -298,6 +300,7 @@ provider、model、时间和必要的 metadata。
 - `/sessions` 列出历史。
 - `/resume`（无参）或 CLI `-c` / `--continue` 接上最近 session。
 - `/resume <id>` 接指定 session。
+- `<sessionDir>/evidence-ledger.jsonl` 持久化 `ev_NNN` 证据与验证/审计记录；`~/.0xaf-re-agent/remote.json` 以绑定本机的 AES-256-GCM 密钥保存远程 SSH 主机配置。
 
 session repair 会检查 tool call 与 tool result 的关系，避免缺失结果把下一轮 provider
 请求弄成非法 transcript。

@@ -368,6 +368,15 @@ entire working history with one `[session summary — earlier turns compacted]`
 user message. The detail lives on in the JSONL. It refuses to replace anything
 if the model returns an empty summary (`agentloop.go:165`).
 
+**`snapcompact`** (`internal/core/snapcompact.go`): when
+`"compactionStrategy": "snapcompact"` is configured and the active HTTP provider
+accepts image blocks (Anthropic, OpenAI Responses, OpenAI-compatible Chat),
+dropped message runs are deterministically rasterized locally into PNG snapshot
+frames under `<sessionDir>/snapshots/` and attached in place of the plain text
+compaction marker — preserving addresses, hex offsets, and tables without an
+extra LLM summarization call. CLI providers and `mock` fall back to the standard
+text marker automatically.
+
 ---
 
 ## 5. Providers
@@ -897,13 +906,15 @@ messages, since those are not what makes a session recognizable.
 
 | Path | Written by | Contents |
 | --- | --- | --- |
-| `<sessionDir>/*.jsonl` | `core.Session` | transcripts |
-| `<sessionDir>/evidence-ledger.jsonl` | `evidence.Ledger` | append-only evidence, hypothesis, and audit records |
+| `<sessionDir>/*.jsonl` | `core.Session` | transcripts + `evidence` / `hypotheses` / `audit` / `goal` events |
+| `<sessionDir>/evidence-ledger.jsonl` | `evidence.Ledger` | append-only `ev_NNN` observation, runtime trace, verification, and audit records |
 | `<sessionDir>/artifacts/` | `tools.SpillIfLarge` | full text of over-budget tool output |
+| `<sessionDir>/snapshots/` | `core.snapcompact` | deterministic PNG snapshot frames for visual context compaction |
 | `<sessionDir>/cli-tmux/<run>/` | `providers.CLITmuxProvider` | prompt, stdout/stderr logs, exit status, runner script, tmux socket |
 | `agent.config.json` (cwd) or `~/.0xaf-re-agent/config.json` | operator | merged over `config.Defaults()` |
 | `~/.0xaf-re-agent/ui.json` | `config.SaveUIPrefs` | `{theme, flow}`, merged on save |
 | `~/.0xaf-re-agent/secrets.json` | `auth.Login` | per-provider API keys |
+| `~/.0xaf-re-agent/remote.json` | `remote.Store` | AES-256-GCM machine-bound encrypted SSH host registry |
 | `~/.0xaf-re-agent/repl-history` | `app.Editor` | one prompt line per row, last 1000 loaded |
 | `knowledge/reverse-index.json` | `cmd/import-knowledge` | the searchable RE corpus |
 
@@ -1173,9 +1184,8 @@ directory or a parent, else the cwd or a parent, looking for a directory
 containing both `prompts/system.md` and `skills/` (`internal/assets/assets.go:75`).
 So editing a skill in a checkout needs no rebuild, but a partial or stale local
 `skills/` directory cannot hide newly shipped embedded skills. Shipping a new
-built-in one still requires rebuilding because
-`//go:embed embedded/prompts/system.md embedded/skills` is baked in at compile
-time.
+built-in one still requires rebuilding because root `embed.go`
+(`//go:embed prompts skills`) is baked in at compile time.
 
 ### Add or tune a workflow mode
 
@@ -1343,25 +1353,22 @@ shapes (`internal/util/util.go:20`).
 
 ## 15. Testing
 
-`make test` → `go test ./...`. Ten packages carry tests; no network, no tmux,
-no API keys, no TTY required. `make vet` runs `go vet ./...`.
+`make test` → `go test ./...`. **Twenty Go packages** carry tests (plus the
+frontend TypeScript build and headless E2E suite in `gui/frontend`). `make vet`
+runs `go vet ./...`.
 
-| Package | Tests | What is actually pinned |
-| --- | --- | --- |
-| `internal/core` (agentloop) | 5 | tool dispatch and turn counting, the tool result reaching the next request, missing-tool recovery, **interrupt leaves no dangling call**, auto-routing (including the Chinese keywords), `DescribeEndpoint` |
-| `internal/core` (compaction) | 5 | CJK token weighting, small histories untouched, tool-result elision inside the budget, **the last exchange survives and the marker is prepended**, marker content |
-| `internal/core` (session) | 3 | JSONL round-trip through the shared wire format, listing/prefix resolution, **`repair()` on a truncated log**, sortable file names |
-| `internal/core` (shell) | 5 | `!` parsing, streamed capture, cancellation, timeout reporting, refusal with no operator attached |
-| `internal/providers` (stream) | 10 | format detection, partial-line buffering, `ClaudeTaskTable` create/update/bind, **sub-agent events ignored**, **`Reset` scopes to a session**, redacted thinking still reports a phase, Codex plan/reasoning and both envelope generations |
-| `internal/providers` (http) | 8 | request shapes for all three HTTP adapters, **tool calls echoed back in Responses input**, response parsing including malformed tool arguments, the mock script, `deltaSince` |
-| `internal/security` | 10 | concern detection, **whole-word network matching** (so `concat` is not `nc`), path/write validation, the full mode × tier matrix, **concerns outrank an allow override**, `always`/`never` memory |
-| `internal/plan` | 5 | no-op suppression, timing carry-over, sanitize/clamp, control-character stripping, counts |
-| `internal/tools` | 16 | registry completeness, workspace escape refused, `--write` enforced, decode/carve/find-bytes/triage/entropy behaviour, `update_plan` publishing through `ToolContext`, frida/proxy templates, command exit capture and policy enforcement, **`SpillIfLarge` writes an artifact** |
-| `internal/config` | 6 | partial-block merge over defaults, defaults with no file, **`SetReasoningEffort` and `SetProviderModel` rewriting CLI argv per tool**, key resolution order |
-| `internal/knowledge` | 10 | answer parsing, invented-citation flagging, aliases/bullets, raw fallback, markdown links are not citations, byte-budget packing, prompt construction, ranking |
-| `internal/workflow` | 8 | default-off behaviour, auto choosing specialist vs caveman, prompt wrappers, delegated packet extraction, delegation gating, and narrowed executor tools |
-| `internal/ui` | 22 | **the width and height contract** across a width × rows matrix, plan-row collapse and display mode, bounded plan box, sparkline, trace shapes, **trace plan transitions only**, flow diagram fits and reacts, **`ComposePane` keeps the HUD floor**, markdown, completions, palette width, shell stream buffering, formatting |
-| `internal/app` | 13 | `layout` newline + soft-wrap accounting (the editor's half of the redraw contract), `commonPrefix`, frame redraw, `--workflow` / `--model` parsing, queued task edit/cancel |
+| Package | What is actually pinned |
+| --- | --- |
+| `internal/core` | tool dispatch and turn counting, tool result reaching next request, missing-tool recovery, **interrupt leaves no dangling call**, auto-routing, `CompactHistory` + `snapcompact` PNG frame budgeting, JSONL `repair()`, `!` shell escape, evidence stamping, hypothesis stack wiring, **idempotent `/audit` verdicts** |
+| `internal/evidence` · `internal/hypothesis` · `internal/verify` · `internal/goal` | append-only `evidence-ledger.jsonl` persistence, deterministic confidence halving & dependency cascade, arbitrator static/dynamic cross-checks, strict `/goal` declaration parsing and ledger acceptance gates |
+| `internal/workflow` | all 9 modes (`off`, `auto`, `specialist`, `caveman`, `research`, `writeup`, `ctf`, `reverse`, `engineering`), delegated packet isolation, and **9-phase evidence/verification/audit gates** (`CheckPhaseGate` & `CheckPhaseGatesTo`) |
+| `internal/tools` | **34-tool registry completeness**, pure-Go ELF/PE/Mach-O `binary_inspect`/`anti_analysis`/`binary_diff`/`binary_mitigations`, pure-Go AXML `apk_inspect`, validated `carve_artifacts`, extended `ctf_decode`, `verify_artifact` build/replay/diff, `SpillIfLarge`, workspace containment, and capability sandbox enforcement |
+| `internal/security` | concern detection, whole-word network matching, sensitive path checks without RE filename false positives, Tier × Mode approval matrix, and **task capability sandbox (`/cap`)** |
+| `internal/remote` | machine-bound AES-256-GCM `remote.json` store and **in-process SSH wire-protocol integration tests** (auth, command exec, PTY allocation, peer tracking) |
+| `internal/providers` · `internal/config` · `internal/auth` | Anthropic / OpenAI Responses / OpenAI Chat / CLI tmux / mock adapters, `ClaudeTaskTable` binding, config merging (`compactionStrategy`, `auditProvider`), API key & CLI auth probing |
+| `internal/skills` · `internal/knowledge` · `internal/assets` · `internal/buildinfo` | 30 embedded skills + local overrides, exact-before-tag `skills.Find`, knowledge citation verification, root `embed.go` asset parity, version metadata |
+| `internal/ui` · `internal/plan` | width/height redraw contract across narrow & CJK terminals, **9-phase RE HUD (`TRI..WRI`)**, plan no-op suppression & timing carry-over |
+| `internal/app` · `gui` | REPL slash commands (`/inspect`, `/anti`, `/diff`, `/goal`, `/cap`, `/audit`, `/phase`, `/new`, `/resume`), raw-mode editor, prompt queue, and **Wails GUI multi-session manager, approval round-trip, interrupt, and headless E2E** |
 
 Useful invocations:
 

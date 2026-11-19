@@ -150,9 +150,9 @@
           <h1>0xAF-Re Architecture Map</h1>
         </div>
         <p class="subtitle">
-          A terminal-first RE agent with a REA-inspired metacognition layer: every tool result is stamped
-          into an evidence ledger (ev_NNN), committed claims live in a host-enforced hypothesis stack (H-NNN),
-          and the planner/executor/researcher seats share one auditable loop.
+          A dual-surface RE agent (Terminal TUI + Wails v2 Desktop GUI) with a host-enforced metacognition layer:
+          34 built-in tools, 30 skills, evidence ledger (ev_NNN), hypothesis stack (H-NNN), /goal task contracts,
+          /cap capability sandbox, 9-phase reverse workflow gates, and encrypted remote SSH execution.
         </p>
       </div>
       <div class="toolbar" data-export-ignore>
@@ -238,42 +238,43 @@
 
         <!-- External operator -->
         <rect x="36" y="278" width="170" height="184" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6" filter="url(#soft-shadow)"/>
-        <text x="121" y="306" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Operator Terminal</text>
-        <text x="121" y="331" fill="#94a3b8" font-size="10" text-anchor="middle">REPL / CLI / TTY</text>
-        <text x="62" y="361" fill="#cbd5e1" font-size="10">/scan /r2 /queue</text>
-        <text x="62" y="381" fill="#cbd5e1" font-size="10">/workflow /model</text>
-        <text x="62" y="401" fill="#cbd5e1" font-size="10">/prompt edit role</text>
-        <text x="62" y="431" fill="#22d3ee" font-size="9">mid-turn steering</text>
+        <text x="121" y="306" fill="#f8fafc" font-size="14" font-weight="700" text-anchor="middle">TUI + Desktop GUI</text>
+        <text x="121" y="328" fill="#94a3b8" font-size="9.5" text-anchor="middle">REPL / CLI / Wails v2</text>
+        <text x="54" y="356" fill="#cbd5e1" font-size="9.5">/inspect /anti /diff</text>
+        <text x="54" y="376" fill="#cbd5e1" font-size="9.5">/workflow /phase /queue</text>
+        <text x="54" y="396" fill="#cbd5e1" font-size="9.5">/goal /cap /audit /remote</text>
+        <text x="54" y="426" fill="#22d3ee" font-size="9">mid-turn steering &amp; interrupt</text>
 
         <!-- Host boundary -->
         <rect x="250" y="60" width="760" height="750" rx="14" fill="rgba(15, 23, 42, 0.46)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re host · static Go binary</text>
-        <text x="270" y="103" fill="#64748b" font-size="9">state machine, local policy, stream telemetry, embedded prompts and skills</text>
+        <text x="270" y="84" fill="#fbbf24" font-size="11" font-weight="700">0xAF-Re host · Go engine · 34 built-in tools · 30 skills</text>
+        <text x="270" y="103" fill="#64748b" font-size="9">state machine, /goal contracts, /cap sandbox, snapcompact, embedded prompts &amp; skills</text>
 
         <rect x="290" y="130" width="205" height="112" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.6"/>
-        <text x="392" y="157" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Prompt + Config</text>
-        <text x="312" y="182" fill="#cbd5e1" font-size="10">role system prompts</text>
-        <text x="312" y="200" fill="#cbd5e1" font-size="10">provider/model routing</text>
-        <text x="312" y="222" fill="#a78bfa" font-size="9">+ injected hypothesis stack</text>
+        <text x="392" y="157" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Prompt + Contract</text>
+        <text x="308" y="182" fill="#cbd5e1" font-size="10">role prompts + --context</text>
+        <text x="308" y="200" fill="#cbd5e1" font-size="10">/goal target hash + gates</text>
+        <text x="308" y="222" fill="#a78bfa" font-size="9">+ ledger &amp; hypothesis digests</text>
 
         <rect x="518" y="148" width="242" height="120" rx="8" fill="rgba(6, 78, 59, 0.44)" stroke="#34d399" stroke-width="1.8"/>
         <text x="639" y="175" fill="#f8fafc" font-size="15" font-weight="700" text-anchor="middle">Agent Loop</text>
         <text x="543" y="200" fill="#cbd5e1" font-size="10">route role, provider, model</text>
-        <text x="543" y="219" fill="#cbd5e1" font-size="10">compact context, stream events</text>
+        <text x="543" y="219" fill="#cbd5e1" font-size="10">elide + snapcompact PNG frames</text>
         <text x="543" y="238" fill="#cbd5e1" font-size="10">merge tool results into next turn</text>
         <text x="543" y="258" fill="#34d399" font-size="9">one shared transcript, JSONL-backed</text>
 
         <rect x="804" y="130" width="182" height="148" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.7"/>
-        <text x="895" y="158" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Workflow Modes</text>
-        <text x="828" y="186" fill="#cbd5e1" font-size="10">off / auto</text>
-        <text x="828" y="205" fill="#cbd5e1" font-size="10">specialist route</text>
-        <text x="828" y="224" fill="#cbd5e1" font-size="10">caveman packet</text>
-        <text x="828" y="246" fill="#fbbf24" font-size="9">plan, then isolated executor</text>
+        <text x="895" y="156" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">9 Workflow Modes</text>
+        <text x="820" y="182" fill="#cbd5e1" font-size="9.5">off / auto / specialist</text>
+        <text x="820" y="200" fill="#cbd5e1" font-size="9.5">caveman isolated packet</text>
+        <text x="820" y="218" fill="#cbd5e1" font-size="9.5">reverse (9 gated phases)</text>
+        <text x="820" y="236" fill="#cbd5e1" font-size="9.5">ctf / research / engineering</text>
+        <text x="820" y="256" fill="#fbbf24" font-size="8.5">hard verification &amp; audit gates</text>
 
         <!-- Metacognition layer -->
         <rect x="270" y="296" width="720" height="190" rx="12" fill="rgba(76, 29, 149, 0.07)" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="8 5"/>
-        <text x="284" y="318" fill="#a78bfa" font-size="11" font-weight="700">Metacognition layer · NEW</text>
-        <text x="284" y="334" fill="#64748b" font-size="9">state outside the transcript — injected every turn, replayed on resume</text>
+        <text x="284" y="318" fill="#a78bfa" font-size="11" font-weight="700">Metacognition &amp; Evidence Loop</text>
+        <text x="284" y="334" fill="#64748b" font-size="9">host state outside the transcript — injected every turn, persisted in evidence-ledger.jsonl</text>
 
         <rect x="290" y="352" width="205" height="110" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.7"/>
         <text x="392" y="378" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Evidence Ledger</text>
@@ -303,17 +304,17 @@
         <text x="536" y="594" fill="#cbd5e1" font-size="9">objections synthesized as verification records</text>
 
         <rect x="805" y="516" width="178" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.7"/>
-        <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Policy Gate</text>
-        <text x="830" y="568" fill="#cbd5e1" font-size="10">workspace-scoped reads</text>
-        <text x="830" y="586" fill="#cbd5e1" font-size="10">write/network approvals</text>
-        <text x="830" y="604" fill="#cbd5e1" font-size="10">sensitive path checks</text>
-        <text x="830" y="620" fill="#fb7185" font-size="9">unsafe work is refused</text>
+        <text x="894" y="542" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Sandbox + Policy</text>
+        <text x="820" y="566" fill="#cbd5e1" font-size="9.5">/cap task net &amp; device gate</text>
+        <text x="820" y="584" fill="#cbd5e1" font-size="9.5">Tier × Mode approval gate</text>
+        <text x="820" y="602" fill="#cbd5e1" font-size="9.5">workspace &amp; sensitive checks</text>
+        <text x="820" y="618" fill="#fb7185" font-size="9">logged ActionRecords</text>
 
         <rect x="286" y="664" width="220" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
-        <text x="396" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Live HUD</text>
-        <text x="310" y="718" fill="#cbd5e1" font-size="10">role/provider/model</text>
-        <text x="310" y="736" fill="#cbd5e1" font-size="10">plan rows and task state</text>
-        <text x="310" y="754" fill="#cbd5e1" font-size="10">tokens, timing, tool trace</text>
+        <text x="396" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">90ms HUD + RE Strip</text>
+        <text x="304" y="718" fill="#cbd5e1" font-size="10">FLOW / TOOLS / PLAN / TELE</text>
+        <text x="304" y="736" fill="#cbd5e1" font-size="10">9-phase RE HUD (TRI..WRI)</text>
+        <text x="304" y="754" fill="#cbd5e1" font-size="10">shared across TUI &amp; GUI</text>
 
         <rect x="536" y="664" width="224" height="110" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.6"/>
         <text x="648" y="692" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">Queue + Editing</text>
@@ -347,24 +348,24 @@
 
         <!-- Evidence layer -->
         <rect x="180" y="840" width="920" height="160" rx="14" fill="rgba(15, 23, 42, 0.54)" stroke="#334155" stroke-width="1.3" stroke-dasharray="8 5"/>
-        <text x="202" y="865" fill="#fbbf24" font-size="11" font-weight="700">Local evidence layer</text>
-        <text x="202" y="884" fill="#64748b" font-size="9">facts are gathered on disk first, then stamped into the ledger and fed back into the loop</text>
+        <text x="202" y="865" fill="#fbbf24" font-size="11" font-weight="700">Local &amp; remote evidence layer (34 built-in tools + MCP)</text>
+        <text x="202" y="884" fill="#64748b" font-size="9">facts come from pure-Go binary parsers, external RE toolchains, artifact verifiers, and SSH lab hosts before model claims</text>
 
         <rect x="216" y="906" width="196" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="314" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Fast local tools</text>
-        <text x="238" y="955" fill="#cbd5e1" font-size="9">scan, hex, entropy, carve, apk</text>
+        <text x="314" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Pure-Go Binary RE</text>
+        <text x="228" y="955" fill="#cbd5e1" font-size="8.8">inspect, anti, diff, carve, apk</text>
 
         <rect x="442" y="906" width="206" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="545" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">RE toolchain</text>
-        <text x="464" y="955" fill="#cbd5e1" font-size="9">r2, Ghidra, JADX, angr, Frida</text>
+        <text x="545" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Toolchain + SSH</text>
+        <text x="456" y="955" fill="#cbd5e1" font-size="8.8">r2, Ghidra, JADX, Frida, remote_exec</text>
 
         <rect x="678" y="906" width="178" height="66" rx="8" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1.4"/>
-        <text x="767" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Labs + traffic</text>
-        <text x="704" y="955" fill="#cbd5e1" font-size="9">Unicorn, unidbg, Burp, mitmproxy</text>
+        <text x="767" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Verify + Emulate</text>
+        <text x="692" y="955" fill="#cbd5e1" font-size="8.8">verify_artifact, Unicorn, unidbg</text>
 
         <rect x="884" y="906" width="178" height="66" rx="8" fill="rgba(76, 29, 149, 0.34)" stroke="#a78bfa" stroke-width="1.4"/>
-        <text x="973" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Memory</text>
-        <text x="910" y="955" fill="#cbd5e1" font-size="9">sessions, evidence + hyp events</text>
+        <text x="973" y="931" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">Durable Memory</text>
+        <text x="896" y="955" fill="#cbd5e1" font-size="8.8">JSONL, evidence-ledger, /know</text>
 
         <!-- Legend (outside all boundaries) -->
         <g transform="translate(36 48)">
@@ -389,20 +390,20 @@
 
     <section class="cards" aria-label="architecture notes">
       <article class="card">
-        <h2><span class="card-dot cyan"></span>Terminal-first loop</h2>
-        <p>The REPL is the product surface: prompt queueing, live task expansion, slash commands, and raw shell escapes share one workspace policy.</p>
+        <h2><span class="card-dot cyan"></span>Two faces, one core</h2>
+        <p>Both the terminal REPL and the Wails v2 CRT Desktop GUI drive the exact same core.AgentLoop, 34-tool registry, 9-phase RE HUD, prompt queue, and session JSONL directory.</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot violet"></span>Metacognition layer (new)</h2>
-        <p>Tool results become ev_NNN ledger records; committed claims become H-NNN hypotheses. A contradiction halves confidence and a rejected root cascades a re-check flag to everything derived from it — host code, not prompt hope. After every tool result an arbitrator pass challenges dangling citations and runtime contradictions on its own, and /audit lets a second model attack the whole stack from a fresh context.</p>
+        <h2><span class="card-dot violet"></span>Metacognition &amp; 9-phase gates</h2>
+        <p>Tool results become ev_NNN ledger records; claims become H-NNN hypotheses. Contradictions halve confidence and cascade; verify_artifact and /audit are hard phase-gate preconditions before writeup.</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot emerald"></span>Composable model seats</h2>
-        <p>Planner, executor, and researcher are independent seats. Each can point at a different provider and model without rebuilding the binary, and results flow back into one shared transcript.</p>
+        <h2><span class="card-dot emerald"></span>Three seats + snapcompact</h2>
+        <p>Planner, executor, and researcher seats route independently at runtime, while mechanical elision and optional snapcompact PNG frames keep long binary-analysis sessions inside budget.</p>
       </article>
       <article class="card">
-        <h2><span class="card-dot rose"></span>Governed evidence collection</h2>
-        <p>File facts come from scoped local tools. Writes, network, sensitive paths, and destructive commands pass through explicit policy gates before anything executes.</p>
+        <h2><span class="card-dot rose"></span>Contracts, sandbox &amp; SSH</h2>
+        <p>/goal pins target hashes and acceptance gates; /cap enforces deny-by-default per-task network/device sandboxing ahead of Tier × Mode approvals, across both local tools and encrypted SSH hosts.</p>
       </article>
     </section>
 

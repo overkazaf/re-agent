@@ -61,7 +61,7 @@
 
     <rect x="990"  y="88" width="140" height="42" rx="6" fill="#0f172a"/>
     <rect x="990"  y="88" width="140" height="42" rx="6" fill="rgba(6,78,59,0.4)"   stroke="#34d399" stroke-width="1.5"/>
-    <text x="1060" y="106" fill="#f1f5f9">types.Tool</text><text x="1060" y="121" fill="#94a3b8" font-size="8" font-weight="400">24 local + MCP</text>
+    <text x="1060" y="106" fill="#f1f5f9">types.Tool</text><text x="1060" y="121" fill="#94a3b8" font-size="8" font-weight="400">34 local + MCP</text>
 
     <rect x="1147" y="88" width="140" height="42" rx="6" fill="#0f172a"/>
     <rect x="1147" y="88" width="140" height="42" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>

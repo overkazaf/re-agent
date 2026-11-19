@@ -17,8 +17,13 @@
       <a href="#why">特点</a>
       <a href="#use-cases">使用场景</a>
       <a href="#workflow">工作流</a>
+      <a href="#gui">桌面端</a>
+      <a href="#remote">远程</a>
       <a href="#routing">角色</a>
       <a href="#arsenal">工具</a>
+      <a href="#safety">安全</a>
+      <a href="#context">上下文</a>
+      <a href="#skills">Skills</a>
       <a href="#marketing">海报</a>
       <a href="#install">安装</a>
       <a href="index.html">English</a>
@@ -51,8 +56,10 @@
     <span class="pill"><b>36 ms</b> 启动</span>
     <span class="pill"><b>9 MB</b> 二进制</span>
     <span class="pill"><b>34</b> 工具</span>
+    <span class="pill"><b>30</b> skills</span>
     <span class="pill"><b>8</b> provider</span>
     <span class="pill"><b>9</b> workflow</span>
+    <span class="pill"><b>0</b> JS runtime</span>
   </div>
 
   <figure class="capture">
@@ -159,12 +166,25 @@
           <tr><td><code class="inline">off</code></td><td>默认</td><td>不改写你的 prompt</td></tr>
           <tr><td><code class="inline">auto</code></td><td>机器上可能有 GPT Cyber / CC CVP 路由</td><td>能走 specialist 就走，否则走 caveman</td></tr>
           <tr><td><code class="inline">specialist</code></td><td>有授权 cyber/CVP 类 provider</td><td>先规划，再调用 skills 和本地工具推进</td></tr>
-          <tr><td><code class="inline">caveman</code></td><td>普通 provider</td><td>planner -> 隔离 executor，只传本地证据包</td></tr>
+          <tr><td><code class="inline">caveman</code></td><td>普通 provider</td><td>planner -&gt; 隔离 executor，只传本地证据包</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>专用模式</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">research</code></td><td>调研公开资料（Web / GitHub / arXiv），输出带出处报告</td></tr>
+          <tr><td><code class="inline">writeup</code></td><td>只基于会话内已入库证据整理结构化分析报告</td></tr>
+          <tr><td><code class="inline">ctf</code></td><td>围绕单一题目完成粗筛、规划、求解与精确 flag 验证</td></tr>
+          <tr><td><code class="inline">reverse</code></td><td><strong>交互式逆向</strong>：样本类型选择器 → 9 阶段推进 → 验证与审计硬闸门 → RE HUD → 证据账本</td></tr>
+          <tr><td><code class="inline">engineering</code></td><td>接口与协议工程化还原：恢复数据结构、客户端 stub 与测试</td></tr>
         </tbody>
       </table>
     </div>
     <pre class="block">/workflow auto
 /workflow caveman
+/workflow reverse
 0xaf --workflow specialist -p "triage ./app.apk"</pre>
     <p>
       caveman 模式不是暗语、编码或绕策略。planner 看到完整授权任务；executor 开全新会话，
@@ -209,6 +229,58 @@
   </div>
 </section>
 
+<section id="gui">
+  <div class="wrap">
+    <p class="label">桌面 GUI</p>
+    <h2>基于同一套内核的 CRT 桌面工作台。</h2>
+    <p>
+      基于 Wails v2（Go 后端 + 原生系统 WebView）构建，直接复用同一个
+      <code class="inline">core.AgentLoop</code>、同一套 34 个内置工具、同一个
+      <code class="inline">sessions/</code> 目录以及同一个任务能力沙箱，不是分叉实现。
+    </p>
+    <pre class="block">make gui                         <span class="c">构建原生应用 -&gt; gui/build/bin/0xAF-Re GUI.app</span>
+make gui-dev                     <span class="c">热更新开发模式</span>
+go test ./gui/ -run TestE2E -v   <span class="c">无头端到端冒烟测试</span></pre>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>能力面</th><th>具体内容</th></tr></thead>
+        <tbody>
+          <tr><td>多会话并发</td><td>同时运行多个逆向会话，侧栏实时展示 idle / running / awaiting approval 状态并支持一键 <code class="inline">Interrupt</code> 中断</td></tr>
+          <tr><td>90ms 实时仪表盘 + 9 阶段 RE HUD</td><td>FLOW / TOOLS / PLAN / THINK / TELE 五面板实时重绘，叠加 9 阶段逆向进度条（<code class="inline">TRI → … → WRI</code> 与 <code class="inline">H:N</code> / <code class="inline">E:N</code> 计数）</td></tr>
+          <tr><td>风险审批弹窗</td><td>写盘/执行/网络调用弹出带命中风险项说明的审批对话框，支持 allow / allow-always / deny / deny-always</td></tr>
+          <tr><td>34 工具与契约对齐</td><td>完整支持 <code class="inline">/inspect</code>、<code class="inline">/anti</code>、<code class="inline">/diff</code>、<code class="inline">verify_artifact</code>、<code class="inline">/goal</code>、<code class="inline">/cap</code>、<code class="inline">/audit</code> 与原生 <code class="inline">/workflow reverse</code> 选择器</td></tr>
+          <tr><td>主题与会话恢复</td><td>内置 <code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code> 四套主题，恢复历史会话时同步还原转录、假设栈、证据账本与沙箱权限</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="remote">
+  <div class="wrap">
+    <p class="label">远程模式</p>
+    <h2>本地窗口规划，SSH 实验机执行。</h2>
+    <p>
+      通过 <code class="inline">--remote &lt;name&gt;</code> 或 <code class="inline">/remote use &lt;name&gt;</code>
+      将 <code class="inline">run_command</code> 与 <code class="inline">!shell</code> 自动路由到后台保活的 SSH 连接（30s keepalive +
+      默认 <code class="inline">ssh -tt</code> 远端 PTY）；模型也可显式调用 <code class="inline">remote_exec</code> 指定任意已保存主机。
+      凭据保存在 <code class="inline">~/.0xaf-re-agent/remote.json</code>，使用绑定机器硬件标识的 AES-256-GCM 密钥本地加密。
+    </p>
+    <pre class="block">/remote add lab dev@10.0.0.5
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519
+/remote use lab
+!uname -a                                 <span class="c">shell escape -&gt; ssh lab</span>
+0xaf --remote lab -p "inventory /opt"     <span class="c">启动即进入远程模式</span></pre>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>/remote list</div>
+      <div class="capture__scroll">
+        <img src="shots/remote.png" alt="/remote 已保存主机列表" style="max-width:520px;width:100%;height:auto;display:block">
+      </div>
+      <figcaption>所有远程命令同样经过任务能力沙箱与 exec 级审批闸门，审批提示明确展示 <code class="inline">ssh &lt;host&gt; &lt;command&gt;</code>。</figcaption>
+    </figure>
+  </div>
+</section>
+
 <section id="routing">
   <div class="wrap">
     <p class="label">角色与模型</p>
@@ -221,9 +293,9 @@
 /prompt path executor
 /prompt edit researcher</pre>
     <p>
-      provider 和具体模型都能运行中切换；`system`、`planner`、`executor`、
-      `researcher` 的 prompt 都能单独编辑。编辑文件会从内置 prompt 初始化，
-      保存到 `prompts/` 或 `~/.0xaf-re-agent/prompts/`，并立即 reload。
+      provider 和具体模型都能运行中切换；<code class="inline">system</code>、<code class="inline">planner</code>、<code class="inline">executor</code>、
+      <code class="inline">researcher</code> 的 prompt 都能单独编辑。编辑文件会从内置 prompt 初始化，
+      保存到 <code class="inline">prompts/</code> 或 <code class="inline">~/.0xaf-re-agent/prompts/</code>，并立即 reload。
     </p>
   </div>
 </section>
@@ -232,24 +304,80 @@
   <div class="wrap">
     <p class="label">工具</p>
     <h2>34 个内置工具，粗筛不必花 token。</h2>
-    <pre class="block">/tools                         <span class="c">列出内置工具</span>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>分组</th><th>工具列表</th></tr></thead>
+        <tbody>
+          <tr><td>文件</td><td class="mono">list_files · read_file · write_file · grep</td></tr>
+          <tr><td>Shell</td><td class="mono">run_command</td></tr>
+          <tr><td>纯 Go 二进制</td><td class="mono">file_info · strings · hexdump · hash_file · extract_symbols · binary_inspect · anti_analysis · binary_diff · binary_mitigations</td></tr>
+          <tr><td>CTF 与提取</td><td class="mono">ctf_triage · ctf_decode · entropy_scan · find_bytes · carve_artifacts</td></tr>
+          <tr><td>外部逆向工具</td><td class="mono">reverse_toolkit</td></tr>
+          <tr><td>移动端</td><td class="mono">apk_inspect · frida_hook_template</td></tr>
+          <tr><td>知识与技能</td><td class="mono">list_skills · read_skill · knowledge_search · knowledge_read</td></tr>
+          <tr><td>证据与阶段闸门</td><td class="mono">verify_artifact · evidence_review · hypothesis_create · hypothesis_update · hypothesis_list · update_re_state</td></tr>
+          <tr><td>远程执行</td><td class="mono">remote_exec</td></tr>
+          <tr><td>任务计划</td><td class="mono">update_plan</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre class="block">/tools                         <span class="c">列出 34 个内置工具及接入的 MCP 工具</span>
 /inspect ./chall               <span class="c">ELF/PE/Mach-O 头部、构造函数、区段熵与导入导出表</span>
 /anti ./chall                  <span class="c">检测加壳、反调试、反 Frida 与内联系统调用</span>
 /diff ./orig ./patched         <span class="c">字节差分与 x86/ARM64 指令 patch 识别</span>
-/skills                        <span class="c">列出内置逆向 skill</span>
-/retool inventory              <span class="c">检查 radare2、JADX、Ghidra、Burp、mitmproxy、angr 等工具</span>
-/retool angr template ./chall  <span class="c">生成符号执行 harness</span>
-/retool mitmproxy template api.example.test <span class="c">生成带 host 过滤的抓包 addon</span>
-/skill proxy-capture capture api.example.test traffic <span class="c">按抓包工作流推进</span>
-/know frida ssl pinning        <span class="c">从本地知识库回答，带出处</span>
+/apk ./app.apk                 <span class="c">纯 Go AXML 清单解析 + DEX/SO + 加壳/框架指纹</span>
+/retool inventory              <span class="c">检查 radare2、JADX、Ghidra、Burp、mitmproxy、angr、Unicorn、unidbg</span>
+/goal &lt;目标&gt; · /cap · /audit   <span class="c">任务契约验收、能力沙箱控制与双模型隔离对抗审计</span>
 !file ./chall &amp;&amp; strings -n 8 ./chall | head</pre>
     <figure class="capture">
       <div class="capture__bar"><span class="dot" aria-hidden="true"></span>/scan artifact.txt</div>
       <div class="capture__scroll">
         <img src="shots/scan.svg" alt="/scan 本地粗筛输出">
       </div>
-      <figcaption>输出过大时只把头尾放进上下文，全文落到 artifact 文件，模型可以按需再读。</figcaption>
+      <figcaption>输出过大时只把头尾放进上下文，全文落到 artifact 文件，模型可以按需再读；任意 stdio MCP server（如 <code class="inline">ida-pro-mcp</code>）也会并入同一注册表和审批闸门。</figcaption>
     </figure>
+  </div>
+</section>
+
+<section id="safety">
+  <div class="wrap">
+    <p class="label">安全与沙箱</p>
+    <h2>任务能力沙箱在前，Tier × Mode 审批在后。</h2>
+    <p>
+      生效的 <code class="inline">/goal</code> 任务契约会先拉起任务级能力沙箱（<code class="inline">/cap</code>）：网络与设备访问默认拒绝，动作写入可审计日志。
+      通过沙箱后，再按工具风险等级与会话模式（<code class="inline">safe</code> / <code class="inline">write</code> / <code class="inline">always-ask</code> / <code class="inline">yolo</code>）执行审批；命中高危或网络特征的命令始终拦截询问。
+    </p>
+  </div>
+</section>
+
+<section id="context">
+  <div class="wrap">
+    <p class="label">上下文、压缩与恢复</p>
+    <h2>磁盘转录完整保留，视觉快照无损压缩。</h2>
+    <p>
+      每次请求自动做两轮机械裁剪（折叠旧工具大输出、丢弃最旧对话轮次），严格保持 <code class="inline">tool_use</code> 与 <code class="inline">toolResult</code> 成对出现。
+      在 <code class="inline">agent.config.json</code> 中开启 <code class="inline">"compactionStrategy": "snapcompact"</code> 可将被裁剪历史本地确定性渲染为 PNG 快照帧，供支持视觉的模型直接读回偏移与地址细节；启动时还可用 <code class="inline">--context "know:…"</code> 或 <code class="inline">--context "file:…"</code> 注入参考资料。
+    </p>
+    <pre class="block">/context                               <span class="c">查看当前上下文预算占用</span>
+/compact                               <span class="c">将当前会话折叠为高密度简报</span>
+/sessions · /resume [id] · /new        <span class="c">列出历史、续接会话或开启新会话</span>
+0xaf --continue                        <span class="c">CLI 直接续接最近一次会话</span>
+0xaf --context "know:android packer"   <span class="c">注入本地知识库或文件上下文</span></pre>
+  </div>
+</section>
+
+<section id="skills">
+  <div class="wrap">
+    <p class="label">Skills 与知识库</p>
+    <h2>内置 30 个逆向工作流，支持本地覆盖与私有笔记检索。</h2>
+    <p>
+      二进制单源内嵌 <strong>30 个正交逆向 Skills</strong>：涵盖 CTF 首轮粗筛、原生 Pwn/RE、二进制打补丁、Capstone/Keystone、radare2、Ghidra、GDB、OLLVM 与 VMProtect 反混淆、SO 字符串解密、密码学识别、白盒 DFA（<code class="inline">whitebox-dfa</code>）、DRM 与私有协议分析（<code class="inline">drm-protocol-analysis</code>）、Android APK/SO/签名 + Frida + JADX、Unicorn/unidbg/Qiling/QEMU 仿真、WASM 与 JSVMP 逆向、浏览器 Hook 以及 Burp/mitmproxy 抓包。
+    </p>
+    <pre class="block">/skills
+/skill android-apk-frida inspect this APK
+/skill whitebox-dfa recover the AES round key from ./wb_cipher
+go run ./cmd/import-knowledge ~/notes/re
+/know frida ssl pinning</pre>
   </div>
 </section>
 

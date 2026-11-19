@@ -38,6 +38,7 @@ modes, queued prompts, session resume, and a live view of every turn.
 - [Context Compaction](#context-compaction)
 - [Remote mode](#remote-mode)
 - [Providers and Models](#providers-and-models)
+- [Built-in Tools (34)](#built-in-tools-34)
 - [Skills and Knowledge](#skills-and-knowledge)
 - [Safety](#safety)
 - [Troubleshooting](#troubleshooting)
@@ -411,16 +412,17 @@ make gui            # build -> gui/build/bin/0xAF-Re GUI.app
 make gui-dev        # live-reload dev mode
 ```
 
-What v1 ships:
+What ships:
 
 | Surface | What you get |
 | --- | --- |
-| Multi-session | Run several agent sessions at once; the sidebar tracks each one's lifecycle (idle / running / awaiting approval) |
-| Live dashboard | The TUI's 90ms flow / tools / plan / think / telemetry panels, redrawn from server snapshots |
-| Approval gate | Write/exec/network tool calls push a risk-coded dialog; allow / allow-always / deny / deny-always round-trips into the session policy |
+| Multi-session | Run several agent sessions at once; the sidebar tracks each one's lifecycle (idle / running / awaiting approval) and supports mid-turn `Interrupt` |
+| Live dashboard + 9-phase RE HUD | The TUI's 90ms flow / tools / plan / think / telemetry panels plus the 9-phase RE HUD (`TRI → … → WRI` with live `H:N` / `E:N` counts) |
+| Full 34-tool & sandbox parity | Identical 34 built-in tools (`binary_inspect`, `anti_analysis`, `binary_diff`, `verify_artifact`, `remote_exec`, …), `evidence-ledger.jsonl`, `/goal` contracts, `/cap` sandbox, and `/audit` |
+| Approval gate | Write/exec/network tool calls push a risk-coded dialog with matched safety concerns; allow / allow-always / deny / deny-always round-trips into the session policy |
 | Prompt queue | Prompts sent mid-turn queue automatically and drain in order |
 | Themes | deck / amber / matrix / mono — scanlines and glow throughout, `prefers-reduced-motion` honored |
-| Resume | The session picker lists the same saved transcripts the CLI resumes |
+| Resume | The session picker lists and hydrates full saved transcripts, task plans, hypotheses, evidence, and active `/goal` sandbox scopes |
 
 Headless smoke (no window needed):
 
@@ -664,15 +666,34 @@ Minimal config override:
 
 Copy `config.example.json` to `agent.config.json` for a full local config.
 
+## Built-in Tools (34)
+
+Both the CLI and Desktop GUI expose the exact same **34 built-in tools** (plus any tools contributed by configured MCP servers):
+
+| Category | Tools |
+| --- | --- |
+| **Files** (4) | `list_files` · `read_file` · `write_file` · `grep` |
+| **Shell & Remote** (2) | `run_command` · `remote_exec` |
+| **Pure-Go Binary Analysis** (9) | `file_info` · `strings` · `hexdump` · `hash_file` · `extract_symbols` · `binary_inspect` (ELF/PE/Mach-O headers, constructors, sections, imports/exports) · `anti_analysis` (packer, anti-debug, anti-Frida, inline syscall detection) · `binary_diff` (byte regions + x86/ARM64 patch classification) · `binary_mitigations` |
+| **CTF & Carving** (5) | `ctf_triage` (head+tail + UTF-16LE) · `ctf_decode` (`base64`/`base32`/`hex`/`url`/`rot13`/`xor`/`zlib`/`gzip`/`rc4`) · `entropy_scan` · `find_bytes` · `carve_artifacts` (validated ELF/PE/Mach-O/DEX/ZIP/SquashFS/GZIP/XZ/U-Boot/PDF/SQLite) |
+| **External RE Wrappers** (1) | `reverse_toolkit` (radare2/rizin, Ghidra headless, JADX, apktool, binwalk, YARA, gdb/lldb, objdump/readelf/nm, angr, Unicorn, unidbg, Frida, Burp, mitmproxy) |
+| **Mobile RE** (2) | `apk_inspect` (pure-Go binary `AndroidManifest.xml` AXML parser + DEX/SO + packer/framework signatures) · `frida_hook_template` |
+| **Skills & Knowledge** (4) | `list_skills` · `read_skill` (including auxiliary scripts/files) · `knowledge_search` · `knowledge_read` |
+| **Evidence, Verification & Gates** (6) | `verify_artifact` (build + replay + stdout diff) · `evidence_review` · `hypothesis_create` · `hypothesis_update` · `hypothesis_list` · `update_re_state` |
+| **Plan** (1) | `update_plan` |
+
 ## Skills and Knowledge
 
-Built-in skills cover common RE paths: CTF first pass, Android APK + Frida,
-native pwn/RE, Web/WASM crypto, radare2, Ghidra, JADX, Burp/mitmproxy, angr, Unicorn, unidbg,
-and local playbooks.
+**30 built-in RE skills** ship embedded in the binary (`embed.go`), covering:
+- **Triage & Binary RE:** `ctf-first-pass`, `native-pwn-re`, `binary-patching`, `capstone-disassembler`, `keystone-assembler`, `radare2-reverse`, `ghidra`, `gdb`, `re-writeup`
+- **Deobfuscation & Crypto:** `ollvm-deobfuscation`, `vmp-restore`, `deobfuscate`, `so-string-deobfuscation`, `crypto-identification`, `whitebox-dfa`, `drm-protocol-analysis`
+- **Android, SO & Emulation:** `android-apk-frida`, `analyze-so`, `analyze-sign`, `frida-hook-workflow`, `jadx`, `unicorn-emulator` (with ready-to-run ARM/ARM64/x86/JNI Python harnesses), `unidbg`, `qiling-emulator`, `qemu-emulator`
+- **Web, WASM & Traffic:** `wasm-reverser`, `web-crypto-analyzer`, `jsvmp-analysis`, `browser-hook`, `proxy-capture`
 
 ```text
 /skills
 /skill android-apk-frida inspect this APK
+/skill whitebox-dfa recover the AES round key from ./wb_encrypt
 /skill proxy-capture capture api.example.test traffic
 ```
 
