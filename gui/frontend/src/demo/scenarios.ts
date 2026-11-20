@@ -98,11 +98,11 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     id: 're-workflow',
     index: 2,
     title: '三模型协同 · 契约/证据/仲裁/审计/Writeup 闭环',
-    subtitle: 'deepseek + codex + glm · carrier.bin',
+    subtitle: 'codex sol + ds + glm-5.3 · carrier.bin',
     duration: '~3 min',
-    tags: ['DEEPSEEK·CODEX·GLM', 'SANDBOX', 'ARBITRATOR', 'WRITEUP'],
+    tags: ['CODEX-SOL·DS·GLM-5.3', 'SANDBOX', 'ARBITRATOR', 'WRITEUP'],
     summary:
-      '严格对齐文章六大核心环节：/goal 契约锚定 → /cap 能力沙箱 → ev_NNN 一等账本 → H-NNN 反证折半与级联纠偏（破除 Commits to a story）→ glm 零上下文隔离审计 → 硬闸门解锁可溯源 Writeup 分析报告（推荐打开「◈ 协同图谱」体验放大、思考过程回放与 Writeup 工坊！）。',
+      '严格对齐文章六大核心环节：/goal 契约锚定 → /cap 能力沙箱 → ev_NNN 一等账本 → H-NNN 反证折半与级联纠偏（破除 Commits to a story）→ glm-5.3 零上下文隔离审计 → 硬闸门解锁可溯源 Writeup 分析报告（推荐打开「◈ 协同图谱」体验放大、思考过程回放与 Writeup 工坊！）。',
     seeds: [{ workspace: '/demo/reverse-lab', role: 'auto', workflow: 'off' }],
     steps: [
       {
@@ -118,7 +118,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
         id: 'carve',
         title: '静态取证与假设',
         target: '③ ev_NNN · ④ H-NNN',
-        guide: 'codex 静态雕刻盖章 ev_001..ev_004 入账，deepseek 建立 H-001/H-002 与派生子假设 H-003，宿主仲裁器触发 single-view 单视角提醒。',
+        guide: '执行席 ds 高速静态雕刻盖章 ev_001..ev_004 入账，规划席 codex-sol 建立 H-001/H-002 与派生子假设 H-003，宿主仲裁器触发 single-view 单视角提醒。',
         fillText: '对 carrier.bin 做文件分诊与内嵌特征提取，建立初步假设',
         autoKind: 'prompt',
         autoLabel: '自动执行',
@@ -134,12 +134,12 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
       },
       {
         id: 'audit',
-        title: 'GLM 隔离对抗审计',
-        target: '⑤ AUDITOR · glm',
-        guide: '运行 /audit 唤醒独立第三席位 glm（零对话、零工具），对假设栈逐条签发 SUPPORT/CHALLENGE 裁定并落盘 audit_finding，打通全部 /goal 门禁。',
+        title: '隔离对抗审计',
+        target: '⑤ AUDITOR · glm-5.3',
+        guide: '运行 /audit 唤醒独立第三席位 glm-5.3（零对话、零工具），对假设栈逐条签发 SUPPORT/CHALLENGE 裁定并落盘 audit_finding，打通全部 /goal 门禁。',
         fillText: '/audit',
         autoKind: 'command',
-        autoLabel: '运行 /audit (glm)',
+        autoLabel: '运行 /audit (glm-5.3)',
       },
       {
         id: 'writeup',

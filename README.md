@@ -445,11 +445,11 @@ The Desktop GUI and Web Demo Sandbox use **semantic color hierarchy** so focal f
 | Operation View | What It Demonstrates |
 | :--- | :--- |
 | <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI Semantic Color Zones & Forensic Ledger"> | **Semantic Color Zones & Immutable Ledger**: Cyan `FLOW`, Crimson/Emerald `TOOLS`, Amber `PLAN`, Violet `THINK` & `RE WORKFLOW [9/9]`, and Emerald Spotlight `LEDGER 🔒` (`ev_NNN` / `H-NNN`). |
-| <img src="docs/shots/gui-governance-graph.png" width="440" alt="Multi-Role Governance Graph & Replay"> | **Multi-Role Architecture Graph & Cognitive Replay**: `deepseek` (Planner) + `codex` (Executor) + `glm` (Auditor) swimlanes, Gate 1/2 security checks, zoom/fullscreen (`125%`), and 8-frame thought replay (`▶ 回放思考过程`). |
+| <img src="docs/shots/gui-governance-graph.png" width="440" alt="Multi-Role Governance Graph & Replay"> | **Multi-Role Architecture Graph & Cognitive Replay**: `codex sol / gemini 4 carbon` (Planner) + `ds / gemini 4 neon / glm-5.3-flash` (Executor) + `codex sol / gemini 4 carbon / glm-5.3` (Auditor) swimlanes, Gate 1/2 security checks, zoom/fullscreen (`125%`), and 8-frame thought replay. |
 | <img src="docs/shots/gui-provenance-dag.png" width="440" alt="Live Provenance Citation DAG"> | **Live Causal Provenance DAG**: Dynamic `ev_NNN ↔ H-NNN` support/contradiction edges, confidence halving (`H-002 [REJECTED]`), and `AUDIT & DELIVERY VERDICT` gate. |
 | <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="Scientific RE Hypothesis & Experiment Workbench"> | **Scientific RE Workbench**: Create/edit falsifiable hypotheses (`H-005`) and run live experiments (`exp_01 [PASSED]`) — only real host execution mints immutable `ev_013`. |
 | <img src="docs/shots/gui-writeup-studio.png" width="440" alt="6-Stage Alignment & Structured Conclusion Studio"> | **6-Stage Cognitive Alignment & Writeup Studio**: 1:1 alignment with the 6 anti-*Commits-to-a-story* stages, **4-Pillar Structured Conclusion Matrix**, and citation-anchored Markdown Writeup export. |
-| <img src="docs/shots/gui-role-config.png" width="440" alt="4-Role AI Agent Configuration"> | **4-Role AI Agent Routing (`amber` CRT theme)**: Live visual configuration for `planner` (`deepseek`), `executor` (`codex`), `researcher` (`glm`), and isolated `auditor` (`glm`). |
+| <img src="docs/shots/gui-role-config.png" width="440" alt="4-Role AI Agent Configuration"> | **4-Role AI Agent Routing (`amber` CRT theme)**: Live visual configuration for `planner` (`codex-sol`), `executor` (`ds`), `researcher` (`gemini-4-carbon`), and isolated `auditor` (`glm-5.3`). |
 
 Headless smoke & E2E verification (no window needed):
 
@@ -648,12 +648,12 @@ pulls, and multi-host fan-out of one plan.
 
 ### Four-Role Seat Matrix
 
-| Role Seat | Config Key | Slash Command | Responsibility | Example Providers |
+| Role Seat | Config Key | Slash Command | Responsibility | Recommended Candidate Pool |
 | :--- | :--- | :--- | :--- | :--- |
-| **Planner** | `plannerProvider` | `/planner <name>` | Drafts `/goal` contracts, maintains `update_plan` routes, creates & revises `H-NNN` hypotheses | `deepseek` (`deepseek-chat` / `deepseek-reasoner`) · `claude-api` |
-| **Executor** | `executorProvider` | `/executor <name>` | Drives all 34 built-in RE tools, collects static/dynamic evidence, runs `verify_artifact` replays | `codex` (`gpt-5.3-codex`) · `claude` |
-| **Researcher** | `researcherProvider` | `/researcher <name>` | Synthesizes papers, symbol context, and local knowledge base entries | `glm` · `grok` · `deepseek` |
-| **Auditor** | `auditProvider` | `/auditor <name\|auto>` | Runs `/audit` in a **zero-history, tool-free** sandbox over the hypothesis stack + ledger digest (`""` / `auto` picks a third seat distinct from Planner & Executor) | `glm` (`glm-4.6`) · any independent model |
+| **Planner** | `plannerProvider` | `/planner <name>` | High-depth reasoning: drafts `/goal` contracts, maintains `update_plan` routes, creates & revises `H-NNN` hypotheses | `codex sol` (`codex-sol`) · `gemini 4 carbon` (`gemini-4-carbon`) |
+| **Executor** | `executorProvider` | `/executor <name>` | High-throughput tool driver: runs all 34 built-in RE tools, collects static/dynamic evidence, executes `verify_artifact` replays | `ds` (`deepseek`) · `gemini 4 neon` (`gemini-4-neon`) · `glm-5.3-flash` |
+| **Researcher** | `researcherProvider` | `/researcher <name>` | Synthesizes papers, symbol context, and local knowledge base entries | `gemini 4 carbon` · `ds` · `glm-5.3` |
+| **Auditor** | `auditProvider` | `/auditor <name\|auto>` | Runs `/audit` in a **zero-history, tool-free** sandbox over the hypothesis stack + ledger digest (automatically avoids active Planner & Executor) | `codex sol` · `gemini 4 carbon` · `glm-5.3` |
 
 ### Three Ways to Configure Roles
 
@@ -661,39 +661,57 @@ pulls, and multi-host fan-out of one plan.
 2. **Runtime Slash Commands (CLI & GUI)**:
 
 ```text
-/planner deepseek
-/executor codex
-/researcher glm
-/auditor glm
+/planner codex-sol
+/executor ds
+/researcher gemini-4-carbon
+/auditor glm-5.3
 /agent auto
-/model deepseek deepseek-reasoner
-/model planner gpt-5.3-codex-high
+/model executor glm-5.3-flash
+/model planner gemini-4-carbon
 ```
 
 3. **Workspace or Global Config (`agent.config.json` / `~/.0xaf-re-agent/config.json`)**:
 
 ```json
 {
-  "plannerProvider": "deepseek",
-  "executorProvider": "codex",
-  "researcherProvider": "glm",
-  "auditProvider": "glm",
+  "plannerProvider": "codex-sol",
+  "executorProvider": "ds",
+  "researcherProvider": "gemini-4-carbon",
+  "auditProvider": "glm-5.3",
   "providers": {
-    "deepseek": {
+    "codex-sol": {
+      "type": "openai-responses",
+      "model": "codex-sol",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": ["OPENAI_API_KEY"]
+    },
+    "gemini-4-carbon": {
+      "type": "openai-chat",
+      "model": "gemini-4-carbon",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKeyEnv": ["GEMINI_API_KEY"]
+    },
+    "ds": {
       "type": "openai-chat",
       "model": "deepseek-chat",
       "baseUrl": "https://api.deepseek.com/v1",
       "apiKeyEnv": ["DEEPSEEK_API_KEY"]
     },
-    "codex": {
-      "type": "openai-responses",
-      "model": "gpt-5.3-codex",
-      "baseUrl": "https://api.openai.com/v1",
-      "apiKeyEnv": ["OPENAI_API_KEY"]
-    },
-    "glm": {
+    "gemini-4-neon": {
       "type": "openai-chat",
-      "model": "glm-4.6",
+      "model": "gemini-4-neon",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKeyEnv": ["GEMINI_API_KEY"]
+    },
+    "glm-5.3-flash": {
+      "type": "openai-chat",
+      "model": "glm-5.3-flash",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
+    },
+    "glm-5.3": {
+      "type": "openai-chat",
+      "model": "glm-5.3",
       "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
       "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
     }

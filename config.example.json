@@ -1,13 +1,61 @@
 {
   "name": "0xAF-Re",
-  "plannerProvider": "codex",
-  "executorProvider": "claude",
-  "researcherProvider": "codex",
+  "plannerProvider": "codex-sol",
+  "executorProvider": "ds",
+  "researcherProvider": "gemini-4-carbon",
   "defaultRole": "auto",
   "maxTurns": 8,
   "compactionStrategy": "summary",
-  "auditProvider": "",
+  "auditProvider": "glm-5.3",
   "providers": {
+    "codex-sol": {
+      "type": "openai-responses",
+      "label": "Codex Sol (Planner / Auditor)",
+      "model": "codex-sol",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": ["OPENAI_API_KEY", "OPENAI_CODEX_OAUTH_TOKEN"],
+      "reasoningEffort": "high"
+    },
+    "gemini-4-carbon": {
+      "type": "openai-chat",
+      "label": "Gemini 4 Carbon (Planner / Auditor)",
+      "model": "gemini-4-carbon",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKeyEnv": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+      "maxTokens": 8192
+    },
+    "ds": {
+      "type": "openai-chat",
+      "label": "DeepSeek / DS (Executor)",
+      "model": "deepseek-chat",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "apiKeyEnv": ["DEEPSEEK_API_KEY"],
+      "maxTokens": 8192
+    },
+    "gemini-4-neon": {
+      "type": "openai-chat",
+      "label": "Gemini 4 Neon (Fast Executor)",
+      "model": "gemini-4-neon",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKeyEnv": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+      "maxTokens": 8192
+    },
+    "glm-5.3-flash": {
+      "type": "openai-chat",
+      "label": "GLM-5.3-Flash (Fast Executor)",
+      "model": "glm-5.3-flash",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"],
+      "maxTokens": 8192
+    },
+    "glm-5.3": {
+      "type": "openai-chat",
+      "label": "GLM-5.3 (Isolated Auditor)",
+      "model": "glm-5.3",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"],
+      "maxTokens": 8192
+    },
     "codex": {
       "type": "cli-tmux",
       "label": "Codex CLI tmux",

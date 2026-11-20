@@ -127,7 +127,7 @@ async function main() {
   }, page)
   await shot('case1-complete')
 
-  await step('Case 2: deepseek+codex+glm RE workflow + sandbox + arbitrator + /audit + SVG graphs', async () => {
+  await step('Case 2: codex-sol+ds+glm-5.3 RE workflow + sandbox + arbitrator + /audit + SVG graphs', async () => {
     await page.getByRole('button', { name: '下一场景 →' }).click()
     await waitFor(page, 'CASE 2/5')
     await waitFor(page, 'reverse-lab')
@@ -151,11 +151,11 @@ async function main() {
     await waitFor(page, '▸VER')
     await waitFor(page, '○ idle')
 
-    // Step 4: isolated GLM /audit → unlocks WRI [9/9]
+    // Step 4: isolated glm-5.3 /audit → unlocks WRI [9/9]
     await page.getByRole('button', { name: /▶ 运行 \/audit/ }).click()
     await waitFor(page, '▸WRI')
     await waitFor(page, '[9/9]')
-    await waitFor(page, 'glm-4.6')
+    await waitFor(page, 'glm-5.3')
 
     // Step 5: Evidence-cited Writeup generation → archives notes/writeup.md & completes all 5 steps
     await page.getByRole('button', { name: /▶ 生成 Writeup/ }).click()
@@ -165,9 +165,9 @@ async function main() {
 
     // Open interactive Governance & Provenance Graph (Pipeline SVG view)
     await page.getByRole('button', { name: '◈ 机制图谱' }).click()
-    await waitFor(page, 'PLANNER · deepseek')
-    await waitFor(page, 'EXECUTOR · codex')
-    await waitFor(page, 'AUDITOR · glm')
+    await waitFor(page, 'PLANNER · codex-sol')
+    await waitFor(page, 'EXECUTOR · ds')
+    await waitFor(page, 'AUDITOR · glm-5.3')
     await waitFor(page, 'GATE 1 · 能力沙箱')
     await waitFor(page, 'HOST ARBITRATOR')
     await waitFor(page, '✦ 逆向过程总结：')
@@ -198,7 +198,7 @@ async function main() {
     // Switch to live Provenance Citation DAG SVG view
     await page.getByRole('button', { name: /☍ 实时因果证据图谱/ }).click()
     await waitFor(page, 'AUDIT & DELIVERY VERDICT')
-    await waitFor(page, 'Auditor Seat: glm')
+    await waitFor(page, 'Auditor Seat: glm-5.3')
     await waitFor(page, 'H-004 [ACTIVE]')
     await waitFor(page, 'H-002 [REJECTED]')
     await page.locator('svg').getByText('H-004 [ACTIVE]', { exact: true }).click()

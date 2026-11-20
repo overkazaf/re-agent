@@ -156,7 +156,7 @@ function handleSignal(sig: DemoSignal): void {
       markStepDone(
         sid,
         'carve',
-        '✓ deepseek 建立 H-001..H-003，codex 静态取证 E:4，宿主仲裁器发出 single-view 提醒（▸DYN [3/9]）。',
+        '✓ codex-sol 建立 H-001..H-003，ds 静态取证 E:4，宿主仲裁器发出 single-view 提醒（▸DYN [3/9]）。',
       )
     } else if (sig.type === 'turn_completed' && sig.kind === 're_verify') {
       markStepDone(
@@ -168,7 +168,7 @@ function handleSignal(sig: DemoSignal): void {
       markStepDone(
         sid,
         'audit',
-        '✓ 独立第三席位 glm (glm-4.6) 隔离对抗审计 PASS！/goal 3/3 达标，已解锁第 5 步 Writeup 报告交付。',
+        '✓ 独立第三席位 glm-5.3 隔离对抗审计 PASS！/goal 3/3 达标，已解锁第 5 步 Writeup 报告交付。',
       )
     } else if (sig.type === 'writeup_completed' || (sig.type === 'turn_completed' && sig.kind === 're_writeup')) {
       markStepDone(

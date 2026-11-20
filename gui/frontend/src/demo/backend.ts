@@ -171,9 +171,12 @@ function zeroUsage(): TokenUsage {
 
 function modelForProvider(provider: string): string {
   const p = provider.toLowerCase()
-  if (p.includes('deepseek')) return 'deepseek-chat'
-  if (p.includes('codex')) return 'gpt-5.3-codex'
-  if (p.includes('glm')) return 'glm-4.6'
+  if (p.includes('codex-sol') || p.includes('codex sol') || p === 'codex') return 'codex sol'
+  if (p.includes('gemini-4-carbon') || p.includes('carbon')) return 'gemini 4 carbon'
+  if (p.includes('gemini-4-neon') || p.includes('neon')) return 'gemini 4 neon'
+  if (p.includes('glm-5.3-flash') || p.includes('flash')) return 'glm-5.3-flash'
+  if (p.includes('glm-5.3') || p === 'glm') return 'glm-5.3'
+  if (p === 'ds' || p.includes('deepseek')) return 'ds (deepseek)'
   if (p.includes('claude')) return 'claude-opus-4-6'
   return 'demo-sandbox-1'
 }
@@ -194,9 +197,9 @@ function shortSha16(text: string): string {
 function makeLoopEvent(partial: Partial<LoopEvent> & { type: LoopEvent['type'] }): LoopEvent {
   return {
     turn: 0,
-    provider: 'deepseek',
+    provider: 'codex-sol',
     phase: '',
-    model: 'deepseek-chat',
+    model: 'codex sol',
     endpoint: 'demo://sandbox',
     messages: 0,
     tokens: 0,
@@ -355,10 +358,10 @@ function makeSavedSessions(): SavedDemoSession[] {
         },
         {
           id: 'ev_004',
-          source: 'audit:glm',
+          source: 'audit:glm-5.3',
           kind: 'audit_finding',
           view: 'static',
-          summary: 'GLM (glm-4.6) adversarial audit PASS · 0 unsupported claims',
+          summary: 'GLM-5.3 adversarial audit PASS · 0 unsupported claims',
           excerpt: 'AUDIT H-001 SUPPORT ev_003 — static decode (ev_002) and dynamic replay (ev_003) verified.',
           supports: ['H-001'],
           bytes: 91,
@@ -509,6 +512,7 @@ interface DemoSession {
   planner: string
   executor: string
   researcher: string
+  auditor: string
   activeSeatOverride: string
   maxTurns: number
   goalText: string
@@ -655,7 +659,7 @@ export class DemoBackend implements AppAPI {
     const activeProvider =
       s.activeSeatOverride ||
       (s.stage === 'tool' || s.stage === 'calls' ? s.executor : s.planner)
-    const auditorName = s.researcher || 'glm'
+    const auditorName = s.auditor || s.researcher || 'glm-5.3'
     const planBadge = s.plan
       ? {
           done: s.plan.steps.filter((st) => st.status === 'completed').length,
@@ -1119,8 +1123,8 @@ export class DemoBackend implements AppAPI {
       workspace,
       role: opts.role?.trim() || 'auto',
       workflow,
-      planner: 'deepseek',
-      executor: 'codex',
+      planner: 'codex-sol',
+      executor: 'ds',
       lifecycle: 'idle',
     }
     const s: DemoSession = {
@@ -1161,9 +1165,10 @@ export class DemoBackend implements AppAPI {
       pendingApprovalId: null,
       gateResolve: null,
       approvalMemory: {},
-      planner: 'deepseek',
-      executor: 'codex',
-      researcher: 'glm',
+      planner: 'codex-sol',
+      executor: 'ds',
+      researcher: 'gemini-4-carbon',
+      auditor: 'glm-5.3',
       activeSeatOverride: '',
       maxTurns: 30,
       goalText: '',
@@ -1295,13 +1300,15 @@ export class DemoBackend implements AppAPI {
       plannerProvider: s.planner,
       executorProvider: s.executor,
       researcherProvider: s.researcher,
-      auditProvider: s.researcher,
-      providerNames: ['deepseek', 'codex', 'glm', 'claude-api', 'mock'],
+      auditProvider: s.auditor,
+      providerNames: ['codex-sol', 'gemini-4-carbon', 'ds', 'gemini-4-neon', 'glm-5.3-flash', 'glm-5.3', 'mock'],
       providers: [
-        { name: 'deepseek', model: 'deepseek-chat', type: 'openai-chat' },
-        { name: 'codex', model: 'gpt-5.3-codex', type: 'openai-responses' },
-        { name: 'glm', model: 'glm-4.6', type: 'openai-chat' },
-        { name: 'claude-api', model: 'claude-opus-4-6', type: 'anthropic' },
+        { name: 'codex-sol', model: 'codex sol', type: 'openai-responses' },
+        { name: 'gemini-4-carbon', model: 'gemini 4 carbon', type: 'openai-chat' },
+        { name: 'ds', model: 'deepseek-chat (ds)', type: 'openai-chat' },
+        { name: 'gemini-4-neon', model: 'gemini 4 neon', type: 'openai-chat' },
+        { name: 'glm-5.3-flash', model: 'glm-5.3-flash', type: 'openai-chat' },
+        { name: 'glm-5.3', model: 'glm-5.3', type: 'openai-chat' },
         { name: 'mock', model: 'demo-sandbox-1', type: 'mock' },
       ],
       maxTurns: s.maxTurns,
@@ -1319,14 +1326,14 @@ export class DemoBackend implements AppAPI {
     if (patch.plannerProvider) s.planner = patch.plannerProvider
     if (patch.executorProvider) s.executor = patch.executorProvider
     if (patch.researcherProvider) s.researcher = patch.researcherProvider
-    if (patch.auditProvider && patch.auditProvider !== 'auto') s.researcher = patch.auditProvider
+    if (patch.auditProvider && patch.auditProvider !== 'auto') s.auditor = patch.auditProvider
     if (patch.maxTurns) s.maxTurns = patch.maxTurns
     s.info = { ...s.info, planner: s.planner, executor: s.executor }
     this.emitTick(s)
     this.emitNotice(
       id,
       'info',
-      `settings updated · planner=${s.planner} executor=${s.executor} auditor=${s.researcher} maxTurns=${s.maxTurns}`,
+      `settings updated · planner=${s.planner} executor=${s.executor} auditor=${s.auditor} maxTurns=${s.maxTurns}`,
     )
     emitDemoSignal({ type: 'settings_saved', sessionId: id })
   }
@@ -1819,8 +1826,40 @@ export class DemoBackend implements AppAPI {
 
       case '/providers':
         info(
-          `planner=${s.planner} (${modelForProvider(s.planner)}) · executor=${s.executor} (${modelForProvider(s.executor)}) · auditor/researcher=${s.researcher} (${modelForProvider(s.researcher)})`,
+          `planner=${s.planner} (${modelForProvider(s.planner)}) · executor=${s.executor} (${modelForProvider(s.executor)}) · auditor=${s.auditor} (${modelForProvider(s.auditor)}) · researcher=${s.researcher}`,
         )
+        break
+
+      case '/planner':
+        if (arg) {
+          s.planner = arg
+          s.info = { ...s.info, planner: arg }
+          this.emitTick(s)
+          info(`planner=${arg} (saved)`)
+        } else {
+          info(`planner=${s.planner} (candidates: codex-sol | gemini-4-carbon)`)
+        }
+        break
+
+      case '/executor':
+        if (arg) {
+          s.executor = arg
+          s.info = { ...s.info, executor: arg }
+          this.emitTick(s)
+          info(`executor=${arg} (saved)`)
+        } else {
+          info(`executor=${s.executor} (candidates: ds | gemini-4-neon | glm-5.3-flash)`)
+        }
+        break
+
+      case '/auditor':
+        if (arg) {
+          s.auditor = arg
+          this.emitTick(s)
+          info(`auditor=${arg} (saved)`)
+        } else {
+          info(`auditor=${s.auditor} (candidates: codex-sol | gemini-4-carbon | glm-5.3)`)
+        }
         break
 
       case '/status':
@@ -1926,7 +1965,7 @@ export class DemoBackend implements AppAPI {
       }
 
       case '/audit': {
-        const auditor = s.researcher || 'glm'
+        const auditor = s.auditor || 'glm-5.3'
         const auditorModel = modelForProvider(auditor)
         s.activeSeatOverride = auditor
         const reevalHyps = s.hypotheses.filter((h) => h.status === 'reevaluate')
@@ -2726,7 +2765,7 @@ export class DemoBackend implements AppAPI {
           { text: '[arbitrator] 运行单视角盲区与阶段门禁巡检', status: 'pending' },
         ],
         'open',
-        'Multi-Model RE: deepseek → codex',
+        `Multi-Model RE: ${s.planner} → ${s.executor}`,
       )
       if (!(await this.runTool(s, 'ctf_triage', 'carrier.bin', '121B · ASCII prefix + %PDF-1.7@0x21 + PK_0x5f@0x5f', 340))) {
         return this.finishAborted(s)
@@ -2747,7 +2786,7 @@ export class DemoBackend implements AppAPI {
       }
 
       s.stage = 'think'
-      s.phaseText = 'modeling (deepseek)'
+      s.phaseText = `modeling (${s.planner})`
       this.pushPlan(
         s,
         [
@@ -2831,7 +2870,7 @@ export class DemoBackend implements AppAPI {
         this.armGoalContract(s, 'carrier.bin', '完成 carrier.bin 静态/动态交叉取证、重放验证与独立对抗审计')
       }
       s.stage = 'think'
-      s.phaseText = 'dynamic check (codex)'
+      s.phaseText = `dynamic check (${s.executor})`
       this.pushThink(s, `[${s.executor}] running dynamic verification on PK_0x5f and checking external hint endpoint`)
       this.pushPlan(
         s,
@@ -2956,7 +2995,7 @@ export class DemoBackend implements AppAPI {
       const verEvId = verEv?.id ?? 'ev_009'
 
       s.stage = 'think'
-      s.phaseText = 'updating stack (deepseek)'
+      s.phaseText = `updating stack (${s.planner})`
       this.upsertHypothesis(s, {
         id: 'H-004',
         claim: 'carrier.bin 中 PK_0x5f 为诱饵头，真实 Flag 位于伴生文件 artifact.txt Base64 载荷 flag{demo_reverse_lab_flag}',
@@ -2998,16 +3037,16 @@ export class DemoBackend implements AppAPI {
           { text: `[${s.executor} → ${s.planner}] 解码 artifact.txt + verify_artifact 确立 H-004`, status: 'completed' },
         ],
         'write',
-        'VER [7/9] passed — awaiting isolated /audit (glm)',
+        `VER [7/9] passed — awaiting isolated /audit (${s.auditor})`,
       )
       reply = [
         '### 阶段二：沙箱拦截 · 确定性反证级联 · 双视角验证',
         '',
-        '- **安全沙箱拦截 (`Gate 1`)**：`codex` 尝试外联 `curl` 被能力沙箱自动阻断（`capability "network" denied`，已记入 SHA256 审计链）',
+        `- **安全沙箱拦截 (\`Gate 1\`)**：\`${s.executor}\` 尝试外联 \`curl\` 被能力沙箱自动阻断（\`capability "network" denied\`，已记入 SHA256 审计链）`,
         `- **反证折半与依赖级联 (\`Arbitrator\`)**：动态校验 \`${dynErrEv.id}\` 暴露 \`PK_0x5f\` 缺失中央目录 → **\`H-002\`** 置信度折半淘汰 (\`rejected\`)，下游子假设 **\`H-003\`** 自动级联降级为 **\`reevaluate\`**`,
         `- **双视角确立新假设 (\`H-004\`)**：解码伴生文件获 **\`flag{demo_reverse_lab_flag}\`**（静态 \`${decEvId}\` + 动态重放 \`${verEvId}\` 2/2 通过）`,
         '',
-        `> 下一步：运行 **\`/audit\`** 唤醒独立第三席位 **\`${s.researcher}\` (\`${modelForProvider(s.researcher)}\`)** 在零工具隔离沙箱中完成终审并解锁 \`WRI [9/9]\`。`,
+        `> 下一步：运行 **\`/audit\`** 唤醒独立第三席位 **\`${s.auditor}\` (\`${modelForProvider(s.auditor)}\`)** 在零工具隔离沙箱中完成终审并解锁 \`WRI [9/9]\`。`,
       ].join('\n')
     } else if (kind === 're_writeup') {
       const preSnap = this.buildTick(s)
@@ -3026,7 +3065,7 @@ export class DemoBackend implements AppAPI {
         ].join('\n')
       } else {
         s.stage = 'think'
-        s.phaseText = 'synthesizing writeup (deepseek)'
+        s.phaseText = `synthesizing writeup (${s.planner})`
         this.pushThink(
           s,
           `[${s.planner}] compiling evidence-anchored Writeup from E:${s.evidence.length} ledger records & H:${s.hypotheses.length} hypotheses`,

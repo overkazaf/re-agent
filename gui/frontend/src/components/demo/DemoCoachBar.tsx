@@ -83,7 +83,7 @@ export function DemoCoachBar({
           <button
             type="button"
             onClick={onToggleGraph}
-            title="切换协同机制图谱 / 五维仪表盘（边跑边看 deepseek·codex·glm 与假设证据演化）"
+            title="切换协同机制图谱 / 五维仪表盘（边跑边看 codex sol · ds · glm-5.3 与假设证据演化）"
             style={{
               ...ctrlBtnStyle,
               borderColor: graphOpen ? 'var(--accent)' : 'var(--violet-dim)',

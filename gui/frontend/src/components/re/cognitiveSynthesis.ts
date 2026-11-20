@@ -166,9 +166,9 @@ export function buildReplayFrames(tick: TickDTO | null, thinkLines: string[] = [
   const sandbox = ledger?.sandbox
   const goal = ledger?.goal
 
-  const planner = tick.hud.route?.planner || 'deepseek'
-  const executor = tick.hud.route?.executor || 'codex'
-  const auditor = ledger?.auditorProvider || tick.hud.route?.auditor || tick.hud.route?.researcher || 'glm'
+  const planner = tick.hud.route?.planner || 'codex-sol'
+  const executor = tick.hud.route?.executor || 'ds'
+  const auditor = ledger?.auditorProvider || tick.hud.route?.auditor || 'glm-5.3'
 
   if (evidence.length === 0 && hypotheses.length === 0 && !goal) {
     return []
@@ -494,9 +494,9 @@ export function synthesizeProcessSummary(tick: TickDTO | null): ProcessSummary {
   const goal = ledger?.goal
   const re = tick?.re
 
-  const planner = tick?.hud.route?.planner || 'deepseek'
-  const executor = tick?.hud.route?.executor || 'codex'
-  const auditor = ledger?.auditorProvider || tick?.hud.route?.auditor || tick?.hud.route?.researcher || 'glm'
+  const planner = tick?.hud.route?.planner || 'codex-sol'
+  const executor = tick?.hud.route?.executor || 'ds'
+  const auditor = ledger?.auditorProvider || tick?.hud.route?.auditor || 'glm-5.3'
 
   const staticCnt = evidence.filter((e) => (e.view || 'static') === 'static' && !e.isError).length
   const dynCnt = evidence.filter((e) => e.view === 'dynamic' && !e.isError).length
@@ -743,9 +743,9 @@ export function generateWriteupMarkdown(
   const sandbox = ledger?.sandbox
   const re = tick?.re
 
-  const planner = tick?.hud.route?.planner || 'deepseek'
-  const executor = tick?.hud.route?.executor || 'codex'
-  const auditor = ledger?.auditorProvider || tick?.hud.route?.auditor || tick?.hud.route?.researcher || 'glm'
+  const planner = tick?.hud.route?.planner || 'codex-sol'
+  const executor = tick?.hud.route?.executor || 'ds'
+  const auditor = ledger?.auditorProvider || tick?.hud.route?.auditor || 'glm-5.3'
 
   const target = goal?.targetFile || re?.sampleType || workspace.split('/').pop() || 'sample.bin'
   const confirmed = hypotheses.filter((h) => h.status === 'active' || h.status === 'revised')

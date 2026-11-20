@@ -114,7 +114,8 @@ export function SettingsDialog({
                 background: 'rgba(6, 14, 24, 0.5)',
               }}
             >
-              <span style={{ ...labelStyle, color: 'var(--accent)' }}>planner · 规划与假设建模 (/planner)</span>
+              <span style={{ ...labelStyle, color: 'var(--accent)' }}>planner · 强推理规划 (/planner)</span>
+              <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: codex sol / gemini 4 carbon</span>
               {routeSelect(planner, settings.providerNames, setPlanner)}
             </label>
             <label
@@ -127,7 +128,8 @@ export function SettingsDialog({
                 background: 'rgba(6, 18, 14, 0.45)',
               }}
             >
-              <span style={{ ...labelStyle, color: 'var(--ok)' }}>executor · 工具取证与重放 (/executor)</span>
+              <span style={{ ...labelStyle, color: 'var(--ok)' }}>executor · 高速工具取证 (/executor)</span>
+              <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: ds / gemini 4 neon / glm-5.3-flash</span>
               {routeSelect(executor, settings.providerNames, setExecutor)}
             </label>
             <label
@@ -141,6 +143,7 @@ export function SettingsDialog({
               }}
             >
               <span style={{ ...labelStyle, color: 'var(--warn)' }}>researcher · 知识库与调研 (/researcher)</span>
+              <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: gemini 4 carbon / ds / glm-5.3</span>
               {routeSelect(researcher, settings.providerNames, setResearcher)}
             </label>
             <label
@@ -153,7 +156,8 @@ export function SettingsDialog({
                 background: 'rgba(16, 10, 26, 0.5)',
               }}
             >
-              <span style={{ ...labelStyle, color: 'var(--violet)' }}>auditor · 零上下文对抗审计 (/auditor)</span>
+              <span style={{ ...labelStyle, color: 'var(--violet)' }}>auditor · 独立对抗审计 (/auditor)</span>
+              <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: codex sol / gemini 4 carbon / glm-5.3</span>
               {routeSelect(auditor, settings.providerNames, setAuditor)}
             </label>
           </div>

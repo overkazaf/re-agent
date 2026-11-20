@@ -48,23 +48,23 @@ const NODE_SPECS: Record<NodeId, NodeSpec> = {
   planner: {
     id: 'planner',
     zone: 'ZONE I · 席位路由',
-    title: 'PLANNER · deepseek (任务建模与假设推演)',
+    title: 'PLANNER · 强推理规划席 (codex sol / gemini 4 carbon)',
     modulePath: 'internal/app/goal.go · internal/workflow/delegate.go',
     summary:
-      '负责高层认知建模：将自然语言目标编译为可机器校验的 /goal JSON 契约，拆解 update_plan 步骤，并通过 hypothesis_create / hypothesis_update 维护显式假设栈。',
+      '选用强推理旗舰模型（codex sol / gemini 4 carbon）负责高层认知建模：起草 /goal JSON 契约，拆解 update_plan 步骤，并通过 hypothesis_create / hypothesis_update 维护显式假设栈。',
     rules: [
       '起草 /goal 契约时不填写文件哈希——目标 SHA256 与二进制格式由宿主强制实地计算注入，防止模型幻觉。',
-      '委托模式（caveman/specialist）下仅持有只读规划工具，将重型静态/动态取证交由 codex 执行席位。',
+      '委托模式（caveman/specialist）下仅持有只读规划工具，将高频静态/动态取证下放给高吞吐执行席位（ds / gemini 4 neon / glm-5.3-flash）。',
       '每次请求自动由宿主在 System Prompt 尾部重注入最新 Hypothesis Stack 与 Evidence Digest，抵抗上下文压缩遗忘。',
     ],
   },
   executor: {
     id: 'executor',
     zone: 'ZONE I · 席位路由',
-    title: 'EXECUTOR · codex (工具执行与动态重放)',
+    title: 'EXECUTOR · 高速取证执行席 (ds / gemini 4 neon / glm-5.3-flash)',
     modulePath: 'internal/tools/* · internal/providers/clitmux.go',
     summary:
-      '驱动 34 个内置逆向工具（纯 Go ELF/PE/Mach-O/APK 解析、字节雕刻、熵扫描、Unicorn/r2/Ghidra 封装及 verify_artifact 重放校验），产出可溯源原始观测。',
+      '选用高吞吐低延迟模型（ds / gemini 4 neon / glm-5.3-flash）高频驱动 34 个内置逆向工具（纯 Go ELF/PE/Mach-O/APK 解析、字节雕刻、熵扫描及 verify_artifact 重放校验），产出可溯源原始观测。',
     rules: [
       '所有外部命令（run_command / remote_exec / verify_artifact）执行前必须串行穿过 Gate 1 能力沙箱与 Gate 2 策略审批门。',
       '工具返回结果由宿主自动分配递增编号 ev_NNN，并在返回给模型的文本末尾加盖 [evidence ev_NNN saved] 水印。',
@@ -74,10 +74,10 @@ const NODE_SPECS: Record<NodeId, NodeSpec> = {
   auditor: {
     id: 'auditor',
     zone: 'ZONE I · 席位路由',
-    title: 'AUDITOR · glm (隔离上下文对抗审计 / Researcher)',
+    title: 'AUDITOR · 独立对抗审计席 (codex sol / gemini 4 carbon / glm-5.3)',
     modulePath: 'internal/core/auditor.go (AgentLoop.Audit)',
     summary:
-      '担任独立第三席位（自动回避 Planner 与 Executor）：在零历史对话、零工具权限的纯净沙箱中重审「假设栈 + 证据账本」数据包，专门挑刺单视角臆断与过度外推。',
+      '选用独立强逻辑模型（codex sol / gemini 4 carbon / glm-5.3，自动回避当前 Planner 与 Executor）：在零历史对话、零工具权限沙箱中重审「假设栈 + 证据账本」数据包，专挑单视角臆断与过度外推。',
     rules: [
       '上下文完全隔离（Isolated: true, FreshSession: true, Tools: []），审计模型无法接触目标文件或顺着前文圆谎。',
       '输出严格受控判定行：AUDIT H-NNN CHALLENGE|SUPPORT ev_NNN <reason>，由宿主正则解析并直接作用于假设栈。',
@@ -248,9 +248,9 @@ export function GovernanceGraphPanel({
   const flow = effectiveTick?.flow
   const re = effectiveTick?.re
 
-  const plannerName = route?.planner || 'deepseek'
-  const executorName = route?.executor || 'codex'
-  const auditorName = ledger?.auditorProvider || route?.auditor || route?.researcher || 'glm'
+  const plannerName = route?.planner || 'codex-sol'
+  const executorName = route?.executor || 'ds'
+  const auditorName = ledger?.auditorProvider || route?.auditor || 'glm-5.3'
   const activeProvider = flow?.provider || route?.active || ''
   const busy = activeFrame
     ? true
@@ -534,7 +534,7 @@ export function GovernanceGraphPanel({
           <>
             {/* Interactive Zoomable Architecture SVG */}
             <ZoomableSvgViewport
-              title="机制协同架构图 (deepseek · codex · glm)"
+              title="机制协同架构图 (codex sol / gemini 4 carbon · ds / neon / flash · glm-5.3)"
               fullscreenFooter={inspectorCard}
               maxInlineHeight={285}
             >
@@ -727,15 +727,15 @@ export function GovernanceGraphPanel({
                 {/* ---- 9 Interactive Nodes ---- */}
                 {renderSvgNode({
                   id: 'planner',
-                  x: 26,
+                  x: 20,
                   y: 42,
-                  w: 200,
+                  w: 212,
                   h: 82,
                   tone: 'accent',
                   selected: selectedNode === 'planner',
                   hot: activeProvider === plannerName && Boolean(busy),
                   title: `PLANNER · ${plannerName}`,
-                  line1: seatSubtitle(plannerName, '推理规划席'),
+                  line1: 'codex sol / gemini 4 carbon',
                   line2: `/goal 契约 · 计划 · 假设栈`,
                   badge: activeProvider === plannerName && busy ? '● RUNNING' : 'SEAT 1',
                   onSelect: setSelectedNode,
@@ -743,15 +743,15 @@ export function GovernanceGraphPanel({
 
                 {renderSvgNode({
                   id: 'executor',
-                  x: 26,
+                  x: 20,
                   y: 162,
-                  w: 200,
+                  w: 212,
                   h: 86,
                   tone: 'ok',
                   selected: selectedNode === 'executor',
                   hot: activeProvider === executorName && Boolean(busy),
                   title: `EXECUTOR · ${executorName}`,
-                  line1: seatSubtitle(executorName, '工具执行席'),
+                  line1: 'ds / gemini 4 neon / glm-5.3-flash',
                   line2: `34 逆向工具 · ✓${flow?.toolsOk ?? 0} ✗${flow?.toolsFailed ?? 0}`,
                   badge: flow?.activeTool ? `⚙ ${flow.activeTool}` : 'SEAT 2',
                   onSelect: setSelectedNode,
@@ -759,15 +759,15 @@ export function GovernanceGraphPanel({
 
                 {renderSvgNode({
                   id: 'auditor',
-                  x: 26,
+                  x: 20,
                   y: 288,
-                  w: 200,
+                  w: 212,
                   h: 90,
                   tone: 'violet',
                   selected: selectedNode === 'auditor',
                   hot: stats.audCnt > 0 || (activeProvider === auditorName && Boolean(busy)),
                   title: `AUDITOR · ${auditorName}`,
-                  line1: seatSubtitle(auditorName, '独立对抗审计席'),
+                  line1: 'codex sol / gemini 4 carbon / glm-5.3',
                   line2: '零对话 · 零工具 · 专挑盲区',
                   badge: stats.audCnt > 0 ? `✓ AUD:${stats.audCnt}` : 'ISOLATED',
                   onSelect: setSelectedNode,
@@ -954,16 +954,6 @@ export function GovernanceGraphPanel({
 
 // ---------- SVG Node Helper ----------
 
-function seatSubtitle(provider: string, roleLabel: string): string {
-  const p = provider.toLowerCase()
-  if (p.includes('deepseek')) return `deepseek-chat (${roleLabel})`
-  if (p.includes('codex')) return `gpt-5.3-codex (${roleLabel})`
-  if (p.includes('glm')) return `glm-4.6 (${roleLabel})`
-  if (p.includes('opus')) return `claude-opus-4-6 (${roleLabel})`
-  if (p.includes('sonnet')) return `claude-sonnet-4-5 (${roleLabel})`
-  return `${provider} (${roleLabel})`
-}
-
 function renderSvgNode(opts: {
   id: NodeId
   x: number
@@ -1012,7 +1002,7 @@ function renderSvgNode(opts: {
       <text x={opts.x + opts.w - 8} y={opts.y + 15} fill="var(--muted)" fontSize="9.5" textAnchor="end">
         {opts.badge}
       </text>
-      <text x={opts.x + 8} y={opts.y + 40} fill="var(--text)" fontSize="10.5">
+      <text x={opts.x + 8} y={opts.y + 40} fill="var(--text)" fontSize={opts.line1.length > 28 ? '9.1' : '10.5'}>
         {opts.line1}
       </text>
       <text x={opts.x + 8} y={opts.y + 58} fill="var(--muted)" fontSize="10">

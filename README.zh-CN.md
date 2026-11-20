@@ -406,11 +406,11 @@ make gui-demo-build # 构建静态演示包 -> docs/gui-demo/（可用于 GitHub
 | 操作视图 | 核心演示内容 |
 | :--- | :--- |
 | <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI 重点功能分区色系与只读证据账本"> | **重点区域色系分层与只读证据账本**：电光青 `FLOW`、执行态 `TOOLS`、琥珀金 `PLAN`、战术紫 `THINK` / `RE WORKFLOW [9/9]` 与翡翠绿焦点框 `LEDGER 🔒`（`ev_NNN` / `H-NNN`）。 |
-| <img src="docs/shots/gui-governance-graph.png" width="440" alt="三模型协同架构图与思考过程回放"> | **多角色机制协同架构图与思考回放**：`deepseek`（规划）+ `codex`（执行）+ `glm`（独立审计）四泳道拓扑、双层安全防线、无级缩放/全屏与 8 帧认知回放（`▶ 回放思考过程`）。 |
+| <img src="docs/shots/gui-governance-graph.png" width="440" alt="三模型协同架构图与思考过程回放"> | **多角色机制协同架构图与思考回放**：`codex sol / gemini 4 carbon`（强推理规划）+ `ds / gemini 4 neon / glm-5.3-flash`（高速执行）+ `codex sol / gemini 4 carbon / glm-5.3`（独立审计）四泳道拓扑、无级缩放/全屏与 8 帧认知回放。 |
 | <img src="docs/shots/gui-provenance-dag.png" width="440" alt="实时因果证据图谱 DAG"> | **实时因果证据图谱（DAG）**：动态渲染 `ev_NNN ↔ H-NNN` 支撑/反证连线、反证置信度折半淘汰（`H-002 [REJECTED]`）与审计交付门禁。 |
 | <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="科学逆向假设实验与验证审查台"> | **科学逆向假设实验与验证台**：支持新增/修订可证伪假设（`H-005`）并挂载实跑实验（`exp_01 [PASSED]`）——严格执行「假设可演进，证据仅由宿主实跑盖章入账（`ev_013`）」。 |
 | <img src="docs/shots/gui-writeup-studio.png" width="440" alt="六大核心环节对齐与结构化结论 Writeup 工坊"> | **文章六大环节认知对齐与 Writeup 工坊**：1:1 对应破除 *Commits to a story* 的六大环节、**四维结构化逆向结论矩阵**与一键导出全溯源 Markdown 报告。 |
-| <img src="docs/shots/gui-role-config.png" width="440" alt="四席位 AI Agent 角色路由配置"> | **四席位 AI Agent 可视化配置（`amber` 琥珀主题）**：在 `⚙ CONFIG` 面板分别为 `planner`（`deepseek`）、`executor`（`codex`）、`researcher`（`glm`）与 `auditor`（`glm`）绑定模型路由并持久化。 |
+| <img src="docs/shots/gui-role-config.png" width="440" alt="四席位 AI Agent 角色路由配置"> | **四席位 AI Agent 可视化配置（`amber` 琥珀主题）**：在 `⚙ CONFIG` 面板分别为 `planner`（`codex-sol`）、`executor`（`ds`）、`researcher`（`gemini-4-carbon`）与 `auditor`（`glm-5.3`）绑定模型路由并持久化。 |
 
 无头冒烟与端到端测试（不需要桌面窗口）：
 
@@ -581,12 +581,12 @@ remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
 
 ### 四角色分工说明
 
-| 角色席位 | 配置字段 | 斜杠命令 | 核心职责 | 推荐模型示例 |
+| 角色席位 | 配置字段 | 斜杠命令 | 核心职责 | 推荐候选模型池 |
 | :--- | :--- | :--- | :--- | :--- |
-| **Planner（规划席）** | `plannerProvider` | `/planner <name>` | 起草 `/goal` 任务契约、拆解 `update_plan` 路线、创建与修订 `H-NNN` 可证伪假设栈 | `deepseek` (`deepseek-chat` / `deepseek-reasoner`) · `claude-api` |
-| **Executor（执行席）** | `executorProvider` | `/executor <name>` | 驱动 34 个本地逆向工具、采集静态/动态证据并执行 `verify_artifact` 重放测试 | `codex` (`gpt-5.3-codex`) · `claude` |
-| **Researcher（调研席）** | `researcherProvider` | `/researcher <name>` | 在 `research` 模式或知识库检索中整合公开论文、符号背景与协议资料 | `glm` · `grok` · `deepseek` |
-| **Auditor（独立审计席）** | `auditProvider` | `/auditor <name\|auto>` | 执行 `/audit`：**零对话历史、零工具权限**独立审阅「假设栈 + 证据账本」，挑刺单视角臆断并签发 `audit_finding`（设为 `""` / `auto` 时自动挑选不同于 Planner/Executor 的第三席位模型） | `glm` (`glm-4.6`) · 任意独立第三方模型 |
+| **Planner（强推理规划席）** | `plannerProvider` | `/planner <name>` | 起草 `/goal` 任务契约、拆解 `update_plan` 路线、创建与修订 `H-NNN` 可证伪假设栈 | `codex sol` (`codex-sol`) · `gemini 4 carbon` (`gemini-4-carbon`) |
+| **Executor（高速执行席）** | `executorProvider` | `/executor <name>` | 高吞吐低延迟驱动 34 个本地逆向工具、采集静态/动态证据并执行 `verify_artifact` 重放测试 | `ds` (`deepseek`) · `gemini 4 neon` (`gemini-4-neon`) · `glm-5.3-flash` |
+| **Researcher（调研席）** | `researcherProvider` | `/researcher <name>` | 在 `research` 模式或知识库检索中整合公开论文、符号背景与协议资料 | `gemini 4 carbon` · `ds` · `glm-5.3` |
+| **Auditor（独立对抗审计席）** | `auditProvider` | `/auditor <name\|auto>` | 执行 `/audit`：**零对话历史、零工具权限**独立审阅「假设栈 + 证据账本」，挑刺单视角臆断并签发 `audit_finding`（自动回避当前 Planner/Executor） | `codex sol` · `gemini 4 carbon` · `glm-5.3` |
 
 ### 三种配置方式
 
@@ -594,39 +594,57 @@ remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
 2. **会话内斜杠命令热切换（CLI 与 GUI 通用）**：
 
 ```text
-/planner deepseek
-/executor codex
-/researcher glm
-/auditor glm
+/planner codex-sol
+/executor ds
+/researcher gemini-4-carbon
+/auditor glm-5.3
 /agent auto
-/model deepseek deepseek-reasoner
-/model planner gpt-5.3-codex-high
+/model executor glm-5.3-flash
+/model planner gemini-4-carbon
 ```
 
 3. **项目级或全局配置文件（`agent.config.json` / `~/.0xaf-re-agent/config.json`）**：
 
 ```json
 {
-  "plannerProvider": "deepseek",
-  "executorProvider": "codex",
-  "researcherProvider": "glm",
-  "auditProvider": "glm",
+  "plannerProvider": "codex-sol",
+  "executorProvider": "ds",
+  "researcherProvider": "gemini-4-carbon",
+  "auditProvider": "glm-5.3",
   "providers": {
-    "deepseek": {
+    "codex-sol": {
+      "type": "openai-responses",
+      "model": "codex-sol",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": ["OPENAI_API_KEY"]
+    },
+    "gemini-4-carbon": {
+      "type": "openai-chat",
+      "model": "gemini-4-carbon",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKeyEnv": ["GEMINI_API_KEY"]
+    },
+    "ds": {
       "type": "openai-chat",
       "model": "deepseek-chat",
       "baseUrl": "https://api.deepseek.com/v1",
       "apiKeyEnv": ["DEEPSEEK_API_KEY"]
     },
-    "codex": {
-      "type": "openai-responses",
-      "model": "gpt-5.3-codex",
-      "baseUrl": "https://api.openai.com/v1",
-      "apiKeyEnv": ["OPENAI_API_KEY"]
-    },
-    "glm": {
+    "gemini-4-neon": {
       "type": "openai-chat",
-      "model": "glm-4.6",
+      "model": "gemini-4-neon",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "apiKeyEnv": ["GEMINI_API_KEY"]
+    },
+    "glm-5.3-flash": {
+      "type": "openai-chat",
+      "model": "glm-5.3-flash",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
+    },
+    "glm-5.3": {
+      "type": "openai-chat",
+      "model": "glm-5.3",
       "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
       "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
     }
