@@ -9,10 +9,22 @@ import { GlowText, PanelBox } from '../crt'
 const PHASES = ['TRI', 'STA', 'DYN', 'EVI', 'IFC', 'HYP', 'VER', 'AUD', 'WRI']
 const BAR_W = 14
 
-export function REHudPanel({ re, style }: { re: ReDTO | null; style?: CSSProperties }) {
+export function REHudPanel({
+  re,
+  onInspect,
+  onOpenGraph,
+  onOpenWriteup,
+  style,
+}: {
+  re: ReDTO | null
+  onInspect?: (tab: 'hypotheses' | 'evidence') => void
+  onOpenGraph?: () => void
+  onOpenWriteup?: () => void
+  style?: CSSProperties
+}) {
   return (
     <div style={style}>
-      <PanelBox title="re workflow" accent="violet">
+      <PanelBox title="re workflow" accent="violet" tier="primary" badge={re ? '9-GATE' : undefined}>
         {!re ? (
           <div style={{ color: 'var(--faint)', fontSize: 12, padding: '4px 0' }}>
             ○ RE workflow off — /workflow reverse|ctf|research… 启用
@@ -58,8 +70,64 @@ export function REHudPanel({ re, style }: { re: ReDTO | null; style?: CSSPropert
             </div>
 
             <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-              <GlowText tone="accent">H:{re.hypotheses}</GlowText>
-              <GlowText tone="ok">E:{re.evidence}</GlowText>
+              <button
+                type="button"
+                onClick={() => onInspect?.('hypotheses')}
+                title="点击查看假设栈明细"
+                style={{
+                  padding: 0,
+                  cursor: onInspect ? 'pointer' : 'default',
+                  borderBottom: onInspect ? '1px dashed var(--accent-dim)' : 'none',
+                }}
+              >
+                <GlowText tone="accent">H:{re.hypotheses}</GlowText>
+              </button>
+              <button
+                type="button"
+                onClick={() => onInspect?.('evidence')}
+                title="点击查看证据账本明细"
+                style={{
+                  padding: 0,
+                  cursor: onInspect ? 'pointer' : 'default',
+                  borderBottom: onInspect ? '1px dashed var(--ok)' : 'none',
+                }}
+              >
+                <GlowText tone="ok">E:{re.evidence}</GlowText>
+              </button>
+              <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
+                {onOpenGraph && (
+                  <button
+                    type="button"
+                    onClick={onOpenGraph}
+                    title="打开假设/证据/审核/安全协同图谱"
+                    style={{
+                      padding: '0 5px',
+                      fontSize: 10,
+                      color: 'var(--violet)',
+                      border: '1px solid var(--violet-dim)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ◈ 图谱
+                  </button>
+                )}
+                {onOpenWriteup && (
+                  <button
+                    type="button"
+                    onClick={onOpenWriteup}
+                    title="打开逆向过程总结与结构化 Writeup 报告工坊"
+                    style={{
+                      padding: '0 5px',
+                      fontSize: 10,
+                      color: re.phase === 'writeup' ? 'var(--ok)' : 'var(--muted)',
+                      border: `1px solid ${re.phase === 'writeup' ? 'var(--ok)' : 'var(--rule)'}`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✎ 报告
+                  </button>
+                )}
+              </span>
             </div>
           </div>
         )}

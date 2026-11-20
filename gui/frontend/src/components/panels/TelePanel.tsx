@@ -16,7 +16,7 @@ export function TelePanel({ hud, flow }: { hud: HudDTO; flow: FlowDTO }) {
   ]
 
   return (
-    <PanelBox title="tele">
+    <PanelBox title="tele" tier="secondary">
       <div className="tele-rows">
         {/* output throughput */}
         <div className="tele-row">

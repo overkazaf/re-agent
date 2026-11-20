@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import { api } from '../../lib/api'
 import { pushEsc } from '../../lib/escStack'
 import { actions, hasBackend } from '../../store/sessions'
+import { emitDemoSignal, onPromptFill } from '../../demo/signals'
 import { Spinner } from '../crt'
 import { REPickerDialog } from '../re'
 
@@ -68,6 +69,7 @@ export function PromptInput({
   // bare "/workflow reverse" opens the GUI picker instead of hitting the
   // backend block — the argument form flows through send() normally
   const [rePicker, setRePicker] = useState(false)
+  const [flashGlow, setFlashGlow] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
   const fetchSeq = useRef(0)
@@ -145,8 +147,8 @@ export function PromptInput({
     taRef.current?.focus()
   }
 
-  async function send() {
-    const text = value.trim()
+  async function sendText(raw: string) {
+    const text = raw.trim()
     if (!text || !sessionId || busy) return
     // the terminal RE picker has no GUI stdin — bare /workflow reverse opens
     // the native dialog (exact, case-insensitive match only)
@@ -154,6 +156,7 @@ export function PromptInput({
       setValue('')
       setDismissed(true)
       setRePicker(true)
+      emitDemoSignal({ type: 're_picker_opened' })
       return
     }
     setBusy(true)
@@ -165,6 +168,36 @@ export function PromptInput({
     if (res.ok) setValue('')
     else setSendError(res.error)
   }
+
+  async function send() {
+    await sendText(value)
+  }
+
+  // Subscribe to Demo Coach prompt-fill requests (fill-only or auto-send)
+  const sendTextRef = useRef(sendText)
+  sendTextRef.current = sendText
+  useEffect(() => {
+    let glowTimer: ReturnType<typeof setTimeout> | null = null
+    const unsub = onPromptFill((req) => {
+      if (req.autoSend) {
+        setValue(req.text)
+        setDismissed(true)
+        void sendTextRef.current(req.text)
+        return
+      }
+      setValue(req.text)
+      setDismissed(true)
+      setSendError(null)
+      setFlashGlow(true)
+      if (glowTimer) clearTimeout(glowTimer)
+      glowTimer = setTimeout(() => setFlashGlow(false), 900)
+      taRef.current?.focus()
+    })
+    return () => {
+      unsub()
+      if (glowTimer) clearTimeout(glowTimer)
+    }
+  }, [])
 
   async function stop() {
     if (!sessionId || busy) return
@@ -199,7 +232,8 @@ export function PromptInput({
     <div
       ref={boxRef}
       style={{
-        border: `1px solid ${running ? 'var(--accent-dim)' : 'var(--rule)'}`,
+        border: `1px solid ${flashGlow ? 'var(--accent)' : running ? 'var(--accent-dim)' : 'var(--rule)'}`,
+        boxShadow: flashGlow ? '0 0 14px var(--accent-dim)' : 'none',
         background: 'var(--bg-panel)',
         position: 'relative',
         display: 'flex',

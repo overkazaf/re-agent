@@ -141,11 +141,14 @@ type FlowDTO struct {
 	Since          int64          `json:"since"`
 }
 
-// HudRouteDTO mirrors ui.HudRoute.
+// HudRouteDTO mirrors ui.HudRoute plus researcher/auditor seats for the
+// multi-model governance view.
 type HudRouteDTO struct {
-	Planner  string `json:"planner"`
-	Executor string `json:"executor"`
-	Active   string `json:"active"`
+	Planner    string `json:"planner"`
+	Executor   string `json:"executor"`
+	Researcher string `json:"researcher,omitempty"`
+	Auditor    string `json:"auditor,omitempty"`
+	Active     string `json:"active"`
 }
 
 // HudDTO is the per-tick HUD strip: stats, sparkline, routing, queue.
@@ -201,13 +204,145 @@ func NewRESampleTypesDTO() []RESampleTypeDTO {
 	return out
 }
 
+// GoalCriterionDTO is one host-checked acceptance gate evaluated against the ledger.
+type GoalCriterionDTO struct {
+	Label  string `json:"label"`
+	Pass   bool   `json:"pass"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// GoalSummaryDTO exposes the active /goal task declaration and gate verdicts.
+type GoalSummaryDTO struct {
+	Primary      string             `json:"primary"`
+	Intent       string             `json:"intent,omitempty"`
+	TargetFile   string             `json:"targetFile,omitempty"`
+	TargetSHA256 string             `json:"targetSha256,omitempty"`
+	Accepted     bool               `json:"accepted"`
+	Constraints  map[string]string  `json:"constraints,omitempty"`
+	Criteria     []GoalCriterionDTO `json:"criteria"`
+}
+
+// SandboxActionDTO mirrors security.ActionRecord for the governance graph.
+type SandboxActionDTO struct {
+	At         int64  `json:"at"`
+	Tool       string `json:"tool"`
+	Capability string `json:"capability,omitempty"`
+	Subject    string `json:"subject"`
+	SHA256     string `json:"sha256"`
+	Decision   string `json:"decision"` // granted | denied | unmanaged
+	Origin     string `json:"origin,omitempty"`
+}
+
+// SandboxDTO snapshots the task-scoped capability sandbox and its action audit log.
+type SandboxDTO struct {
+	Active        bool               `json:"active"`
+	Granted       []string           `json:"granted"`
+	Device        string             `json:"device,omitempty"`
+	GrantedCount  int                `json:"grantedCount"`
+	DeniedCount   int                `json:"deniedCount"`
+	RecentActions []SandboxActionDTO `json:"recentActions"`
+}
+
+// LedgerDTO carries the live evidence ledger, hypothesis stack, and governance
+// state (goal contract, capability sandbox, arbitrator findings) for the GUI.
+// Slices are always non-nil ([] rather than null on the wire).
+type LedgerDTO struct {
+	Hypotheses      []types.Hypothesis     `json:"hypotheses"`
+	Evidence        []types.EvidenceRecord `json:"evidence"`
+	Path            string                 `json:"path,omitempty"`
+	AuditorProvider string                 `json:"auditorProvider,omitempty"`
+	Goal            *GoalSummaryDTO        `json:"goal,omitempty"`
+	Sandbox         *SandboxDTO            `json:"sandbox,omitempty"`
+	Findings        []types.Finding        `json:"findings"`
+}
+
+// NewLedgerDTO copies the latest hypotheses and evidence records onto the wire
+// shape. Bounded so a very long session never bloats the 90ms tick payload.
+func NewLedgerDTO(hypotheses []types.Hypothesis, evidence []types.EvidenceRecord, path string) *LedgerDTO {
+	const maxEvidence = 100
+	if len(evidence) > maxEvidence {
+		evidence = evidence[len(evidence)-maxEvidence:]
+	}
+	hyps := make([]types.Hypothesis, len(hypotheses))
+	copy(hyps, hypotheses)
+	evs := make([]types.EvidenceRecord, len(evidence))
+	copy(evs, evidence)
+	return &LedgerDTO{
+		Hypotheses: hyps,
+		Evidence:   evs,
+		Path:       path,
+		Findings:   []types.Finding{},
+	}
+}
+
 // TickDTO is the 90ms dashboard snapshot — everything the five panels render.
 // types.PlanSnapshot is already json-tagged in core, so it crosses as-is.
 type TickDTO struct {
-	Flow FlowDTO             `json:"flow"`
-	Hud  HudDTO              `json:"hud"`
-	Re   *ReDTO              `json:"re"`
-	Plan *types.PlanSnapshot `json:"plan"`
+	Flow   FlowDTO             `json:"flow"`
+	Hud    HudDTO              `json:"hud"`
+	Re     *ReDTO              `json:"re"`
+	Plan   *types.PlanSnapshot `json:"plan"`
+	Ledger *LedgerDTO          `json:"ledger,omitempty"`
+}
+
+// HypothesisMutationDTO creates or updates a hypothesis or adds a planned
+// falsification experiment. It can NEVER create or alter EvidenceRecords.
+type HypothesisMutationDTO struct {
+	// Action: create | revise | reject | support | challenge | meta | add_experiment
+	Action      string   `json:"action"`
+	ID          string   `json:"id,omitempty"`
+	Claim       string   `json:"claim,omitempty"`
+	Confidence  *float64 `json:"confidence,omitempty"`
+	EvidenceIDs []string `json:"evidenceIds,omitempty"`
+	DependsOn   []string `json:"dependsOn,omitempty"`
+	Note        string   `json:"note,omitempty"`
+	ExpTitle    string   `json:"expTitle,omitempty"`
+	ExpCommand  string   `json:"expCommand,omitempty"`
+	ExpExpected string   `json:"expExpected,omitempty"`
+}
+
+// RunExperimentDTO executes a hypothesis experiment through the host shell +
+// sandbox + approval gate and mints an immutable ev_NNN record from stdout.
+type RunExperimentDTO struct {
+	HypothesisID string `json:"hypothesisId"`
+	ExperimentID string `json:"experimentId,omitempty"`
+	Title        string `json:"title,omitempty"`
+	Command      string `json:"command,omitempty"`
+	Expected     string `json:"expected,omitempty"`
+}
+
+// VerificationCaseDTO is one replay test vector for RunVerification.
+type VerificationCaseDTO struct {
+	Name     string `json:"name"`
+	Command  string `json:"command"`
+	Input    string `json:"input,omitempty"`
+	Expected string `json:"expected"`
+}
+
+// VerificationRequestDTO invokes VerifyArtifactTool on a real workspace file
+// and files an immutable verification_result ev_NNN record.
+type VerificationRequestDTO struct {
+	Artifact     string                `json:"artifact"`
+	BuildCommand string                `json:"buildCommand,omitempty"`
+	Cases        []VerificationCaseDTO `json:"cases"`
+	HypothesisID string                `json:"hypothesisId,omitempty"`
+}
+
+// ReviewRequestDTO triggers deterministic arbitration or records a formal
+// review citing existing ledger ev_NNN records.
+type ReviewRequestDTO struct {
+	// Mode: arbitrate | operator_audit | model_audit
+	Mode          string   `json:"mode"`
+	Summary       string   `json:"summary,omitempty"`
+	HypothesisID  string   `json:"hypothesisId,omitempty"`
+	Verdict       string   `json:"verdict,omitempty"` // support | challenge | reject | ""
+	CitedEvidence []string `json:"citedEvidence,omitempty"`
+}
+
+// ReviewResultDTO returns the arbitration findings and optional minted audit_finding record.
+type ReviewResultDTO struct {
+	AuditRecord *types.EvidenceRecord `json:"auditRecord,omitempty"`
+	Findings    []types.Finding       `json:"findings"`
 }
 
 // LifecycleEvent rides kind=lifecycle.
@@ -232,6 +367,7 @@ type SettingsDTO struct {
 	PlannerProvider    string            `json:"plannerProvider"`
 	ExecutorProvider   string            `json:"executorProvider"`
 	ResearcherProvider string            `json:"researcherProvider"`
+	AuditProvider      string            `json:"auditProvider"`
 	ProviderNames      []string          `json:"providerNames"`
 	Providers          []ProviderInfoDTO `json:"providers"`
 	MaxTurns           int               `json:"maxTurns"`
@@ -241,12 +377,13 @@ type SettingsDTO struct {
 
 // SettingsPatch is the editable subset; empty/zero fields mean "leave
 // unchanged". Provider routes persist through SaveUIPrefs exactly like the
-// terminal /planner /executor /researcher commands; maxTurns is
+// terminal /planner /executor /researcher /auditor commands; maxTurns is
 // session-local (no prefs slot exists for it).
 type SettingsPatch struct {
 	PlannerProvider    string `json:"plannerProvider"`
 	ExecutorProvider   string `json:"executorProvider"`
 	ResearcherProvider string `json:"researcherProvider"`
+	AuditProvider      string `json:"auditProvider"`
 	MaxTurns           int    `json:"maxTurns"`
 }
 

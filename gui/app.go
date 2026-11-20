@@ -108,6 +108,22 @@ func (a *App) SetSettings(id string, patch SettingsPatch) error {
 	return a.manager.SetSettings(id, patch)
 }
 
+func (a *App) MutateHypothesis(id string, req HypothesisMutationDTO) (types.Hypothesis, error) {
+	return a.manager.MutateHypothesis(id, req)
+}
+
+func (a *App) RunHypothesisExperiment(id string, req RunExperimentDTO) (types.EvidenceRecord, error) {
+	return a.manager.RunHypothesisExperiment(id, req)
+}
+
+func (a *App) RunVerification(id string, req VerificationRequestDTO) (types.EvidenceRecord, error) {
+	return a.manager.RunVerification(id, req)
+}
+
+func (a *App) SubmitReview(id string, req ReviewRequestDTO) (ReviewResultDTO, error) {
+	return a.manager.SubmitReview(id, req)
+}
+
 // Completions bridges ui.SlashCompletions onto the frozen []string contract.
 // The frontend replaces the whole line, so each entry is the item's Replacement
 // (not its display Value); the rich CompletionItem DTO is a v2 upgrade.

@@ -241,3 +241,28 @@ func TestZeroUsageWireShape(t *testing.T) {
 		}
 	}
 }
+
+func TestLedgerDTOMapping(t *testing.T) {
+	empty := NewLedgerDTO(nil, nil, "/tmp/sessions/evidence-ledger.jsonl")
+	if empty.Hypotheses == nil || empty.Evidence == nil {
+		t.Fatalf("empty ledger slices must be non-nil: %+v", empty)
+	}
+	if empty.Path != "/tmp/sessions/evidence-ledger.jsonl" {
+		t.Fatalf("ledger path = %q", empty.Path)
+	}
+
+	hyps := []types.Hypothesis{{ID: "H-001", Claim: "xor key 0x2a", Confidence: 0.85, Status: types.HypActive}}
+	evs := []types.EvidenceRecord{{ID: "ev_001", Source: "read_file", Kind: "tool_observation", View: "static", Excerpt: "const key = 0x2a"}}
+	dto := NewLedgerDTO(hyps, evs, "/tmp/sessions/evidence-ledger.jsonl")
+	if len(dto.Hypotheses) != 1 || dto.Hypotheses[0].ID != "H-001" {
+		t.Fatalf("hypotheses mapping wrong: %+v", dto.Hypotheses)
+	}
+	if len(dto.Evidence) != 1 || dto.Evidence[0].ID != "ev_001" {
+		t.Fatalf("evidence mapping wrong: %+v", dto.Evidence)
+	}
+	// Mutating the DTO must not alias the caller's slice.
+	dto.Hypotheses[0].Claim = "mutated"
+	if hyps[0].Claim != "xor key 0x2a" {
+		t.Fatalf("ledger DTO aliased source hypotheses slice")
+	}
+}

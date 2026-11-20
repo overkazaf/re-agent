@@ -275,6 +275,21 @@ const (
 	HypReevaluate HypothesisStatus = "reevaluate"
 )
 
+// HypothesisExperiment is one falsifiable test attached to a hypothesis. The
+// design (Title, Command, Expected) is authored by the operator or planner,
+// while Status, EvidenceID, Actual, and RanAt are populated ONLY when the host
+// actually executes Command and mints an immutable ev_NNN record.
+type HypothesisExperiment struct {
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	Command    string `json:"command"`
+	Expected   string `json:"expected,omitempty"`
+	Status     string `json:"status"` // planned | passed | falsified | error
+	EvidenceID string `json:"evidenceId,omitempty"`
+	Actual     string `json:"actual,omitempty"`
+	RanAt      int64  `json:"ranAt,omitempty"`
+}
+
 // Hypothesis is one explicit, reviewable claim about the target — the unit the
 // planner reasons with instead of prose buried in the transcript.
 type Hypothesis struct {
@@ -290,9 +305,11 @@ type Hypothesis struct {
 	Derived   []string         `json:"derived,omitempty"`
 	Status    HypothesisStatus `json:"status"`
 	// Note carries the latest challenge/revision reason.
-	Note      string `json:"note,omitempty"`
-	CreatedAt int64  `json:"createdAt"`
-	UpdatedAt int64  `json:"updatedAt"`
+	Note string `json:"note,omitempty"`
+	// Experiments tracks planned and executed falsification tests for this claim.
+	Experiments []HypothesisExperiment `json:"experiments,omitempty"`
+	CreatedAt   int64                  `json:"createdAt"`
+	UpdatedAt   int64                  `json:"updatedAt"`
 }
 
 // HypothesisStore is the surface the hypothesis_* tools and the loop share.

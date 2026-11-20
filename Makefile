@@ -3,7 +3,7 @@ GOFLAGS ?=
 GIT_COMMIT := $(shell git rev-parse HEAD 2>/dev/null)
 LDFLAGS := -s -w $(if $(GIT_COMMIT),-X github.com/overkazaf/re-agent/internal/buildinfo.Commit=$(GIT_COMMIT))
 
-.PHONY: all build install test vet fmt clean cross gui gui-dev
+.PHONY: all build install test vet fmt clean cross gui gui-dev gui-demo gui-demo-build
 
 WAILS ?= $(shell command -v wails 2>/dev/null || echo $(HOME)/go/bin/wails)
 
@@ -43,3 +43,14 @@ gui:
 
 gui-dev:
 	cd gui && $(WAILS) dev
+
+# Browser-only interactive GUI demo sandbox (no Wails or API key needed).
+gui-demo:
+	cd gui/frontend && npm run dev
+
+# Build static GUI demo bundle into docs/gui-demo/ for GitHub Pages / static hosting.
+gui-demo-build:
+	cd gui/frontend && npm run build
+	rm -rf docs/gui-demo
+	mkdir -p docs/gui-demo
+	cp -R gui/frontend/dist/. docs/gui-demo/

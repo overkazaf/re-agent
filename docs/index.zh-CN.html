@@ -240,7 +240,13 @@
     </p>
     <pre class="block">make gui                         <span class="c">构建原生应用 -&gt; gui/build/bin/0xAF-Re GUI.app</span>
 make gui-dev                     <span class="c">热更新开发模式</span>
+make gui-demo                    <span class="c">浏览器零配置交互式演示沙盒（5 个常见逆向 Case）</span>
 go test ./gui/ -run TestE2E -v   <span class="c">无头端到端冒烟测试</span></pre>
+    <p>
+      想先在浏览器里直接感受桌面端操作？打开内置静态演示环境：
+      <a href="gui-demo/index.html" target="_blank" rel="noreferrer"><strong>▷ 在线体验 GUI 交互演示沙盒（5 个典型 Case）</strong></a>
+      ——无需 API Key，不修改本地文件，可亲手体验审批门 allow/deny 分叉、9 阶段 RE HUD、多会话排队/中断、斜杠直调命令与内置终端。
+    </p>
     <div class="tablewrap">
       <table>
         <thead><tr><th>能力面</th><th>具体内容</th></tr></thead>

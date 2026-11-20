@@ -497,6 +497,20 @@ func handleCommand(line string, state *State) error {
 		config.SaveUIPrefs(map[string]string{"researcherProvider": arg})
 		fmt.Printf("researcher=%s (saved)\n", arg)
 		return nil
+	case "/auditor":
+		if arg == "" || arg == "auto" {
+			state.Config.AuditProvider = ""
+			config.SaveUIPrefs(map[string]string{"auditProvider": ""})
+			fmt.Println("auditor=auto (saved)")
+			return nil
+		}
+		if _, ok := state.Config.Providers[arg]; !ok {
+			return fmt.Errorf("unknown provider: %s", arg)
+		}
+		state.Config.AuditProvider = arg
+		config.SaveUIPrefs(map[string]string{"auditProvider": arg})
+		fmt.Printf("auditor=%s (saved)\n", arg)
+		return nil
 	case "/read":
 		return runDirectTool("read_file", map[string]any{"path": arg}, state)
 	case "/run":

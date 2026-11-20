@@ -371,12 +371,15 @@ sessions 目录、同一套策略引擎——GUI 是 agent 的第二张脸，不
 ```bash
 make gui            # 构建产物 -> gui/build/bin/0xAF-Re GUI.app
 make gui-dev        # 热更新开发模式
+make gui-demo       # 浏览器零配置交互式演示环境（无需 Wails / API Key）
+make gui-demo-build # 构建静态演示包 -> docs/gui-demo/（可用于 GitHub Pages）
 ```
 
 核心桌面能力：
 
 | 界面 | 能力 |
 | --- | --- |
+| 交互式演示沙盒 | 桌面端右上角点击 `▷ 演示环境`（或直接 `make gui-demo` 在浏览器打开），零配置体验 5 个常见逆向 Case（入门解谜+审批门分叉、9 阶段 RE Workflow、多会话+排队+中断、斜杠直调命令+主题+恢复、内置 PTY 终端），支持分步指引、「一键填入/自动演示」与自由实操，退出即恢复真实会话 |
 | 多 session 并发 | 同时跑多个 agent session，侧栏实时跟踪每个会话的状态（idle / running / awaiting approval），支持回合内一键 `Interrupt` 中断 |
 | 实时仪表盘 + 9 阶段 RE HUD | 与 TUI 相同的 90ms flow / tools / plan / think / telemetry 五面板，叠加 9 阶段逆向进度条（`TRI → … → WRI` 与实时 `H:N` / `E:N` 计数） |
 | 34 工具与沙箱完全对齐 | 与 CLI 共享全部 34 个内置工具（含 `binary_inspect`、`anti_analysis`、`binary_diff`、`verify_artifact`、`remote_exec`）、`evidence-ledger.jsonl`、`/goal` 任务契约、`/cap` 能力沙箱与 `/audit` |
@@ -385,10 +388,35 @@ make gui-dev        # 热更新开发模式
 | 主题 | deck / amber / matrix / mono——全套扫描线 + 辉光，尊重 prefers-reduced-motion |
 | Resume | 会话选择器列出并完整恢复历史消息、plan 任务进度、假设栈、证据账本及已生效的 `/goal` 沙箱权限 |
 
-无头冒烟测试（不需要窗口）：
+### GUI 六大功能分区导览（按视觉色系区分重点区域）
+
+桌面 GUI 与 Web 演示沙盒采用**语义化色阶分层**，让重点取证区、核心协同图谱与辅助遥测一目了然，且所有区域均支持**拖拽调宽/调高、独立折叠与 `↺` 一键复位**：
+
+| 分区位置 | 面板 / 模块名称 | 视觉主色（`deck` 主题） | 核心职责与常用操作 |
+| :--- | :--- | :--- | :--- |
+| **① 顶部全局控制栏** | `TopBar` + 布局开关 | 电光青 / 战术紫徽标 | 切换 `▣ 五维仪表` ↔ `◈ 机制图谱`、进入 `▷ 演示环境`（`◈ 场景库`）、一键折叠 `◧ 侧栏 / ⬒ 仪表 / ⬓ 转录 / ◨ 右栏`、切换 CRT 主题（`deck` / `amber` / `matrix` / `mono`） |
+| **② 左侧会话与终端导航区** | `SESSIONS` · `SHELLS` | 低调冷灰框（退后背景层） | 新建会话（`+ new`）、恢复历史会话（`resume`）、打开当前会话四角色路由配置（`⚙`）、开启内置交互式 PTY 终端（`+ sh`） |
+| **③ 中央焦点主舞台（双模切换）** | **模式 A**：五维实时仪表盘<br>**模式 B**：`◈ 协同图谱 & Writeup 工坊` | **焦点高亮层**：<br>FLOW 青 · TOOLS 绿 · PLAN 琥珀 · THINK 紫（TELE 辅助灰） | **五维仪表**：90ms 实时观测请求流、工具树、计划步骤与推理流；<br>**机制图谱**：支持滚轮/按钮缩放与 `⛶ 全屏放大`、`▶ 回放思考过程`（逐帧回放账本与假设演化）、查看**四维结构化逆向结论矩阵**，并在 `✎ Writeup 工坊` 生成/导出全引用锚定的分析报告 |
+| **④ 右侧重点取证与门禁区** | `RE WORKFLOW`（9 阶段门禁）<br>`LEDGER`（只读证据与假设账本） | **紫色** `RE WORKFLOW` +<br>**翡翠绿焦点框** `LEDGER 🔒` | **RE WORKFLOW**：追踪 `TRI → … → WRI [9/9]` 硬闸门进度；<br>**LEDGER（核心事实底座）**：检视带 `🔒 IMMUTABLE` 封条的 `ev_NNN` 证据与 `H-NNN` 假设栈；点击 `+ 假设/实验` 或 `+ 实跑验证` 唤起 **科学逆向实验与验证审查台**（支持新增/编辑假设与实验、宿主实跑签发 `ev_NNN`、`verify_artifact` 重放与有据审查签章） |
+| **⑤ 中部实时转录流** | `TRANSCRIPT` | 左侧紫罗兰细线深底区 | 按时间轴（`t+Xs`）流式呈现 wire 帧、工具参数/耗时、思考摘要与 Markdown 回复 |
+| **⑥ 底部指令台与安全审批门** | `PromptInput` + `ApprovalDialog` | 左侧电光青高亮指令槽 / 琥珀红审批弹窗 | 支持多行输入、`/` 斜杠命令自动补全、运行中自动排队与 `■ stop` 中断；写盘/执行/外联操作触发分级审批弹窗（默认聚焦 `deny`） |
+
+### GUI 实操界面与流程截图
+
+| 操作视图 | 核心演示内容 |
+| :--- | :--- |
+| <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI 重点功能分区色系与只读证据账本"> | **重点区域色系分层与只读证据账本**：电光青 `FLOW`、执行态 `TOOLS`、琥珀金 `PLAN`、战术紫 `THINK` / `RE WORKFLOW [9/9]` 与翡翠绿焦点框 `LEDGER 🔒`（`ev_NNN` / `H-NNN`）。 |
+| <img src="docs/shots/gui-governance-graph.png" width="440" alt="三模型协同架构图与思考过程回放"> | **多角色机制协同架构图与思考回放**：`deepseek`（规划）+ `codex`（执行）+ `glm`（独立审计）四泳道拓扑、双层安全防线、无级缩放/全屏与 8 帧认知回放（`▶ 回放思考过程`）。 |
+| <img src="docs/shots/gui-provenance-dag.png" width="440" alt="实时因果证据图谱 DAG"> | **实时因果证据图谱（DAG）**：动态渲染 `ev_NNN ↔ H-NNN` 支撑/反证连线、反证置信度折半淘汰（`H-002 [REJECTED]`）与审计交付门禁。 |
+| <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="科学逆向假设实验与验证审查台"> | **科学逆向假设实验与验证台**：支持新增/修订可证伪假设（`H-005`）并挂载实跑实验（`exp_01 [PASSED]`）——严格执行「假设可演进，证据仅由宿主实跑盖章入账（`ev_013`）」。 |
+| <img src="docs/shots/gui-writeup-studio.png" width="440" alt="六大核心环节对齐与结构化结论 Writeup 工坊"> | **文章六大环节认知对齐与 Writeup 工坊**：1:1 对应破除 *Commits to a story* 的六大环节、**四维结构化逆向结论矩阵**与一键导出全溯源 Markdown 报告。 |
+| <img src="docs/shots/gui-role-config.png" width="440" alt="四席位 AI Agent 角色路由配置"> | **四席位 AI Agent 可视化配置（`amber` 琥珀主题）**：在 `⚙ CONFIG` 面板分别为 `planner`（`deepseek`）、`executor`（`codex`）、`researcher`（`glm`）与 `auditor`（`glm`）绑定模型路由并持久化。 |
+
+无头冒烟与端到端测试（不需要桌面窗口）：
 
 ```bash
 go test ./gui/ -run TestE2E -v
+cd gui/frontend && npm run test:e2e && npm run test:e2e-demo
 ```
 
 注意：在 GUI 中发送裸 `/workflow reverse` 会打开原生的样本类型 + 起始 prompt
@@ -549,15 +577,61 @@ remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
 
 ## Provider 与模型
 
-planner、executor、researcher 是角色；provider 是可替换的座位。
+`planner`、`executor`、`researcher`、`auditor` 是四个职责解耦的 AI 角色席位；`provider` 是可自由替换的模型后端（CLI 通道或 HTTP API）。
+
+### 四角色分工说明
+
+| 角色席位 | 配置字段 | 斜杠命令 | 核心职责 | 推荐模型示例 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Planner（规划席）** | `plannerProvider` | `/planner <name>` | 起草 `/goal` 任务契约、拆解 `update_plan` 路线、创建与修订 `H-NNN` 可证伪假设栈 | `deepseek` (`deepseek-chat` / `deepseek-reasoner`) · `claude-api` |
+| **Executor（执行席）** | `executorProvider` | `/executor <name>` | 驱动 34 个本地逆向工具、采集静态/动态证据并执行 `verify_artifact` 重放测试 | `codex` (`gpt-5.3-codex`) · `claude` |
+| **Researcher（调研席）** | `researcherProvider` | `/researcher <name>` | 在 `research` 模式或知识库检索中整合公开论文、符号背景与协议资料 | `glm` · `grok` · `deepseek` |
+| **Auditor（独立审计席）** | `auditProvider` | `/auditor <name\|auto>` | 执行 `/audit`：**零对话历史、零工具权限**独立审阅「假设栈 + 证据账本」，挑刺单视角臆断并签发 `audit_finding`（设为 `""` / `auto` 时自动挑选不同于 Planner/Executor 的第三席位模型） | `glm` (`glm-4.6`) · 任意独立第三方模型 |
+
+### 三种配置方式
+
+1. **桌面 GUI 可视化配置（实时生效并持久化）**：点击左侧 `SESSIONS` 栏顶部的 **`⚙`** 按钮打开 `CONFIG` 面板，在四色角色卡片中分别为 `planner`、`executor`、`researcher`、`auditor` 下拉选择已配置的 Provider 并点击 `save`（自动写入 `~/.0xaf-re-agent/ui.json`）。
+2. **会话内斜杠命令热切换（CLI 与 GUI 通用）**：
 
 ```text
 /planner deepseek
-/executor claude-api
-/researcher grok
+/executor codex
+/researcher glm
+/auditor glm
 /agent auto
 /model deepseek deepseek-reasoner
 /model planner gpt-5.3-codex-high
+```
+
+3. **项目级或全局配置文件（`agent.config.json` / `~/.0xaf-re-agent/config.json`）**：
+
+```json
+{
+  "plannerProvider": "deepseek",
+  "executorProvider": "codex",
+  "researcherProvider": "glm",
+  "auditProvider": "glm",
+  "providers": {
+    "deepseek": {
+      "type": "openai-chat",
+      "model": "deepseek-chat",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "apiKeyEnv": ["DEEPSEEK_API_KEY"]
+    },
+    "codex": {
+      "type": "openai-responses",
+      "model": "gpt-5.3-codex",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": ["OPENAI_API_KEY"]
+    },
+    "glm": {
+      "type": "openai-chat",
+      "model": "glm-4.6",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
+    }
+  }
+}
 ```
 
 HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--model`；
@@ -579,24 +653,7 @@ HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--
 会从内置 prompt 初始化文件，打开 `$VISUAL` 或 `$EDITOR`，保存后立即 reload。
 如果检测到项目根目录，会写到 `prompts/`；否则写到 `~/.0xaf-re-agent/prompts/`。
 
-最小配置示例：
-
-```json
-{
-  "plannerProvider": "codex",
-  "executorProvider": "claude",
-  "providers": {
-    "deepseek": {
-      "type": "openai-chat",
-      "model": "deepseek-chat",
-      "baseUrl": "https://api.deepseek.com/v1",
-      "apiKeyEnv": ["DEEPSEEK_API_KEY"]
-    }
-  }
-}
-```
-
-完整配置可以复制 `config.example.json` 到 `agent.config.json` 后修改。
+完整配置模板可以复制 `config.example.json` 到工作区 `agent.config.json` 后修改。
 
 ## 内置工具（34 个）
 

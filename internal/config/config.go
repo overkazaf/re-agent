@@ -285,6 +285,7 @@ type UIPrefs struct {
 	PlannerProvider    string `json:"plannerProvider,omitempty"`
 	ExecutorProvider   string `json:"executorProvider,omitempty"`
 	ResearcherProvider string `json:"researcherProvider,omitempty"`
+	AuditProvider      string `json:"auditProvider,omitempty"`
 	Role               string `json:"role,omitempty"`
 	Provider           string `json:"provider,omitempty"`
 }

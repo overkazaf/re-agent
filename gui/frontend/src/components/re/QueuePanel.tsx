@@ -6,7 +6,7 @@ import { GlowText, PanelBox } from '../crt'
 export function QueuePanel({ count, style }: { count: number; style?: CSSProperties }) {
   return (
     <div style={style}>
-      <PanelBox title="queue" accent={count > 0 ? 'accent' : undefined}>
+      <PanelBox title="queue" accent={count > 0 ? 'warn' : undefined} tier="secondary">
         {count > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '4px 0' }}>
             <GlowText tone="accent">

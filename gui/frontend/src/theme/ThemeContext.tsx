@@ -8,6 +8,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { emitDemoSignal, registerLiveThemeSetter } from '../demo/signals'
 
 export const THEME_NAMES = ['deck', 'amber', 'matrix', 'mono'] as const
 
@@ -61,7 +62,13 @@ export function ThemeProvider({ children, themes = THEME_NAMES }: { children: Re
     } catch {
       // Persistence is a convenience, not a requirement.
     }
+    emitDemoSignal({ type: 'theme_changed', theme: name })
   }, [])
+
+  useEffect(() => {
+    registerLiveThemeSetter(setTheme)
+    return () => registerLiveThemeSetter(null)
+  }, [setTheme])
 
   // Belt and braces: keep the attribute in sync even if something else
   // clobbers it (HMR, another tab's bootstrap).

@@ -26,7 +26,12 @@ export function ToolsPanel({ flow }: { flow: FlowDTO }) {
   const runs = flow.toolRuns.slice(-MAX_CARDS)
   const now = Date.now()
   return (
-    <PanelBox title="tools">
+    <PanelBox
+      title="tools"
+      accent={flow.toolsFailed > 0 ? 'err' : flow.toolRuns.length > 0 ? 'ok' : undefined}
+      tier="primary"
+      badge="执行采样"
+    >
       <div className="tools-head">
         <span className="t-ok">✓ {flow.toolsOk}</span>
         <span className={flow.toolsFailed > 0 ? 't-err' : 't-faint'}>✗ {flow.toolsFailed}</span>

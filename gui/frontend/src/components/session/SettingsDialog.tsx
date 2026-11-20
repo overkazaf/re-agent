@@ -41,6 +41,7 @@ export function SettingsDialog({
   const [planner, setPlanner] = useState(AUTO)
   const [executor, setExecutor] = useState(AUTO)
   const [researcher, setResearcher] = useState(AUTO)
+  const [auditor, setAuditor] = useState(AUTO)
   const [maxTurns, setMaxTurns] = useState(0)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -59,6 +60,7 @@ export function SettingsDialog({
         setPlanner(s.plannerProvider)
         setExecutor(s.executorProvider)
         setResearcher(s.researcherProvider)
+        setAuditor(s.auditProvider ?? '')
         setMaxTurns(s.maxTurns)
       })
       .catch((err) => setLoadError(String(err)))
@@ -73,6 +75,7 @@ export function SettingsDialog({
       plannerProvider: planner,
       executorProvider: executor,
       researcherProvider: researcher,
+      auditProvider: auditor === '' && (settings.auditProvider ?? '') !== '' ? 'auto' : auditor,
       // 0 = leave unchanged; the backend validates 1..200 otherwise
       maxTurns: maxTurns === settings.maxTurns ? 0 : maxTurns,
     }
@@ -86,7 +89,7 @@ export function SettingsDialog({
   }
 
   return (
-    <Dialog title="config" width={480} onClose={onClose}>
+    <Dialog title="config" width={560} onClose={onClose}>
       {!settings ? (
         <div style={{ color: loadError ? 'var(--err)' : 'var(--faint)', fontSize: 12, padding: '8px 0' }}>
           {loadError ? `✗ ${loadError}` : 'loading…'}
@@ -100,18 +103,58 @@ export function SettingsDialog({
             <span style={{ margin: '0 6px' }}>·</span>mcp {settings.mcpServerCount}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={labelStyle}>planner</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                padding: '6px 8px',
+                border: '1px solid color-mix(in srgb, var(--accent) 42%, var(--rule))',
+                background: 'rgba(6, 14, 24, 0.5)',
+              }}
+            >
+              <span style={{ ...labelStyle, color: 'var(--accent)' }}>planner · 规划与假设建模 (/planner)</span>
               {routeSelect(planner, settings.providerNames, setPlanner)}
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={labelStyle}>executor</span>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                padding: '6px 8px',
+                border: '1px solid color-mix(in srgb, var(--ok) 42%, var(--rule))',
+                background: 'rgba(6, 18, 14, 0.45)',
+              }}
+            >
+              <span style={{ ...labelStyle, color: 'var(--ok)' }}>executor · 工具取证与重放 (/executor)</span>
               {routeSelect(executor, settings.providerNames, setExecutor)}
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={labelStyle}>researcher</span>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                padding: '6px 8px',
+                border: '1px solid color-mix(in srgb, var(--warn) 42%, var(--rule))',
+                background: 'rgba(20, 14, 6, 0.45)',
+              }}
+            >
+              <span style={{ ...labelStyle, color: 'var(--warn)' }}>researcher · 知识库与调研 (/researcher)</span>
               {routeSelect(researcher, settings.providerNames, setResearcher)}
+            </label>
+            <label
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                padding: '6px 8px',
+                border: '1px solid color-mix(in srgb, var(--violet) 48%, var(--rule))',
+                background: 'rgba(16, 10, 26, 0.5)',
+              }}
+            >
+              <span style={{ ...labelStyle, color: 'var(--violet)' }}>auditor · 零上下文对抗审计 (/auditor)</span>
+              {routeSelect(auditor, settings.providerNames, setAuditor)}
             </label>
           </div>
 

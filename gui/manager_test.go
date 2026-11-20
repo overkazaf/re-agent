@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -406,5 +408,82 @@ func TestSessionListAndResume(t *testing.T) {
 	}
 	if _, err := mgr.Resume("does-not-exist"); err == nil {
 		t.Fatal("Resume with an unknown id must fail")
+	}
+}
+
+func TestSessionWorkbenchExperimentVerificationAndReview(t *testing.T) {
+	workspace := testEnv(t)
+	sink := &collectSink{}
+	mgr := NewSessionManager(sink, nil)
+	defer mgr.CloseAll()
+
+	info, err := mgr.Start(StartOptions{Workspace: workspace, Mock: true})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// 1. Create hypothesis H-001 with a planned experiment.
+	conf := 0.75
+	hyp, err := mgr.MutateHypothesis(info.ID, HypothesisMutationDTO{
+		Action:      "create",
+		Claim:       "decoder script outputs flag{verified_by_host}",
+		Confidence:  &conf,
+		Note:        "created from workbench",
+		ExpTitle:    "Echo test vector",
+		ExpCommand:  "printf 'flag{verified_by_host}\\n'",
+		ExpExpected: "flag{verified_by_host}",
+	})
+	if err != nil {
+		t.Fatalf("MutateHypothesis(create): %v", err)
+	}
+	if hyp.ID != "H-001" || len(hyp.Experiments) != 1 || hyp.Experiments[0].EvidenceID != "" {
+		t.Fatalf("unexpected initial hypothesis state: %+v", hyp)
+	}
+
+	// 2. Run the planned experiment -> mints real ev_001 (runtime_trace) and supports H-001.
+	expRec, err := mgr.RunHypothesisExperiment(info.ID, RunExperimentDTO{
+		HypothesisID: hyp.ID,
+		ExperimentID: hyp.Experiments[0].ID,
+	})
+	if err != nil {
+		t.Fatalf("RunHypothesisExperiment: %v", err)
+	}
+	if expRec.ID != "ev_001" || expRec.Kind != "runtime_trace" {
+		t.Fatalf("expected runtime_trace ev_001, got %+v", expRec)
+	}
+
+	// 3. Create a real artifact file in workspace and run RunVerification -> mints ev_002 with SHA256.
+	artifactRel := "solve.sh"
+	artifactAbs := filepath.Join(workspace, artifactRel)
+	if writeErr := os.WriteFile(artifactAbs, []byte("#!/bin/sh\nprintf 'flag{verified_by_host}\\n'\n"), 0o755); writeErr != nil {
+		t.Fatalf("write artifact: %v", writeErr)
+	}
+	verRec, err := mgr.RunVerification(info.ID, VerificationRequestDTO{
+		Artifact:     artifactRel,
+		HypothesisID: hyp.ID,
+		Cases: []VerificationCaseDTO{
+			{Name: "replay_flag", Command: "sh solve.sh", Expected: "flag{verified_by_host}"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunVerification: %v", err)
+	}
+	if verRec.ID != "ev_002" || verRec.SHA256 == "" || verRec.Verification == nil || verRec.Verification.Passed != 1 {
+		t.Fatalf("expected SHA256-stamped verification ev_002, got %+v", verRec)
+	}
+
+	// 4. Submit operator review citing ev_001 + ev_002 -> mints audit_finding ev_003.
+	revRes, err := mgr.SubmitReview(info.ID, ReviewRequestDTO{
+		Mode:          "review",
+		HypothesisID:  hyp.ID,
+		Verdict:       "support",
+		CitedEvidence: []string{"ev_001", "ev_002"},
+		Summary:       "Dynamic experiment and artifact replay both match expected flag.",
+	})
+	if err != nil {
+		t.Fatalf("SubmitReview: %v", err)
+	}
+	if revRes.AuditRecord == nil || revRes.AuditRecord.ID != "ev_003" || revRes.AuditRecord.Kind != "audit_finding" {
+		t.Fatalf("expected audit_finding ev_003, got %+v", revRes)
 	}
 }

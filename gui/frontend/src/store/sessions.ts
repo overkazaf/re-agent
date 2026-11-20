@@ -7,8 +7,9 @@
 // values that dialogs render inline instead of throwing uncaught.
 
 import { useSyncExternalStore } from 'react'
-import { api } from '../lib/api'
+import { api, hasRealWailsBackend, isDemoAppActive } from '../lib/api'
 import { onGuiEvent } from '../lib/events'
+import { emitDemoSignal } from '../demo/signals'
 import type {
   ApprovalDecision,
   ApprovalDTO,
@@ -95,6 +96,11 @@ export function useSessionStore(): SessionStoreSnapshot {
 export function useSessionRuntime(id: string | null | undefined): SessionRuntime | null {
   const snap = useSessionStore()
   return (id && snap.sessions.get(id)) || null
+}
+
+/** Synchronous snapshot getter for non-React coordinators (demo runner). */
+export function getSessionStoreSnapshot(): SessionStoreSnapshot {
+  return snapshot
 }
 
 // ---------- event channel ----------
@@ -203,18 +209,17 @@ function appendCapped<T>(arr: readonly T[], add: readonly T[], cap: number): T[]
 
 // ---------- helpers ----------
 
+export function hasRealBackend(): boolean {
+  return hasRealWailsBackend()
+}
+
 export function hasBackend(): boolean {
-  try {
-    const w = window as unknown as { go?: { main?: { App?: unknown } } }
-    return Boolean(w.go && w.go.main && w.go.main.App)
-  } catch {
-    return false
-  }
+  return isDemoAppActive() || hasRealWailsBackend()
 }
 
 /** Human-readable message for a failed api call (browser-dev aware). */
 export function errText(err: unknown): string {
-  if (!hasBackend()) return 'Wails runtime 不可用（浏览器 dev 环境）'
+  if (!hasBackend()) return 'Wails runtime 不可用（可点击右上角进入演示环境）'
   if (err instanceof Error) return err.message
   return String(err)
 }
@@ -265,9 +270,14 @@ function reseatActive(afterRemove: string): void {
 
 export const actions = {
   setActive(id: string): void {
-    if (!sessions.has(id)) return
+    const rt = sessions.get(id)
+    if (!rt) return
+    const changed = activeId !== id
     activeId = id
     commit()
+    if (changed && isDemoAppActive()) {
+      emitDemoSignal({ type: 'session_switched', sessionId: id, workspace: rt.info.workspace })
+    }
   },
 
   async createSession(opts: StartOptions): Promise<Result<SessionInfo>> {
@@ -427,4 +437,52 @@ export function __injectMockSession(info: SessionInfo, active = false): void {
   sessions.set(info.id, freshRuntime(info))
   if (active) activeId = info.id
   commit()
+}
+
+// ---------- demo sandbox isolation (stash/restore real desktop sessions) ----------
+
+let stashedReal: { sessions: Map<string, SessionRuntime>; activeId: string | null } | null = null
+
+export function stashSessionsForDemo(): void {
+  if (stashedReal !== null) return
+  stashedReal = { sessions: new Map(sessions), activeId }
+  sessions = new Map()
+  activeId = null
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+    toastTimer = null
+  }
+  toast = null
+  commit()
+}
+
+export function resetSessionStoreForDemo(): void {
+  sessions = new Map()
+  activeId = null
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+    toastTimer = null
+  }
+  toast = null
+  commit()
+}
+
+export function restoreSessionsFromDemo(): void {
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+    toastTimer = null
+  }
+  toast = null
+  if (stashedReal) {
+    sessions = stashedReal.sessions
+    activeId = stashedReal.activeId
+    stashedReal = null
+  } else {
+    sessions = new Map()
+    activeId = null
+  }
+  commit()
+  if (activeId && hasRealWailsBackend()) {
+    void actions.getState(activeId)
+  }
 }

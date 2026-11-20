@@ -213,6 +213,74 @@ func TestLoadSessionRestoresEvidenceAndHypotheses(t *testing.T) {
 	}
 }
 
+func TestWorkbenchEnforcesExecutionOnlyEvidence(t *testing.T) {
+	provider := &scriptedProvider{
+		config: &types.ProviderConfig{Type: types.KindMock, Model: "scripted"},
+		responses: []types.ProviderResponse{
+			{ToolCalls: []types.ToolCall{{ID: "1", Name: "echo", Arguments: map[string]any{}}}},
+			{Text: "done"},
+		},
+	}
+	calls := 0
+	loop, _ := newTestLoop(t, provider, []types.Tool{echoTool(&calls)})
+
+	// 1. Citing a non-existent ev_NNN on hypothesis creation or audit review must fail.
+	if _, _, err := loop.CreateHypothesis("forged citation", 0.8, []string{"ev_999"}, nil, ""); err == nil {
+		t.Fatal("expected CreateHypothesis to reject non-existent ev_999")
+	}
+	if _, _, err := loop.SubmitAuditReview("ungrounded sign-off", "", "", nil); err == nil {
+		t.Fatal("expected SubmitAuditReview to reject review when ledger is empty")
+	}
+
+	// 2. Real tool execution mints ev_001.
+	if _, err := loop.Run("collect real evidence", RunOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	hyp, _, err := loop.CreateHypothesis("output is decoy", 0.8, []string{"ev_001"}, nil, "initial hypothesis")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 3. Planned experiment starts without an ev_NNN; CompleteExperiment mints ev_002
+	// and automatically challenges the hypothesis when output misses expected.
+	_, exp, err := loop.AddExperiment(hyp.ID, "Check magic return", "echo actual_real_path", "0x46414b45")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp.EvidenceID != "" {
+		t.Fatalf("planned experiment must not pre-allocate evidence id: %+v", exp)
+	}
+	evRec, updatedHyp, _, err := loop.CompleteExperiment(hyp.ID, exp.ID, exp.Command, "actual_real_path", exp.Expected, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evRec.ID != "ev_002" || evRec.Kind != "runtime_trace" {
+		t.Fatalf("expected runtime_trace ev_002, got %+v", evRec)
+	}
+	if updatedHyp.Confidence != 0.4 || len(updatedHyp.Contradicting) != 1 || updatedHyp.Contradicting[0] != "ev_002" {
+		t.Fatalf("falsified experiment should halve confidence and record ev_002: %+v", updatedHyp)
+	}
+
+	// 4. Operator review must cite real ledger evidence and stamps audit_finding ev_003.
+	if _, _, err := loop.SubmitAuditReview("missing citation", hyp.ID, "reject", nil); err == nil {
+		t.Fatal("expected SubmitAuditReview without cited evidence to fail")
+	}
+	auditRec, findings, err := loop.SubmitAuditReview("decoy confirmed falsified by ev_002", hyp.ID, "reject", []string{"ev_001", "ev_002"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if auditRec == nil || auditRec.ID != "ev_003" || auditRec.Kind != "audit_finding" {
+		t.Fatalf("expected audit_finding ev_003, got %+v", auditRec)
+	}
+	if len(findings) == 0 {
+		t.Fatal("expected operator-review finding to be returned")
+	}
+	finalHyp, _ := loop.GetHypothesis(hyp.ID)
+	if finalHyp.Status != types.HypRejected {
+		t.Fatalf("expected hypothesis rejected by review verdict, got %s", finalHyp.Status)
+	}
+}
+
 func planTools() []types.Tool {
 	return []types.Tool{{
 		Name: "update_plan", Description: "publish plan", Risk: types.RiskRead,

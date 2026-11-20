@@ -7,7 +7,13 @@
 import type {
   ApprovalDecision,
   CommandResultDTO,
+  EvidenceRecord,
+  Hypothesis,
+  HypothesisMutationDTO,
   RESampleType,
+  ReviewRequestDTO,
+  ReviewResultDTO,
+  RunExperimentDTO,
   SessionInfo,
   SessionSummaryDTO,
   SettingsPatch,
@@ -15,6 +21,7 @@ import type {
   ShellInfo,
   StartOptions,
   TickDTO,
+  VerificationRequestDTO,
 } from './types'
 
 export interface AppAPI {
@@ -29,6 +36,10 @@ export interface AppAPI {
   GetState(id: string): Promise<TickDTO>
   GetSettings(id: string): Promise<SettingsDTO>
   SetSettings(id: string, patch: SettingsPatch): Promise<void>
+  MutateHypothesis(id: string, req: HypothesisMutationDTO): Promise<Hypothesis>
+  RunHypothesisExperiment(id: string, req: RunExperimentDTO): Promise<EvidenceRecord>
+  RunVerification(id: string, req: VerificationRequestDTO): Promise<EvidenceRecord>
+  SubmitReview(id: string, req: ReviewRequestDTO): Promise<ReviewResultDTO>
   Completions(line: string): Promise<string[]>
   GetThemes(): Promise<string[]>
   RESampleTypes(): Promise<RESampleType[]>
@@ -41,7 +52,29 @@ export interface AppAPI {
   ShellList(): Promise<ShellInfo[]>
 }
 
+let demoAppOverride: AppAPI | null = null
+
+/** Install or clear the in-memory demo AppAPI transport. */
+export function setDemoAppAPI(impl: AppAPI | null): void {
+  demoAppOverride = impl
+}
+
+export function isDemoAppActive(): boolean {
+  return demoAppOverride !== null
+}
+
+/** True only when the real Wails Go bridge (or test shim) is injected on window. */
+export function hasRealWailsBackend(): boolean {
+  try {
+    const w = window as unknown as { go?: { main?: { App?: unknown } } }
+    return Boolean(w.go && w.go.main && w.go.main.App)
+  } catch {
+    return false
+  }
+}
+
 function app(): AppAPI {
+  if (demoAppOverride) return demoAppOverride
   return (window as unknown as { go: { main: { App: AppAPI } } }).go.main.App
 }
 
@@ -58,6 +91,10 @@ export const api = {
   getState: (id: string) => app().GetState(id),
   getSettings: (id: string) => app().GetSettings(id),
   setSettings: (id: string, patch: SettingsPatch) => app().SetSettings(id, patch),
+  mutateHypothesis: (id: string, req: HypothesisMutationDTO) => app().MutateHypothesis(id, req),
+  runHypothesisExperiment: (id: string, req: RunExperimentDTO) => app().RunHypothesisExperiment(id, req),
+  runVerification: (id: string, req: VerificationRequestDTO) => app().RunVerification(id, req),
+  submitReview: (id: string, req: ReviewRequestDTO) => app().SubmitReview(id, req),
   completions: (line: string) => app().Completions(line),
   getThemes: () => app().GetThemes(),
   reSampleTypes: () => app().RESampleTypes(),

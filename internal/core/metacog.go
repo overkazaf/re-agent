@@ -6,6 +6,7 @@
 package core
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/overkazaf/re-agent/internal/evidence"
@@ -214,4 +215,290 @@ func withEvidenceID(details any, id string) any {
 		return next
 	}
 	return details
+}
+
+// --- Host-controlled GUI workbench operations ---------------------------------
+//
+// Hypotheses and experiment designs are mutable reasoning state; EvidenceRecords
+// (ev_NNN) are strictly append-only and can ONLY be minted from real execution
+// outputs or formal audit reviews citing existing ledger records.
+
+func (l *AgentLoop) GetHypothesis(id string) (types.Hypothesis, bool) {
+	return l.hypotheses.Get(id)
+}
+
+func (l *AgentLoop) persistHypothesesSnapshot() {
+	if l.options.Session != nil {
+		_ = l.options.Session.AppendEvent(map[string]any{
+			"type":       "hypotheses",
+			"hypotheses": l.hypotheses.List(),
+		})
+	}
+}
+
+func (l *AgentLoop) validateEvidenceRefs(ids []string) error {
+	for _, raw := range ids {
+		id := strings.TrimSpace(raw)
+		if id == "" {
+			continue
+		}
+		if _, ok := l.evidence.Get(id); !ok {
+			return fmt.Errorf("证据账本中不存在 %s（证据不可凭空填写，仅可引用已实跑入账的 ev_NNN）", id)
+		}
+	}
+	return nil
+}
+
+func (l *AgentLoop) CreateHypothesis(claim string, confidence float64, supporting, dependsOn []string, note string) (types.Hypothesis, []types.Finding, error) {
+	if err := l.validateEvidenceRefs(supporting); err != nil {
+		return types.Hypothesis{}, nil, err
+	}
+	created, err := l.hypotheses.Create(claim, confidence, supporting, dependsOn)
+	if err != nil {
+		return types.Hypothesis{}, nil, err
+	}
+	if strings.TrimSpace(note) != "" {
+		trimmed := strings.TrimSpace(note)
+		created, _ = l.hypotheses.UpdateMeta(created.ID, nil, nil, &trimmed)
+	}
+	l.persistHypothesesSnapshot()
+	var findings []types.Finding
+	if l.arbiter != nil {
+		findings = l.arbiter.Review()
+	}
+	if refreshed, ok := l.hypotheses.Get(created.ID); ok {
+		created = refreshed
+	}
+	return created, findings, nil
+}
+
+func (l *AgentLoop) UpdateHypothesis(id, action, claim, note string, confidence *float64, evidenceIDs, dependsOn []string) (types.Hypothesis, []types.Finding, error) {
+	act := strings.ToLower(strings.TrimSpace(action))
+	var updated types.Hypothesis
+	var err error
+	switch act {
+	case "revise":
+		if strings.TrimSpace(claim) != "" {
+			updated, err = l.hypotheses.Revise(id, claim, note)
+			if err != nil {
+				return types.Hypothesis{}, nil, err
+			}
+		}
+		if confidence != nil || dependsOn != nil || (strings.TrimSpace(claim) == "" && note != "") {
+			var notePtr *string
+			if note != "" {
+				notePtr = &note
+			}
+			updated, err = l.hypotheses.UpdateMeta(id, confidence, dependsOn, notePtr)
+		}
+	case "reject":
+		updated, err = l.hypotheses.Reject(id, note)
+	case "support":
+		if err = l.validateEvidenceRefs(evidenceIDs); err != nil {
+			return types.Hypothesis{}, nil, err
+		}
+		for _, evID := range evidenceIDs {
+			updated, err = l.hypotheses.Support(id, evID)
+			if err != nil {
+				return types.Hypothesis{}, nil, err
+			}
+		}
+		if note != "" || confidence != nil {
+			var notePtr *string
+			if note != "" {
+				notePtr = &note
+			}
+			updated, err = l.hypotheses.UpdateMeta(id, confidence, nil, notePtr)
+		}
+	case "challenge":
+		if err = l.validateEvidenceRefs(evidenceIDs); err != nil {
+			return types.Hypothesis{}, nil, err
+		}
+		for _, evID := range evidenceIDs {
+			updated, err = l.hypotheses.Challenge(id, evID, note)
+			if err != nil {
+				return types.Hypothesis{}, nil, err
+			}
+		}
+	case "meta":
+		var notePtr *string
+		if note != "" {
+			notePtr = &note
+		}
+		updated, err = l.hypotheses.UpdateMeta(id, confidence, dependsOn, notePtr)
+	default:
+		return types.Hypothesis{}, nil, fmt.Errorf("unknown hypothesis action: %s", action)
+	}
+	if err != nil {
+		return types.Hypothesis{}, nil, err
+	}
+	l.persistHypothesesSnapshot()
+	var findings []types.Finding
+	if l.arbiter != nil {
+		findings = l.arbiter.Review()
+	}
+	if refreshed, ok := l.hypotheses.Get(id); ok {
+		updated = refreshed
+	}
+	return updated, findings, nil
+}
+
+func (l *AgentLoop) AddExperiment(hypID, title, command, expected string) (types.Hypothesis, types.HypothesisExperiment, error) {
+	hyp, exp, err := l.hypotheses.AddExperiment(hypID, title, command, expected)
+	if err != nil {
+		return types.Hypothesis{}, types.HypothesisExperiment{}, err
+	}
+	l.persistHypothesesSnapshot()
+	return hyp, exp, nil
+}
+
+func (l *AgentLoop) CompleteExperiment(hypID, expID, command, output, expected string, runErr error) (types.EvidenceRecord, types.Hypothesis, []types.Finding, error) {
+	text := strings.TrimSpace(output)
+	if runErr != nil && text == "" {
+		text = runErr.Error()
+	} else if runErr != nil {
+		text = text + "\nerror: " + runErr.Error()
+	}
+	rec := l.evidence.Add(evidence.Input{
+		Source:  "experiment:run_command",
+		Kind:    string(evidence.KindRuntimeTrace),
+		View:    evidence.ViewDynamic,
+		Text:    fmt.Sprintf("$ %s\n%s", command, text),
+		IsError: runErr != nil,
+	})
+	if l.options.Session != nil {
+		_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": rec})
+	}
+
+	status := "passed"
+	want := strings.TrimSpace(expected)
+	if runErr != nil {
+		if want != "" {
+			status = "falsified"
+		} else {
+			status = "error"
+		}
+	} else if want != "" && !strings.Contains(strings.ToLower(output), strings.ToLower(want)) {
+		status = "falsified"
+	}
+
+	if status == "passed" {
+		_, _ = l.hypotheses.Support(hypID, rec.ID)
+	} else if status == "falsified" {
+		reason := fmt.Sprintf("实验 %s 实跑结果 (%s) 未命中预期 %q", expID, rec.ID, want)
+		_, _ = l.hypotheses.Challenge(hypID, rec.ID, reason)
+	}
+	updated, err := l.hypotheses.RecordExperimentResult(hypID, expID, status, rec.ID, text)
+	if err != nil {
+		return rec, types.Hypothesis{}, nil, err
+	}
+	l.persistHypothesesSnapshot()
+	var findings []types.Finding
+	if l.arbiter != nil {
+		findings = l.arbiter.Review()
+	}
+	if refreshed, ok := l.hypotheses.Get(hypID); ok {
+		updated = refreshed
+	}
+	return rec, updated, findings, nil
+}
+
+func (l *AgentLoop) RecordVerificationToolResult(result types.ToolResult, isError bool, linkHypID string) (types.EvidenceRecord, []types.Finding, error) {
+	artifact, digest := provenanceFromResult(result.Details)
+	verification := verificationFromDetails(result.Details)
+	rec := l.evidence.Add(evidence.Input{
+		Source:       "verify_artifact",
+		Kind:         string(evidence.KindVerification),
+		View:         evidence.ViewDynamic,
+		Text:         types.TextFromBlocks(result.Content),
+		IsError:      isError || (verification != nil && (!verification.Build || verification.Passed < verification.Total)),
+		Artifact:     artifact,
+		SHA256:       digest,
+		Verification: verification,
+	})
+	if l.options.Session != nil {
+		_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": rec})
+	}
+	if strings.TrimSpace(linkHypID) != "" {
+		if !rec.IsError && verification != nil && verification.Total > 0 && verification.Passed == verification.Total {
+			_, _ = l.hypotheses.Support(linkHypID, rec.ID)
+		} else {
+			_, _ = l.hypotheses.Challenge(linkHypID, rec.ID, fmt.Sprintf("verify_artifact (%s) 未全部通过", rec.ID))
+		}
+		l.persistHypothesesSnapshot()
+	}
+	var findings []types.Finding
+	if l.arbiter != nil {
+		findings = l.arbiter.Review()
+	}
+	return rec, findings, nil
+}
+
+func (l *AgentLoop) SubmitAuditReview(summary, targetHypID, verdict string, citedEvidence []string) (*types.EvidenceRecord, []types.Finding, error) {
+	if err := l.validateEvidenceRefs(citedEvidence); err != nil {
+		return nil, nil, err
+	}
+	var findings []types.Finding
+	if l.arbiter != nil {
+		findings = l.arbiter.Review()
+	}
+	cleanSummary := strings.TrimSpace(summary)
+	if cleanSummary == "" {
+		return nil, findings, nil
+	}
+	if len(l.evidence.List()) == 0 {
+		return nil, findings, fmt.Errorf("当前账本尚无任何实跑证据（ev_NNN），禁止在无客观数据支撑下签发审查结论")
+	}
+	if len(citedEvidence) == 0 {
+		return nil, findings, fmt.Errorf("签发审查结论必须至少引用一条账本中真实存在的 ev_NNN 证据")
+	}
+
+	target := strings.TrimSpace(targetHypID)
+	act := strings.ToLower(strings.TrimSpace(verdict))
+	if target != "" && act != "" {
+		switch act {
+		case "support":
+			for _, evID := range citedEvidence {
+				_, _ = l.hypotheses.Support(target, evID)
+			}
+		case "challenge":
+			for _, evID := range citedEvidence {
+				_, _ = l.hypotheses.Challenge(target, evID, cleanSummary)
+			}
+		case "reject":
+			_, _ = l.hypotheses.Reject(target, cleanSummary)
+		}
+		l.persistHypothesesSnapshot()
+	}
+
+	excerpt := fmt.Sprintf("[operator-review] cites=%s", strings.Join(citedEvidence, ","))
+	if target != "" && act != "" {
+		excerpt += fmt.Sprintf(" target=%s verdict=%s", target, strings.ToUpper(act))
+	}
+	excerpt += " — " + cleanSummary
+
+	rec, err := l.evidence.AddEvidence(types.EvidenceRecord{
+		Source:   "review:operator",
+		Kind:     string(evidence.KindAuditFinding),
+		View:     evidence.ViewStatic,
+		Summary:  cleanSummary,
+		Excerpt:  excerpt,
+		Supports: citedEvidence,
+		Bytes:    len(excerpt),
+	})
+	if err != nil {
+		return nil, findings, err
+	}
+	if l.options.Session != nil {
+		_ = l.options.Session.AppendEvent(map[string]any{"type": "evidence", "record": rec})
+	}
+	findings = append(findings, types.Finding{
+		Rule:         "operator-review",
+		HypothesisID: target,
+		EvidenceID:   rec.ID,
+		Action:       act,
+		Applied:      target != "" && act != "",
+		Message:      cleanSummary,
+	})
+	return &rec, findings, nil
 }

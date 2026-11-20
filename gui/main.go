@@ -18,8 +18,8 @@ func main() {
 		Title:     "0xAF·RE :: COMMAND CENTER",
 		Width:     1440,
 		Height:    900,
-		MinWidth:  1100,
-		MinHeight: 700,
+		MinWidth:  680,
+		MinHeight: 460,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

@@ -82,7 +82,7 @@ export function PlanPanel({ plan, badge, planKind }: {
     }
 
   return (
-    <PanelBox title="plan" accent={flash ?? undefined}>
+    <PanelBox title="plan" accent={flash ?? 'warn'} tier="primary" badge="任务路线">
       <div className="plan-head">
         {counts.total > 0 && (
           <>

@@ -41,6 +41,10 @@ export function useShellStore(): ShellStoreSnapshot {
   return useSyncExternalStore(subscribe, getSnapshot)
 }
 
+export function getShellStoreSnapshot(): ShellStoreSnapshot {
+  return snapshot
+}
+
 // ---------- PTY data sinks ----------
 
 // ShellView registers one sink per mounted terminal; the event dispatch writes
@@ -132,4 +136,34 @@ export const shellActions = {
       // exited mid-keystroke — harmless
     }
   },
+}
+
+// ---------- demo sandbox isolation ----------
+
+let stashedRealShells: { shells: Map<string, ShellInfo>; activeShellId: string | null } | null = null
+
+export function stashShellsForDemo(): void {
+  if (stashedRealShells !== null) return
+  stashedRealShells = { shells: new Map(shells), activeShellId }
+  shells = new Map()
+  activeShellId = null
+  commit()
+}
+
+export function resetShellStoreForDemo(): void {
+  shells = new Map()
+  activeShellId = null
+  commit()
+}
+
+export function restoreShellsFromDemo(): void {
+  if (stashedRealShells) {
+    shells = stashedRealShells.shells
+    activeShellId = stashedRealShells.activeShellId
+    stashedRealShells = null
+  } else {
+    shells = new Map()
+    activeShellId = null
+  }
+  commit()
 }

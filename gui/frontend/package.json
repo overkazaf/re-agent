@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "node scripts/e2e-runtime.mjs",
+    "test:e2e-demo": "node scripts/e2e-demo.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.1.1",

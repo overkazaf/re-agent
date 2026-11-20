@@ -161,6 +161,10 @@
 }
 
 .crt-panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   padding: 4px 10px;
   border-bottom: 1px solid var(--rule);
   font-size: 11px;
@@ -170,6 +174,143 @@
   user-select: none;
 }
 
+.crt-panel-title--toggle {
+  cursor: pointer;
+}
+
+.crt-panel-title--toggle:hover .crt-panel-fold-btn {
+  color: var(--accent);
+}
+
+.crt-panel-fold-btn {
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.crt-panel--collapsed {
+  flex: 0 0 auto;
+}
+
+.crt-panel--collapsed > .crt-panel-title {
+  border-bottom: none;
+}
+
+/* --- resizable split handles & collapsed strips ------------------------------- */
+
+.split-handle {
+  position: relative;
+  flex: 0 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+  z-index: 4;
+}
+
+.split-handle--col {
+  cursor: col-resize;
+}
+
+.split-handle--row {
+  cursor: row-resize;
+}
+
+.split-handle::after {
+  content: '';
+  display: block;
+  background: transparent;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.split-handle--col::after {
+  width: 2px;
+  height: 100%;
+}
+
+.split-handle--row::after {
+  height: 2px;
+  width: 100%;
+}
+
+.split-handle:hover::after,
+.split-handle--active::after {
+  background: var(--accent);
+  box-shadow: 0 0 calc(8px * var(--glow-strength)) var(--accent);
+}
+
+.collapsed-rail-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 26px;
+  flex: 0 0 26px;
+  padding: 8px 0;
+  border: 1px solid var(--rule);
+  background: var(--bg-panel);
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsed-rail-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.collapsed-rail-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.collapsed-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 3px 10px;
+  border: 1px solid var(--rule);
+  background: var(--bg-panel);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsed-bar-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.layout-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 11px;
+  padding: 1px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.layout-toggle-btn:hover {
+  border-color: var(--accent-dim);
+  color: var(--text);
+}
+
+.layout-toggle-btn--off {
+  color: var(--faint);
+  opacity: 0.65;
+  border-style: dashed;
+}
+
 .crt-panel-body {
   padding: 6px 10px;
   overflow: auto;
@@ -177,12 +318,96 @@
   flex: 1;
 }
 
-/* Accent variant tints the frame so a panel's job is readable at a glance. */
-.crt-panel--accent { border-color: color-mix(in srgb, var(--accent) 38%, var(--rule)); }
-.crt-panel--violet { border-color: color-mix(in srgb, var(--violet) 38%, var(--rule)); }
-.crt-panel--ok     { border-color: color-mix(in srgb, var(--ok) 38%, var(--rule)); }
-.crt-panel--warn   { border-color: color-mix(in srgb, var(--warn) 45%, var(--rule)); }
-.crt-panel--err    { border-color: color-mix(in srgb, var(--err) 45%, var(--rule)); }
+/* Accent variant tints the frame, header wash, and left indicator bar so focal
+   functional zones stand apart immediately from secondary telemetry blocks. */
+.crt-panel {
+  --panel-tone: var(--rule);
+}
+
+.crt-panel--accent {
+  --panel-tone: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--rule));
+}
+.crt-panel--violet {
+  --panel-tone: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 54%, var(--rule));
+}
+.crt-panel--ok {
+  --panel-tone: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 56%, var(--rule));
+}
+.crt-panel--warn {
+  --panel-tone: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 56%, var(--rule));
+}
+.crt-panel--err {
+  --panel-tone: var(--err);
+  border-color: color-mix(in srgb, var(--err) 62%, var(--rule));
+}
+
+.crt-panel--accent > .crt-panel-title,
+.crt-panel--violet > .crt-panel-title,
+.crt-panel--ok > .crt-panel-title,
+.crt-panel--warn > .crt-panel-title,
+.crt-panel--err > .crt-panel-title {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--panel-tone) 17%, transparent) 0%,
+    color-mix(in srgb, var(--panel-tone) 5%, transparent) 55%,
+    transparent 100%
+  );
+  border-bottom-color: color-mix(in srgb, var(--panel-tone) 36%, var(--rule));
+  font-weight: 600;
+}
+
+/* Primary panels carry a crisp 2px left indicator stripe when accented */
+.crt-panel--tier-primary.crt-panel--accent,
+.crt-panel--tier-primary.crt-panel--violet,
+.crt-panel--tier-primary.crt-panel--ok,
+.crt-panel--tier-primary.crt-panel--warn,
+.crt-panel--tier-primary.crt-panel--err {
+  border-left: 2px solid color-mix(in srgb, var(--panel-tone) 82%, var(--rule));
+}
+
+/* Spotlight panels (Governance Graph & Evidence Ledger): elevated contrast + ambient halo */
+.crt-panel--tier-spotlight {
+  border-left: 3px solid var(--panel-tone);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-tone) 7%, var(--bg-panel)) 0%,
+    var(--bg-panel) 110px
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--panel-tone) 28%, transparent),
+    0 0 calc(16px * var(--glow-strength)) color-mix(in srgb, var(--panel-tone) 11%, transparent);
+}
+
+.crt-panel--tier-spotlight > .crt-panel-title {
+  padding: 5px 10px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--panel-tone) 24%, transparent) 0%,
+    color-mix(in srgb, var(--panel-tone) 7%, transparent) 68%,
+    transparent 100%
+  );
+}
+
+/* Secondary support panels (TELE / QUEUE / NOTICES): recessed slate so focal zones pop */
+.crt-panel--tier-secondary {
+  background: color-mix(in srgb, var(--bg) 55%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--rule) 72%, transparent);
+  box-shadow: none;
+}
+
+.crt-panel-badge {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, currentColor 48%, var(--rule));
+  background: color-mix(in srgb, currentColor 12%, rgba(3, 6, 10, 0.7));
+  text-shadow: none;
+  font-weight: 600;
+}
 
 /* ╭╮╰╯ glyphs sit on the square border corners (TUI box hybrid). */
 .crt-panel-corner {
@@ -269,6 +494,47 @@
   background: var(--bg-panel);
   border: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.shell-cell--nav {
+  background: color-mix(in srgb, var(--bg) 48%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--rule) 80%, transparent);
+}
+
+.shell-cell--focus {
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--rule));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 4%, var(--bg-panel)) 0%,
+    var(--bg-panel) 96px
+  );
+}
+
+.shell-cell--forensic {
+  border-top: 2px solid color-mix(in srgb, var(--ok) 58%, var(--rule));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ok) 4%, var(--bg-panel)) 0%,
+    var(--bg-panel) 96px
+  );
+}
+
+.shell-cell--transcript {
+  background: color-mix(in srgb, var(--bg) 38%, var(--bg-panel));
+  border-left: 2px solid color-mix(in srgb, var(--violet) 42%, var(--rule));
+}
+
+.shell-cell--prompt {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--rule));
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 8%, var(--bg-panel)) 0%,
+    var(--bg-panel) 45%
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 22%, transparent),
+    0 0 calc(12px * var(--glow-strength)) color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .shell-bar {

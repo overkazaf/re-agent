@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -347,6 +348,7 @@ type session struct {
 	mu        sync.Mutex
 	lifecycle string
 	running   bool
+	findings  []types.Finding
 	turns     sync.WaitGroup
 	// turnCancel aborts the in-flight turn without closing the session; set by
 	// runTurn while a turn runs, nil otherwise
@@ -1068,9 +1070,11 @@ func (m *SessionManager) Snapshot(id string) (TickDTO, bool) {
 	if s == nil {
 		return TickDTO{}, false
 	}
-	return NewTickDTO(
+	tick := NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
-	), true
+	)
+	tick.Ledger = ledgerOf(s)
+	return tick, true
 }
 
 // TickSnapshot advances one animation frame (spinner, sparkline sampling) and
@@ -1082,9 +1086,127 @@ func (m *SessionManager) TickSnapshot(id string) (TickDTO, bool) {
 		return TickDTO{}, false
 	}
 	s.hud.onTick()
-	return NewTickDTO(
+	tick := NewTickDTO(
 		s.flow.Snapshot(), s.hud.snapshot(), reHudOf(s), s.loop.Plan(),
-	), true
+	)
+	tick.Ledger = ledgerOf(s)
+	return tick, true
+}
+
+// ledgerOf snapshots the live hypothesis stack, evidence ledger, /goal contract,
+// capability sandbox, and designated auditor seat for the GUI inspector & graph.
+func ledgerOf(s *session) *LedgerDTO {
+	if s == nil || s.loop == nil {
+		return nil
+	}
+	var ledgerPath string
+	if s.state != nil && s.state.ToolContext != nil && s.state.ToolContext.SessionDir != "" {
+		ledgerPath = filepath.Join(s.state.ToolContext.SessionDir, "evidence-ledger.jsonl")
+	}
+	dto := NewLedgerDTO(s.loop.Hypotheses(), s.loop.Evidence(), ledgerPath)
+	s.mu.Lock()
+	if len(s.findings) > 0 {
+		dto.Findings = append([]types.Finding(nil), s.findings...)
+	}
+	s.mu.Unlock()
+	if s.state != nil && s.state.Config != nil {
+		dto.AuditorProvider = pickAuditorName(s.state.Config)
+	}
+	if decl := s.loop.Goal(); decl != nil {
+		report := s.loop.GoalReport()
+		criteria := make([]GoalCriterionDTO, 0, len(report.Statuses))
+		for _, st := range report.Statuses {
+			criteria = append(criteria, GoalCriterionDTO{
+				Label:  st.Criterion.Describe(),
+				Pass:   st.Pass,
+				Detail: st.Detail,
+			})
+		}
+		constraints := map[string]string{}
+		for k, v := range decl.Objective.Constraints {
+			constraints[k] = v
+		}
+		dto.Goal = &GoalSummaryDTO{
+			Primary:      decl.Objective.Primary,
+			Intent:       decl.Objective.Intent,
+			TargetFile:   decl.Target.File,
+			TargetSHA256: decl.Target.SHA256,
+			Accepted:     decl.Accepted,
+			Constraints:  constraints,
+			Criteria:     criteria,
+		}
+	}
+	if s.state != nil && s.state.Sandbox != nil {
+		sb := s.state.Sandbox
+		grantsMap := sb.Granted()
+		granted := make([]string, 0, len(grantsMap))
+		for capName, origin := range grantsMap {
+			granted = append(granted, fmt.Sprintf("%s (%s)", capName, origin))
+		}
+		sort.Strings(granted)
+		allActions := sb.Actions()
+		grantedCnt, deniedCnt := 0, 0
+		for _, act := range allActions {
+			if act.Decision == security.DecisionDenied {
+				deniedCnt++
+			} else if act.Decision == security.DecisionGranted {
+				grantedCnt++
+			}
+		}
+		tail := allActions
+		if len(tail) > 10 {
+			tail = tail[len(tail)-10:]
+		}
+		recent := make([]SandboxActionDTO, 0, len(tail))
+		for _, act := range tail {
+			recent = append(recent, SandboxActionDTO{
+				At:         act.At,
+				Tool:       act.Tool,
+				Capability: string(act.Capability),
+				Subject:    act.Subject,
+				SHA256:     act.SHA256,
+				Decision:   string(act.Decision),
+				Origin:     act.Origin,
+			})
+		}
+		dto.Sandbox = &SandboxDTO{
+			Active:        sb.Active(),
+			Granted:       granted,
+			Device:        sb.Device(),
+			GrantedCount:  grantedCnt,
+			DeniedCount:   deniedCnt,
+			RecentActions: recent,
+		}
+	}
+	return dto
+}
+
+// pickAuditorName mirrors core.AgentLoop.auditProviderName seat selection for display.
+func pickAuditorName(cfg *types.AgentConfig) string {
+	if cfg == nil {
+		return ""
+	}
+	if cfg.AuditProvider != "" {
+		if _, ok := cfg.Providers[cfg.AuditProvider]; ok {
+			return cfg.AuditProvider
+		}
+	}
+	exclude := map[string]bool{
+		cfg.PlannerProvider:  true,
+		cfg.ExecutorProvider: true,
+		"mock":               true,
+	}
+	names := make([]string, 0, len(cfg.Providers))
+	for name := range cfg.Providers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if !exclude[name] {
+			return name
+		}
+	}
+	return cfg.ExecutorProvider
 }
 
 // GetSettings renders the session's live config for the settings dialog.
@@ -1101,6 +1223,7 @@ func (m *SessionManager) GetSettings(id string) (SettingsDTO, error) {
 		PlannerProvider:    cfg.PlannerProvider,
 		ExecutorProvider:   cfg.ExecutorProvider,
 		ResearcherProvider: cfg.ResearcherProvider,
+		AuditProvider:      cfg.AuditProvider,
 		ProviderNames:      providerNamesOf(cfg),
 		MaxTurns:           cfg.MaxTurns,
 		CompactionStrategy: cfg.CompactionStrategy,
@@ -1151,6 +1274,16 @@ func (m *SessionManager) SetSettings(id string, patch SettingsPatch) error {
 		}
 		cfg.ResearcherProvider = patch.ResearcherProvider
 		config.SaveUIPrefs(map[string]string{"researcherProvider": patch.ResearcherProvider})
+	}
+	if patch.AuditProvider == "auto" {
+		cfg.AuditProvider = ""
+		config.SaveUIPrefs(map[string]string{"auditProvider": ""})
+	} else if patch.AuditProvider != "" {
+		if cfg.Providers[patch.AuditProvider] == nil {
+			return fmt.Errorf("unknown provider: %s", patch.AuditProvider)
+		}
+		cfg.AuditProvider = patch.AuditProvider
+		config.SaveUIPrefs(map[string]string{"auditProvider": patch.AuditProvider})
 	}
 	if patch.MaxTurns != 0 {
 		if patch.MaxTurns < 1 || patch.MaxTurns > 200 {
@@ -1321,4 +1454,222 @@ func lastAssistantText(messages []types.Message) string {
 		}
 	}
 	return ""
+}
+
+// --- Hypothesis, Experiment, Verification & Review Workbench -----------------
+
+func (m *SessionManager) mergeFindings(s *session, fresh []types.Finding) {
+	if len(fresh) == 0 {
+		return
+	}
+	s.mu.Lock()
+	s.findings = append(s.findings, fresh...)
+	if len(s.findings) > 32 {
+		s.findings = s.findings[len(s.findings)-32:]
+	}
+	s.mu.Unlock()
+}
+
+func (m *SessionManager) MutateHypothesis(id string, req HypothesisMutationDTO) (types.Hypothesis, error) {
+	s := m.get(id)
+	if s == nil {
+		return types.Hypothesis{}, errUnknownSession(id)
+	}
+	act := strings.ToLower(strings.TrimSpace(req.Action))
+	var hyp types.Hypothesis
+	var findings []types.Finding
+	var err error
+
+	switch act {
+	case "create":
+		conf := 0.65
+		if req.Confidence != nil {
+			conf = *req.Confidence
+		}
+		hyp, findings, err = s.loop.CreateHypothesis(req.Claim, conf, req.EvidenceIDs, req.DependsOn, req.Note)
+		if err == nil {
+			if strings.TrimSpace(req.ExpCommand) != "" {
+				hyp, _, _ = s.loop.AddExperiment(hyp.ID, req.ExpTitle, req.ExpCommand, req.ExpExpected)
+			}
+			m.sinkFor().Notice(id, "info", fmt.Sprintf("created hypothesis %s (%.0f%%)", hyp.ID, hyp.Confidence*100))
+		}
+	case "add_experiment":
+		var exp types.HypothesisExperiment
+		hyp, exp, err = s.loop.AddExperiment(req.ID, req.ExpTitle, req.ExpCommand, req.ExpExpected)
+		if err == nil {
+			m.sinkFor().Notice(id, "info", fmt.Sprintf("added planned experiment %s on %s", exp.ID, hyp.ID))
+		}
+	default:
+		hyp, findings, err = s.loop.UpdateHypothesis(req.ID, act, req.Claim, req.Note, req.Confidence, req.EvidenceIDs, req.DependsOn)
+		if err == nil {
+			m.sinkFor().Notice(id, "info", fmt.Sprintf("updated hypothesis %s (%s → %s)", hyp.ID, act, hyp.Status))
+		}
+	}
+	if err != nil {
+		return types.Hypothesis{}, err
+	}
+	m.mergeFindings(s, findings)
+	m.emitTick(s)
+	return hyp, nil
+}
+
+func (m *SessionManager) RunHypothesisExperiment(id string, req RunExperimentDTO) (types.EvidenceRecord, error) {
+	s := m.get(id)
+	if s == nil {
+		return types.EvidenceRecord{}, errUnknownSession(id)
+	}
+	hypID := strings.TrimSpace(req.HypothesisID)
+	expID := strings.TrimSpace(req.ExperimentID)
+	cmd := strings.TrimSpace(req.Command)
+	expected := strings.TrimSpace(req.Expected)
+
+	if expID == "" {
+		if cmd == "" {
+			return types.EvidenceRecord{}, fmt.Errorf("experiment command is required")
+		}
+		_, exp, addErr := s.loop.AddExperiment(hypID, req.Title, cmd, expected)
+		if addErr != nil {
+			return types.EvidenceRecord{}, addErr
+		}
+		expID = exp.ID
+	} else {
+		existing, ok := s.loop.GetHypothesis(hypID)
+		if !ok {
+			return types.EvidenceRecord{}, fmt.Errorf("unknown hypothesis %s", hypID)
+		}
+		for _, exp := range existing.Experiments {
+			if exp.ID == expID {
+				if cmd == "" {
+					cmd = exp.Command
+				}
+				if expected == "" {
+					expected = exp.Expected
+				}
+				break
+			}
+		}
+	}
+	if cmd == "" {
+		return types.EvidenceRecord{}, fmt.Errorf("experiment %s has empty command", expID)
+	}
+
+	tc := *s.state.ToolContext
+	// Enforce Task Capability Sandbox + Execution Policy Approval before running!
+	if tc.Sandbox != nil {
+		if sbErr := tc.Sandbox.Authorize("run_command", cmd); sbErr != nil {
+			rec, _, findings, _ := s.loop.CompleteExperiment(hypID, expID, cmd, "", expected, sbErr)
+			m.mergeFindings(s, findings)
+			m.sinkFor().Notice(id, "error", fmt.Sprintf("[Gate 1 · Sandbox] experiment %s blocked: %v (%s)", expID, sbErr, rec.ID))
+			m.emitTick(s)
+			return rec, nil
+		}
+	}
+	if tc.Policy != nil {
+		concerns, cErr := security.CommandConcerns(cmd, tc.Policy)
+		if cErr != nil {
+			return types.EvidenceRecord{}, cErr
+		}
+		if aErr := security.RequestApproval(types.ApprovalRequest{
+			Tool: "run_command", Tier: types.TierExec, Summary: "experiment: " + cmd, Concerns: concerns,
+		}, tc); aErr != nil {
+			return types.EvidenceRecord{}, aErr
+		}
+	}
+
+	out, runErr := tools.RunShellForVerification(cmd, "", tc)
+	rec, updated, findings, err := s.loop.CompleteExperiment(hypID, expID, cmd, out, expected, runErr)
+	if err != nil {
+		return types.EvidenceRecord{}, err
+	}
+	m.mergeFindings(s, findings)
+	m.sinkFor().Notice(id, "info", fmt.Sprintf("experiment %s executed → minted %s (%s: %.0f%%)", expID, rec.ID, updated.ID, updated.Confidence*100))
+	m.emitTick(s)
+	return rec, nil
+}
+
+func (m *SessionManager) RunVerification(id string, req VerificationRequestDTO) (types.EvidenceRecord, error) {
+	s := m.get(id)
+	if s == nil {
+		return types.EvidenceRecord{}, errUnknownSession(id)
+	}
+	if strings.TrimSpace(req.Artifact) == "" || len(req.Cases) == 0 {
+		return types.EvidenceRecord{}, fmt.Errorf("artifact path and at least one replay case are required")
+	}
+	rawCases := make([]any, 0, len(req.Cases))
+	for _, c := range req.Cases {
+		rawCases = append(rawCases, map[string]any{
+			"name":     c.Name,
+			"command":  c.Command,
+			"input":    c.Input,
+			"expected": c.Expected,
+		})
+	}
+	args := map[string]any{
+		"artifact":     req.Artifact,
+		"buildCommand": req.BuildCommand,
+		"cases":        rawCases,
+	}
+	tool := tools.VerifyArtifactTool()
+	res, err := tool.Execute(args, *s.state.ToolContext)
+	if err != nil {
+		return types.EvidenceRecord{}, err
+	}
+	rec, findings, recErr := s.loop.RecordVerificationToolResult(res, res.IsError, req.HypothesisID)
+	if recErr != nil {
+		return types.EvidenceRecord{}, recErr
+	}
+	m.mergeFindings(s, findings)
+	m.sinkFor().Notice(id, "info", fmt.Sprintf("verify_artifact completed → minted immutable %s", rec.ID))
+	m.emitTick(s)
+	return rec, nil
+}
+
+func (m *SessionManager) SubmitReview(id string, req ReviewRequestDTO) (ReviewResultDTO, error) {
+	s := m.get(id)
+	if s == nil {
+		return ReviewResultDTO{}, errUnknownSession(id)
+	}
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	if mode == "model_audit" {
+		cmdRes, err := m.SendCommand(id, "/audit")
+		if err != nil {
+			return ReviewResultDTO{}, err
+		}
+		for _, n := range cmdRes.Notices {
+			m.sinkFor().Notice(id, n.Level, n.Text)
+		}
+		evs := s.loop.Evidence()
+		var lastAudit *types.EvidenceRecord
+		for i := len(evs) - 1; i >= 0; i-- {
+			if evs[i].Kind == string(evidence.KindAuditFinding) {
+				copied := evs[i]
+				lastAudit = &copied
+				break
+			}
+		}
+		s.mu.Lock()
+		fSnap := append([]types.Finding(nil), s.findings...)
+		s.mu.Unlock()
+		return ReviewResultDTO{AuditRecord: lastAudit, Findings: fSnap}, nil
+	}
+
+	summary := req.Summary
+	if mode == "arbitrate" {
+		summary = ""
+	}
+	rec, findings, err := s.loop.SubmitAuditReview(summary, req.HypothesisID, req.Verdict, req.CitedEvidence)
+	if err != nil {
+		return ReviewResultDTO{}, err
+	}
+	m.mergeFindings(s, findings)
+	if rec != nil {
+		m.sinkFor().Notice(id, "info", fmt.Sprintf("audit review stamped → %s", rec.ID))
+	} else {
+		m.sinkFor().Notice(id, "info", fmt.Sprintf("arbitrator review complete (%d findings)", len(findings)))
+	}
+	m.emitTick(s)
+	if findings == nil {
+		findings = []types.Finding{}
+	}
+	return ReviewResultDTO{AuditRecord: rec, Findings: findings}, nil
 }

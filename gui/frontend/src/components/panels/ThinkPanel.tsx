@@ -30,7 +30,7 @@ export function ThinkPanel({ lines, expanded, onToggle }: {
   const start = Math.max(0, lines.length - rows.length)
 
   return (
-    <PanelBox title="think">
+    <PanelBox title="think" accent="violet" tier="primary" badge="推理脉络">
       <div className="think-root">
         <button type="button" className="think-head" onClick={toggle} title={open ? 'collapse' : 'expand'}>
           <span className="t-muted">{open ? '⌃' : '⌄'}</span>

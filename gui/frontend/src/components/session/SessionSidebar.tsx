@@ -3,10 +3,11 @@
 // confirm on running sessions. Store-driven — no props required.
 // The SHELLS section below lists PTY shells; clicking one swaps the main area
 // to the terminal (sessions data stays put in the store).
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { actions, useSessionStore } from '../../store/sessions'
 import { shellActions, useShellStore } from '../../store/shells'
 import { hasBackend } from '../../store/sessions'
+import { emitDemoSignal, onSidebarDialogRequest } from '../../demo/signals'
 import type { LifecycleState } from '../../lib/types'
 import { StatusBadge } from '../crt'
 import { Btn, Dialog } from './Dialog'
@@ -32,7 +33,7 @@ const headerBtnStyle: CSSProperties = {
   cursor: 'pointer',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 7px',
+  padding: '1px 5px',
 }
 
 export function SessionSidebar({
@@ -50,6 +51,14 @@ export function SessionSidebar({
   // in-app confirm: window.confirm always returns false inside Wails' WKWebView
   // (no WKUIDelegate), so a running session could never be closed
   const [confirmClose, setConfirmClose] = useState<{ id: string; name: string } | null>(null)
+
+  useEffect(() => {
+    return onSidebarDialogRequest((kind) => {
+      if (kind === 'new') setShowNew(true)
+      else if (kind === 'resume') setShowResume(true)
+      else if (kind === 'settings') setShowConfig(true)
+    })
+  }, [])
 
   function requestClose(id: string, lifecycle: LifecycleState, name: string) {
     if (lifecycle === 'running') {
@@ -93,7 +102,7 @@ export function SessionSidebar({
         }}
       >
         <span style={{ flexShrink: 0 }}>SESSIONS · {list.length}</span>
-        <span style={{ display: 'flex', gap: 6 }}>
+        <span style={{ display: 'flex', gap: 4 }}>
           <button
             onClick={() => setShowNew(true)}
             title="new session"
@@ -135,9 +144,13 @@ export function SessionSidebar({
             <div
               key={rt.info.id}
               onClick={() => {
+                const wasInShell = activeShellId !== null
                 actions.setActive(rt.info.id)
                 // leaving shell mode — the main area shows the session again
                 shellActions.setActive(null)
+                if (wasInShell) {
+                  emitDemoSignal({ type: 'returned_to_session', sessionId: rt.info.id })
+                }
               }}
               style={{
                 border: `1px solid ${activeRt ? 'var(--accent)' : 'var(--rule)'}`,

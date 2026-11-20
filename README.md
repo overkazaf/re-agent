@@ -410,12 +410,15 @@ a second face for the agent, not a fork.
 ```bash
 make gui            # build -> gui/build/bin/0xAF-Re GUI.app
 make gui-dev        # live-reload dev mode
+make gui-demo       # browser-only interactive demo sandbox (no Wails / API key)
+make gui-demo-build # build static demo bundle -> docs/gui-demo/ (GitHub Pages ready)
 ```
 
 What ships:
 
 | Surface | What you get |
 | --- | --- |
+| Interactive demo sandbox | Click `▷ 演示环境` in the desktop TopBar (or launch `make gui-demo` in any browser) to walk through 5 guided RE cases — approval-gate branching, 9-phase RE HUD, multi-session queueing & interrupt, direct slash tools + themes + resume, and an interactive xterm shell — with zero API keys or disk writes |
 | Multi-session | Run several agent sessions at once; the sidebar tracks each one's lifecycle (idle / running / awaiting approval) and supports mid-turn `Interrupt` |
 | Live dashboard + 9-phase RE HUD | The TUI's 90ms flow / tools / plan / think / telemetry panels plus the 9-phase RE HUD (`TRI → … → WRI` with live `H:N` / `E:N` counts) |
 | Full 34-tool & sandbox parity | Identical 34 built-in tools (`binary_inspect`, `anti_analysis`, `binary_diff`, `verify_artifact`, `remote_exec`, …), `evidence-ledger.jsonl`, `/goal` contracts, `/cap` sandbox, and `/audit` |
@@ -424,10 +427,35 @@ What ships:
 | Themes | deck / amber / matrix / mono — scanlines and glow throughout, `prefers-reduced-motion` honored |
 | Resume | The session picker lists and hydrates full saved transcripts, task plans, hypotheses, evidence, and active `/goal` sandbox scopes |
 
-Headless smoke (no window needed):
+### GUI Functional Zones & Visual Color Hierarchy
+
+The Desktop GUI and Web Demo Sandbox use **semantic color hierarchy** so focal forensic zones stand apart from secondary telemetry, with every pane supporting **drag-to-resize, per-panel fold toggles, and 1-click `↺` layout reset**:
+
+| Zone | Panels / Modules | Visual Accent (`deck` theme) | Responsibilities & Key Actions |
+| :--- | :--- | :--- | :--- |
+| **① Top Control Bar** | `TopBar` + Pane Toggles | Electric Cyan / Violet Badges | Switch `▣ 五维仪表` ↔ `◈ 机制图谱`, enter `▷ 演示环境` (`◈ 场景库`), collapse/expand `◧ 侧栏 / ⬒ 仪表 / ⬓ 转录 / ◨ 右栏`, switch CRT palette (`deck` / `amber` / `matrix` / `mono`) |
+| **② Left Navigation Rail** | `SESSIONS` · `SHELLS` | Recessed Slate Frame | Create sessions (`+ new`), hydrate saved sessions (`resume`), open 4-role routing config (`⚙`), spawn embedded PTY shells (`+ sh`) |
+| **③ Center Focal Stage (Dual-Mode)** | **Mode A**: 5-Panel Dashboard<br>**Mode B**: `◈ Governance Graph & Writeup Studio` | **Spotlight Layer**:<br>FLOW Cyan · TOOLS Emerald · PLAN Amber · THINK Violet (TELE Recessed) | **Dashboard**: 90ms live wires, tool cards, plan steps, and reasoning tail;<br>**Governance Graph**: zoom/pan + `⛶ 全屏放大`, `▶ 回放思考过程` (frame-by-frame cognitive & ledger replay), **4-Pillar Structured Conclusion Matrix**, and citation-anchored `✎ Writeup Studio` |
+| **④ Right Forensic & Gate Rail** | `RE WORKFLOW` (9-Phase Gate)<br>`LEDGER` (Evidence & Hypotheses) | **Violet** `RE WORKFLOW` +<br>**Emerald Spotlight** `LEDGER 🔒` | **RE WORKFLOW**: tracks `TRI → … → WRI [9/9]` hard gates;<br>**LEDGER (Ground Truth)**: inspects `🔒 IMMUTABLE` `ev_NNN` records & `H-NNN` hypotheses; `+ 假设/实验` / `+ 实跑验证` launches the **Scientific RE Workbench** (create/edit hypotheses & experiments, host-executed `ev_NNN` minting, `verify_artifact` replay, and evidence-cited review sign-offs) |
+| **⑤ Middle Transcript Stream** | `TRANSCRIPT` | Violet-Edged Dark Stream | Time-stamped (`t+Xs`) wire frames, tool runs, reasoning summaries, and Markdown replies |
+| **⑥ Bottom Command Deck & Gate** | `PromptInput` + `ApprovalDialog` | Electric Cyan Command Bar / Amber-Red Approval Overlay | Auto-growing input, `/` slash completions, mid-turn queueing & `■ stop` interrupt; write/exec/network actions trigger tiered approval dialogs (`deny` focused by default) |
+
+### GUI Operation Walkthrough
+
+| Operation View | What It Demonstrates |
+| :--- | :--- |
+| <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI Semantic Color Zones & Forensic Ledger"> | **Semantic Color Zones & Immutable Ledger**: Cyan `FLOW`, Crimson/Emerald `TOOLS`, Amber `PLAN`, Violet `THINK` & `RE WORKFLOW [9/9]`, and Emerald Spotlight `LEDGER 🔒` (`ev_NNN` / `H-NNN`). |
+| <img src="docs/shots/gui-governance-graph.png" width="440" alt="Multi-Role Governance Graph & Replay"> | **Multi-Role Architecture Graph & Cognitive Replay**: `deepseek` (Planner) + `codex` (Executor) + `glm` (Auditor) swimlanes, Gate 1/2 security checks, zoom/fullscreen (`125%`), and 8-frame thought replay (`▶ 回放思考过程`). |
+| <img src="docs/shots/gui-provenance-dag.png" width="440" alt="Live Provenance Citation DAG"> | **Live Causal Provenance DAG**: Dynamic `ev_NNN ↔ H-NNN` support/contradiction edges, confidence halving (`H-002 [REJECTED]`), and `AUDIT & DELIVERY VERDICT` gate. |
+| <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="Scientific RE Hypothesis & Experiment Workbench"> | **Scientific RE Workbench**: Create/edit falsifiable hypotheses (`H-005`) and run live experiments (`exp_01 [PASSED]`) — only real host execution mints immutable `ev_013`. |
+| <img src="docs/shots/gui-writeup-studio.png" width="440" alt="6-Stage Alignment & Structured Conclusion Studio"> | **6-Stage Cognitive Alignment & Writeup Studio**: 1:1 alignment with the 6 anti-*Commits-to-a-story* stages, **4-Pillar Structured Conclusion Matrix**, and citation-anchored Markdown Writeup export. |
+| <img src="docs/shots/gui-role-config.png" width="440" alt="4-Role AI Agent Configuration"> | **4-Role AI Agent Routing (`amber` CRT theme)**: Live visual configuration for `planner` (`deepseek`), `executor` (`codex`), `researcher` (`glm`), and isolated `auditor` (`glm`). |
+
+Headless smoke & E2E verification (no window needed):
 
 ```bash
 go test ./gui/ -run TestE2E -v
+cd gui/frontend && npm run test:e2e && npm run test:e2e-demo
 ```
 
 Notes: sending bare `/workflow reverse` in the GUI opens a native sample-type +
@@ -616,15 +644,61 @@ pulls, and multi-host fan-out of one plan.
 
 ## Providers and Models
 
-Planner, executor, and researcher are roles. Providers are replaceable seats.
+`planner`, `executor`, `researcher`, and `auditor` are decoupled AI role seats; providers are replaceable model backends (CLI channels or HTTP APIs).
+
+### Four-Role Seat Matrix
+
+| Role Seat | Config Key | Slash Command | Responsibility | Example Providers |
+| :--- | :--- | :--- | :--- | :--- |
+| **Planner** | `plannerProvider` | `/planner <name>` | Drafts `/goal` contracts, maintains `update_plan` routes, creates & revises `H-NNN` hypotheses | `deepseek` (`deepseek-chat` / `deepseek-reasoner`) · `claude-api` |
+| **Executor** | `executorProvider` | `/executor <name>` | Drives all 34 built-in RE tools, collects static/dynamic evidence, runs `verify_artifact` replays | `codex` (`gpt-5.3-codex`) · `claude` |
+| **Researcher** | `researcherProvider` | `/researcher <name>` | Synthesizes papers, symbol context, and local knowledge base entries | `glm` · `grok` · `deepseek` |
+| **Auditor** | `auditProvider` | `/auditor <name\|auto>` | Runs `/audit` in a **zero-history, tool-free** sandbox over the hypothesis stack + ledger digest (`""` / `auto` picks a third seat distinct from Planner & Executor) | `glm` (`glm-4.6`) · any independent model |
+
+### Three Ways to Configure Roles
+
+1. **Desktop GUI Visual Config (`⚙`)**: Click **`⚙`** in the `SESSIONS` sidebar header to open `CONFIG`, select any configured provider for `planner`, `executor`, `researcher`, and `auditor`, and click `save` (persisted to `~/.0xaf-re-agent/ui.json`).
+2. **Runtime Slash Commands (CLI & GUI)**:
 
 ```text
 /planner deepseek
-/executor claude-api
-/researcher grok
+/executor codex
+/researcher glm
+/auditor glm
 /agent auto
 /model deepseek deepseek-reasoner
 /model planner gpt-5.3-codex-high
+```
+
+3. **Workspace or Global Config (`agent.config.json` / `~/.0xaf-re-agent/config.json`)**:
+
+```json
+{
+  "plannerProvider": "deepseek",
+  "executorProvider": "codex",
+  "researcherProvider": "glm",
+  "auditProvider": "glm",
+  "providers": {
+    "deepseek": {
+      "type": "openai-chat",
+      "model": "deepseek-chat",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "apiKeyEnv": ["DEEPSEEK_API_KEY"]
+    },
+    "codex": {
+      "type": "openai-responses",
+      "model": "gpt-5.3-codex",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": ["OPENAI_API_KEY"]
+    },
+    "glm": {
+      "type": "openai-chat",
+      "model": "glm-4.6",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
+    }
+  }
+}
 ```
 
 HTTP providers use model overrides in the request body. Built-in CLI providers
@@ -646,23 +720,6 @@ Editable targets are `system`, `planner`, `executor`, and `researcher`.
 `/prompt edit` seeds the file from the embedded prompt, opens `$VISUAL` or
 `$EDITOR`, and reloads immediately. With a detected project root it writes under
 `prompts/`; otherwise it writes under `~/.0xaf-re-agent/prompts/`.
-
-Minimal config override:
-
-```json
-{
-  "plannerProvider": "codex",
-  "executorProvider": "claude",
-  "providers": {
-    "deepseek": {
-      "type": "openai-chat",
-      "model": "deepseek-chat",
-      "baseUrl": "https://api.deepseek.com/v1",
-      "apiKeyEnv": ["DEEPSEEK_API_KEY"]
-    }
-  }
-}
-```
 
 Copy `config.example.json` to `agent.config.json` for a full local config.
 

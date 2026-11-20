@@ -402,7 +402,7 @@
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(200px, auto) auto;
+  grid-template-rows: auto auto auto auto;
   grid-template-areas:
     'flow  flow'
     'tools tools'

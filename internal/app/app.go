@@ -104,6 +104,9 @@ func Run(argv []string) error {
 	if prefs.ResearcherProvider != "" && agentConfig.Providers[prefs.ResearcherProvider] != nil && args.Researcher == "" {
 		agentConfig.ResearcherProvider = prefs.ResearcherProvider
 	}
+	if prefs.AuditProvider != "" && agentConfig.Providers[prefs.AuditProvider] != nil {
+		agentConfig.AuditProvider = prefs.AuditProvider
+	}
 	if args.Planner != "" {
 		agentConfig.PlannerProvider = args.Planner
 	}

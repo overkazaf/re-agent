@@ -8,19 +8,40 @@ type Handler = (e: GuiEvent) => void
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Runtime = { EventsOn(name: string, cb: (...data: any[]) => void): void; EventsOff(name: string, ...names: string[]): void }
 
-function runtime(): Runtime {
-  return (window as unknown as { runtime: Runtime }).runtime
+function runtime(): Runtime | null {
+  try {
+    const r = (window as unknown as { runtime?: Runtime }).runtime
+    return r && typeof r.EventsOn === 'function' ? r : null
+  } catch {
+    return null
+  }
 }
 
 const CHANNEL = 'gui:event'
 
 const handlers = new Set<Handler>()
 let subscribed = false
+let demoEventsOnly = false
+
+/** When true, window.runtime events are muted so real desktop sessions never
+ *  bleed into the in-memory demo sandbox. */
+export function setDemoEventsOnly(on: boolean): void {
+  demoEventsOnly = on
+}
+
+/** Deliver a synthetic gui:event from the in-memory demo backend. */
+export function emitDemoGuiEvent(e: GuiEvent): void {
+  if (!demoEventsOnly) return
+  for (const h of handlers) h(e)
+}
 
 function ensureSubscribed() {
   if (subscribed) return
+  const rt = runtime()
+  if (!rt) return
   subscribed = true
-  runtime().EventsOn(CHANNEL, (...payload: unknown[]) => {
+  rt.EventsOn(CHANNEL, (...payload: unknown[]) => {
+    if (demoEventsOnly) return
     const e = payload[0] as GuiEvent
     for (const h of handlers) h(e)
   })
@@ -56,14 +77,24 @@ type ShellHandler = (env: import('./types').ShellEnvelope) => void
 const shellHandlers = new Set<ShellHandler>()
 let shellSubscribed = false
 
+/** Deliver a synthetic gui:shell frame from the in-memory demo shell. */
+export function emitDemoShellEvent(env: import('./types').ShellEnvelope): void {
+  if (!demoEventsOnly) return
+  for (const h of shellHandlers) h(env)
+}
+
 /** Subscribe to gui:shell. Same join-once + fan-out pattern as onGuiEvent. */
 export function onShellEvent(handler: ShellHandler): () => void {
   if (!shellSubscribed) {
-    shellSubscribed = true
-    runtime().EventsOn(SHELL_CHANNEL, (...payload: unknown[]) => {
-      const env = payload[0] as import('./types').ShellEnvelope
-      for (const h of shellHandlers) h(env)
-    })
+    const rt = runtime()
+    if (rt) {
+      shellSubscribed = true
+      rt.EventsOn(SHELL_CHANNEL, (...payload: unknown[]) => {
+        if (demoEventsOnly) return
+        const env = payload[0] as import('./types').ShellEnvelope
+        for (const h of shellHandlers) h(env)
+      })
+    }
   }
   shellHandlers.add(handler)
   return () => shellHandlers.delete(handler)

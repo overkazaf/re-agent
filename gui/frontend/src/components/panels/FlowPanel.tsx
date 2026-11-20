@@ -99,7 +99,7 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
   const replyMode = flow.stage === 'write' || (flow.pendingCalls === 0 && flow.replyChars > 0)
 
   return (
-    <PanelBox title="flow" accent={BOX_ACCENT[flow.stage]}>
+    <PanelBox title="flow" accent={BOX_ACCENT[flow.stage] ?? 'accent'} tier="primary" badge="核心链路">
       <div className="flow-body">
         {/* stage rail + plan badge */}
         <div className="stage-rail">

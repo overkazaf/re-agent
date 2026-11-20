@@ -118,6 +118,8 @@ export interface FlowDTO {
 export interface HudRoute {
   planner: string
   executor: string
+  researcher?: string
+  auditor?: string
   active: string
 }
 
@@ -171,11 +173,172 @@ export interface RESampleType {
   prompts: RESamplePrompt[]
 }
 
+// ---------- evidence ledger & hypothesis stack ----------
+
+export type HypothesisStatus = 'active' | 'revised' | 'rejected' | 'reevaluate'
+
+export interface HypothesisExperiment {
+  id: string
+  title: string
+  command: string
+  expected?: string
+  status: 'planned' | 'passed' | 'falsified' | 'error'
+  evidenceId?: string
+  actual?: string
+  ranAt?: number
+}
+
+export interface Hypothesis {
+  id: string
+  claim: string
+  confidence: number
+  supporting?: string[]
+  contradicting?: string[]
+  dependsOn?: string[]
+  derived?: string[]
+  status: HypothesisStatus
+  note?: string
+  experiments?: HypothesisExperiment[]
+  createdAt: number
+  updatedAt: number
+}
+
+export interface VerificationStats {
+  build: boolean
+  passed: number
+  total: number
+  id?: string
+}
+
+export interface EvidenceRecord {
+  id: string
+  source: string
+  kind?: string
+  view?: string
+  excerpt: string
+  summary?: string
+  isError?: boolean
+  toolCallId?: string
+  artifact?: string
+  sha256?: string
+  supports?: string[]
+  contradicts?: string[]
+  untrustedInput?: boolean
+  bytes: number
+  verification?: VerificationStats | null
+  createdAt: number
+}
+
+export interface GoalCriterionDTO {
+  label: string
+  pass: boolean
+  detail?: string
+}
+
+export interface GoalSummaryDTO {
+  primary: string
+  intent?: string
+  targetFile?: string
+  targetSha256?: string
+  accepted: boolean
+  constraints?: Record<string, string>
+  criteria: GoalCriterionDTO[]
+}
+
+export interface SandboxActionDTO {
+  at: number
+  tool: string
+  capability?: string
+  subject: string
+  sha256: string
+  decision: 'granted' | 'denied' | 'unmanaged'
+  origin?: string
+}
+
+export interface SandboxDTO {
+  active: boolean
+  granted: string[]
+  device?: string
+  grantedCount: number
+  deniedCount: number
+  recentActions: SandboxActionDTO[]
+}
+
+export interface FindingDTO {
+  rule: string
+  hypothesisId: string
+  evidenceId?: string
+  action?: string
+  applied: boolean
+  message: string
+}
+
+export interface LedgerDTO {
+  hypotheses: Hypothesis[]
+  evidence: EvidenceRecord[]
+  path?: string
+  auditorProvider?: string
+  goal?: GoalSummaryDTO | null
+  sandbox?: SandboxDTO | null
+  findings?: FindingDTO[]
+}
+
 export interface TickDTO {
   flow: FlowDTO
   hud: HudDTO
   re: ReDTO | null
   plan: PlanSnapshot | null
+  ledger?: LedgerDTO | null
+}
+
+// ---------- hypothesis, experiment, verification & review workbench ----------
+
+export interface HypothesisMutationDTO {
+  action: 'create' | 'revise' | 'reject' | 'support' | 'challenge' | 'meta' | 'add_experiment'
+  id?: string
+  claim?: string
+  confidence?: number
+  evidenceIds?: string[]
+  dependsOn?: string[]
+  note?: string
+  expTitle?: string
+  expCommand?: string
+  expExpected?: string
+}
+
+export interface RunExperimentDTO {
+  hypothesisId: string
+  experimentId?: string
+  title?: string
+  command?: string
+  expected?: string
+}
+
+export interface VerificationCaseDTO {
+  name: string
+  command: string
+  input?: string
+  expected: string
+}
+
+export interface VerificationRequestDTO {
+  artifact: string
+  buildCommand?: string
+  cases: VerificationCaseDTO[]
+  hypothesisId?: string
+}
+
+export interface ReviewRequestDTO {
+  mode: 'arbitrate' | 'operator_audit' | 'model_audit'
+  summary?: string
+  hypothesisId?: string
+  verdict?: 'support' | 'challenge' | 'reject' | ''
+  citedEvidence?: string[]
+}
+
+export interface ReviewResultDTO {
+  auditRecord?: EvidenceRecord | null
+  findings: FindingDTO[]
 }
 
 // ---------- loop events (transcript stream) ----------
@@ -237,6 +400,7 @@ export interface SettingsDTO {
   plannerProvider: string
   executorProvider: string
   researcherProvider: string
+  auditProvider?: string
   providerNames: string[]
   providers: ProviderInfoDTO[]
   maxTurns: number
@@ -249,6 +413,7 @@ export interface SettingsPatch {
   plannerProvider: string
   executorProvider: string
   researcherProvider: string
+  auditProvider?: string
   maxTurns: number
 }
 

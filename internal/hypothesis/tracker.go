@@ -71,6 +71,26 @@ func (t *Tracker) Create(claim string, confidence float64, evidence []string, de
 	return *hyp, nil
 }
 
+func copyHypothesis(src *types.Hypothesis) types.Hypothesis {
+	out := *src
+	if len(src.Supporting) > 0 {
+		out.Supporting = append([]string(nil), src.Supporting...)
+	}
+	if len(src.Contradicting) > 0 {
+		out.Contradicting = append([]string(nil), src.Contradicting...)
+	}
+	if len(src.DependsOn) > 0 {
+		out.DependsOn = append([]string(nil), src.DependsOn...)
+	}
+	if len(src.Derived) > 0 {
+		out.Derived = append([]string(nil), src.Derived...)
+	}
+	if len(src.Experiments) > 0 {
+		out.Experiments = append([]types.HypothesisExperiment(nil), src.Experiments...)
+	}
+	return out
+}
+
 func (t *Tracker) Get(id string) (types.Hypothesis, bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -78,7 +98,7 @@ func (t *Tracker) Get(id string) (types.Hypothesis, bool) {
 	if err != nil {
 		return types.Hypothesis{}, false
 	}
-	return *hyp, true
+	return copyHypothesis(hyp), true
 }
 
 func (t *Tracker) List() []types.Hypothesis {
@@ -86,7 +106,7 @@ func (t *Tracker) List() []types.Hypothesis {
 	defer t.mu.Unlock()
 	out := make([]types.Hypothesis, 0, len(t.byID))
 	for _, hyp := range t.byID {
-		out = append(out, *hyp)
+		out = append(out, copyHypothesis(hyp))
 	}
 	sortHypotheses(out)
 	return out
@@ -175,7 +195,108 @@ func (t *Tracker) Reject(id, note string) (types.Hypothesis, error) {
 	hyp.Note = strings.TrimSpace(util.Truncate(note, 200))
 	hyp.UpdatedAt = types.NowMs()
 	t.cascadeLocked(hyp.ID)
-	return *hyp, nil
+	return copyHypothesis(hyp), nil
+}
+
+// UpdateMeta updates operator-editable metadata (confidence, parent dependsOn
+// links, and note) while preserving provenance rules on evidence links.
+func (t *Tracker) UpdateMeta(id string, confidence *float64, dependsOn []string, note *string) (types.Hypothesis, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	hyp, err := t.locked(id)
+	if err != nil {
+		return types.Hypothesis{}, err
+	}
+	if dependsOn != nil {
+		normDeps := normalizeIDs(dependsOn)
+		for _, dep := range normDeps {
+			if dep == hyp.ID {
+				return types.Hypothesis{}, fmt.Errorf("hypothesis %s cannot depend on itself", hyp.ID)
+			}
+			if _, ok := t.byID[dep]; !ok {
+				return types.Hypothesis{}, fmt.Errorf("dependsOn references unknown hypothesis %s", dep)
+			}
+		}
+		// Unlink old Derived references first, then re-link
+		for _, oldParentID := range hyp.DependsOn {
+			if parent, ok := t.byID[oldParentID]; ok {
+				filtered := parent.Derived[:0]
+				for _, child := range parent.Derived {
+					if child != hyp.ID {
+						filtered = append(filtered, child)
+					}
+				}
+				parent.Derived = filtered
+			}
+		}
+		hyp.DependsOn = dedupe(normDeps)
+		t.backlink(hyp)
+	}
+	if confidence != nil {
+		hyp.Confidence = clamp(*confidence)
+	}
+	if note != nil {
+		hyp.Note = strings.TrimSpace(util.Truncate(*note, 200))
+	}
+	hyp.UpdatedAt = types.NowMs()
+	return copyHypothesis(hyp), nil
+}
+
+// AddExperiment appends a planned falsification experiment to a hypothesis.
+// EvidenceID starts empty and can only be populated by RecordExperimentResult
+// after real host execution.
+func (t *Tracker) AddExperiment(id, title, command, expected string) (types.Hypothesis, types.HypothesisExperiment, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	hyp, err := t.locked(id)
+	if err != nil {
+		return types.Hypothesis{}, types.HypothesisExperiment{}, err
+	}
+	cleanCmd := strings.TrimSpace(command)
+	if cleanCmd == "" {
+		return types.Hypothesis{}, types.HypothesisExperiment{}, fmt.Errorf("experiment command must not be empty")
+	}
+	cleanTitle := strings.TrimSpace(util.Truncate(title, 120))
+	if cleanTitle == "" {
+		cleanTitle = util.Truncate(cleanCmd, 80)
+	}
+	exp := types.HypothesisExperiment{
+		ID:       fmt.Sprintf("exp_%02d", len(hyp.Experiments)+1),
+		Title:    cleanTitle,
+		Command:  cleanCmd,
+		Expected: strings.TrimSpace(util.Truncate(expected, 200)),
+		Status:   "planned",
+	}
+	hyp.Experiments = append(hyp.Experiments, exp)
+	hyp.UpdatedAt = types.NowMs()
+	return copyHypothesis(hyp), exp, nil
+}
+
+// RecordExperimentResult binds a host-executed ev_NNN record and actual stdout
+// excerpt onto a hypothesis experiment.
+func (t *Tracker) RecordExperimentResult(id, expID, status, evidenceID, actual string) (types.Hypothesis, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	hyp, err := t.locked(id)
+	if err != nil {
+		return types.Hypothesis{}, err
+	}
+	idx := -1
+	for i := range hyp.Experiments {
+		if hyp.Experiments[i].ID == expID {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return types.Hypothesis{}, fmt.Errorf("unknown experiment %s on %s", expID, hyp.ID)
+	}
+	hyp.Experiments[idx].Status = status
+	hyp.Experiments[idx].EvidenceID = evidenceID
+	hyp.Experiments[idx].Actual = util.Truncate(strings.TrimSpace(actual), 240)
+	hyp.Experiments[idx].RanAt = types.NowMs()
+	hyp.UpdatedAt = types.NowMs()
+	return copyHypothesis(hyp), nil
 }
 
 // Load seeds a restored session; ids are trusted here because they were

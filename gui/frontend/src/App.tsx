@@ -7,13 +7,25 @@ import type { CSSProperties } from 'react'
 
 import { AppShell } from './components/shell/AppShell'
 import { BootSplash, PanelBox, type BootProbe } from './components/crt'
+import { DemoCoachBar, DemoLauncherDialog } from './components/demo'
 import { Dashboard } from './components/panels'
-import { QueuePanel, REHudPanel } from './components/re'
+import {
+  GovernanceGraphPanel,
+  HypothesisWorkbenchDialog,
+  LedgerDetailDialog,
+  LedgerPanel,
+  QueuePanel,
+  REHudPanel,
+  type GraphViewMode,
+  type LedgerTab,
+  type WorkbenchTab,
+} from './components/re'
 import { ApprovalDialog, PromptInput, SessionSidebar, TranscriptStream } from './components/session'
 import { ShellView } from './components/terminal/ShellView'
 import { THEME_NAMES, ThemeProvider, useTheme, type ThemeName } from './theme/ThemeContext'
-import { actions, hasBackend, useSessionRuntime, useSessionStore } from './store/sessions'
+import { actions, hasRealBackend, useSessionRuntime, useSessionStore } from './store/sessions'
 import { useShellStore } from './store/shells'
+import { demoActions, useDemoStore } from './demo/store'
 import { api } from './lib/api'
 import type { NoticeDTO } from './lib/types'
 import type { StoreToast } from './store/sessions'
@@ -29,7 +41,9 @@ async function settled(promise: Promise<unknown>): Promise<boolean> {
   }
 }
 
-/** Probe the backend once; BootSplash plays the sequence when the list lands. */
+/** Probe the backend once; BootSplash plays the sequence when the list lands.
+ *  In a standalone browser (no Wails bridge) or with ?demo=1 / ?case=...,
+ *  automatically boots the interactive Demo Sandbox so every feature works live. */
 function useBootProbes(): BootProbe[] {
   const [probes, setProbes] = useState<BootProbe[]>([])
   useEffect(() => {
@@ -39,14 +53,21 @@ function useBootProbes(): BootProbe[] {
       const settle = () => {
         if (!cancelled) setProbes([...rows])
       }
-      if (hasBackend()) {
+      const initial = demoActions.detectInitialDemo()
+      if (initial.shouldAutoEnter) {
+        rows.push({ label: 'demo sandbox', ok: true })
+        settle()
+        await demoActions.enterDemo(initial.caseId, false)
+        rows.push({ label: '5 case scenarios', ok: true })
+        rows.push({ label: 'themes index', ok: true })
+        settle()
+      } else if (hasRealBackend()) {
         rows.push({ label: 'wails bridge', ok: true })
         settle()
         rows.push({ label: 'themes index', ok: await settled(api.getThemes()) })
         rows.push({ label: 'session index', ok: await settled(api.listSessions()) })
         settle()
       } else {
-        // plain `vite dev` in a browser — demos still run, backend slots stay dark
         rows.push({ label: 'wails bridge', ok: false })
         rows.push({ label: 'themes index', ok: false })
         rows.push({ label: 'session index', ok: false })
@@ -65,7 +86,7 @@ export default function App() {
   // until then the local constant mirrors it exactly.
   const [themes, setThemes] = useState<readonly ThemeName[]>(THEME_NAMES)
   useEffect(() => {
-    if (!hasBackend()) return
+    if (!hasRealBackend()) return
     api
       .getThemes()
       .then((names) => {
@@ -89,9 +110,29 @@ function CommandCenter() {
   const [booted, setBooted] = useState(false)
   const { sessions, activeId, toast } = useSessionStore()
   const { shells, activeShellId } = useShellStore()
+  const demo = useDemoStore()
   const active = useSessionRuntime(activeId)
   const { themes, theme, setTheme } = useTheme()
   const activeShell = activeShellId ? shells.get(activeShellId) : null
+  const [ledgerModal, setLedgerModal] = useState<{ tab: LedgerTab; highlightId?: string } | null>(null)
+  const [workbenchModal, setWorkbenchModal] = useState<{ tab: WorkbenchTab; hypId?: string } | null>(null)
+  const [centerView, setCenterView] = useState<'dashboard' | 'graph'>('dashboard')
+  const [graphMode, setGraphMode] = useState<GraphViewMode>('pipeline')
+  const [expandDashKey, setExpandDashKey] = useState(0)
+
+  const openGraph = (mode: GraphViewMode) => {
+    setGraphMode(mode)
+    setCenterView('graph')
+    setExpandDashKey((k) => k + 1)
+  }
+
+  const toggleCenterGraph = () => {
+    setCenterView((cur) => {
+      const next = cur === 'graph' ? 'dashboard' : 'graph'
+      if (next === 'graph') setExpandDashKey((k) => k + 1)
+      return next
+    })
+  }
 
   if (!booted) {
     if (probes.length === 0) return null // power-on dark frame
@@ -108,17 +149,56 @@ function CommandCenter() {
     <>
       <AppShell
         live={live}
+        expandDashboardKey={expandDashKey}
+        banner={
+          demo.active ? (
+            <DemoCoachBar graphOpen={centerView === 'graph'} onToggleGraph={toggleCenterGraph} />
+          ) : undefined
+        }
         topRight={
-          <label style={{ color: 'var(--faint)', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            theme
-            <select value={theme} onChange={(e) => setTheme(e.target.value as ThemeName)} style={selectStyle}>
-              {themes.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              onClick={toggleCenterGraph}
+              title={
+                centerView === 'graph'
+                  ? '切回五维实时仪表盘 (FLOW / TOOLS / PLAN / THINK / TELE)'
+                  : '以图谱形式查看假设、证据、仲裁审核与安全沙箱协同机制'
+              }
+              style={centerView === 'graph' ? graphBtnActiveStyle : graphBtnStyle}
+            >
+              {centerView === 'graph' ? '▣ 五维仪表' : '◈ 机制图谱'}
+            </button>
+            {demo.active ? (
+              <button
+                type="button"
+                onClick={() => demoActions.setLauncherOpen(true)}
+                title="打开演示场景库（5 个常见逆向 Case）"
+                style={demoBtnActiveStyle}
+              >
+                ◈ 场景库
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void demoActions.enterDemo('welcome-approval', true)}
+                title="进入交互式演示沙盒（零配置体验 5 个常见逆向 Case）"
+                style={demoBtnStyle}
+              >
+                ▷ 演示环境
+              </button>
+            )}
+            <label style={{ color: 'var(--faint)', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              theme
+              <select value={theme} onChange={(e) => setTheme(e.target.value as ThemeName)} style={selectStyle}>
+                {themes.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         }
         sidebar={<SessionSidebar style={{ width: '100%' }} />}
         // shell mode: key includes the theme so the terminal palette re-reads
@@ -129,15 +209,51 @@ function CommandCenter() {
           ) : undefined
         }
         dashboard={
-          active?.latestTick ? (
+          centerView === 'graph' ? (
+            <GovernanceGraphPanel
+              tick={active?.latestTick ?? null}
+              thinkLines={active?.thinkLines ?? []}
+              workspace={active?.info.workspace}
+              onRunAgentWriteup={
+                activeId
+                  ? () => {
+                      void actions.sendPrompt(
+                        activeId,
+                        '基于已审计的证据账本与假设栈生成结构化 Writeup 分析报告并写入 notes/writeup.md',
+                      )
+                    }
+                  : undefined
+              }
+              onOpenWorkbench={
+                activeId ? (tab, hypId) => setWorkbenchModal({ tab, hypId }) : undefined
+              }
+              initialMode={graphMode}
+            />
+          ) : active?.latestTick ? (
             <Dashboard tick={active.latestTick} thinkLines={active.thinkLines} />
           ) : (
-            <EmptySlot hint={sessions.size === 0 ? 'sidebar [+ new] 开机一个 session' : '发送第一条 prompt 唤醒链路'} />
+            <EmptySlot
+              hint={sessions.size === 0 ? 'sidebar [+ new] 开机一个 session' : '发送第一条 prompt 唤醒链路'}
+              showDemoCta={sessions.size === 0 && !demo.active}
+            />
           )
         }
         side={
           <div style={railStyle}>
-            <REHudPanel re={active?.latestTick?.re ?? null} />
+            <REHudPanel
+              re={active?.latestTick?.re ?? null}
+              onInspect={(tab) => setLedgerModal({ tab })}
+              onOpenGraph={() => openGraph('pipeline')}
+              onOpenWriteup={() => openGraph('writeup')}
+            />
+            <LedgerPanel
+              ledger={active?.latestTick?.ledger}
+              onOpenDetail={(tab, highlightId) => setLedgerModal({ tab, highlightId })}
+              onOpenGraph={() => openGraph('dag')}
+              onOpenWorkbench={
+                activeId ? (tab, hypId) => setWorkbenchModal({ tab, hypId }) : undefined
+              }
+            />
             <QueuePanel count={queueCount} />
             <NoticeLog notices={active?.notices ?? []} />
           </div>
@@ -156,6 +272,30 @@ function CommandCenter() {
           the flicker animation's containing block */}
       {active?.pendingApproval && (
         <ApprovalDialog approval={active.pendingApproval} sessionId={active.info.id} />
+      )}
+      {demo.launcherOpen && (
+        <DemoLauncherDialog onClose={() => demoActions.setLauncherOpen(false)} />
+      )}
+      {ledgerModal && (
+        <LedgerDetailDialog
+          ledger={active?.latestTick?.ledger}
+          initialTab={ledgerModal.tab}
+          initialHighlightId={ledgerModal.highlightId}
+          onOpenWorkbench={
+            activeId ? (tab, hypId) => setWorkbenchModal({ tab, hypId }) : undefined
+          }
+          onClose={() => setLedgerModal(null)}
+        />
+      )}
+      {workbenchModal && activeId && (
+        <HypothesisWorkbenchDialog
+          sessionId={activeId}
+          workspace={active?.info.workspace}
+          ledger={active?.latestTick?.ledger}
+          initialTab={workbenchModal.tab}
+          initialHypId={workbenchModal.hypId}
+          onClose={() => setWorkbenchModal(null)}
+        />
       )}
       {toast && <ToastStrip toast={toast} />}
     </>
@@ -197,7 +337,7 @@ function NoticeLog({ notices }: { notices: NoticeDTO[] }) {
   const tail = notices.slice(-20)
   const hasError = tail.some((n) => n.level === 'error')
   return (
-    <PanelBox title="notices" accent={hasError ? 'err' : undefined}>
+    <PanelBox title="notices" accent={hasError ? 'err' : undefined} tier="secondary">
       {tail.length === 0 ? (
         <div style={{ color: 'var(--faint)', fontSize: 11, padding: '4px 0' }}>
           ○ quiet — 命令输出与系统消息在此落地
@@ -237,7 +377,7 @@ function NoticeLog({ notices }: { notices: NoticeDTO[] }) {
 
 // ---------- empty slot ----------
 
-function EmptySlot({ hint }: { hint: string }) {
+function EmptySlot({ hint, showDemoCta = false }: { hint: string; showDemoCta?: boolean }) {
   return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ color: 'var(--faint)', fontSize: 12, textAlign: 'center', lineHeight: 2.2 }}>
@@ -245,6 +385,17 @@ function EmptySlot({ hint }: { hint: string }) {
           ░ NO SIGNAL ░
         </div>
         <div>{hint}</div>
+        {showDemoCta && (
+          <div style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={() => void demoActions.enterDemo('welcome-approval', false)}
+              style={emptyDemoCtaStyle}
+            >
+              ▷ 快速体验交互式演示环境（5 个典型逆向 Case · 零配置）
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -265,5 +416,57 @@ const selectStyle: CSSProperties = {
   font: 'inherit',
   fontSize: 11,
   padding: '1px 4px',
+  cursor: 'pointer',
+}
+
+const demoBtnStyle: CSSProperties = {
+  background: 'rgba(34, 211, 238, 0.06)',
+  color: 'var(--accent)',
+  border: '1px solid var(--accent-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const demoBtnActiveStyle: CSSProperties = {
+  background: 'rgba(139, 92, 246, 0.1)',
+  color: 'var(--violet)',
+  border: '1px solid var(--violet-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const graphBtnStyle: CSSProperties = {
+  background: 'rgba(139, 92, 246, 0.08)',
+  color: 'var(--violet)',
+  border: '1px solid var(--violet-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const graphBtnActiveStyle: CSSProperties = {
+  background: 'rgba(34, 211, 238, 0.14)',
+  color: 'var(--accent)',
+  border: '1px solid var(--accent)',
+  boxShadow: '0 0 10px var(--accent-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const emptyDemoCtaStyle: CSSProperties = {
+  background: 'rgba(34, 211, 238, 0.08)',
+  color: 'var(--accent)',
+  border: '1px solid var(--accent)',
+  boxShadow: '0 0 12px var(--accent-dim)',
+  font: 'inherit',
+  fontSize: 12,
+  padding: '5px 14px',
   cursor: 'pointer',
 }

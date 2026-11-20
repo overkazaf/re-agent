@@ -231,3 +231,54 @@ func TestLoadRestoresAndContinuesNumbering(t *testing.T) {
 		t.Fatalf("numbering did not restart after reset: %s", afterReset.ID)
 	}
 }
+
+func TestExperimentsAndUpdateMetaPreserveProvenance(t *testing.T) {
+	tr := New()
+	root, err := tr.Create("sub_401280 checks flag length", 0.7, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := tr.Create("XOR key is 0x5a", 0.6, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Planned experiment starts without any EvidenceID — evidence can only be
+	// stamped by RecordExperimentResult after host execution.
+	withExp, exp, err := tr.AddExperiment(child.ID, "Probe XOR byte", "python3 -c 'print(hex(0x3c ^ 0x66))'", "0x5a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp.ID != "exp_01" || exp.Status != "planned" || exp.EvidenceID != "" {
+		t.Fatalf("unexpected planned experiment state: %+v", exp)
+	}
+	if len(withExp.Experiments) != 1 {
+		t.Fatalf("expected 1 experiment on %s, got %d", child.ID, len(withExp.Experiments))
+	}
+
+	afterRun, err := tr.RecordExperimentResult(child.ID, exp.ID, "passed", "ev_004", "0x5a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterRun.Experiments[0].Status != "passed" || afterRun.Experiments[0].EvidenceID != "ev_004" || afterRun.Experiments[0].RanAt == 0 {
+		t.Fatalf("experiment execution provenance not recorded: %+v", afterRun.Experiments[0])
+	}
+
+	// UpdateMeta rewires dependsOn/derived edges cleanly and rejects self-loops.
+	if _, err := tr.UpdateMeta(child.ID, nil, []string{child.ID}, nil); err == nil {
+		t.Fatal("expected self-dependency to fail")
+	}
+	conf := 0.85
+	note := "confirmed via probe"
+	updatedChild, err := tr.UpdateMeta(child.ID, &conf, []string{root.ID}, &note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updatedChild.Confidence != 0.85 || len(updatedChild.DependsOn) != 1 || updatedChild.DependsOn[0] != root.ID {
+		t.Fatalf("UpdateMeta did not apply changes: %+v", updatedChild)
+	}
+	refreshedRoot, _ := tr.Get(root.ID)
+	if len(refreshedRoot.Derived) != 1 || refreshedRoot.Derived[0] != child.ID {
+		t.Fatalf("UpdateMeta did not backlink parent Derived: %+v", refreshedRoot.Derived)
+	}
+}
