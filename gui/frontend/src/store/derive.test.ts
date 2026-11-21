@@ -334,14 +334,17 @@ describe('suggestNext', () => {
 
   it('无 hyp 且阶段在 SCR/HYP 区 → new-hypothesis；其他区不触发', () => {
     const emptyLedger: LedgerDTO = { hypotheses: [], evidence: [] }
-    // SCR/HYP 区 = PHASE_ZONE 按索引映射（契约冻结事实）：索引 1、2
-    for (const idx of [1, 2]) {
+    // SCR/HYP 区 = PHASE_ZONE 按索引映射（契约修订后对齐 phase.go）：
+    // 1 static→SCR、3 evidence→HYP、4 interface→SCR、5 hypothesis→HYP
+    for (const idx of [1, 3, 4, 5]) {
       const s = suggestNext(tick({ re: re(idx), ledger: emptyLedger }))
       expect(s.action).toEqual({ kind: 'new-hypothesis' })
       expect(s.text.length).toBeGreaterThan(0)
     }
-    // 非 SCR/HYP 区（索引 6 → AUD）不触发
-    expect(suggestNext(tick({ re: re(6), ledger: emptyLedger })).action.kind).toBe('none')
+    // 非 SCR/HYP 区（2 dynamic→EXP、6 verify→VER）不触发
+    for (const idx of [2, 6]) {
+      expect(suggestNext(tick({ re: re(idx), ledger: emptyLedger })).action.kind).toBe('none')
+    }
   })
 
   it('active hyp 无实验或全 planned → configure-experiment', () => {
@@ -468,7 +471,7 @@ describe('scene store reconcile wiring', () => {
     const before = sceneActions.scene
     sceneActions.reconcile(
       ['s1'],
-      new Map([['s1', tick({ re: re(2), ledger: { hypotheses: [], evidence: [ev('ev_001')] } })]]),
+      new Map([['s1', tick({ re: re(5), ledger: { hypotheses: [], evidence: [ev('ev_001')] } })]]),
     )
     const first = sceneActions.scene
     expect(first).not.toBe(before)
@@ -477,7 +480,7 @@ describe('scene store reconcile wiring', () => {
 
     sceneActions.reconcile(
       ['s1'],
-      new Map([['s1', tick({ re: re(2), ledger: { hypotheses: [], evidence: [ev('ev_001'), ev('ev_002')] } })]]),
+      new Map([['s1', tick({ re: re(5), ledger: { hypotheses: [], evidence: [ev('ev_001'), ev('ev_002')] } })]]),
     )
     const second = sceneActions.scene
     expect(second).not.toBe(first)

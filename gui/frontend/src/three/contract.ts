@@ -41,18 +41,24 @@ export function zoneOf(key: ZoneKey): ZoneSpec {
 
 /**
  * 9 阶段 RE 工作流 → 7 区的映射（PhaseRailMesh / ZoneMarker 共用）。
- * 阶段名以 ReDTO.phase 字符串为准（internal/workflow 的 9 相位）。
+ * 按索引对应 internal/workflow/phase.go 的 Phases（1:1）：
+ *   0 triage→TRI  1 static→SCR  2 dynamic→EXP  3 evidence→HYP
+ *   4 interface→SCR  5 hypothesis→HYP  6 verify→VER  7 audit→AUD
+ *   8 writeup→DEL
+ * evidence 入账使 DAG（假设塔周围）生长故映射 HYP；interface 重建
+ * 属勘查分析故映射 SCR。suggestNext 以「区 ∈ {SCR,HYP}」触发
+ * new-hypothesis 建议，即 static/evidence/interface/hypothesis 相位。
  */
 export const PHASE_ZONE: readonly ZoneKey[] = [
-  'TRI', // triage
-  'SCR', // scout
-  'HYP', // hypothesize
-  'EXP', // experiment
-  'EXP', // instrument
-  'VER', // verify
-  'AUD', // audit
-  'AUD', // arbitrate
-  'DEL', // deliver
+  'TRI', // 0 triage
+  'SCR', // 1 static
+  'EXP', // 2 dynamic
+  'HYP', // 3 evidence
+  'SCR', // 4 interface
+  'HYP', // 5 hypothesis
+  'VER', // 6 verify
+  'AUD', // 7 audit
+  'DEL', // 8 writeup
 ]
 
 // ---------- 派生场景状态（store/derive.ts 计算，three/ 渲染） ----------
