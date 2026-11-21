@@ -115,6 +115,8 @@ export function exitNativeFullscreen(): Promise<void> {
 /** Tracks whole-window native fullscreen (browser Fullscreen API or Wails OS window). */
 export function useNativeFullscreen() {
   const [active, setActive] = useState<boolean>(() => isDocumentFullscreen())
+  const activeRef = useRef(active)
+  activeRef.current = active
 
   useEffect(() => {
     const sync = () => {
@@ -151,12 +153,12 @@ export function useNativeFullscreen() {
   }, [])
 
   const toggle = useCallback(() => {
-    if (active || isDocumentFullscreen()) {
+    if (activeRef.current || isDocumentFullscreen()) {
       exit()
     } else {
       enter()
     }
-  }, [active, enter, exit])
+  }, [enter, exit])
 
   return { active, enter, exit, toggle }
 }

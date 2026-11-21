@@ -1,16 +1,26 @@
 // Layout skeleton: resizable + collapsible CRT split workspace with localStorage
-// persistence. Left SESSIONS sidebar spans full height; right workspace splits
-// vertically between [Dashboard | Right Rail], [Transcript], and [Prompt].
-// Every pane can be folded with 1 click and resized by dragging glowing handles
-// (double-click any handle to reset). A non-null `main` swaps the right side
-// for the embedded xterm.js shell terminal.
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+// persistence, keyboard pane shortcuts (Cmd/Ctrl+B, J, \, Shift+D, Shift+0, Shift+F),
+// focus-tracked panes, keyboard-accessible splitters with live dimension readout,
+// and drag-resize text-selection lock.
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MutableRefObject,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import { useNativeFullscreen } from '../../lib/fullscreen'
+import { hasPrimaryMod, modGlyph } from './shortcuts'
 import { TopBar } from './TopBar'
+import './interaction.css'
 
 const LAYOUT_KEY = '0xaf-gui-layout-v1'
 
-interface LayoutState {
+export interface LayoutState {
   sidebarWidth: number
   sideWidth: number
   transcriptHeight: number
@@ -18,6 +28,16 @@ interface LayoutState {
   sideCollapsed: boolean
   dashboardCollapsed: boolean
   transcriptCollapsed: boolean
+}
+
+export interface ShellLayoutController {
+  getState: () => LayoutState & { fullscreen: boolean }
+  toggleSidebar: () => void
+  toggleSide: () => void
+  toggleDashboard: () => void
+  toggleTranscript: () => void
+  resetLayout: () => void
+  toggleFullscreen: () => void
 }
 
 const DEFAULT_LAYOUT: LayoutState = {
@@ -62,6 +82,14 @@ function saveLayout(state: LayoutState): void {
 }
 
 type DragAxis = 'sidebar' | 'side' | 'transcript'
+type FocusPane = 'sidebar' | 'dashboard' | 'side' | 'transcript' | 'prompt' | 'shell'
+
+interface DragReadout {
+  axis: DragAxis
+  px: number
+  x: number
+  y: number
+}
 
 export function AppShell({
   topRight,
@@ -73,7 +101,12 @@ export function AppShell({
   prompt,
   main,
   live = 0,
+  awaitingApprovalCount = 0,
+  onJumpToApproval,
+  activeLabel,
+  activeModeBadge,
   expandDashboardKey = 0,
+  layoutRef: controllerRef,
 }: {
   topRight: ReactNode
   /** optional full-width strip beneath TopBar (e.g. DemoCoachBar) */
@@ -87,15 +120,31 @@ export function AppShell({
   main?: ReactNode
   /** live session count — drives the breathing ● LIVE indicator (integration) */
   live?: number
+  /** sessions currently blocked on a tool approval gate */
+  awaitingApprovalCount?: number
+  /** click handler for the TopBar approval alert pill */
+  onJumpToApproval?: () => void
+  /** active workspace/shell breadcrumb shown in TopBar */
+  activeLabel?: string
+  /** optional short mode tag next to activeLabel (e.g. SHELL / RE) */
+  activeModeBadge?: string
   /** increment to ensure upper dashboard/graph pane is uncollapsed */
   expandDashboardKey?: number
+  /** optional imperative bridge so Command Palette can toggle panes & fullscreen */
+  layoutRef?: MutableRefObject<ShellLayoutController | null>
 }) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout)
   const [dragging, setDragging] = useState<DragAxis | null>(null)
+  const [dragReadout, setDragReadout] = useState<DragReadout | null>(null)
+  const [focusedPane, setFocusedPane] = useState<FocusPane | null>(null)
   const nativeFs = useNativeFullscreen()
   const shellRef = useRef<HTMLDivElement>(null)
-  const layoutRef = useRef(layout)
-  layoutRef.current = layout
+  const layoutStateRef = useRef(layout)
+  layoutStateRef.current = layout
+  const nativeFsRef = useRef(nativeFs)
+  nativeFsRef.current = nativeFs
+
+  const mod = modGlyph()
 
   useEffect(() => {
     saveLayout(layout)
@@ -107,16 +156,101 @@ export function AppShell({
     }
   }, [expandDashboardKey])
 
-  const startDrag = useCallback((axis: DragAxis, e: React.PointerEvent) => {
+  const toggle = useCallback(
+    (key: 'sidebarCollapsed' | 'sideCollapsed' | 'dashboardCollapsed' | 'transcriptCollapsed') => {
+      setLayout((cur) => ({ ...cur, [key]: !cur[key] }))
+    },
+    [],
+  )
+
+  const resetLayout = useCallback(() => setLayout(DEFAULT_LAYOUT), [])
+
+  // Expose layout controls to Command Palette / parent orchestrator
+  useEffect(() => {
+    if (!controllerRef) return
+    controllerRef.current = {
+      getState: () => ({ ...layoutStateRef.current, fullscreen: nativeFsRef.current.active }),
+      toggleSidebar: () => toggle('sidebarCollapsed'),
+      toggleSide: () => toggle('sideCollapsed'),
+      toggleDashboard: () => toggle('dashboardCollapsed'),
+      toggleTranscript: () => toggle('transcriptCollapsed'),
+      resetLayout,
+      toggleFullscreen: () => nativeFsRef.current.toggle(),
+    }
+    return () => {
+      controllerRef.current = null
+    }
+  }, [controllerRef, toggle, resetLayout])
+
+  const shellMode = main != null
+
+  // Keyboard pane ergonomics: Cmd/Ctrl+B (sidebar), J (transcript), \ (right rail),
+  // Shift+D (dashboard), Shift+0 (reset layout), Shift+F (fullscreen)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!hasPrimaryMod(e) || e.altKey) return
+      const key = e.key.toLowerCase()
+
+      if (!e.shiftKey && key === 'b') {
+        e.preventDefault()
+        toggle('sidebarCollapsed')
+        return
+      }
+      if (!e.shiftKey && key === 'j' && !shellMode) {
+        e.preventDefault()
+        toggle('transcriptCollapsed')
+        return
+      }
+      if (!e.shiftKey && e.key === '\\' && !shellMode) {
+        e.preventDefault()
+        toggle('sideCollapsed')
+        return
+      }
+      if (e.shiftKey && key === 'd' && !shellMode) {
+        e.preventDefault()
+        toggle('dashboardCollapsed')
+        return
+      }
+      if (e.shiftKey && (e.key === '0' || e.code === 'Digit0')) {
+        e.preventDefault()
+        resetLayout()
+        return
+      }
+      if (e.shiftKey && key === 'f') {
+        e.preventDefault()
+        nativeFsRef.current.toggle()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [toggle, resetLayout, shellMode])
+
+  const startDrag = useCallback((axis: DragAxis, e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return
     e.preventDefault()
     const startX = e.clientX
     const startY = e.clientY
-    const initial = layoutRef.current
+    const initial = layoutStateRef.current
     const rect = shellRef.current?.getBoundingClientRect()
     const maxColW = rect ? Math.max(220, Math.floor(rect.width * 0.42)) : 460
     const maxRowH = rect ? Math.max(160, Math.floor(rect.height * 0.65)) : 560
 
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // ignore if capture is unsupported
+    }
+
+    const startPx =
+      axis === 'sidebar'
+        ? initial.sidebarWidth
+        : axis === 'side'
+          ? initial.sideWidth
+          : initial.transcriptHeight
+
     setDragging(axis)
+    setDragReadout({ axis, px: startPx, x: e.clientX, y: e.clientY })
+    document.body.classList.add('ix-resizing')
     document.body.style.userSelect = 'none'
     document.body.style.cursor = axis === 'transcript' ? 'row-resize' : 'col-resize'
 
@@ -124,34 +258,64 @@ export function AppShell({
       if (axis === 'sidebar') {
         const next = clamp(initial.sidebarWidth + (ev.clientX - startX), 180, maxColW)
         setLayout((cur) => ({ ...cur, sidebarWidth: next, sidebarCollapsed: false }))
+        setDragReadout({ axis, px: Math.round(next), x: ev.clientX, y: ev.clientY })
       } else if (axis === 'side') {
         const next = clamp(initial.sideWidth - (ev.clientX - startX), 180, maxColW)
         setLayout((cur) => ({ ...cur, sideWidth: next, sideCollapsed: false }))
+        setDragReadout({ axis, px: Math.round(next), x: ev.clientX, y: ev.clientY })
       } else {
         const next = clamp(initial.transcriptHeight - (ev.clientY - startY), 96, maxRowH)
         setLayout((cur) => ({ ...cur, transcriptHeight: next, transcriptCollapsed: false }))
+        setDragReadout({ axis, px: Math.round(next), x: ev.clientX, y: ev.clientY })
       }
     }
 
-    const onUp = () => {
+    const cleanup = () => {
       setDragging(null)
+      setDragReadout(null)
+      document.body.classList.remove('ix-resizing')
       document.body.style.userSelect = ''
       document.body.style.cursor = ''
       window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointerup', cleanup)
+      window.removeEventListener('pointercancel', cleanup)
+      window.removeEventListener('blur', cleanup)
     }
 
     window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointerup', cleanup)
+    window.addEventListener('pointercancel', cleanup)
+    window.addEventListener('blur', cleanup)
   }, [])
 
-  const toggle = (key: 'sidebarCollapsed' | 'sideCollapsed' | 'dashboardCollapsed' | 'transcriptCollapsed') => {
-    setLayout((cur) => ({ ...cur, [key]: !cur[key] }))
-  }
+  const onSplitterKeyDown = useCallback((axis: DragAxis, e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 48 : 16
+    if (e.key === '0' || e.key === 'Enter') {
+      e.preventDefault()
+      setLayout((cur) =>
+        axis === 'sidebar'
+          ? { ...cur, sidebarWidth: DEFAULT_LAYOUT.sidebarWidth }
+          : axis === 'side'
+            ? { ...cur, sideWidth: DEFAULT_LAYOUT.sideWidth }
+            : { ...cur, transcriptHeight: DEFAULT_LAYOUT.transcriptHeight },
+      )
+      return
+    }
+    if (axis === 'sidebar' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault()
+      const delta = e.key === 'ArrowRight' ? step : -step
+      setLayout((cur) => ({ ...cur, sidebarWidth: clamp(cur.sidebarWidth + delta, 180, 460) }))
+    } else if (axis === 'side' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault()
+      const delta = e.key === 'ArrowLeft' ? step : -step
+      setLayout((cur) => ({ ...cur, sideWidth: clamp(cur.sideWidth + delta, 180, 460) }))
+    } else if (axis === 'transcript' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault()
+      const delta = e.key === 'ArrowUp' ? step : -step
+      setLayout((cur) => ({ ...cur, transcriptHeight: clamp(cur.transcriptHeight + delta, 96, 560) }))
+    }
+  }, [])
 
-  const resetLayout = () => setLayout(DEFAULT_LAYOUT)
-
-  const shellMode = main != null
   const hasBanner = banner != null
   const isCustom =
     layout.sidebarCollapsed ||
@@ -162,18 +326,38 @@ export function AppShell({
     layout.sideWidth !== DEFAULT_LAYOUT.sideWidth ||
     layout.transcriptHeight !== DEFAULT_LAYOUT.transcriptHeight
 
+  const paneFocusClass = (pane: FocusPane) =>
+    focusedPane === pane ? ' shell-cell--active-focus' : ''
+
   return (
     <>
-      <div ref={shellRef} className="app-shell crt-flicker" style={outerStyle}>
+      <div
+        ref={shellRef}
+        className="app-shell crt-flicker"
+        style={outerStyle}
+        onBlurCapture={(e) => {
+          const next = e.relatedTarget as Node | null
+          if (!next || !shellRef.current?.contains(next)) {
+            setFocusedPane(null)
+          }
+        }}
+      >
         {/* Top Bar */}
         <div className="shell-bar" style={topBarStyle}>
-          <TopBar live={live} />
+          <TopBar
+            live={live}
+            awaitingApprovalCount={awaitingApprovalCount}
+            onJumpToApproval={onJumpToApproval}
+            activeLabel={activeLabel}
+            activeModeBadge={activeModeBadge}
+          />
           <div style={topRightWrapStyle}>
             <div style={layoutBarStyle} aria-label="pane visibility">
               <button
                 type="button"
                 onClick={() => toggle('sidebarCollapsed')}
-                title={layout.sidebarCollapsed ? '展开左侧会话栏' : '折叠左侧会话栏'}
+                title={layout.sidebarCollapsed ? '展开左侧会话栏' : `折叠左侧会话栏 (${mod}B)`}
+                aria-pressed={!layout.sidebarCollapsed}
                 className={`layout-toggle-btn${layout.sidebarCollapsed ? ' layout-toggle-btn--off' : ''}`}
               >
                 ◧ 侧栏
@@ -183,7 +367,8 @@ export function AppShell({
                   <button
                     type="button"
                     onClick={() => toggle('dashboardCollapsed')}
-                    title={layout.dashboardCollapsed ? '展开仪表盘' : '折叠仪表盘（放大转录区）'}
+                    title={layout.dashboardCollapsed ? '展开仪表盘' : `折叠仪表盘（放大转录区 · ${mod}⇧D）`}
+                    aria-pressed={!layout.dashboardCollapsed}
                     className={`layout-toggle-btn${layout.dashboardCollapsed ? ' layout-toggle-btn--off' : ''}`}
                   >
                     ⬒ 仪表
@@ -191,7 +376,8 @@ export function AppShell({
                   <button
                     type="button"
                     onClick={() => toggle('transcriptCollapsed')}
-                    title={layout.transcriptCollapsed ? '展开转录日志' : '折叠转录日志'}
+                    title={layout.transcriptCollapsed ? '展开转录日志' : `折叠转录日志 (${mod}J)`}
+                    aria-pressed={!layout.transcriptCollapsed}
                     className={`layout-toggle-btn${layout.transcriptCollapsed ? ' layout-toggle-btn--off' : ''}`}
                   >
                     ⬓ 转录
@@ -199,7 +385,8 @@ export function AppShell({
                   <button
                     type="button"
                     onClick={() => toggle('sideCollapsed')}
-                    title={layout.sideCollapsed ? '展开右侧 RE/通知栏' : '折叠右侧 RE/通知栏'}
+                    title={layout.sideCollapsed ? '展开右侧 RE/通知栏' : `折叠右侧 RE/通知栏 (${mod}\\)`}
+                    aria-pressed={!layout.sideCollapsed}
                     className={`layout-toggle-btn${layout.sideCollapsed ? ' layout-toggle-btn--off' : ''}`}
                   >
                     ◨ 右栏
@@ -219,7 +406,7 @@ export function AppShell({
               <button
                 type="button"
                 onClick={nativeFs.toggle}
-                title={nativeFs.active ? '退出系统全屏 (Esc)' : '整个工作台进入系统真全屏'}
+                title={nativeFs.active ? `退出系统全屏 (Esc / ${mod}⇧F)` : `整个工作台进入系统真全屏 (${mod}⇧F)`}
                 className="layout-toggle-btn"
                 style={
                   nativeFs.active
@@ -234,7 +421,7 @@ export function AppShell({
           </div>
         </div>
 
-        {/* Optional Banner (DemoCoachBar) */}
+        {/* Optional Banner (DemoCoachBar + SuggestionBar) */}
         {hasBanner && <div style={{ flex: '0 0 auto', minWidth: 0 }}>{banner}</div>}
 
         {/* Main Horizontal Split: Full-Height Sidebar | Workspace (or Shell) */}
@@ -252,7 +439,8 @@ export function AppShell({
             </button>
           ) : (
             <div
-              className="shell-cell shell-cell--nav"
+              className={`shell-cell shell-cell--nav${paneFocusClass('sidebar')}`}
+              onFocusCapture={() => setFocusedPane('sidebar')}
               style={{ ...cell, flex: `0 0 ${layout.sidebarWidth}px`, width: layout.sidebarWidth }}
             >
               {sidebar}
@@ -262,10 +450,16 @@ export function AppShell({
           {!layout.sidebarCollapsed ? (
             <div
               role="separator"
+              tabIndex={0}
               aria-orientation="vertical"
-              title="拖动调整左侧栏宽度（双击重置）"
+              aria-label="调整左侧会话栏宽度"
+              aria-valuemin={180}
+              aria-valuemax={460}
+              aria-valuenow={Math.round(layout.sidebarWidth)}
+              title="拖动调整左侧栏宽度（双击或按 0 重置，方向键微调）"
               className={`split-handle split-handle--col${dragging === 'sidebar' ? ' split-handle--active' : ''}`}
               onPointerDown={(e) => startDrag('sidebar', e)}
+              onKeyDown={(e) => onSplitterKeyDown('sidebar', e)}
               onDoubleClick={() => setLayout((cur) => ({ ...cur, sidebarWidth: DEFAULT_LAYOUT.sidebarWidth }))}
             />
           ) : (
@@ -274,7 +468,11 @@ export function AppShell({
 
           {/* Right Area: Shell OR (Upper[Dashboard | Side] + Transcript + Prompt) */}
           {shellMode ? (
-            <div className="shell-cell" style={{ ...cell, flex: '1 1 0', overflow: 'hidden' }}>
+            <div
+              className={`shell-cell${paneFocusClass('shell')}`}
+              onFocusCapture={() => setFocusedPane('shell')}
+              style={{ ...cell, flex: '1 1 0', overflow: 'hidden' }}
+            >
               {main}
             </div>
           ) : (
@@ -288,11 +486,15 @@ export function AppShell({
                   title="展开五面板仪表盘与右侧 RE/通知栏"
                 >
                   <span>▸ DASHBOARD · FLOW / TOOLS / PLAN / THINK / TELE</span>
-                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>点击展开</span>
+                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>点击展开 ({mod}⇧D)</span>
                 </button>
               ) : (
                 <div style={{ ...rowFlexStyle, flex: '1 1 0', minHeight: 110 }}>
-                  <div className="shell-cell shell-cell--focus" style={{ ...cell, flex: '1 1 0', overflow: 'auto' }}>
+                  <div
+                    className={`shell-cell shell-cell--focus${paneFocusClass('dashboard')}`}
+                    onFocusCapture={() => setFocusedPane('dashboard')}
+                    style={{ ...cell, flex: '1 1 0', overflow: 'auto' }}
+                  >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: '100%' }}>
                       {dashboard}
                     </div>
@@ -301,10 +503,16 @@ export function AppShell({
                   {!layout.sideCollapsed ? (
                     <div
                       role="separator"
+                      tabIndex={0}
                       aria-orientation="vertical"
-                      title="拖动调整右侧栏宽度（双击重置）"
+                      aria-label="调整右侧取证栏宽度"
+                      aria-valuemin={180}
+                      aria-valuemax={460}
+                      aria-valuenow={Math.round(layout.sideWidth)}
+                      title="拖动调整右侧栏宽度（双击或按 0 重置，方向键微调）"
                       className={`split-handle split-handle--col${dragging === 'side' ? ' split-handle--active' : ''}`}
                       onPointerDown={(e) => startDrag('side', e)}
+                      onKeyDown={(e) => onSplitterKeyDown('side', e)}
                       onDoubleClick={() => setLayout((cur) => ({ ...cur, sideWidth: DEFAULT_LAYOUT.sideWidth }))}
                     />
                   ) : (
@@ -323,7 +531,8 @@ export function AppShell({
                     </button>
                   ) : (
                     <div
-                      className="shell-cell shell-cell--forensic"
+                      className={`shell-cell shell-cell--forensic${paneFocusClass('side')}`}
+                      onFocusCapture={() => setFocusedPane('side')}
                       style={{ ...cell, flex: `0 0 ${layout.sideWidth}px`, width: layout.sideWidth }}
                     >
                       {side}
@@ -336,10 +545,16 @@ export function AppShell({
               {!layout.transcriptCollapsed && !layout.dashboardCollapsed ? (
                 <div
                   role="separator"
+                  tabIndex={0}
                   aria-orientation="horizontal"
-                  title="拖动调整转录区高度（双击重置）"
+                  aria-label="调整转录区高度"
+                  aria-valuemin={96}
+                  aria-valuemax={560}
+                  aria-valuenow={Math.round(layout.transcriptHeight)}
+                  title="拖动调整转录区高度（双击或按 0 重置，方向键微调）"
                   className={`split-handle split-handle--row${dragging === 'transcript' ? ' split-handle--active' : ''}`}
                   onPointerDown={(e) => startDrag('transcript', e)}
+                  onKeyDown={(e) => onSplitterKeyDown('transcript', e)}
                   onDoubleClick={() =>
                     setLayout((cur) => ({ ...cur, transcriptHeight: DEFAULT_LAYOUT.transcriptHeight }))
                   }
@@ -357,11 +572,12 @@ export function AppShell({
                   title="展开转录流"
                 >
                   <span>▸ TRANSCRIPT</span>
-                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>点击展开</span>
+                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>点击展开 ({mod}J)</span>
                 </button>
               ) : (
                 <div
-                  className="shell-cell shell-cell--transcript"
+                  className={`shell-cell shell-cell--transcript${paneFocusClass('transcript')}`}
+                  onFocusCapture={() => setFocusedPane('transcript')}
                   style={{
                     ...cell,
                     flex: layout.dashboardCollapsed ? '1 1 0' : `0 0 ${layout.transcriptHeight}px`,
@@ -378,13 +594,33 @@ export function AppShell({
               <div style={{ flex: '0 0 8px' }} />
 
               {/* Prompt Input */}
-              <div className="shell-cell shell-cell--prompt" style={{ ...cell, flex: '0 0 auto', overflow: 'hidden' }}>
+              <div
+                className={`shell-cell shell-cell--prompt${paneFocusClass('prompt')}`}
+                onFocusCapture={() => setFocusedPane('prompt')}
+                style={{ ...cell, flex: '0 0 auto', overflow: 'hidden' }}
+              >
                 {prompt}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Live pixel readout badge while dragging splitters */}
+      {dragReadout && (
+        <div
+          className="ix-drag-readout"
+          style={{ left: dragReadout.x, top: dragReadout.y }}
+          aria-live="polite"
+        >
+          {dragReadout.axis === 'sidebar'
+            ? `SIDEBAR ${dragReadout.px}px`
+            : dragReadout.axis === 'side'
+              ? `RAIL ${dragReadout.px}px`
+              : `TRANSCRIPT ${dragReadout.px}px`}
+        </div>
+      )}
+
       <div className="crt-vignette" aria-hidden />
       <div className="crt-scanlines" aria-hidden />
     </>
@@ -410,7 +646,7 @@ const topBarStyle: CSSProperties = {
 const topRightWrapStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 10,
+  gap: 8,
   minWidth: 0,
 }
 

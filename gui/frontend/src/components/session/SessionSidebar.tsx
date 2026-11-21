@@ -1,19 +1,18 @@
 // WS4 session list: lifecycle badge (● running / ◐ awaiting approval / ○ idle),
-// planner→executor routing line, queue badge, active-session glow, close with
-// confirm on running sessions. Store-driven — no props required.
-// The SHELLS section below lists PTY shells; clicking one swaps the main area
-// to the terminal (sessions data stays put in the store).
-import { useEffect, useState, type CSSProperties } from 'react'
-import { actions, useSessionStore } from '../../store/sessions'
+// quick filter/search, keyboard roving navigation, unmistakable approval/busy cues,
+// planner→executor routing line, queue badge, active-session glow, and PTY shells.
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { actions, hasBackend, useSessionStore } from '../../store/sessions'
 import { shellActions, useShellStore } from '../../store/shells'
-import { hasBackend } from '../../store/sessions'
 import { emitDemoSignal, onSidebarDialogRequest } from '../../demo/signals'
 import type { LifecycleState } from '../../lib/types'
 import { StatusBadge } from '../crt'
+import { IX_EVENT_FOCUS_SIDEBAR_SEARCH, modGlyph } from '../shell/shortcuts'
 import { Btn, Dialog } from './Dialog'
 import { NewSessionDialog } from './NewSessionDialog'
 import { ResumeDialog } from './ResumeDialog'
 import { SettingsDialog } from './SettingsDialog'
+import '../shell/interaction.css'
 
 function badgeState(lifecycle: LifecycleState): 'ok' | 'pending' | 'off' {
   if (lifecycle === 'running') return 'ok'
@@ -48,9 +47,11 @@ export function SessionSidebar({
   const [showNew, setShowNew] = useState(false)
   const [showResume, setShowResume] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
-  // in-app confirm: window.confirm always returns false inside Wails' WKWebView
-  // (no WKUIDelegate), so a running session could never be closed
+  const [filterText, setFilterText] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [confirmClose, setConfirmClose] = useState<{ id: string; name: string } | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     return onSidebarDialogRequest((kind) => {
@@ -58,6 +59,16 @@ export function SessionSidebar({
       else if (kind === 'resume') setShowResume(true)
       else if (kind === 'settings') setShowConfig(true)
     })
+  }, [])
+
+  // Focus sidebar filter when Cmd/Ctrl+Shift+S is triggered globally
+  useEffect(() => {
+    const onFocusSearch = () => {
+      setSearchOpen(true)
+      requestAnimationFrame(() => searchRef.current?.focus())
+    }
+    window.addEventListener(IX_EVENT_FOCUS_SIDEBAR_SEARCH, onFocusSearch)
+    return () => window.removeEventListener(IX_EVENT_FOCUS_SIDEBAR_SEARCH, onFocusSearch)
   }, [])
 
   function requestClose(id: string, lifecycle: LifecycleState, name: string) {
@@ -68,9 +79,62 @@ export function SessionSidebar({
     void actions.closeSession(id)
   }
 
+  function activateSession(id: string) {
+    const wasInShell = activeShellId !== null
+    actions.setActive(id)
+    shellActions.setActive(null)
+    if (wasInShell) {
+      emitDemoSignal({ type: 'returned_to_session', sessionId: id })
+    }
+  }
+
   const list = [...sessions.values()]
   const active = activeId ? sessions.get(activeId) : undefined
   const shellList = [...shells.values()]
+
+  const filteredList = useMemo(() => {
+    const q = filterText.trim().toLowerCase()
+    if (!q) return list
+    return list.filter((rt) => {
+      const name = basename(rt.info.workspace).toLowerCase()
+      const ws = rt.info.workspace.toLowerCase()
+      const route = `${rt.info.planner} ${rt.info.executor} ${rt.info.workflow} ${rt.lifecycle}`.toLowerCase()
+      return name.includes(q) || ws.includes(q) || route.includes(q)
+    })
+  }, [list, filterText])
+
+  const showSearchBar = searchOpen || list.length > 1 || filterText.length > 0
+  const mod = modGlyph()
+
+  function focusCardAt(index: number) {
+    const cards = listRef.current?.querySelectorAll<HTMLElement>('[data-session-card="true"]')
+    if (!cards || cards.length === 0) return
+    const wrapped = (index + cards.length) % cards.length
+    cards[wrapped]?.focus()
+  }
+
+  function onCardKeyDown(
+    e: KeyboardEvent<HTMLDivElement>,
+    idx: number,
+    id: string,
+    lifecycle: LifecycleState,
+    name: string,
+  ) {
+    if (e.target !== e.currentTarget) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      focusCardAt(idx + 1)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      focusCardAt(idx - 1)
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      activateSession(id)
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault()
+      requestClose(id, lifecycle, name)
+    }
+  }
 
   return (
     <section
@@ -104,6 +168,8 @@ export function SessionSidebar({
         <span style={{ flexShrink: 0 }}>SESSIONS · {list.length}</span>
         <span style={{ display: 'flex', gap: 4 }}>
           <button
+            type="button"
+            className="ix-btn"
             onClick={() => setShowNew(true)}
             title="new session"
             style={{ ...headerBtnStyle, color: 'var(--accent)' }}
@@ -111,6 +177,8 @@ export function SessionSidebar({
             + new
           </button>
           <button
+            type="button"
+            className="ix-btn"
             onClick={() => setShowResume(true)}
             title="resume saved session"
             style={headerBtnStyle}
@@ -118,6 +186,8 @@ export function SessionSidebar({
             resume
           </button>
           <button
+            type="button"
+            className="ix-btn"
             onClick={() => setShowConfig(true)}
             disabled={!active}
             title={active ? 'session config' : '无 active session'}
@@ -128,7 +198,57 @@ export function SessionSidebar({
         </span>
       </header>
 
-      <div style={{ overflow: 'auto', minHeight: 0, flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Quick session filter (auto-shown when multiple sessions exist or toggled via Cmd+Shift+S) */}
+      {showSearchBar && (
+        <div className="ix-sidebar-search-wrap">
+          <span style={{ color: 'var(--faint)', fontSize: 11 }} aria-hidden>
+            ⌕
+          </span>
+          <input
+            ref={searchRef}
+            type="text"
+            className="ix-sidebar-search"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation()
+                if (filterText) {
+                  setFilterText('')
+                } else {
+                  setSearchOpen(false)
+                  e.currentTarget.blur()
+                }
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                focusCardAt(0)
+              }
+            }}
+            placeholder={`筛选会话… (${mod}⇧S)`}
+            aria-label="Filter sessions"
+            spellCheck={false}
+          />
+          {filterText && (
+            <button
+              type="button"
+              className="ix-sidebar-clear"
+              onClick={() => {
+                setFilterText('')
+                searchRef.current?.focus()
+              }}
+              title="清除筛选"
+              aria-label="Clear session filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+
+      <div
+        ref={listRef}
+        style={{ overflow: 'auto', minHeight: 0, flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 6 }}
+      >
         {list.length === 0 && (
           <div style={{ color: 'var(--faint)', fontSize: 12, padding: 8 }}>
             ○ no sessions —
@@ -137,40 +257,46 @@ export function SessionSidebar({
           </div>
         )}
 
-        {list.map((rt) => {
-          const activeRt = rt.info.id === activeId
+        {list.length > 0 && filteredList.length === 0 && (
+          <div style={{ color: 'var(--faint)', fontSize: 11, padding: 8 }}>
+            未找到匹配「{filterText}」的会话
+          </div>
+        )}
+
+        {filteredList.map((rt, idx) => {
+          const activeRt = rt.info.id === activeId && activeShellId === null
           const queue = rt.latestTick?.hud.queueCount ?? 0
+          const needsApproval = rt.lifecycle === 'awaiting_approval' || rt.pendingApproval != null
+          const isRunning = rt.lifecycle === 'running'
+          const wsName = basename(rt.info.workspace)
+
+          const cardClass = [
+            'ix-sidebar-item',
+            activeRt ? 'ix-sidebar-item--active' : '',
+            isRunning ? 'ix-sidebar-item--running' : '',
+            needsApproval ? 'ix-sidebar-item--approval' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
+
           return (
             <div
               key={rt.info.id}
-              onClick={() => {
-                const wasInShell = activeShellId !== null
-                actions.setActive(rt.info.id)
-                // leaving shell mode — the main area shows the session again
-                shellActions.setActive(null)
-                if (wasInShell) {
-                  emitDemoSignal({ type: 'returned_to_session', sessionId: rt.info.id })
-                }
-              }}
-              style={{
-                border: `1px solid ${activeRt ? 'var(--accent)' : 'var(--rule)'}`,
-                boxShadow: activeRt ? '0 0 14px var(--accent-dim)' : 'none',
-                background: 'rgba(5, 8, 12, 0.4)',
-                padding: '7px 9px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 3,
-              }}
+              data-session-card="true"
+              tabIndex={0}
+              aria-current={activeRt ? 'true' : undefined}
+              className={cardClass}
+              onClick={() => activateSession(rt.info.id)}
+              onKeyDown={(e) => onCardKeyDown(e, idx, rt.info.id, rt.lifecycle, wsName)}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                <span style={rt.lifecycle === 'awaiting_approval' ? { animation: 'ws4pulse 1.2s ease-in-out infinite' } : undefined}>
-                  <StatusBadge state={badgeState(rt.lifecycle)} />
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                <span style={needsApproval ? { animation: 'ws4pulse 1.2s ease-in-out infinite' } : undefined}>
+                  <StatusBadge state={badgeState(needsApproval ? 'awaiting_approval' : rt.lifecycle)} />
                 </span>
                 <span
                   style={{
-                    color: activeRt ? 'var(--accent)' : 'var(--text)',
-                    fontWeight: activeRt ? 700 : 400,
+                    color: activeRt ? 'var(--accent)' : needsApproval ? 'var(--warn)' : 'var(--text)',
+                    fontWeight: activeRt || needsApproval ? 700 : 400,
                     fontSize: 12,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -178,28 +304,30 @@ export function SessionSidebar({
                     flex: 1,
                   }}
                 >
-                  {basename(rt.info.workspace)}
+                  {wsName}
                 </span>
+                {needsApproval ? (
+                  <span className="ix-state-pill ix-state-pill--approval" title="等待安全审批确认">
+                    APPROVAL
+                  </span>
+                ) : isRunning ? (
+                  <span className="ix-state-pill ix-state-pill--running" title="正在执行分析回合">
+                    LIVE
+                  </span>
+                ) : null}
                 {queue > 0 && (
                   <span style={{ color: 'var(--accent)', fontSize: 11 }} title={`${queue} prompts queued`}>
                     ⠿ {queue}
                   </span>
                 )}
                 <button
+                  type="button"
+                  className="ix-close-btn"
                   onClick={(e) => {
                     e.stopPropagation()
-                    requestClose(rt.info.id, rt.lifecycle, basename(rt.info.workspace))
+                    requestClose(rt.info.id, rt.lifecycle, wsName)
                   }}
                   title="close session"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--faint)',
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    fontSize: 11,
-                    padding: '0 2px',
-                  }}
                 >
                   ✕
                 </button>
@@ -229,6 +357,8 @@ export function SessionSidebar({
           >
             <span>SHELLS · {shellList.length}</span>
             <button
+              type="button"
+              className="ix-btn"
               onClick={() => void shellActions.open(active?.info.workspace ?? null)}
               disabled={!hasBackend()}
               title={active ? `在 ${basename(active.info.workspace)} 开 shell` : '开一个 shell（$HOME）'}
@@ -247,13 +377,21 @@ export function SessionSidebar({
               return (
                 <div
                   key={sh.id}
+                  tabIndex={0}
                   onClick={() => shellActions.setActive(sh.id)}
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      shellActions.setActive(sh.id)
+                    }
+                  }}
+                  className="ix-sidebar-item"
                   style={{
-                    border: `1px solid ${activeSh ? 'var(--violet)' : 'var(--rule)'}`,
-                    background: 'rgba(5, 8, 12, 0.4)',
+                    borderColor: activeSh ? 'var(--violet)' : 'var(--rule)',
+                    borderLeftWidth: activeSh ? 3 : 2,
+                    borderLeftColor: activeSh ? 'var(--violet)' : 'var(--rule)',
                     padding: '5px 8px',
-                    cursor: 'pointer',
-                    display: 'flex',
+                    flexDirection: 'row',
                     alignItems: 'center',
                     gap: 6,
                     marginBottom: 4,
@@ -275,20 +413,13 @@ export function SessionSidebar({
                     {basename(sh.cwd)}
                   </span>
                   <button
+                    type="button"
+                    className="ix-close-btn"
                     onClick={(e) => {
                       e.stopPropagation()
                       void shellActions.close(sh.id)
                     }}
                     title="kill shell"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--faint)',
-                      cursor: 'pointer',
-                      font: 'inherit',
-                      fontSize: 11,
-                      padding: '0 2px',
-                    }}
                   >
                     ✕
                   </button>

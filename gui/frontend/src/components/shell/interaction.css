@@ -1,0 +1,666 @@
+/* ============================================================================
+   0xAF·RE — Interaction & Desktop IDE Ergonomics Layer
+   Owned by the shell/interaction layer. Consumes only CSS custom properties
+   from styles/tokens.css so deck / amber / matrix / mono themes stay seamless.
+   ========================================================================== */
+
+/* --- Global drag-resize selection lock ------------------------------------ */
+body.ix-resizing,
+body.ix-resizing * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* --- Focus rings & active pane chrome ------------------------------------- */
+.ix-btn,
+.layout-toggle-btn,
+.collapsed-rail-btn,
+.collapsed-bar-btn,
+.ix-top-btn,
+.ix-sidebar-item,
+.ix-palette-item,
+.ix-dialog-btn {
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
+}
+
+.ix-btn:focus-visible,
+.ix-top-btn:focus-visible,
+.layout-toggle-btn:focus-visible,
+.collapsed-rail-btn:focus-visible,
+.collapsed-bar-btn:focus-visible,
+.ix-sidebar-item:focus-visible,
+.ix-dialog-btn:focus-visible,
+.split-handle:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.shell-cell {
+  position: relative;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.shell-cell--active-focus {
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--rule)) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 26%, transparent),
+    0 0 calc(10px * var(--glow-strength)) color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* --- Keycap badges -------------------------------------------------------- */
+.ix-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 5px;
+  height: 17px;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 72%, var(--bg-panel));
+  border: 1px solid color-mix(in srgb, var(--rule) 90%, transparent);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ix-kbd--accent {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
+}
+
+/* --- Enhanced splitter ergonomics & dimension pill ------------------------ */
+.split-handle:focus-visible::after {
+  background: var(--accent);
+  box-shadow: 0 0 calc(8px * var(--glow-strength)) var(--accent);
+}
+
+.ix-drag-readout {
+  position: fixed;
+  z-index: 90;
+  pointer-events: none;
+  padding: 2px 7px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 92%, var(--bg-panel));
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 calc(12px * var(--glow-strength)) color-mix(in srgb, var(--accent) 35%, transparent);
+  transform: translate(12px, -50%);
+  white-space: nowrap;
+}
+
+/* --- TopBar switcher & quick triggers ------------------------------------- */
+.ix-top-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  border: 1px solid color-mix(in srgb, var(--rule) 80%, transparent);
+  background: color-mix(in srgb, var(--bg) 52%, transparent);
+}
+
+.ix-top-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 11px;
+  padding: 1px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ix-top-btn:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.ix-top-btn--cmd {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--rule));
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--accent);
+  padding: 1px 6px;
+}
+
+.ix-top-btn--cmd:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.ix-top-btn--help {
+  border-color: var(--rule);
+  color: var(--muted);
+  padding: 1px 6px;
+}
+
+.ix-top-btn--help:hover {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.ix-top-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ix-approval-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid var(--warn);
+  cursor: pointer;
+  white-space: nowrap;
+  animation: ix-approval-pulse 1.5s ease-in-out infinite;
+}
+
+.ix-approval-pill:hover {
+  background: color-mix(in srgb, var(--warn) 24%, transparent);
+}
+
+@keyframes ix-approval-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 calc(10px * var(--glow-strength)) color-mix(in srgb, var(--warn) 48%, transparent);
+  }
+}
+
+/* --- Command Palette (Cmd/Ctrl+K) ----------------------------------------- */
+.ix-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: rgba(2, 5, 8, 0.82);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: min(12vh, 96px);
+}
+
+.ix-palette {
+  width: 600px;
+  max-width: 92vw;
+  max-height: 74vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-3, color-mix(in srgb, var(--bg) 94%, var(--accent) 6%));
+  border: 1px solid var(--border-accent, var(--accent));
+  border-radius: var(--radius-md, 3px);
+  box-shadow:
+    var(--shadow-popover, 0 22px 56px rgba(0, 0, 0, 0.88)),
+    0 0 calc(20px * var(--glow-strength)) color-mix(in srgb, var(--accent) 26%, transparent);
+  overflow: hidden;
+  animation: ix-pop-in 80ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.ix-palette-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-default, var(--rule));
+  background: var(--surface-2, color-mix(in srgb, var(--bg) 90%, var(--accent) 10%));
+}
+
+.ix-palette-prompt {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+}
+
+.ix-palette-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.ix-palette-input::placeholder {
+  color: var(--faint);
+}
+
+.ix-palette-count {
+  font-size: 10px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ix-palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ix-palette-group {
+  padding: 6px 12px 3px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  user-select: none;
+}
+
+.ix-palette-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ix-palette-item--active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-left-color: var(--accent);
+}
+
+.ix-palette-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ix-palette-icon {
+  color: var(--accent);
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ix-palette-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.ix-palette-label {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ix-palette-desc {
+  font-size: 10px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ix-palette-match {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  text-underline-offset: 2px;
+}
+
+.ix-palette-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ix-palette-badge {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, var(--rule));
+  color: var(--ok);
+  text-transform: uppercase;
+}
+
+.ix-palette-badge--warn {
+  border-color: color-mix(in srgb, var(--warn) 65%, var(--rule));
+  color: var(--warn);
+}
+
+.ix-palette-empty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.ix-palette-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 12px;
+  border-top: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+/* --- Shortcuts Cheat Sheet ------------------------------------------------ */
+.ix-shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  max-height: 68vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+@media (max-width: 680px) {
+  .ix-shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ix-shortcuts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
+  background: color-mix(in srgb, var(--bg) 52%, transparent);
+}
+
+.ix-shortcuts-title {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 65%, transparent);
+  margin-bottom: 2px;
+}
+
+.ix-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ix-shortcut-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* --- Session Sidebar Ergonomics ------------------------------------------- */
+.ix-sidebar-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+
+.ix-sidebar-search {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.ix-sidebar-search::placeholder {
+  color: var(--faint);
+}
+
+.ix-sidebar-clear {
+  background: none;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  padding: 0 2px;
+}
+
+.ix-sidebar-clear:hover {
+  color: var(--accent);
+}
+
+.ix-sidebar-item {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-left-width: 2px;
+  background: rgba(5, 8, 12, 0.42);
+  padding: 7px 9px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ix-sidebar-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
+  background: color-mix(in srgb, var(--accent) 5%, rgba(5, 8, 12, 0.55));
+}
+
+.ix-sidebar-item--active {
+  border-color: var(--accent);
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, rgba(5, 8, 12, 0.62));
+  box-shadow: 0 0 calc(14px * var(--glow-strength)) color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.ix-sidebar-item--running {
+  border-left: 3px solid var(--ok);
+}
+
+.ix-sidebar-item--active.ix-sidebar-item--running {
+  border-left: 3px solid var(--accent);
+}
+
+.ix-sidebar-item--approval {
+  border-color: color-mix(in srgb, var(--warn) 78%, var(--rule));
+  border-left: 3px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 9%, rgba(5, 8, 12, 0.58));
+  box-shadow: 0 0 calc(12px * var(--glow-strength)) color-mix(in srgb, var(--warn) 24%, transparent);
+}
+
+.ix-state-pill {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  text-transform: uppercase;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.ix-state-pill--approval {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  animation: ix-approval-pulse 1.4s ease-in-out infinite;
+}
+
+.ix-state-pill--running {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 11%, transparent);
+}
+
+.ix-close-btn {
+  background: none;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 0 3px;
+  opacity: 0.65;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.ix-sidebar-item:hover .ix-close-btn,
+.ix-close-btn:focus-visible {
+  opacity: 1;
+}
+
+.ix-close-btn:hover {
+  color: var(--err);
+}
+
+/* --- PromptInput Ergonomics ----------------------------------------------- */
+.ix-prompt-mode {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  padding: 0 5px;
+  border: 1px solid var(--rule);
+  color: var(--faint);
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.ix-prompt-mode--cmd {
+  color: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 60%, var(--rule));
+  background: color-mix(in srgb, var(--violet) 12%, transparent);
+}
+
+.ix-prompt-mode--queue {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--rule));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.ix-prompt-mode--shell {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 65%, var(--rule));
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.ix-prompt-send-btn {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--rule));
+  color: var(--accent);
+  font: inherit;
+  font-size: 10px;
+  padding: 1px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ix-prompt-send-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: var(--accent);
+}
+
+.ix-prompt-send-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ix-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+/* --- Dialog polish -------------------------------------------------------- */
+.ix-dialog-backdrop {
+  backdrop-filter: blur(3px);
+}
+
+.ix-dialog-panel {
+  animation: ix-pop-in 80ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  border-radius: var(--radius-md, 3px);
+}
+
+.ix-dialog-panel:focus {
+  outline: none;
+}
+
+.ix-dialog-btn:hover:not(:disabled) {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+@keyframes ix-pop-in {
+  from {
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ix-palette-backdrop,
+  .ix-palette,
+  .ix-dialog-backdrop,
+  .ix-dialog-panel,
+  .ix-approval-pill,
+  .ix-state-pill--approval {
+    animation: none;
+  }
+}

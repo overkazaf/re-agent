@@ -33,3 +33,13 @@ export function pushEsc(handler: EscHandler): () => void {
     if (i >= 0) stack.splice(i, 1)
   }
 }
+
+/** Current depth of registered Esc overlays (dialogs, palettes, fullscreen stages). */
+export function escStackDepth(): number {
+  return stack.length
+}
+
+/** True when at least one overlay/modal/palette is currently capturing Escape. */
+export function hasEscHandler(): boolean {
+  return stack.length > 0
+}
