@@ -66,9 +66,34 @@ export function placeEv(
   return [base[0] + r * Math.cos(a), y, base[2] + r * Math.sin(a)]
 }
 
+/**
+ * 从台账派生场景边：
+ * - hyp.supporting → support 边（ev → hyp）
+ * - hyp.contradicting → contradict 边（ev → hyp）
+ * - hyp.derived → derive 边（父 hyp → 子 hyp）
+ * - kind === 'audit' 的 evidence.supports → audit 边（ev → hyp）
+ */
 export function deriveEdges(ledger: LedgerDTO | null | undefined): SceneEdge[] {
-  void ledger
-  throw new Error('not implemented')
+  if (!ledger) return []
+  const edges: SceneEdge[] = []
+  for (const hyp of ledger.hypotheses) {
+    for (const evId of hyp.supporting ?? []) {
+      edges.push({ from: evId, to: hyp.id, kind: 'support' })
+    }
+    for (const evId of hyp.contradicting ?? []) {
+      edges.push({ from: evId, to: hyp.id, kind: 'contradict' })
+    }
+    for (const childId of hyp.derived ?? []) {
+      edges.push({ from: hyp.id, to: childId, kind: 'derive' })
+    }
+  }
+  for (const ev of ledger.evidence) {
+    if (ev.kind !== 'audit') continue
+    for (const hypId of ev.supports ?? []) {
+      edges.push({ from: ev.id, to: hypId, kind: 'audit' })
+    }
+  }
+  return edges
 }
 
 export function suggestNext(tick: TickDTO | null): Suggestion {
