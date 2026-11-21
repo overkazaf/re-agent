@@ -1,0 +1,68 @@
+gui/frontend/src/three/CameraRig.tsx
+  6dcd1ee682d8c61b 9,40-49
+gui/frontend/src/three/DagLayer.tsx
+  6dcd1ee682d8c61b 1-279
+gui/frontend/src/three/index.ts
+  6dcd1ee682d8c61b 1,3-4
+gui/frontend/src/three/ForensicTheater.tsx
+  6dcd1ee682d8c61b 7-9,12,20-21,23-38,43,60,66-76,93,105,108,129-153
+gui/frontend/src/three/HoloPanels.tsx
+  6dcd1ee682d8c61b 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "03dbfa2e62ab2642f666a2b722aabcca4e52953f",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 667,
+      "total_deletions": 15,
+      "accepted_lines": 489,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/scratch-smoke.mjs": {
+          "additions": 60,
+          "deletions": 1
+        },
+        "gui/frontend/src/three/HoloPanels.tsx": {
+          "additions": 132,
+          "deletions": 2,
+          "accepted_lines": 130
+        },
+        "gui/frontend/src/three/index.ts": {
+          "additions": 3,
+          "deletions": 1,
+          "accepted_lines": 3
+        },
+        "gui/frontend/src/three/CameraRig.tsx": {
+          "additions": 11,
+          "deletions": 1,
+          "accepted_lines": 11
+        },
+        "gui/frontend/src/three/ForensicTheater.tsx": {
+          "additions": 66,
+          "deletions": 3,
+          "accepted_lines": 66
+        },
+        "gui/frontend/smoke-theater.html": {
+          "additions": 35
+        },
+        "gui/frontend/src/three/DagLayer.tsx": {
+          "additions": 279,
+          "accepted_lines": 279
+        },
+        "gui/frontend/smoke-theater2.html": {
+          "additions": 81,
+          "deletions": 7
+        }
+      }
+    }
+  }
+}
