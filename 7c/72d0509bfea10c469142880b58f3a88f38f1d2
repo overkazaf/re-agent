@@ -1,0 +1,55 @@
+gui/frontend/src/three/useThrottledScene.ts
+  6dcd1ee682d8c61b 1-41
+gui/frontend/src/three/ThemeMaterials.ts
+  6dcd1ee682d8c61b 1-82
+gui/frontend/src/three/CameraRig.tsx
+  6dcd1ee682d8c61b 1-62
+gui/frontend/src/three/ForensicTheater.tsx
+  6dcd1ee682d8c61b 1-86
+gui/frontend/src/three/index.ts
+  6dcd1ee682d8c61b 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "7c72d0509bfea10c469142880b58f3a88f38f1d2",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 281,
+      "total_deletions": 5,
+      "accepted_lines": 273,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/three/useThrottledScene.ts": {
+          "additions": 41,
+          "accepted_lines": 41
+        },
+        "gui/frontend/src/three/index.ts": {
+          "additions": 6,
+          "deletions": 1,
+          "accepted_lines": 2
+        },
+        "gui/frontend/src/three/ThemeMaterials.ts": {
+          "additions": 82,
+          "accepted_lines": 82
+        },
+        "gui/frontend/src/three/ForensicTheater.tsx": {
+          "additions": 90,
+          "deletions": 4,
+          "accepted_lines": 86
+        },
+        "gui/frontend/src/three/CameraRig.tsx": {
+          "additions": 62,
+          "accepted_lines": 62
+        }
+      }
+    }
+  }
+}
