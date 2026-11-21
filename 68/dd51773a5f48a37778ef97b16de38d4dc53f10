@@ -1,0 +1,48 @@
+gui/frontend/package.json
+  6dcd1ee682d8c61b 11-12,16-17,23-24,29,33-34
+gui/frontend/vite.config.ts
+  6dcd1ee682d8c61b 1,16-19
+gui/frontend/src/three/contract.ts
+  6dcd1ee682d8c61b 1-176
+gui/frontend/src/store/scene.ts
+  6dcd1ee682d8c61b 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "68dd51773a5f48a37778ef97b16de38d4dc53f10",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 293,
+      "total_deletions": 3,
+      "accepted_lines": 293,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/vite.config.ts": {
+          "additions": 6,
+          "accepted_lines": 6
+        },
+        "gui/frontend/src/three/contract.ts": {
+          "additions": 176,
+          "accepted_lines": 176
+        },
+        "gui/frontend/package.json": {
+          "additions": 9,
+          "deletions": 3,
+          "accepted_lines": 9
+        },
+        "gui/frontend/src/store/scene.ts": {
+          "additions": 102,
+          "accepted_lines": 102
+        }
+      }
+    }
+  }
+}
