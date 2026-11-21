@@ -6,6 +6,7 @@ import { CameraControls } from '@react-three/drei'
 import type CameraControlsImpl from 'camera-controls'
 import * as THREE from 'three'
 import { zoneOf } from './contract'
+import { nodePositionIndex } from './DagLayer'
 import { useSceneStore } from '../store/scene'
 import { useThrottledScene } from './useThrottledScene'
 
@@ -36,7 +37,16 @@ export function CameraRig() {
       void c.setLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, true)
     }
     if (focus.kind === 'node') {
-      // node 运镜在 DagLayer 落地后接线（nodePositionIndex）。
+      if (appliedNonce.current === focusNonce && pendingNode.current === null) return
+      const p = nodePositionIndex.get(focus.nodeId)
+      if (!p) {
+        // 节点尚未渲染（截断/还没挂载）：挂起，等下一次节流快照重试。
+        pendingNode.current = focus.nodeId
+        return
+      }
+      pendingNode.current = null
+      appliedNonce.current = focusNonce
+      fly(new THREE.Vector3(p[0], p[1], p[2]), 9)
       return
     }
     pendingNode.current = null
