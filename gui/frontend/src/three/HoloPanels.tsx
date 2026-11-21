@@ -95,7 +95,7 @@ function TeleBar({ materials, tokens }: { materials: TheaterMaterials; tokens: n
   const mat = useMemo(() => makeWireMaterial(materials.accent, 0.45, 0.8), [materials])
   useEffect(() => () => mat.dispose(), [mat])
   return (
-    <group position={[50, 9, 18]}>
+    <group position={[58, 11, 22]}>
       <mesh material={mat}>
         <boxGeometry args={[13, 2.6, 0.3]} />
       </mesh>

@@ -388,6 +388,31 @@ make gui-demo-build # 构建静态演示包 -> docs/gui-demo/（可用于 GitHub
 | 主题 | deck / amber / matrix / mono——全套扫描线 + 辉光，尊重 prefers-reduced-motion |
 | Resume | 会话选择器列出并完整恢复历史消息、plan 任务进度、假设栈、证据账本及已生效的 `/goal` 沙箱权限 |
 
+### 3D 取证剧场（默认视图）
+
+GUI 现在默认进入**全 3D 取证作战室**（three.js + react-three-fiber），经典 2D 布局一键
+可回（TopBar `▣ 经典视图` / `◈ 3D 剧场`，选择持久化在 `localStorage`）。
+
+- **9 阶段空间骨架**：七个区域——`TRI 三角洲 → SCR 勘查屏 → HYP 假设塔 → EXP 实验平台
+  → VER 验证台 → AUD 审计拱门 → DEL 交付坞`——由发光相位脊串联。已完成段实心、
+  当前阶段脉冲、未到段虚化；`writeup` 完成后整条金化定格。
+- **证据 DAG 实时生长**：`H-NNN` 棱镜随置信度缩放（被拒假设沉降半透明），`ev_NNN`
+  多面体绕假设塔螺旋上升；支持边绿色光束、矛盾边红色抖动。右上全息面板承载
+  transcript 尾部 / token 遥测 / 队列深度。点击区域或节点即运镜，点空白（含拖拽
+  防误触）回全局视角。
+- **引导式假设主线**（解决"功能点太散"）：TopBar 下方建议条常驻提示下一步
+  （`H-001 没有执行过的实验 → 去配置实验`）。向导按 ① 可证伪假设 + 挂靠证据 → ②
+  实验配置（**沙箱 scope 引导**：可写路径、网络状态、越界警告）→ ③ `verify_artifact`
+  重放验证 → ④ 审计签章 推进，失败自动回流到预填的「修正假设」步。每步可跳过；
+  审批门与中断优先级高于向导。
+- **自动降级**：无 WebGL、`prefers-reduced-motion`、持续 <30fps 时自动切回经典视图
+  并 toast 提示（30s 冷却；`?noFallback=1` 供无头/e2e 关闭哨兵）。
+
+| <img src="docs/shots/gui-3d-overview.png" width="440" alt="3D 取证剧场全景"> | <img src="docs/shots/gui-3d-wizard.png" width="440" alt="引导式实验配置与沙箱 scope"> |
+| :---: | :---: |
+| **作战室全景**——相位脊、七区字形、假设塔周围实时生长的证据 DAG | **引导式实验配置**——实验类型卡、沙箱 scope 芯片、预填命令 |
+| <img src="docs/shots/gui-3d-amber.png" width="440" alt="amber 主题下的 3D 剧场"> | **主题联动**——四套 CRT 配色直接驱动 3D 线框/自发光材质 |
+
 ### GUI 六大功能分区导览（按视觉色系区分重点区域）
 
 桌面 GUI 与 Web 演示沙盒采用**语义化色阶分层**，让重点取证区、核心协同图谱与辅助遥测一目了然，且所有区域均支持**拖拽调宽/调高、独立折叠与 `↺` 一键复位**：

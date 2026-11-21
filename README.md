@@ -427,6 +427,37 @@ What ships:
 | Themes | deck / amber / matrix / mono — scanlines and glow throughout, `prefers-reduced-motion` honored |
 | Resume | The session picker lists and hydrates full saved transcripts, task plans, hypotheses, evidence, and active `/goal` sandbox scopes |
 
+### 3D Forensic Theater (default view)
+
+The GUI now boots into a full-3D **forensic ops room** (three.js + react-three-fiber)
+and keeps the classic 2D layout one click away (`▣ 经典视图` / `◈ 3D 剧场` in the
+TopBar, persisted in `localStorage`).
+
+- **9-phase backbone in space**: seven zones — `TRI 三角洲 → SCR 勘查屏 → HYP 假设塔
+  → EXP 实验平台 → VER 验证台 → AUD 审计拱门 → DEL 交付坞` — wired by a glowing
+  phase rail. Completed segments are solid, the active phase pulses, future
+  segments dim; `writeup` finish locks the rail gold.
+- **Evidence DAG grows live**: `H-NNN` prisms scale with confidence (rejected ones
+  sink and fade), `ev_NNN` polyhedra spiral around the hypothesis tower; support
+  edges are green beams, contradictions jitter red. Top-right holo panels carry
+  the transcript tail / token telemetry / queue depth. Click a zone or node to fly
+  the camera; click empty space (or drag-guard miss) to reset.
+- **Guided hypothesis flow** (the fix for "features are scattered"): the advice
+  bar under the TopBar always suggests the next move (`H-001 没有执行过的实验 →
+  去配置实验`). The wizard walks ① falsifiable claim + linked evidence → ②
+  experiment config with **sandbox-scope guidance** (writable paths, network
+  state, out-of-scope warnings) → ③ `verify_artifact` replay → ④ audit sign-off,
+  with failure routing back to a prefilled *revise* step. Every step is
+  skippable; approval gates and interrupts still take priority.
+- **Automatic fallback**: no WebGL, `prefers-reduced-motion`, or sustained <30fps
+  switches back to the classic view with a toast (30s cooldown; `?noFallback=1`
+  disables the sentinel for headless/e2e runs).
+
+| <img src="docs/shots/gui-3d-overview.png" width="440" alt="3D Forensic Theater overview"> | <img src="docs/shots/gui-3d-wizard.png" width="440" alt="Guided experiment wizard with sandbox scope"> |
+| :---: | :---: |
+| **Ops-room overview** — phase rail, zone glyphs, live evidence DAG around the hypothesis tower | **Guided experiment config** — type cards, sandbox scope chips, prefilled command |
+| <img src="docs/shots/gui-3d-amber.png" width="440" alt="3D theater in the amber theme"> | **Theming** — the four CRT palettes drive the 3D wireframe/emissive materials directly |
+
 ### GUI Functional Zones & Visual Color Hierarchy
 
 The Desktop GUI and Web Demo Sandbox use **semantic color hierarchy** so focal forensic zones stand apart from secondary telemetry, with every pane supporting **drag-to-resize, per-panel fold toggles, and 1-click `↺` layout reset**:

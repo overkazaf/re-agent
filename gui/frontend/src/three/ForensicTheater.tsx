@@ -46,19 +46,25 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
   return (
     <>
       <ThemeSync />
-      <Canvas
-        dpr={[1, 2]}
-        gl={{ antialias: true }}
-        camera={{ position: [0, 55, 95], fov: 50, near: 0.5, far: 600 }}
-        onPointerMissed={(e) => {
-          const dx = e.clientX - lastPointerDown.x
-          const dy = e.clientY - lastPointerDown.y
-          if (dx * dx + dy * dy > 36) return // 环绕/平移的拖拽不算空白点击
-          sceneActions.setFocus({ kind: 'global' })
-        }}
-      >
-        <SceneRoot materials={materials} scene={scene} hud={hud} onExitToClassic={onExitToClassic} />
-      </Canvas>
+      {/* Canvas 必须有确定尺寸的定位容器：dashboard 槽是可滚动的 flex 列，
+          R3F 的 height:100% 在 auto 高度链上会退化成 HTML canvas 默认 150px。
+          flex:1 + absolute inset:0 让画布精确铺满中心舞台。 */}
+      <div style={{ position: 'relative', flex: '1 1 0', minHeight: 0 }}>
+        <Canvas
+          style={{ position: 'absolute', inset: 0 }}
+          dpr={[1, 2]}
+          gl={{ antialias: true }}
+          camera={{ position: [0, 64, 106], fov: 50, near: 0.5, far: 600 }}
+          onPointerMissed={(e) => {
+            const dx = e.clientX - lastPointerDown.x
+            const dy = e.clientY - lastPointerDown.y
+            if (dx * dx + dy * dy > 36) return // 环绕/平移的拖拽不算空白点击
+            sceneActions.setFocus({ kind: 'global' })
+          }}
+        >
+          <SceneRoot materials={materials} scene={scene} hud={hud} onExitToClassic={onExitToClassic} />
+        </Canvas>
+      </div>
     </>
   )
 }
@@ -83,7 +89,7 @@ function SceneRoot({
   return (
     <>
       <color attach="background" args={[materials.bg.getHex()]} />
-      <fog attach="fog" args={[materials.bg.getHex(), 130, 300]} />
+      <fog attach="fog" args={[materials.bg.getHex(), 150, 320]} />
       <ambientLight intensity={0.4} />
       {/* EXP 上方 cyan 主光 + AUD 上方 violet 补光 */}
       <pointLight position={[0, 34, 0]} color={materials.accent} intensity={1.1} decay={0} />

@@ -152,10 +152,12 @@ function labelY(key: ZoneKey, r: number): number {
     case 'SCR':
       return r * 1.0
     case 'HYP':
-      return r * 1.75
+      // 越过棱镜群（derive 的假设节点 y≈10..18 + 标签），避免与 H-NNN 叠字
+      return r * 2.5
     case 'AUD':
       return r * 1.45
     default:
-      return 3.2
+      // EXP / VER / DEL：高于 glyph 顶部（旧值 3.2 会压在底座圆环上）
+      return r * 1.05
   }
 }

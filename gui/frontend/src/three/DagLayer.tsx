@@ -135,8 +135,8 @@ export function DagLayer({ session, materials }: { session: SessionScene; materi
 
   return (
     <group>
-      {session.hyps.map((h) => (
-        <HypPrism key={h.id} hyp={h} sessionId={session.sessionId} materials={materials} />
+      {session.hyps.map((h, i) => (
+        <HypPrism key={h.id} hyp={h} index={i} sessionId={session.sessionId} materials={materials} />
       ))}
       {evs.map((e) => (
         <EvPoly key={e.id} ev={e} contradicted={contradictedIds.has(e.id)} materials={materials} />
@@ -158,10 +158,12 @@ export function DagLayer({ session, materials }: { session: SessionScene; materi
 /** H-NN 假设棱镜：边长随 confidence 0.8→1.6；rejected 半透明 + 沉降 2；active 呼吸。 */
 function HypPrism({
   hyp,
+  index,
   sessionId,
   materials,
 }: {
   hyp: HypNode
+  index: number
   sessionId: string
   materials: TheaterMaterials
 }) {
@@ -214,7 +216,12 @@ function HypPrism({
       >
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <Html position={[0, size + 1.1, 0]} center zIndexRange={[40, 0]} style={{ pointerEvents: 'none' }}>
+      <Html
+        position={[0, size + 1.1 + (index % 2) * 1.7, 0]}
+        center
+        zIndexRange={[40, 0]}
+        style={{ pointerEvents: 'none' }}
+      >
         <div
           className="glow-accent"
           style={{ fontSize: 10, whiteSpace: 'nowrap', opacity: rejected ? 0.4 : 0.95 }}
