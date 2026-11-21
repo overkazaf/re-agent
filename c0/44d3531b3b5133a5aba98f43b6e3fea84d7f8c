@@ -1,0 +1,42 @@
+gui/frontend/src/three/ZoneMarker.tsx
+  6dcd1ee682d8c61b 1-161
+gui/frontend/src/three/PhaseRailMesh.tsx
+  6dcd1ee682d8c61b 1-76
+gui/frontend/src/three/ForensicTheater.tsx
+  6dcd1ee682d8c61b 6-9,11,14-15,44-49,60-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "c044d3531b3b5133a5aba98f43b6e3fea84d7f8c",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 265,
+      "total_deletions": 22,
+      "accepted_lines": 265,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/three/ForensicTheater.tsx": {
+          "additions": 28,
+          "deletions": 22,
+          "accepted_lines": 28
+        },
+        "gui/frontend/src/three/PhaseRailMesh.tsx": {
+          "additions": 76,
+          "accepted_lines": 76
+        },
+        "gui/frontend/src/three/ZoneMarker.tsx": {
+          "additions": 161,
+          "accepted_lines": 161
+        }
+      }
+    }
+  }
+}
