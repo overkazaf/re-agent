@@ -2,7 +2,7 @@
 // bridge, then AppShell slots fill from the session store: one live session
 // drives Dashboard/Transcript/Prompt, its pending approval floats as an
 // overlay, and the side rail carries the RE HUD, queue, and notice log.
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import { AppShell } from './components/shell/AppShell'
@@ -21,9 +21,19 @@ import {
   type WorkbenchTab,
 } from './components/re'
 import { ApprovalDialog, PromptInput, SessionSidebar, TranscriptStream } from './components/session'
+import {
+  ExperimentWizard,
+  HypothesisWizard,
+  ReviewWizard,
+  SuggestionBar,
+  VerificationWizard,
+} from './components/wizard'
 import { ShellView } from './components/terminal/ShellView'
+import { ForensicTheater, type HoloHudData } from './three'
+import { useTheaterFallback, type TheaterFallbackReason } from './three/useTheaterFallback'
 import { THEME_NAMES, ThemeProvider, useTheme, type ThemeName } from './theme/ThemeContext'
-import { actions, hasRealBackend, useSessionRuntime, useSessionStore } from './store/sessions'
+import { actions, hasRealBackend, pushSessionToast, useSessionRuntime, useSessionStore } from './store/sessions'
+import { sceneActions, useSceneStore } from './store/scene'
 import { useShellStore } from './store/shells'
 import { demoActions, useDemoStore } from './demo/store'
 import { api } from './lib/api'
@@ -105,12 +115,28 @@ export default function App() {
 
 // ---------- command center ----------
 
+type ViewMode = 'theater' | 'classic'
+const VIEW_MODE_KEY = '0xaf-view-mode'
+
+const FALLBACK_TEXT: Record<TheaterFallbackReason['kind'], string> = {
+  'no-webgl': '3D 剧场需要 WebGL 支持，已切回经典视图',
+  'reduced-motion': '检测到系统「减弱动效」偏好，已切回经典视图',
+  'low-fps': '3D 场景帧率持续过低，已切回经典视图（稍后可手动再进）',
+}
+
+/** 只在 theater 模式下挂载的降级哨兵（null 渲染，纯副作用）。 */
+function TheaterFallbackWatch({ onFallback }: { onFallback: (r: TheaterFallbackReason) => void }) {
+  useTheaterFallback(onFallback)
+  return null
+}
+
 function CommandCenter() {
   const probes = useBootProbes()
   const [booted, setBooted] = useState(false)
   const { sessions, activeId, toast } = useSessionStore()
   const { shells, activeShellId } = useShellStore()
   const demo = useDemoStore()
+  const scene = useSceneStore()
   const active = useSessionRuntime(activeId)
   const { themes, theme, setTheme } = useTheme()
   const activeShell = activeShellId ? shells.get(activeShellId) : null
@@ -119,6 +145,35 @@ function CommandCenter() {
   const [centerView, setCenterView] = useState<'dashboard' | 'graph'>('dashboard')
   const [graphMode, setGraphMode] = useState<GraphViewMode>('pipeline')
   const [expandDashKey, setExpandDashKey] = useState(0)
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    typeof localStorage !== 'undefined' && localStorage.getItem(VIEW_MODE_KEY) === 'classic' ? 'classic' : 'theater',
+  )
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode)
+    } catch {
+      /* private mode 等 — 记不住就每次默认 theater */
+    }
+  }, [viewMode])
+
+  // demo 沙箱下激活 3D 场景的 e2e 调试钩子（window.__theaterDebug）
+  useEffect(() => {
+    ;(window as unknown as { __DEMO__?: boolean }).__DEMO__ = demo.active || undefined
+  }, [demo.active])
+
+  // reconcile 桥：3D 剧场的唯一数据喂入口。sessions 快照每个事件批都会换
+  // 引用，这里随之重算派生场景；重活（场景树渲染）由 useThrottledScene 250ms 节流兜住。
+  useEffect(() => {
+    const ids = [...sessions.keys()]
+    const ticks = new Map(ids.map((id) => [id, sessions.get(id)?.latestTick ?? null]))
+    sceneActions.reconcile(ids, ticks)
+  }, [sessions])
+
+  const onTheaterFallback = useCallback((reason: TheaterFallbackReason) => {
+    setViewMode('classic')
+    pushSessionToast('info', FALLBACK_TEXT[reason.kind])
+  }, [])
 
   const openGraph = (mode: GraphViewMode) => {
     setGraphMode(mode)
@@ -145,6 +200,16 @@ function CommandCenter() {
   const busy = active?.lifecycle === 'running' || active?.lifecycle === 'awaiting_approval'
   const queueCount = active?.latestTick?.hud.queueCount ?? 0
 
+  // 3D 剧场的全息面板数据（低频摘要：think 尾 3 条 / token 累计 / 队列深度）
+  const usage = active?.latestTick?.flow.usage
+  const holoHud: HoloHudData | null = active
+    ? {
+        thinkLines: active.thinkLines.slice(-3),
+        tokensUsed: usage ? usage.input + usage.output + usage.thinking + usage.cacheRead + usage.cacheWrite : null,
+        queueCount: active.latestTick?.hud.queueCount ?? null,
+      }
+    : null
+
   return (
     <>
       <AppShell
@@ -153,22 +218,38 @@ function CommandCenter() {
         banner={
           demo.active ? (
             <DemoCoachBar graphOpen={centerView === 'graph'} onToggleGraph={toggleCenterGraph} />
-          ) : undefined
+          ) : (
+            <SuggestionBar />
+          )
         }
         topRight={
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
             <button
               type="button"
-              onClick={toggleCenterGraph}
+              onClick={() => setViewMode((m) => (m === 'theater' ? 'classic' : 'theater'))}
               title={
-                centerView === 'graph'
-                  ? '切回五维实时仪表盘 (FLOW / TOOLS / PLAN / THINK / TELE)'
-                  : '以图谱形式查看假设、证据、仲裁审核与安全沙箱协同机制'
+                viewMode === 'theater'
+                  ? '切回经典 2D 布局（五维仪表 / 图谱 / 账本）'
+                  : '进入 3D 取证剧场（作战室 + 引导式假设主线）'
               }
-              style={centerView === 'graph' ? graphBtnActiveStyle : graphBtnStyle}
+              style={viewMode === 'theater' ? theaterBtnActiveStyle : theaterBtnStyle}
             >
-              {centerView === 'graph' ? '▣ 五维仪表' : '◈ 机制图谱'}
+              {viewMode === 'theater' ? '▣ 经典视图' : '◈ 3D 剧场'}
             </button>
+            {viewMode === 'classic' && (
+              <button
+                type="button"
+                onClick={toggleCenterGraph}
+                title={
+                  centerView === 'graph'
+                    ? '切回五维实时仪表盘 (FLOW / TOOLS / PLAN / THINK / TELE)'
+                    : '以图谱形式查看假设、证据、仲裁审核与安全沙箱协同机制'
+                }
+                style={centerView === 'graph' ? graphBtnActiveStyle : graphBtnStyle}
+              >
+                {centerView === 'graph' ? '▣ 五维仪表' : '◈ 机制图谱'}
+              </button>
+            )}
             {demo.active ? (
               <button
                 type="button"
@@ -209,7 +290,12 @@ function CommandCenter() {
           ) : undefined
         }
         dashboard={
-          centerView === 'graph' ? (
+          viewMode === 'theater' ? (
+            <>
+              <TheaterFallbackWatch onFallback={onTheaterFallback} />
+              <ForensicTheater hud={holoHud} onExitToClassic={() => setViewMode('classic')} />
+            </>
+          ) : centerView === 'graph' ? (
             <GovernanceGraphPanel
               tick={active?.latestTick ?? null}
               thinkLines={active?.thinkLines ?? []}
@@ -296,6 +382,16 @@ function CommandCenter() {
           initialHypId={workbenchModal.hypId}
           onClose={() => setWorkbenchModal(null)}
         />
+      )}
+      {/* 引导式向导（3D 剧场与经典视图共用入口：HUD 建议条 / 场景节点 / 侧栏）。
+          各组件自读 sceneStore.wizard 并按 stage 自门控，这里只负责挂载时机。 */}
+      {scene.wizard && (
+        <>
+          <HypothesisWizard />
+          <ExperimentWizard />
+          <VerificationWizard />
+          <ReviewWizard />
+        </>
       )}
       {toast && <ToastStrip toast={toast} />}
     </>
@@ -443,6 +539,27 @@ const graphBtnStyle: CSSProperties = {
   background: 'rgba(139, 92, 246, 0.08)',
   color: 'var(--violet)',
   border: '1px solid var(--violet-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const theaterBtnStyle: CSSProperties = {
+  background: 'rgba(34, 211, 238, 0.08)',
+  color: 'var(--accent)',
+  border: '1px solid var(--accent-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const theaterBtnActiveStyle: CSSProperties = {
+  background: 'rgba(34, 211, 238, 0.16)',
+  color: 'var(--accent)',
+  border: '1px solid var(--accent)',
+  boxShadow: '0 0 12px var(--accent-dim)',
   font: 'inherit',
   fontSize: 11,
   padding: '1px 8px',

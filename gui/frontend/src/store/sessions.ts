@@ -235,6 +235,11 @@ function pushToast(tone: StoreToast['tone'], text: string): void {
   }, TOAST_MS)
 }
 
+/** 集成层（App/3D 剧场）推送 toast 的公开出口（Task D 降级提示等）。 */
+export function pushSessionToast(tone: StoreToast['tone'], text: string): void {
+  pushToast(tone, text)
+}
+
 function freshRuntime(info: SessionInfo): SessionRuntime {
   const history = Array.isArray(info.history) ? info.history.slice(-LOOP_LIMIT) : []
   const now = Date.now()
