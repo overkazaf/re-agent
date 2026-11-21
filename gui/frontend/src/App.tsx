@@ -10,6 +10,7 @@ import { BootSplash, PanelBox, type BootProbe } from './components/crt'
 import { DemoCoachBar, DemoLauncherDialog } from './components/demo'
 import { Dashboard } from './components/panels'
 import {
+  BinaryTerrainPanel,
   GovernanceGraphPanel,
   HypothesisWorkbenchDialog,
   LedgerDetailDialog,
@@ -142,7 +143,7 @@ function CommandCenter() {
   const activeShell = activeShellId ? shells.get(activeShellId) : null
   const [ledgerModal, setLedgerModal] = useState<{ tab: LedgerTab; highlightId?: string } | null>(null)
   const [workbenchModal, setWorkbenchModal] = useState<{ tab: WorkbenchTab; hypId?: string } | null>(null)
-  const [centerView, setCenterView] = useState<'dashboard' | 'graph'>('dashboard')
+  const [centerView, setCenterView] = useState<'dashboard' | 'graph' | 'terrain'>('dashboard')
   const [graphMode, setGraphMode] = useState<GraphViewMode>('pipeline')
   const [expandDashKey, setExpandDashKey] = useState(0)
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
@@ -188,6 +189,20 @@ function CommandCenter() {
     setCenterView((cur) => {
       const next = cur === 'graph' ? 'dashboard' : 'graph'
       if (next === 'graph') setExpandDashKey((k) => k + 1)
+      return next
+    })
+  }
+
+  const toggleCenterTerrain = () => {
+    if (viewMode === 'theater') {
+      setCenterView('terrain')
+      setViewMode('classic')
+      setExpandDashKey((k) => k + 1)
+      return
+    }
+    setCenterView((cur) => {
+      const next = cur === 'terrain' ? 'dashboard' : 'terrain'
+      if (next === 'terrain') setExpandDashKey((k) => k + 1)
       return next
     })
   }
@@ -240,20 +255,28 @@ function CommandCenter() {
             >
               {viewMode === 'theater' ? '▣ 经典视图' : '◈ 3D 剧场'}
             </button>
-            {viewMode === 'classic' && centerView === 'graph' && (
+            {viewMode === 'classic' && centerView !== 'dashboard' && (
               <button
                 type="button"
-                onClick={toggleCenterGraph}
+                onClick={() => setCenterView('dashboard')}
                 title="切回五维实时仪表盘 (FLOW / TOOLS / PLAN / THINK / TELE)"
                 style={graphBtnActiveStyle}
               >
                 ▣ 五维仪表
               </button>
             )}
+            <button
+              type="button"
+              onClick={toggleCenterTerrain}
+              title="二进制地形图（段/RWX/熵值曲线/内嵌载荷/反分析热点/补丁 Diff）与动静证据对齐视图"
+              style={viewMode === 'classic' && centerView === 'terrain' ? terrainBtnActiveStyle : terrainBtnStyle}
+            >
+              ◫ 二进制解剖
+            </button>
             {!(viewMode === 'classic' && centerView === 'graph') && (
               <button
                 type="button"
-                onClick={toggleCenterGraph}
+                onClick={() => openGraph('pipeline')}
                 title="以图谱形式查看假设、证据、仲裁审核与安全沙箱协同机制（3D 剧场下将切至经典视图）"
                 style={graphBtnStyle}
               >
@@ -305,6 +328,12 @@ function CommandCenter() {
               {!noFallback && <TheaterFallbackWatch onFallback={onTheaterFallback} />}
               <ForensicTheater hud={holoHud} onExitToClassic={() => setViewMode('classic')} />
             </>
+          ) : centerView === 'terrain' ? (
+            <BinaryTerrainPanel
+              sessionId={activeId}
+              ledger={active?.latestTick?.ledger}
+              onOpenLedger={(tab, highlightId) => setLedgerModal({ tab, highlightId })}
+            />
           ) : centerView === 'graph' ? (
             <GovernanceGraphPanel
               tick={active?.latestTick ?? null}
@@ -581,6 +610,27 @@ const graphBtnActiveStyle: CSSProperties = {
   color: 'var(--accent)',
   border: '1px solid var(--accent)',
   boxShadow: '0 0 10px var(--accent-dim)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const terrainBtnStyle: CSSProperties = {
+  background: 'rgba(245, 158, 11, 0.08)',
+  color: 'var(--warn)',
+  border: '1px solid rgba(245, 158, 11, 0.45)',
+  font: 'inherit',
+  fontSize: 11,
+  padding: '1px 8px',
+  cursor: 'pointer',
+}
+
+const terrainBtnActiveStyle: CSSProperties = {
+  background: 'rgba(245, 158, 11, 0.18)',
+  color: 'var(--warn)',
+  border: '1px solid var(--warn)',
+  boxShadow: '0 0 10px rgba(245, 158, 11, 0.35)',
   font: 'inherit',
   fontSize: 11,
   padding: '1px 8px',

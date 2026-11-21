@@ -9,6 +9,7 @@ import (
 
 	"github.com/overkazaf/re-agent/internal/config"
 	"github.com/overkazaf/re-agent/internal/skills"
+	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
 )
@@ -122,6 +123,14 @@ func (a *App) RunVerification(id string, req VerificationRequestDTO) (types.Evid
 
 func (a *App) SubmitReview(id string, req ReviewRequestDTO) (ReviewResultDTO, error) {
 	return a.manager.SubmitReview(id, req)
+}
+
+func (a *App) ListWorkspaceFiles(id string) ([]tools.WorkspaceFile, error) {
+	return a.manager.ListWorkspaceFiles(id)
+}
+
+func (a *App) AnalyzeBinaryTerrain(id, path, comparePath string) (tools.BinaryTerrain, error) {
+	return a.manager.AnalyzeBinaryTerrain(id, path, comparePath)
 }
 
 // Completions bridges ui.SlashCompletions onto the frozen []string contract.

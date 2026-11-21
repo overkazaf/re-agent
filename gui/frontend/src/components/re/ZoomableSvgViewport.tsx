@@ -1,8 +1,10 @@
-// ZoomableSvgViewport — interactive zoom (60%..300%), drag-to-pan, reset, and
-// ⛶ full-viewport modal magnifier for CRT SVG graphs. Preserves crisp vector
-// rendering at arbitrary magnification and never hijacks click events on nodes.
+// ZoomableSvgViewport — interactive zoom (65%..300%), drag-to-pan, reset, and
+// TRUE edge-to-edge 100vw×100vh + native OS/browser fullscreen magnifier for
+// CRT SVG graphs. Preserves crisp vector rendering at arbitrary magnification
+// and never hijacks click events on nodes.
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Dialog } from '../session/Dialog'
+import { createPortal } from 'react-dom'
+import { useStageFullscreen } from '../../lib/fullscreen'
 
 const MIN_ZOOM = 0.65
 const MAX_ZOOM = 3.0
@@ -19,18 +21,19 @@ export function ZoomableSvgViewport({
   maxInlineHeight = 310,
 }: {
   title: string
-  /** Render callback receives whether it is inside the fullscreen modal so SVG max-height adapts cleanly */
+  /** Render callback receives whether it is inside true fullscreen so SVG max-height adapts cleanly */
   children: (inFullscreen: boolean) => ReactNode
-  /** Optional inspector / replay controls also shown inside the fullscreen modal */
+  /** Optional inspector / replay controls also shown inside true fullscreen */
   fullscreenFooter?: ReactNode
   maxInlineHeight?: number
 }) {
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
-  const [fullscreen, setFullscreen] = useState(false)
+  const fs = useStageFullscreen()
+  const [showFooter, setShowFooter] = useState(true)
 
-  const [fsZoom, setFsZoom] = useState(1.25)
+  const [fsZoom, setFsZoom] = useState(1.15)
   const [fsPan, setFsPan] = useState({ x: 0, y: 0 })
   const [fsDragging, setFsDragging] = useState(false)
 
@@ -42,7 +45,7 @@ export function ZoomableSvgViewport({
   }
 
   const resetFs = () => {
-    setFsZoom(1.25)
+    setFsZoom(1.15)
     setFsPan({ x: 0, y: 0 })
   }
 
@@ -96,7 +99,7 @@ export function ZoomableSvgViewport({
         {/* Floating Zoom & Fullscreen HUD */}
         <div style={hudBarStyle}>
           <span style={{ color: 'var(--faint)', fontSize: 10 }}>
-            {zoom > 1 || pan.x !== 0 || pan.y !== 0 ? '✥ 按住空白处可拖拽平移 · Ctrl/⌘+滚轮缩放' : '🔍 支持缩放 / 拖拽平移 / 全屏检视'}
+            {zoom > 1 || pan.x !== 0 || pan.y !== 0 ? '✥ 按住空白处可拖拽平移 · Ctrl/⌘+滚轮缩放' : '🔍 支持缩放 / 拖拽平移 / 真全屏检视'}
           </span>
           <span style={{ flex: 1 }} />
           <button
@@ -127,8 +130,8 @@ export function ZoomableSvgViewport({
           </button>
           <button
             type="button"
-            onClick={() => setFullscreen(true)}
-            title="全屏放大检视完整图谱与节点细节"
+            onClick={fs.enter}
+            title="进入系统真全屏放大检视完整图谱与节点细节"
             style={{ ...zoomBtnStyle, color: 'var(--accent)', borderColor: 'var(--accent-dim)', padding: '1px 8px' }}
           >
             ⛶ 全屏放大
@@ -162,80 +165,100 @@ export function ZoomableSvgViewport({
         </div>
       </div>
 
-      {fullscreen && (
-        <Dialog
-          title={`fullscreen graph — ${title}`}
-          accent="accent"
-          width={1260}
-          onClose={() => setFullscreen(false)}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-              ✥ 滚轮直接无级缩放 · 按住画布任意位置拖拽平移 · 点击图中节点切换下方实时遥测与详情 · 按 Esc 退出全屏
-            </span>
-            <span style={{ flex: 1 }} />
-            <button type="button" onClick={() => setFsZoom((z) => clampZoom(z - STEP))} style={zoomBtnStyle}>
-              −
-            </button>
-            <button type="button" onClick={resetFs} style={{ ...zoomBtnStyle, minWidth: 52, color: 'var(--accent)' }}>
-              {Math.round(fsZoom * 100)}%
-            </button>
-            <button type="button" onClick={() => setFsZoom((z) => clampZoom(z + STEP))} style={zoomBtnStyle}>
-              +
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFsZoom(1.8)
-                setFsPan({ x: 0, y: 0 })
-              }}
-              style={zoomBtnStyle}
-            >
-              180% 细节
-            </button>
-            <button
-              type="button"
-              onClick={() => setFullscreen(false)}
-              style={{ ...zoomBtnStyle, borderColor: 'var(--warn)', color: 'var(--warn)', padding: '1px 9px' }}
-            >
-              ✕ 退出全屏
-            </button>
-          </div>
-
+      {fs.open &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
-            {...fsHandlers}
-            onWheel={(e) => {
-              e.preventDefault()
-              const delta = e.deltaY < 0 ? 0.15 : -0.15
-              setFsZoom((z) => clampZoom(z + delta))
-            }}
-            style={{
-              border: '1px solid var(--rule)',
-              background: 'rgba(2, 5, 9, 0.85)',
-              height: '56vh',
-              minHeight: 380,
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: fsDragging ? 'grabbing' : 'grab',
-            }}
+            data-fullscreen-stage="graph"
+            style={fsOverlayStyle}
           >
+            {/* Compact Fullscreen Top Chrome */}
+            <header style={fsHeaderStyle}>
+              <span style={{ color: 'var(--accent)', fontSize: 11, letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>
+                ╭─ FULLSCREEN GRAPH — {title.toUpperCase()} ─╮
+              </span>
+              <span style={{ color: 'var(--faint)', fontSize: 10.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                ✥ 滚轮无级缩放 · 拖拽画布平移 · 点击节点查看详情 · Esc 退出
+              </span>
+              <span style={{ flex: 1 }} />
+              <span style={fsBadgeStyle}>{fs.nativeActive ? '● OS FULLSCREEN' : '● 100% VIEWPORT'}</span>
+              <button type="button" onClick={() => setFsZoom((z) => clampZoom(z - STEP))} style={zoomBtnStyle} aria-label="全屏缩小">
+                −
+              </button>
+              <button type="button" onClick={resetFs} style={{ ...zoomBtnStyle, minWidth: 52, color: 'var(--accent)' }}>
+                {Math.round(fsZoom * 100)}%
+              </button>
+              <button type="button" onClick={() => setFsZoom((z) => clampZoom(z + STEP))} style={zoomBtnStyle} aria-label="全屏放大">
+                +
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFsZoom(1.8)
+                  setFsPan({ x: 0, y: 0 })
+                }}
+                style={zoomBtnStyle}
+              >
+                180% 细节
+              </button>
+              {fullscreenFooter && (
+                <button
+                  type="button"
+                  onClick={() => setShowFooter((v) => !v)}
+                  style={zoomBtnStyle}
+                  title="显示/隐藏底部遥测详情以最大化画布面积"
+                >
+                  {showFooter ? '▾ 隐藏详情' : '▸ 展开详情'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={fs.close}
+                style={{ ...zoomBtnStyle, borderColor: 'var(--warn)', color: 'var(--warn)', padding: '2px 10px' }}
+              >
+                ✕ 退出全屏
+              </button>
+            </header>
+
+            {/* True edge-to-edge SVG stage */}
             <div
+              {...fsHandlers}
+              onWheel={(e) => {
+                e.preventDefault()
+                const delta = e.deltaY < 0 ? 0.15 : -0.15
+                setFsZoom((z) => clampZoom(z + delta))
+              }}
               style={{
+                flex: '1 1 0',
+                minHeight: 0,
                 width: '100%',
-                transform: `translate(${fsPan.x}px, ${fsPan.y}px) scale(${fsZoom})`,
-                transformOrigin: 'center center',
-                transition: fsDragging ? 'none' : 'transform 0.1s ease-out',
+                background: 'rgba(2, 5, 9, 0.96)',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: fsDragging ? 'grabbing' : 'grab',
               }}
             >
-              {children(true)}
+              <div
+                style={{
+                  width: '100%',
+                  padding: '8px 16px',
+                  transform: `translate(${fsPan.x}px, ${fsPan.y}px) scale(${fsZoom})`,
+                  transformOrigin: 'center center',
+                  transition: fsDragging ? 'none' : 'transform 0.1s ease-out',
+                }}
+              >
+                {children(true)}
+              </div>
             </div>
-          </div>
 
-          {fullscreenFooter && <div style={{ maxHeight: '22vh', overflowY: 'auto' }}>{fullscreenFooter}</div>}
-        </Dialog>
-      )}
+            {fullscreenFooter && showFooter && (
+              <div style={fsFooterStyle}>{fullscreenFooter}</div>
+            )}
+          </div>,
+          document.body,
+        )}
     </>
   )
 }
@@ -264,4 +287,45 @@ const zoomBtnStyle: CSSProperties = {
   padding: '1px 7px',
   cursor: 'pointer',
   lineHeight: 1.35,
+}
+
+const fsOverlayStyle: CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  width: '100vw',
+  height: '100vh',
+  zIndex: 38,
+  background: 'var(--bg)',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+}
+
+const fsHeaderStyle: CSSProperties = {
+  flex: '0 0 auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  flexWrap: 'wrap',
+  padding: '6px 12px',
+  background: 'var(--bg-panel)',
+  borderBottom: '1px solid var(--accent-dim)',
+}
+
+const fsBadgeStyle: CSSProperties = {
+  fontSize: 10,
+  color: 'var(--ok)',
+  border: '1px solid rgba(34, 197, 94, 0.35)',
+  background: 'rgba(34, 197, 94, 0.08)',
+  padding: '1px 6px',
+  letterSpacing: '0.06em',
+}
+
+const fsFooterStyle: CSSProperties = {
+  flex: '0 0 auto',
+  maxHeight: '24vh',
+  overflowY: 'auto',
+  padding: '8px 12px',
+  background: 'var(--bg-panel)',
+  borderTop: '1px solid var(--rule)',
 }

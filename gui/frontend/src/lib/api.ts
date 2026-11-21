@@ -6,6 +6,7 @@
 
 import type {
   ApprovalDecision,
+  BinaryTerrainDTO,
   CommandResultDTO,
   EvidenceRecord,
   Hypothesis,
@@ -22,6 +23,7 @@ import type {
   StartOptions,
   TickDTO,
   VerificationRequestDTO,
+  WorkspaceFileDTO,
 } from './types'
 
 export interface AppAPI {
@@ -40,6 +42,8 @@ export interface AppAPI {
   RunHypothesisExperiment(id: string, req: RunExperimentDTO): Promise<EvidenceRecord>
   RunVerification(id: string, req: VerificationRequestDTO): Promise<EvidenceRecord>
   SubmitReview(id: string, req: ReviewRequestDTO): Promise<ReviewResultDTO>
+  ListWorkspaceFiles(id: string): Promise<WorkspaceFileDTO[]>
+  AnalyzeBinaryTerrain(id: string, path: string, comparePath: string): Promise<BinaryTerrainDTO>
   Completions(line: string): Promise<string[]>
   GetThemes(): Promise<string[]>
   RESampleTypes(): Promise<RESampleType[]>
@@ -95,6 +99,9 @@ export const api = {
   runHypothesisExperiment: (id: string, req: RunExperimentDTO) => app().RunHypothesisExperiment(id, req),
   runVerification: (id: string, req: VerificationRequestDTO) => app().RunVerification(id, req),
   submitReview: (id: string, req: ReviewRequestDTO) => app().SubmitReview(id, req),
+  listWorkspaceFiles: (id: string) => app().ListWorkspaceFiles(id),
+  analyzeBinaryTerrain: (id: string, path: string, comparePath = '') =>
+    app().AnalyzeBinaryTerrain(id, path, comparePath),
   completions: (line: string) => app().Completions(line),
   getThemes: () => app().GetThemes(),
   reSampleTypes: () => app().RESampleTypes(),

@@ -441,3 +441,74 @@ export interface GuiEvent {
   ts: number
   data: TickDTO | LoopBatch | ApprovalDTO | NoticeDTO | { state: LifecycleState }
 }
+
+// ---------- binary forensic terrain (Route B) ----------
+export interface WorkspaceFileDTO {
+  path: string
+  size: number
+  format: string
+  isBinary: boolean
+}
+
+export interface TerrainSectionDTO {
+  name: string
+  segment?: string
+  offset: number
+  size: number
+  vaddr?: string
+  flags: string
+  entropy: number
+  rwx?: boolean
+  isConstructor?: boolean
+}
+
+export interface TerrainBucketDTO {
+  offset: number
+  size: number
+  entropy: number
+  printable: number
+  hexPreview: string
+  asciiPreview: string
+}
+
+export interface TerrainCarveDTO {
+  offset: number
+  kind: string
+  signature: string
+}
+
+export interface TerrainAntiDTO {
+  category: string
+  confidence: string
+  description: string
+  detail: string
+  offset: number
+  bypass?: string
+}
+
+export interface TerrainDiffDTO {
+  offset: number
+  length: number
+  bytesA: string
+  bytesB: string
+  classification?: string[]
+}
+
+export interface BinaryTerrainDTO {
+  path: string
+  comparePath?: string
+  format: string
+  arch?: string
+  size: number
+  sampled: number
+  sha256: string
+  overallEntropy: number
+  maxEntropy: number
+  entryPoint?: string
+  mitigations?: Record<string, string>
+  sections: TerrainSectionDTO[]
+  entropy: TerrainBucketDTO[]
+  carves: TerrainCarveDTO[]
+  anti: TerrainAntiDTO[]
+  diffs: TerrainDiffDTO[]
+}

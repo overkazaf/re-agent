@@ -6,6 +6,7 @@ import type { AppAPI } from '../lib/api'
 import type {
   ApprovalDecision,
   ApprovalDTO,
+  BinaryTerrainDTO,
   CommandResultDTO,
   EvidenceRecord,
   FindingDTO,
@@ -37,6 +38,7 @@ import type {
   TokenUsage,
   ToolRunSnapshot,
   VerificationRequestDTO,
+  WorkspaceFileDTO,
 } from '../lib/types'
 import { emitDemoGuiEvent } from '../lib/events'
 import { THEME_NAMES, type ThemeName } from '../theme/ThemeContext'
@@ -46,6 +48,7 @@ import {
 } from '../components/re/cognitiveSynthesis'
 import { DemoShellManager } from './mockShell'
 import { applyLiveTheme, emitDemoSignal } from './signals'
+import { DEMO_WORKSPACE_FILES, getDemoTerrain } from './terrain'
 
 // ---------- static mirrors from Go (workflow/picker.go & workflow/phase.go) ----------
 
@@ -1785,6 +1788,15 @@ export class DemoBackend implements AppAPI {
     return this.shells.list()
   }
 
+  async ListWorkspaceFiles(_id: string): Promise<WorkspaceFileDTO[]> {
+    return DEMO_WORKSPACE_FILES.map((f) => ({ ...f }))
+  }
+
+  async AnalyzeBinaryTerrain(_id: string, path: string, comparePath: string): Promise<BinaryTerrainDTO> {
+    await this.delay(45)
+    return getDemoTerrain(path, comparePath)
+  }
+
   // ---------- slash commands ----------
 
   async SendCommand(id: string, line: string): Promise<CommandResultDTO> {
@@ -2076,6 +2088,29 @@ export class DemoBackend implements AppAPI {
         info(`[anti_analysis] ${target}:`)
         info('  [HIGH] packer signature: UPX! header at 0x000001e8')
         info('  [MED]  anti-debug: ptrace(PTRACE_TRACEME) + /proc/self/status TracerPid')
+        break
+      }
+
+      case '/hex': {
+        const target = parts[1] || 'chall.elf'
+        const offRaw = parts[2] || '0x0'
+        const lenRaw = parts[3] || '128'
+        const off = Number.parseInt(offRaw, offRaw.startsWith('0x') ? 16 : 10) || 0
+        const pad = (n: number) => '0x' + Math.max(0, n).toString(16).padStart(8, '0')
+        info(`[hexdump] ${target} @ ${pad(off)} (${lenRaw} bytes):`)
+        if (target.includes('carrier')) {
+          info(`  ${pad(off)}  63 61 72 72 69 65 72 2d  70 72 65 66 69 78 0a 25  |carrier-prefix.%|`)
+          info(`  ${pad(off + 16)}  50 44 46 2d 31 2e 37 0a  50 4b 03 04 14 00 00 00  |PDF-1.7.PK......|`)
+        } else if (off === 0x1184) {
+          info(`  ${pad(off)}  74 12 48 8b 45 f8 48 83  38 00 75 0a 90 90 90 90  |t.H.E.H.8.u.....|`)
+          info(`  ${pad(off + 16)}  48 89 df e8 64 02 00 00  85 c0 0f 85 20 00 00 00  |H...d....... ...|`)
+        } else if (off === 0x2420) {
+          info(`  ${pad(off)}  55 48 89 e5 48 83 ec 20  89 7d fc e8 41 01 00 00  |UH..H.. .}..A...|`)
+          info(`  ${pad(off + 16)}  b8 01 00 00 00 c3 90 90  0f 1f 44 00 00 5d c3 00  |..........D..]..|`)
+        } else {
+          info(`  ${pad(off)}  7f 45 4c 46 02 01 01 00  00 00 00 00 00 00 00 00  |.ELF............|`)
+          info(`  ${pad(off + 16)}  03 00 3e 00 01 00 00 00  40 10 00 00 00 00 00 00  |..>.....@.......|`)
+        }
         break
       }
 

@@ -172,11 +172,15 @@ async function main() {
     await waitFor(page, 'HOST ARBITRATOR')
     await waitFor(page, '✦ 逆向过程总结：')
 
-    // Verify Graph Zoom (+) and Fullscreen Magnifier (⛶ 全屏放大)
+    // Verify Graph Zoom (+) and True Edge-to-Edge Fullscreen (⛶ 全屏放大)
     await page.getByLabel('放大图谱').click()
     await waitFor(page, '125%')
     await page.getByRole('button', { name: '⛶ 全屏放大' }).click()
     await waitFor(page, 'FULLSCREEN GRAPH')
+    const fsRect = await page.locator('[data-fullscreen-stage="graph"]').boundingBox()
+    if (!fsRect || fsRect.width < 1430 || fsRect.height < 890) {
+      throw new Error(`graph fullscreen is not edge-to-edge 100vw×100vh: ${JSON.stringify(fsRect)}`)
+    }
     await page.getByRole('button', { name: '✕ 退出全屏' }).click()
 
     // Verify Cognitive Process Replay (step through frames & thought playback, then return to LIVE)
@@ -229,6 +233,31 @@ async function main() {
     await page.getByRole('button', { name: 'close', exact: true }).click()
 
     // Return to 5-panel Dashboard cleanly
+    await page.getByRole('button', { name: '▣ 五维仪表' }).click()
+
+    // Verify Binary Forensic Radar (Binary Terrain + True Fullscreen + Static vs Dynamic Evidence Alignment)
+    await page.getByRole('button', { name: '◫ 二进制解剖' }).click()
+    await waitFor(page, 'BINARY FORENSIC RADAR')
+    await waitFor(page, 'SECTIONS')
+    await waitFor(page, '.packed_stub')
+    await waitFor(page, 'PATCH #1')
+    await page.getByRole('button', { name: '⛶ 全屏放大' }).click()
+    const terrainFsRect = await page.locator('[data-fullscreen-stage="terrain"]').boundingBox()
+    if (!terrainFsRect || terrainFsRect.width < 1430 || terrainFsRect.height < 890) {
+      throw new Error(`terrain fullscreen is not edge-to-edge 100vw×100vh: ${JSON.stringify(terrainFsRect)}`)
+    }
+    await page.getByRole('button', { name: '✕ 退出全屏' }).click()
+    await page.getByRole('button', { name: /HEX 查看/ }).click()
+    await waitFor(page, '[hexdump]')
+    await page.getByRole('button', { name: /带入假设向导/ }).click()
+    await waitFor(page, '假设 · 建立')
+    const prefilledClaim = await page.getByLabel('hypothesis claim').inputValue()
+    if (!prefilledClaim.trim()) throw new Error('expected prefilled claim from binary terrain hotspot')
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: /⇄ 动静证据对齐/ }).click()
+    await waitFor(page, '假设双视角交叉核验')
+    await waitFor(page, '双视角交叉确认')
+    await shot('case2-binary-terrain-alignment')
     await page.getByRole('button', { name: '▣ 五维仪表' }).click()
 
     // Verify LedgerPanel + clickable H:N opens LedgerDetailDialog with hypotheses & evidence cross-links
@@ -354,6 +383,13 @@ async function main() {
     if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') {
       throw new Error(`zoneScreenPos broken: ${JSON.stringify(pos)}`)
     }
+    // Verify 3D Theater true edge-to-edge fullscreen without losing canvas
+    await tPage.getByRole('button', { name: '⛶ 全屏剧场' }).click()
+    const thFsRect = await tPage.locator('[data-fullscreen-stage="theater"]').boundingBox()
+    if (!thFsRect || thFsRect.width < 1430 || thFsRect.height < 890) {
+      throw new Error(`theater fullscreen is not edge-to-edge 100vw×100vh: ${JSON.stringify(thFsRect)}`)
+    }
+    await tPage.getByRole('button', { name: '✕ 退出全屏' }).click()
   }, tPage)
   await tPage.screenshot({ path: join(ARTIFACTS, 'theater-01-boot.png') })
 
@@ -497,6 +533,8 @@ async function main() {
           async ShellResize() {},
           async ShellStop() {},
           async ShellList() { return [] },
+          async ListWorkspaceFiles() { return [] },
+          async AnalyzeBinaryTerrain() { throw new Error('no binary') },
         },
       },
     }

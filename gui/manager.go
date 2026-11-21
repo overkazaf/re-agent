@@ -1673,3 +1673,22 @@ func (m *SessionManager) SubmitReview(id string, req ReviewRequestDTO) (ReviewRe
 	}
 	return ReviewResultDTO{AuditRecord: rec, Findings: findings}, nil
 }
+
+// ListWorkspaceFiles enumerates inspectable workspace files for the Binary Forensic Radar.
+func (m *SessionManager) ListWorkspaceFiles(id string) ([]tools.WorkspaceFile, error) {
+	s := m.get(id)
+	if s == nil {
+		return nil, errUnknownSession(id)
+	}
+	return tools.ListWorkspaceFiles(s.state.ToolContext.Workspace, 80), nil
+}
+
+// AnalyzeBinaryTerrain computes sections, Shannon entropy buckets, carved signatures,
+// anti-analysis markers, and optional binary patch diffs inside the session workspace.
+func (m *SessionManager) AnalyzeBinaryTerrain(id, path, comparePath string) (tools.BinaryTerrain, error) {
+	s := m.get(id)
+	if s == nil {
+		return tools.BinaryTerrain{}, errUnknownSession(id)
+	}
+	return tools.BuildBinaryTerrain(s.state.ToolContext.Workspace, path, comparePath, s.state.ToolContext.Policy)
+}

@@ -46,14 +46,21 @@ export function HypothesisWizard() {
   const [busy, setBusy] = useState(false)
   const [banner, setBanner] = useState<{ tone: 'ok' | 'err' | 'info'; text: string } | null>(null)
 
-  // revise 或从第②步回退导航时：把原假设声明带回编辑器（hyp.id 稳定，仅切换假设时重置）
+  // revise 或从第②步回退导航时：把原假设声明带回编辑器（hyp.id 稳定，仅切换假设时重置）；
+  // 新建假设时若携带 prefillClaim（如从二进制地形图选中热点发起），自动预填声明。
   const prefillId = hyp?.id
+  const prefillClaim = ctx?.prefillClaim
   useEffect(() => {
-    if (!prefillId || !hyp) return
-    setClaim(hyp.claim)
-    setPrediction(hyp.note?.startsWith(PREDICTION_PREFIX) ? hyp.note.slice(PREDICTION_PREFIX.length) : '')
+    if (prefillId && hyp) {
+      setClaim(hyp.claim)
+      setPrediction(hyp.note?.startsWith(PREDICTION_PREFIX) ? hyp.note.slice(PREDICTION_PREFIX.length) : '')
+      return
+    }
+    if (!prefillId && prefillClaim) {
+      setClaim(prefillClaim)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefillId])
+  }, [prefillId, prefillClaim])
 
   // stage=hypothesis 但 ctx 已带 hypId（第②步回退）：按修订语义保存，避免重复建卡
   const isRevise = ctx?.stage === 'revise' || (ctx?.stage === 'hypothesis' && Boolean(hypId))

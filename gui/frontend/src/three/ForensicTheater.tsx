@@ -7,11 +7,12 @@
 // HUD 摘要（think/token/queue）由集成层低频组装经 props 喂入，不订阅 90ms 事件。
 //
 // e2e 调试钩子：DEV / demo 下挂 window.__theaterDebug.zoneScreenPos(zone)（contract 尾注约定）。
-import { useEffect } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { PHASE_ZONE, ZONES, zoneOf, type SceneState, type ZoneKey } from './contract'
 import { sceneActions } from '../store/scene'
+import { useStageFullscreen } from '../lib/fullscreen'
 import { ThemeSync, useTheaterMaterials, type TheaterMaterials } from './ThemeMaterials'
 import { useThrottledScene } from './useThrottledScene'
 import { CameraRig } from './CameraRig'
@@ -43,13 +44,29 @@ const lastPointerDown = { x: Number.NaN, y: Number.NaN }
 export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheaterProps) {
   const materials = useTheaterMaterials()
   const scene = useThrottledScene(250)
+  const fs = useStageFullscreen()
   return (
     <>
       <ThemeSync />
       {/* Canvas 必须有确定尺寸的定位容器：dashboard 槽是可滚动的 flex 列，
           R3F 的 height:100% 在 auto 高度链上会退化成 HTML canvas 默认 150px。
-          flex:1 + absolute inset:0 让画布精确铺满中心舞台。 */}
-      <div style={{ position: 'relative', flex: '1 1 0', minHeight: 0 }}>
+          flex:1 + absolute inset:0 让画布精确铺满中心舞台；进入真全屏时直接
+          切换为 fixed 100vw×100vh（不卸载 Canvas，保持 WebGL 上下文零闪烁）。 */}
+      <div
+        data-fullscreen-stage={fs.open ? 'theater' : undefined}
+        style={
+          fs.open
+            ? {
+                position: 'fixed',
+                inset: 0,
+                width: '100vw',
+                height: '100vh',
+                zIndex: 38,
+                background: 'var(--bg)',
+              }
+            : { position: 'relative', flex: '1 1 0', minHeight: 0 }
+        }
+      >
         <Canvas
           style={{ position: 'absolute', inset: 0 }}
           dpr={[1, 2]}
@@ -64,9 +81,61 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
         >
           <SceneRoot materials={materials} scene={scene} hud={hud} onExitToClassic={onExitToClassic} />
         </Canvas>
+        <div style={theaterFsBarStyle}>
+          {fs.open && (
+            <span style={theaterFsBadgeStyle}>
+              {fs.nativeActive ? '● OS FULLSCREEN' : '● 100% VIEWPORT'}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={fs.toggle}
+            title={fs.open ? '退出 3D 剧场全屏 (Esc)' : '将 3D 剧场铺满整个屏幕（系统真全屏）'}
+            style={fs.open ? theaterFsExitBtnStyle : theaterFsBtnStyle}
+          >
+            {fs.open ? '✕ 退出全屏' : '⛶ 全屏剧场'}
+          </button>
+        </div>
       </div>
     </>
   )
+}
+
+const theaterFsBarStyle: CSSProperties = {
+  position: 'absolute',
+  top: 8,
+  right: 10,
+  zIndex: 5,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+}
+
+const theaterFsBadgeStyle: CSSProperties = {
+  fontSize: 10,
+  color: 'var(--ok)',
+  border: '1px solid rgba(34, 197, 94, 0.4)',
+  background: 'rgba(2, 6, 12, 0.78)',
+  padding: '2px 7px',
+  letterSpacing: '0.06em',
+}
+
+const theaterFsBtnStyle: CSSProperties = {
+  border: '1px solid var(--accent-dim)',
+  background: 'rgba(2, 6, 12, 0.78)',
+  color: 'var(--accent)',
+  fontSize: 10.5,
+  padding: '2px 8px',
+  cursor: 'pointer',
+}
+
+const theaterFsExitBtnStyle: CSSProperties = {
+  border: '1px solid var(--warn)',
+  background: 'rgba(2, 6, 12, 0.88)',
+  color: 'var(--warn)',
+  fontSize: 10.5,
+  padding: '2px 9px',
+  cursor: 'pointer',
 }
 
 function SceneRoot({

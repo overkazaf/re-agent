@@ -141,6 +141,8 @@ export interface WizardContext {
   experimentId?: string
   /** revise 变体：失败的证据链回填 */
   failureEvidenceId?: string
+  /** 从二进制地形图等入口预填的假设声明 */
+  prefillClaim?: string
   artifact?: string
 }
 

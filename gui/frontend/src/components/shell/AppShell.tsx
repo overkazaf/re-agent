@@ -5,6 +5,7 @@
 // (double-click any handle to reset). A non-null `main` swaps the right side
 // for the embedded xterm.js shell terminal.
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useNativeFullscreen } from '../../lib/fullscreen'
 import { TopBar } from './TopBar'
 
 const LAYOUT_KEY = '0xaf-gui-layout-v1'
@@ -91,6 +92,7 @@ export function AppShell({
 }) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout)
   const [dragging, setDragging] = useState<DragAxis | null>(null)
+  const nativeFs = useNativeFullscreen()
   const shellRef = useRef<HTMLDivElement>(null)
   const layoutRef = useRef(layout)
   layoutRef.current = layout
@@ -214,6 +216,19 @@ export function AppShell({
                   ↺
                 </button>
               )}
+              <button
+                type="button"
+                onClick={nativeFs.toggle}
+                title={nativeFs.active ? '退出系统全屏 (Esc)' : '整个工作台进入系统真全屏'}
+                className="layout-toggle-btn"
+                style={
+                  nativeFs.active
+                    ? { borderColor: 'var(--warn)', color: 'var(--warn)' }
+                    : { borderColor: 'var(--accent-dim)', color: 'var(--accent)' }
+                }
+              >
+                {nativeFs.active ? '✕ 退全屏' : '⛶ 全屏'}
+              </button>
             </div>
             {topRight}
           </div>
