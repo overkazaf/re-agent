@@ -1,8 +1,8 @@
 // Scene store — 3D 剧场的派生状态 + 向导/聚焦 UI 状态。
 // 形态照抄 sessions.ts：useSyncExternalStore 单一快照 + actions 对象，
 // 每次变更换快照引用，React 精确重渲染。
-// Task 0 交付骨架（reconcile 直通空场景）；Track B 在 store/derive.ts
-// 实现 deriveScene/suggestNext 并接线 reconcile。
+// Track B 已接线：reconcile 在 tick 到达时调用 store/derive.ts 的
+// deriveScene/suggestNext 重算派生状态（App 层的 CommandCenter 喂 activeIds + ticks）。
 import { useSyncExternalStore } from 'react'
 import type { TickDTO } from '../lib/types'
 import type {
@@ -12,6 +12,7 @@ import type {
   Suggestion,
   WizardContext,
 } from '../three/contract'
+import { deriveScene, suggestNext } from './derive'
 
 const EMPTY_SCENE: SceneState = { sessions: [], empty: true }
 const NO_SUGGESTION: Suggestion = { text: '', action: { kind: 'none' } }
@@ -76,8 +77,20 @@ export const sceneActions: SceneStoreApi = {
   get suggestionDismissed() {
     return snap.suggestionDismissed
   },
-  reconcile(_activeIds: string[], _ticks: Map<string, TickDTO | null>) {
-    // Task 0: no-op；Track B 接线 deriveScene/suggestNext。
+  reconcile(activeIds: string[], ticks: Map<string, TickDTO | null>) {
+    // Track B 接线：tick 到达时重算派生场景 + 主 session 建议（照计划 Track B 节）。
+    const inputs = activeIds.map((id, i) => ({ sessionId: id, slot: i, tick: ticks.get(id) ?? null }))
+    const scene = deriveScene(inputs)
+    const primary = ticks.get(activeIds[0] ?? '') ?? null
+    const suggestion = suggestNext(primary)
+    if (scene === snap.scene && suggestion.text === snap.suggestion.text) return
+    snap = {
+      ...snap,
+      scene,
+      // 建议条被 dismiss 后不再更新，直到下次会话状态重启
+      suggestion: snap.suggestionDismissed ? snap.suggestion : suggestion,
+    }
+    emit()
   },
   setFocus(target: FocusTarget) {
     snap = { ...snap, focus: target, focusNonce: snap.focusNonce + 1 }
