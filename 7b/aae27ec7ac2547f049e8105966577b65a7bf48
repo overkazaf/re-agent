@@ -1,0 +1,71 @@
+gui/frontend/src/App.tsx
+  6dcd1ee682d8c61b 151-152,178,183-187,222-225,227,243,247-248,250-253,257-258,260,305
+docs/gui-demo/index.html
+  6dcd1ee682d8c61b 8
+gui/frontend/src/demo/store.ts
+  6dcd1ee682d8c61b 303-305,326
+gui/frontend/scripts/e2e-demo.mjs
+  6dcd1ee682d8c61b 337-442
+docs/gui-demo/assets/main-68YmHPuc.js
+  6dcd1ee682d8c61b 1-4162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "7baae27ec7ac2547f049e8105966577b65a7bf48",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 21015,
+      "total_deletions": 40,
+      "accepted_lines": 4301,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/gui-demo/assets/main-68YmHPuc.js": {
+          "additions": 4162,
+          "accepted_lines": 4162
+        },
+        "gui/frontend/src/App.tsx": {
+          "additions": 28,
+          "deletions": 18,
+          "accepted_lines": 28
+        },
+        "gui/frontend/scripts/debug-suggestion.mjs": {
+          "additions": 45
+        },
+        "docs/gui-demo/assets/main-7kbQpDZN.js": {
+          "additions": 4162
+        },
+        "gui/frontend/src/demo/store.ts": {
+          "additions": 4,
+          "accepted_lines": 4
+        },
+        "docs/gui-demo/index.html": {
+          "additions": 5,
+          "deletions": 5,
+          "accepted_lines": 1
+        },
+        "docs/gui-demo/assets/main-D7Gc_c6T.js": {
+          "additions": 4162
+        },
+        "docs/gui-demo/assets/main-BsmKlPoP.js": {
+          "additions": 4162
+        },
+        "gui/frontend/scripts/e2e-demo.mjs": {
+          "additions": 123,
+          "deletions": 17,
+          "accepted_lines": 106
+        },
+        "docs/gui-demo/assets/main-Bxx2Vkat.js": {
+          "additions": 4162
+        }
+      }
+    }
+  }
+}
