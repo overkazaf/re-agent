@@ -1,19 +1,14 @@
 // 向导第②步（stage: experiment）——为假设配置并实跑可证伪实验。
 // 实验类型三卡（static_probe / sandbox_trace / artifact_replay）选中即预填
-// 命令模板，命令与预期输出均可编辑。
-// 引导配置核心：读 tick.ledger.sandbox（SandboxDTO）与 ledger.goal——
-// 可写路径渲染为绿色 chip、只读目标灰 chip、网络开关状态；命令引用
-// scope 外路径时输入框下红字警告「该路径不在沙箱 scope 内」。
-// 提交 api.RunHypothesisExperiment 后按实验结果路由：
-//   passed   → 第③步（verification，回填 artifact）+ 聚焦 VER
-//   falsified→ 第①步 revise 变体（failureEvidenceId）+ 聚焦 HYP
-//   error    → 红条停留本步
+// 命令模板，命令与预期输出均可编辑。沙箱可写/只读路径 chip 点击即可复制，
+// 命令引用 scope 外路径时即时红字警告。
 import { useMemo, useState, type CSSProperties } from 'react'
 import { api } from '../../lib/api'
 import type { EvidenceRecord } from '../../lib/types'
 import { sceneActions, useSceneStore } from '../../store/scene'
 import { actions, errText, useSessionRuntime } from '../../store/sessions'
 import { Spinner } from '../crt/Spinner'
+import { useCopyFeedback } from '../session/usabilityHelpers'
 import { WizardCard, WizBanner, WizBtn, wizFieldStyle, wizFooterStyle, wizLabelStyle, wizSelectCardStyle } from './WizardCard'
 
 type ExpKindKey = 'static_probe' | 'sandbox_trace' | 'artifact_replay'
@@ -87,6 +82,7 @@ export function ExperimentWizard() {
   const [expected, setExpected] = useState('')
   const [busy, setBusy] = useState(false)
   const [banner, setBanner] = useState<{ tone: 'ok' | 'err' | 'info'; text: string } | null>(null)
+  const { copiedKey, copy } = useCopyFeedback()
 
   const granted = sandbox?.granted ?? []
   const readonlyRoots = useMemo(
@@ -111,6 +107,7 @@ export function ExperimentWizard() {
     setKind(k.key)
     setCommand(k.tpl.replaceAll('{artifact}', artifact || '{artifact}'))
     setExpected(k.expected)
+    setBanner(null)
   }
 
   function goBackToHypothesis() {
@@ -161,12 +158,13 @@ export function ExperimentWizard() {
     <WizardCard
       title={`实验 · ${hyp ? hyp.id : (ctx.hypId ?? '—')}`}
       step={2}
+      why="由宿主真实执行探针并铸造不可篡改证据 ev_NNN：命中预期则推进产物重放，不符则自动反证折半并回到假设修正。"
       sessionId={ctx.sessionId}
       onClose={sceneActions.closeWizard}
     >
       {hyp && (
         <div style={hypBarStyle}>
-          <b style={{ color: 'var(--accent)' }}>{hyp.id}</b>
+          <b style={{ color: 'var(--accent)', flexShrink: 0 }}>{hyp.id}</b>
           <span style={{ color: 'var(--text)' }}>{hyp.claim}</span>
         </div>
       )}
@@ -175,7 +173,7 @@ export function ExperimentWizard() {
       <div style={scopePanelStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ color: sandboxActive ? 'var(--ok)' : 'var(--faint)', fontWeight: 700, fontSize: 11 }}>
-            {sandboxActive ? '沙箱 · 已激活' : '沙箱 · 未激活'}
+            {sandboxActive ? '● 沙箱 · 已激活' : '○ 沙箱 · 未激活'}
           </span>
           {sandbox?.device && <span style={{ color: 'var(--muted)', fontSize: 10.5 }}>{sandbox.device}</span>}
           {sandbox && (
@@ -183,18 +181,32 @@ export function ExperimentWizard() {
               授权 {sandbox.grantedCount} · 拒绝 {sandbox.deniedCount}
             </span>
           )}
-          <span style={{ color: 'var(--muted)', fontSize: 10.5 }}>网络：{network ?? '未声明'}</span>
+          <span style={{ color: 'var(--muted)', fontSize: 10.5, marginLeft: 'auto' }}>
+            网络：{network ?? '未声明'}
+          </span>
         </div>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
           {granted.map((g) => (
-            <span key={g} title="沙箱内可写路径" style={greenChipStyle}>
-              {g}
-            </span>
+            <button
+              key={g}
+              type="button"
+              onClick={() => copy(`scope-${g}`, g)}
+              title="点击复制沙箱内可写路径"
+              style={greenChipStyle}
+            >
+              {copiedKey === `scope-${g}` ? '✓ 已复制' : g}
+            </button>
           ))}
           {readonlyRoots.map((p) => (
-            <span key={p} title="只读目标（可引用，不可写）" style={grayChipStyle}>
-              {p}（只读）
-            </span>
+            <button
+              key={p}
+              type="button"
+              onClick={() => copy(`ro-${p}`, p)}
+              title="只读目标（可引用不可写，点击复制）"
+              style={grayChipStyle}
+            >
+              {copiedKey === `ro-${p}` ? '✓ 已复制' : `${p}（只读）`}
+            </button>
           ))}
           {!sandboxActive && (
             <span style={{ color: 'var(--faint)', fontSize: 10 }}>命令将在未受控环境执行</span>
@@ -218,17 +230,35 @@ export function ExperimentWizard() {
       </div>
 
       <label style={wizLabelStyle}>
-        实跑命令（{artifact ? <>目标产物 <code style={{ color: 'var(--ok)' }}>{artifact}</code></> : '未指定目标产物'}）
+        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>
+            实跑命令（{artifact ? <>目标产物 <code style={{ color: 'var(--ok)' }}>{artifact}</code></> : '未指定目标产物'}）
+          </span>
+          <span style={{ color: command.trim() ? 'var(--ok)' : 'var(--faint)', fontSize: 10 }}>
+            {command.trim() ? '✓ 就绪' : '必填'}
+          </span>
+        </span>
         <input
           aria-label="experiment command"
-          style={wizFieldStyle}
+          style={{
+            ...wizFieldStyle,
+            borderColor: outOfScope.length > 0 ? 'var(--err)' : undefined,
+          }}
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           placeholder="例如：strings -a carrier.bin | head -50"
         />
       </label>
       {outOfScope.length > 0 && (
-        <div style={{ color: 'var(--err)', fontSize: 10.5 }}>
+        <div
+          style={{
+            color: 'var(--err)',
+            fontSize: 10.5,
+            padding: '5px 8px',
+            border: '1px solid var(--err)',
+            background: 'color-mix(in srgb, var(--err) 10%, var(--bg))',
+          }}
+        >
           ⚠ 该路径不在沙箱 scope 内：{outOfScope.join('、')} —— 实验将被沙箱拒绝或产生未受控读写
         </div>
       )}
@@ -247,10 +277,10 @@ export function ExperimentWizard() {
       {banner && <WizBanner tone={banner.tone} text={banner.text} />}
 
       <div style={wizFooterStyle}>
-        <WizBtn disabled={busy} onClick={goBackToHypothesis}>
+        <WizBtn type="button" disabled={busy} onClick={goBackToHypothesis}>
           ← 上一步
         </WizBtn>
-        <WizBtn tone="accent" disabled={busy} onClick={() => void run()}>
+        <WizBtn type="button" tone="accent" disabled={busy} onClick={() => void run()}>
           {busy ? (
             <>
               <Spinner /> 实验实跑中…
@@ -289,6 +319,7 @@ const greenChipStyle: CSSProperties = {
   color: 'var(--ok)',
   fontSize: 10,
   padding: '1px 6px',
+  cursor: 'pointer',
 }
 
 const grayChipStyle: CSSProperties = {
@@ -297,4 +328,5 @@ const grayChipStyle: CSSProperties = {
   color: 'var(--muted)',
   fontSize: 10,
   padding: '1px 6px',
+  cursor: 'pointer',
 }

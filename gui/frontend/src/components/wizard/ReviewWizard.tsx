@@ -1,8 +1,8 @@
 // 向导第④步（stage: review）——审计签章。
 // mode 三选：operator_audit（引用实测证据签发 audit_finding，主线推荐）/
 // arbitrate（宿主确定性四规则仲裁）/ model_audit（独立第三席位模型审计）。
-// operator_audit 需 verdict + citedEvidence(≥1) + summary；提交
-// api.SubmitReview 后展示 findings 列表；[完成归档] → closeWizard + 全局聚焦。
+// operator_audit 需 verdict + citedEvidence(≥1) + summary，顶部给出实时就绪检查项；
+// 提交 api.SubmitReview 后展示 findings 列表；[完成归档] → closeWizard + 全局聚焦。
 import { useMemo, useState, type CSSProperties } from 'react'
 import { api } from '../../lib/api'
 import type { FindingDTO } from '../../lib/types'
@@ -66,6 +66,9 @@ export function ReviewWizard() {
   const [findings, setFindings] = useState<FindingDTO[] | null>(null)
   const [recordId, setRecordId] = useState('')
 
+  const evReady = cited.length > 0
+  const summaryReady = summary.trim().length > 0
+
   async function submit() {
     if (!ctx) return
     if (mode === 'operator_audit') {
@@ -115,7 +118,13 @@ export function ReviewWizard() {
   if (!ctx || ctx.stage !== 'review') return null
 
   return (
-    <WizardCard title="审计 · 审查签章" step={4} sessionId={ctx.sessionId} onClose={sceneActions.closeWizard}>
+    <WizardCard
+      title="审计 · 审查签章"
+      step={4}
+      why="审计结论将追加写入只读账本且不可篡改：绑定真实 ev_NNN 证据或触发独立第三席位对抗审计，确保最终报告零幻觉。"
+      sessionId={ctx.sessionId}
+      onClose={sceneActions.closeWizard}
+    >
       {/* mode 三选卡 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
         {MODES.map((m) => {
@@ -125,7 +134,10 @@ export function ReviewWizard() {
               key={m.key}
               type="button"
               disabled={busy || findings !== null}
-              onClick={() => setMode(m.key)}
+              onClick={() => {
+                setMode(m.key)
+                setBanner(null)
+              }}
               style={wizSelectCardStyle(on, 'violet')}
             >
               <span style={{ color: on ? 'var(--violet)' : 'var(--muted)', fontSize: 13 }}>{m.glyph}</span>
@@ -139,7 +151,12 @@ export function ReviewWizard() {
       {mode === 'operator_audit' ? (
         <>
           <div style={wizLabelStyle}>
-            <span>1. 引用核验过的实测证据（必选 ≥1 条，无证据不可签发审查）</span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>1. 引用核验过的实测证据（必选 ≥1 条，无证据不可签发审查）</span>
+              <span style={{ color: evReady ? 'var(--ok)' : 'var(--warn)', fontSize: 10 }}>
+                {evReady ? `✓ 已选 ${cited.length} 条` : '请至少选择 1 条'}
+              </span>
+            </span>
             {recentEvidence.length === 0 ? (
               <div style={{ color: 'var(--err)', fontSize: 10.5 }}>
                 ✗ 当前账本为空——请先回到实验/验证步骤产生实跑证据
@@ -153,7 +170,10 @@ export function ReviewWizard() {
                       key={ev.id}
                       type="button"
                       disabled={busy}
-                      onClick={() => setCited(toggleIn(cited, ev.id))}
+                      onClick={() => {
+                        setCited(toggleIn(cited, ev.id))
+                        if (banner) setBanner(null)
+                      }}
                       title={`${ev.source}: ${ev.summary || ev.excerpt}`}
                       style={chipToneStyle(on, 'ok')}
                     >
@@ -183,12 +203,20 @@ export function ReviewWizard() {
           </div>
 
           <label style={wizLabelStyle}>
-            3. 审查结论摘要（必填）
+            <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>3. 审查结论摘要（必填）</span>
+              <span style={{ color: summaryReady ? 'var(--ok)' : 'var(--warn)', fontSize: 10 }}>
+                {summaryReady ? '✓ 已填写' : '待填写'}
+              </span>
+            </span>
             <input
               aria-label="review summary"
               style={wizFieldStyle}
               value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              onChange={(e) => {
+                setSummary(e.target.value)
+                if (banner) setBanner(null)
+              }}
               placeholder="例如：经核对静态解码与动态重放记录，结论闭环且无未证实外推"
             />
           </label>
@@ -226,8 +254,13 @@ export function ReviewWizard() {
       )}
 
       <div style={wizFooterStyle}>
+        {mode === 'operator_audit' && findings === null && (
+          <span style={{ marginRight: 'auto', fontSize: 10, color: evReady && summaryReady ? 'var(--ok)' : 'var(--faint)' }}>
+            {evReady ? '✓ 证据' : '○ 证据'} · ✓ 裁定 · {summaryReady ? '✓ 摘要' : '○ 摘要'}
+          </span>
+        )}
         {findings === null ? (
-          <WizBtn tone="accent" disabled={busy} onClick={() => void submit()}>
+          <WizBtn type="button" tone="accent" disabled={busy} onClick={() => void submit()}>
             {busy ? (
               <>
                 <Spinner /> 审查执行中…
@@ -238,8 +271,8 @@ export function ReviewWizard() {
           </WizBtn>
         ) : (
           <>
-            <WizBtn onClick={() => setFindings(null)}>重新运行</WizBtn>
-            <WizBtn tone="accent" onClick={finishArchive}>
+            <WizBtn type="button" onClick={() => setFindings(null)}>重新运行</WizBtn>
+            <WizBtn type="button" tone="ok" onClick={finishArchive}>
               ✓ 完成归档
             </WizBtn>
           </>
@@ -252,7 +285,7 @@ export function ReviewWizard() {
 const findingStyle: CSSProperties = {
   borderLeft: '2px solid var(--violet-dim)',
   background: 'rgba(5, 8, 12, 0.55)',
-  padding: '3px 8px',
+  padding: '4px 8px',
   fontSize: 11,
   lineHeight: 1.5,
 }

@@ -44,6 +44,7 @@ export function VerificationWizard() {
   }, [])
 
   const hypLabel = useMemo(() => ctx?.hypId ?? '（不关联假设）', [ctx?.hypId])
+  const validCaseCount = useMemo(() => cases.filter((c) => c.command.trim()).length, [cases])
 
   function goReview() {
     if (!ctx) return
@@ -97,15 +98,26 @@ export function VerificationWizard() {
   if (!ctx || ctx.stage !== 'verification') return null
 
   return (
-    <WizardCard title="验证 · 产物重放" step={3} sessionId={ctx.sessionId} onClose={sceneActions.closeWizard}>
+    <WizardCard
+      title="验证 · 产物重放"
+      step={3}
+      why="确定性重放为目标产物计算真实 SHA256 并逐条比对 stdout，签发唯一可解锁审计门禁的 verification_result 凭证。"
+      sessionId={ctx.sessionId}
+      onClose={sceneActions.closeWizard}
+    >
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        调用内置 <code>verify_artifact</code> 对目标产物执行确定性重放：宿主计算真实 SHA256，逐条比对实跑 stdout
-        与预期值，签发唯一可解锁审计门禁的 verification_result 证据。关联假设 {hypLabel}
+        调用内置 <code style={{ color: 'var(--accent)' }}>verify_artifact</code> 执行确定性重放 · 关联假设{' '}
+        <strong style={{ color: 'var(--text)' }}>{hypLabel}</strong>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <label style={wizLabelStyle}>
-          工作区产物文件（Artifact）
+          <span style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>工作区产物文件（Artifact）</span>
+            <span style={{ color: artifact.trim() ? 'var(--ok)' : 'var(--faint)', fontSize: 10 }}>
+              {artifact.trim() ? '✓' : '必填'}
+            </span>
+          </span>
           <input
             aria-label="verify artifact path"
             style={wizFieldStyle}
@@ -127,8 +139,10 @@ export function VerificationWizard() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>重放测试向量（Replay Cases）</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>
+            重放测试向量（Replay Cases · {validCaseCount}/{cases.length} 有效）
+          </span>
           <button
             type="button"
             disabled={busy}
@@ -138,6 +152,25 @@ export function VerificationWizard() {
             + 添加用例行
           </button>
         </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '130px 1fr 180px 28px',
+            gap: 6,
+            fontSize: 9.5,
+            color: 'var(--faint)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            padding: '0 2px',
+          }}
+        >
+          <span>Case Name</span>
+          <span>Command</span>
+          <span>Expected stdout</span>
+          <span />
+        </div>
+
         {cases.map((c, idx) => (
           <div key={idx} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px 28px', gap: 6, alignItems: 'center' }}>
             <input
@@ -187,6 +220,9 @@ export function VerificationWizard() {
               {stats.evId}
               {stats.sha256 ? ` · sha256:${stats.sha256.slice(0, 12)}…` : ''}
             </span>
+            <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 10 }}>
+              1.5s 后自动进入审计，或直接点击继续
+            </span>
           </div>
           <div style={{ height: 8, display: 'flex', border: '1px solid var(--rule)' }}>
             <div style={{ flex: stats.passed, background: 'var(--ok)', boxShadow: '0 0 8px var(--ok)' }} />
@@ -197,11 +233,11 @@ export function VerificationWizard() {
 
       <div style={wizFooterStyle}>
         {stats ? (
-          <WizBtn tone="accent" onClick={goReview}>
+          <WizBtn type="button" tone="accent" onClick={goReview}>
             ▸ 进入审计 →
           </WizBtn>
         ) : (
-          <WizBtn tone="accent" disabled={busy} onClick={() => void run()}>
+          <WizBtn type="button" tone="accent" disabled={busy} onClick={() => void run()}>
             {busy ? (
               <>
                 <Spinner /> 重放执行中…

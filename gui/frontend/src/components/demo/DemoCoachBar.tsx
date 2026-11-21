@@ -1,10 +1,12 @@
 // DemoCoachBar — compact, CRT-native interactive walkthrough banner mounted
 // directly beneath TopBar while Demo Sandbox mode is active. Keeps step
-// guidance visible across both the Agent Dashboard and the embedded Shell view.
-import type { CSSProperties } from 'react'
+// guidance visible across both the Agent Dashboard and the embedded Shell view,
+// with a slim collapsible mode, visual progress rail, and clear CTA hierarchy.
+import { useState, type CSSProperties } from 'react'
 import { DEMO_SCENARIOS, getScenario } from '../../demo/scenarios'
 import { demoActions, useDemoStore } from '../../demo/store'
 import { GlowText } from '../crt'
+import '../session/usability.css'
 
 export function DemoCoachBar({
   graphOpen = false,
@@ -14,6 +16,8 @@ export function DemoCoachBar({
   onToggleGraph?: () => void
 }) {
   const demo = useDemoStore()
+  const [dismissedHint, setDismissedHint] = useState<string | null>(null)
+
   if (!demo.active) return null
 
   const scenario = getScenario(demo.scenarioId)
@@ -21,10 +25,12 @@ export function DemoCoachBar({
   const doneCount = scenario.steps.filter((st) => demo.completedSteps[`${scenario.id}:${st.id}`]).length
   const allDone = doneCount === scenario.steps.length
   const stepDone = Boolean(demo.completedSteps[`${scenario.id}:${step.id}`])
+  const progressPct = scenario.steps.length > 0 ? Math.round((doneCount / scenario.steps.length) * 100) : 0
+  const activeHint = demo.lastHint && demo.lastHint !== dismissedHint ? demo.lastHint : null
 
   return (
     <div style={barOuter}>
-      {/* Row 1: scenario picker, step progress pills, controls */}
+      {/* Row 1: scenario picker, step progress pills (or compact step cue when collapsed), controls */}
       <div style={row1Style}>
         <span style={badgeStyle}>
           <GlowText tone="accent">◈ DEMO</GlowText>
@@ -36,46 +42,77 @@ export function DemoCoachBar({
           title="切换演示场景（共 5 个常见 Case）"
           style={caseBtnStyle}
         >
-          <span style={{ color: 'var(--violet)' }}>
+          <span style={{ color: 'var(--violet)', fontWeight: 700 }}>
             CASE {scenario.index}/{DEMO_SCENARIOS.length}
           </span>
           <span style={{ color: 'var(--text)', fontWeight: 600 }}>{scenario.title}</span>
           <span style={{ color: 'var(--faint)' }}>▾</span>
         </button>
 
-        <div style={stepsRowStyle}>
-          {scenario.steps.map((st, idx) => {
-            const done = Boolean(demo.completedSteps[`${scenario.id}:${st.id}`])
-            const current = idx === demo.stepIndex
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => demoActions.setStepIndex(idx)}
-                title={st.guide}
-                style={{
-                  ...stepPillStyle,
-                  borderColor: current
-                    ? 'var(--accent)'
-                    : done
-                      ? 'color-mix(in srgb, var(--ok) 55%, var(--rule))'
-                      : 'var(--rule)',
-                  color: current ? 'var(--accent)' : done ? 'var(--ok)' : 'var(--faint)',
-                  background: current ? 'rgba(34, 211, 238, 0.08)' : 'transparent',
-                }}
-              >
-                <span>{done ? '✓' : current ? '▸' : '○'}</span>
-                <span>
-                  {idx + 1}.{st.title}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+        {!demo.collapsed ? (
+          <div style={stepsRowStyle}>
+            {scenario.steps.map((st, idx) => {
+              const done = Boolean(demo.completedSteps[`${scenario.id}:${st.id}`])
+              const current = idx === demo.stepIndex
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => demoActions.setStepIndex(idx)}
+                  title={st.guide}
+                  style={{
+                    ...stepPillStyle,
+                    borderColor: current
+                      ? 'var(--accent)'
+                      : done
+                        ? 'color-mix(in srgb, var(--ok) 60%, var(--rule))'
+                        : 'var(--rule)',
+                    color: current ? 'var(--accent)' : done ? 'var(--ok)' : 'var(--faint)',
+                    background: current
+                      ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+                      : done
+                        ? 'color-mix(in srgb, var(--ok) 6%, transparent)'
+                        : 'transparent',
+                    fontWeight: current ? 600 : 400,
+                  }}
+                >
+                  <span>{done ? '✓' : current ? '▸' : '○'}</span>
+                  <span>
+                    {idx + 1}.{st.title}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <span
+            style={{
+              color: 'var(--muted)',
+              fontSize: 11,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: '1 1 200px',
+              minWidth: 0,
+            }}
+          >
+            <span style={{ color: 'var(--accent)' }}>
+              Step {demo.stepIndex + 1}/{scenario.steps.length}
+            </span>{' '}
+            · {step.title}
+          </span>
+        )}
 
-        <span style={{ flex: 1 }} />
+        <span style={{ flex: demo.collapsed ? 0 : 1 }} />
 
-        <span style={{ color: allDone ? 'var(--ok)' : 'var(--faint)', fontSize: 11, whiteSpace: 'nowrap' }}>
+        <span
+          style={{
+            color: allDone ? 'var(--ok)' : 'var(--muted)',
+            fontSize: 10.5,
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {doneCount}/{scenario.steps.length}
         </span>
 
@@ -88,7 +125,9 @@ export function DemoCoachBar({
               ...ctrlBtnStyle,
               borderColor: graphOpen ? 'var(--accent)' : 'var(--violet-dim)',
               color: graphOpen ? 'var(--accent)' : 'var(--violet)',
-              background: graphOpen ? 'rgba(34, 211, 238, 0.1)' : 'rgba(139, 92, 246, 0.08)',
+              background: graphOpen
+                ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
+                : 'color-mix(in srgb, var(--violet) 10%, transparent)',
             }}
           >
             {graphOpen ? '▣ 返回仪表' : '◈ 协同图谱'}
@@ -107,7 +146,7 @@ export function DemoCoachBar({
         <button
           type="button"
           onClick={() => demoActions.toggleCollapsed()}
-          title={demo.collapsed ? '展开操作指引' : '折叠指引条'}
+          title={demo.collapsed ? '展开操作指引' : '收起指引条，腾出更多画布空间'}
           style={ctrlBtnStyle}
         >
           {demo.collapsed ? '▾ 指引' : '▴ 折叠'}
@@ -128,18 +167,35 @@ export function DemoCoachBar({
         )}
       </div>
 
-      {/* Row 2: active step instruction + one-click fill / auto-run actions */}
+      {/* Row 2: active step instruction + unmistakable CTA hierarchy */}
       {!demo.collapsed && (
         <div style={row2Style}>
-          <span style={targetTagStyle}>{step.target}</span>
+          <span style={targetTagStyle}>
+            {demo.stepIndex + 1}/{scenario.steps.length} · {step.target}
+          </span>
           <span style={guideTextStyle}>
-            {stepDone && demo.lastHint ? (
-              <span style={{ color: 'var(--ok)' }}>{demo.lastHint}</span>
+            {stepDone && activeHint ? (
+              <span style={{ color: 'var(--ok)' }}>{activeHint}</span>
             ) : (
               <>
                 <span style={{ color: 'var(--text)' }}>{step.guide}</span>
-                {demo.lastHint && (
-                  <span style={{ color: 'var(--ok)', marginLeft: 10 }}>{demo.lastHint}</span>
+                {activeHint && (
+                  <span style={{ color: 'var(--ok)', marginLeft: 10 }}>
+                    {activeHint}
+                    <button
+                      type="button"
+                      onClick={() => setDismissedHint(activeHint)}
+                      title="隐藏此条完成提示"
+                      style={{
+                        marginLeft: 5,
+                        color: 'var(--faint)',
+                        fontSize: 10,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
                 )}
               </>
             )}
@@ -178,6 +234,18 @@ export function DemoCoachBar({
           </span>
         </div>
       )}
+
+      {/* Subtle 2px scenario progress rail */}
+      <div style={{ height: 2, background: 'color-mix(in srgb, var(--rule) 50%, transparent)', width: '100%' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${progressPct}%`,
+            background: allDone ? 'var(--ok)' : 'var(--accent)',
+            transition: 'width 240ms ease',
+          }}
+        />
+      </div>
     </div>
   )
 }
@@ -258,9 +326,10 @@ const ctrlBtnStyle: CSSProperties = {
 
 const targetTagStyle: CSSProperties = {
   border: '1px solid var(--accent-dim)',
+  background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
   color: 'var(--accent)',
   fontSize: 10,
-  letterSpacing: '0.08em',
+  letterSpacing: '0.06em',
   padding: '1px 6px',
   whiteSpace: 'nowrap',
   flexShrink: 0,
@@ -286,8 +355,9 @@ const fillBtnStyle: CSSProperties = {
 const runBtnStyle: CSSProperties = {
   border: '1px solid var(--accent)',
   color: 'var(--accent)',
-  background: 'rgba(34, 211, 238, 0.08)',
-  padding: '2px 10px',
+  background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+  fontWeight: 600,
+  padding: '2px 11px',
   fontSize: 11,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
@@ -296,8 +366,9 @@ const runBtnStyle: CSSProperties = {
 const nextCaseBtnStyle: CSSProperties = {
   border: '1px solid var(--ok)',
   color: 'var(--ok)',
-  background: 'rgba(74, 222, 128, 0.1)',
-  padding: '2px 10px',
+  background: 'color-mix(in srgb, var(--ok) 16%, transparent)',
+  fontWeight: 600,
+  padding: '2px 11px',
   fontSize: 11,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
