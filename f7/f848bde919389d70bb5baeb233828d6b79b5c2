@@ -1,0 +1,29 @@
+docs/plans/2026-11-21-3d-forensic-theater.md
+  6dcd1ee682d8c61b 1-508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "f7f848bde919389d70bb5baeb233828d6b79b5c2",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 508,
+      "total_deletions": 0,
+      "accepted_lines": 508,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/plans/2026-11-21-3d-forensic-theater.md": {
+          "additions": 508,
+          "accepted_lines": 508
+        }
+      }
+    }
+  }
+}
