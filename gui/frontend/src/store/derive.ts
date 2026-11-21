@@ -10,8 +10,12 @@ import type {
 } from '../lib/types'
 import { PHASE_ZONE, RAIL_SPACING, zoneOf } from '../three/contract'
 import type {
+  EvNode,
+  ExpMark,
+  HypNode,
   SceneEdge,
   SceneState,
+  SessionScene,
   Suggestion,
 } from '../three/contract'
 
@@ -35,9 +39,64 @@ const EV_BASE_HEIGHT = 12
 const EV_LEVEL_HEIGHT = 2.2
 const EV_ERROR_Y = -1.5 // isError 证据沉降
 
+/** 证据视为已验证：跑过 verification 且全部用例通过。 */
+function isVerified(ev: EvidenceRecord): boolean {
+  const v = ev.verification
+  return v != null && v.total > 0 && v.passed >= v.total
+}
+
+/** tick → 单条 session 主线：假设塔节点 + 证据螺旋 + 边 + 相位轨道。 */
+function deriveSession(input: DeriveInput): SessionScene {
+  const offset: [number, number, number] = [input.slot * RAIL_SPACING, 0, 0]
+  const zone = zoneOf('HYP').center
+  const base: [number, number, number] = [zone[0] + offset[0], zone[1] + offset[1], zone[2] + offset[2]]
+
+  const ledger = input.tick?.ledger ?? null
+  const re = input.tick?.re ?? null
+
+  const hyps: HypNode[] = (ledger?.hypotheses ?? []).map((hyp, i) => ({
+    id: hyp.id,
+    claim: hyp.claim,
+    confidence: hyp.confidence,
+    status: hyp.status,
+    position: placeHyp(hyp, i, base),
+    experiments: (hyp.experiments ?? []).map(
+      (exp): ExpMark => ({
+        id: exp.id,
+        title: exp.title,
+        status: exp.status,
+        evidenceId: exp.evidenceId,
+      }),
+    ),
+  }))
+
+  const evs: EvNode[] = (ledger?.evidence ?? []).map((ev, i) => ({
+    id: ev.id,
+    kind: ev.kind ?? ev.source,
+    summary: ev.summary ?? ev.excerpt,
+    isError: !!ev.isError,
+    verified: isVerified(ev),
+    position: placeEv(ev, i, base),
+  }))
+
+  return {
+    sessionId: input.sessionId,
+    offset,
+    rail: {
+      activeIndex: re ? re.phaseIndex : -1,
+      total: PHASE_ZONE.length, // 9
+      archived: re?.phase === 'writeup',
+    },
+    hyps,
+    evs,
+    edges: deriveEdges(ledger),
+  }
+}
+
+/** 多 session 派生：inputs 为空（或不含任何 session）时输出空场景。 */
 export function deriveScene(inputs: DeriveInput[]): SceneState {
-  void inputs
-  throw new Error('not implemented')
+  const sessions = inputs.map(deriveSession)
+  return { sessions, empty: sessions.length === 0 }
 }
 
 /** 假设节点：绕 HYP 塔 base 环形上升，半径 8、高度 10 + index*4；只依赖 index/base，同 id 重算坐标不变。 */
@@ -100,7 +159,3 @@ export function suggestNext(tick: TickDTO | null): Suggestion {
   void tick
   throw new Error('not implemented')
 }
-
-// 布局常量唯一来源仍是 three/contract.ts；此处仅消费。
-void PHASE_ZONE
-void zoneOf
