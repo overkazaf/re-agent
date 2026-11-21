@@ -1,13 +1,10 @@
-// ForensicTheater — 3D 取证剧场主组件（three/ 唯一对外入口，见 index.ts）。
-// DOM HUD 层（向导卡/审批/输入）不在此渲染；这里只有 WebGL 空间：
-// 灯光、雾、摄像机运镜、区块标记、相位主线、证据 DAG 与全息面板。
+// ForensicTheater — 3D Forensic Theater main component (sole public entry in index.ts).
+// Renders the WebGL tactical stage: calibrated lighting, atmospheric depth fog,
+// architectural coordinate floor grid, CameraRig, ZoneMarkers, dual-layer
+// PhaseRailMesh, Evidence/Hypothesis DAG, and frosted HoloPanels.
 //
-// 数据：store/scene（useSceneStore 快照 + sceneActions 动作），经 useThrottledScene
-// 节流消费；点画布空白回全局视角。多 session = 按 offset 平移的平行主线组。
-// HUD 摘要（think/token/queue）由集成层低频组装经 props 喂入，不订阅 90ms 事件。
-//
-// e2e 调试钩子：DEV / demo 下挂 window.__theaterDebug.zoneScreenPos(zone)（contract 尾注约定）。
-import { useEffect, type CSSProperties } from 'react'
+// Preserves window.__theaterDebug.zoneScreenPos(zone) and data-fullscreen-stage="theater".
+import { useEffect, useMemo, type CSSProperties } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { PHASE_ZONE, ZONES, zoneOf, type SceneState, type ZoneKey } from './contract'
@@ -24,7 +21,7 @@ import { HoloPanels, type HoloHudData } from './HoloPanels'
 declare global {
   interface Window {
     __DEMO__?: boolean
-    /** Track A 挂的 e2e 调试钩子（DEV / demo 才有；见 contract.ts 尾注） */
+    /** Track A E2E debug hook (DEV / demo; see contract.ts) */
     __theaterDebug?: {
       zoneScreenPos: (zone: ZoneKey) => { x: number; y: number } | null
     }
@@ -32,13 +29,13 @@ declare global {
 }
 
 export interface ForensicTheaterProps {
-  /** HUD 摘要（TRANSCRIPT/TELE/QUEUE），集成层低频喂入；缺省显示占位 */
+  /** Low-frequency HUD summary (TRANSCRIPT/TELE/QUEUE) */
   hud?: HoloHudData | null
-  /** 点击 TRANSCRIPT 摘要条 → 回经典视图（集成层接线） */
+  /** Clicking a TRANSCRIPT strip returns to Classic workbench view */
   onExitToClassic?: () => void
 }
 
-/** 最近一次 pointerdown 的页面坐标：onPointerMissed 用它区分「点击」与「拖拽视角」。 */
+/** Last pointerdown page coords so onPointerMissed ignores orbit drags. */
 const lastPointerDown = { x: Number.NaN, y: Number.NaN }
 
 export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheaterProps) {
@@ -48,10 +45,6 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
   return (
     <>
       <ThemeSync />
-      {/* Canvas 必须有确定尺寸的定位容器：dashboard 槽是可滚动的 flex 列，
-          R3F 的 height:100% 在 auto 高度链上会退化成 HTML canvas 默认 150px。
-          flex:1 + absolute inset:0 让画布精确铺满中心舞台；进入真全屏时直接
-          切换为 fixed 100vw×100vh（不卸载 Canvas，保持 WebGL 上下文零闪烁）。 */}
       <div
         data-fullscreen-stage={fs.open ? 'theater' : undefined}
         style={
@@ -70,12 +63,12 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
         <Canvas
           style={{ position: 'absolute', inset: 0 }}
           dpr={[1, 2]}
-          gl={{ antialias: true }}
-          camera={{ position: [0, 64, 106], fov: 50, near: 0.5, far: 600 }}
+          gl={{ antialias: true, powerPreference: 'high-performance' }}
+          camera={{ position: [0, 74, 126], fov: 48, near: 0.5, far: 650 }}
           onPointerMissed={(e) => {
             const dx = e.clientX - lastPointerDown.x
             const dy = e.clientY - lastPointerDown.y
-            if (dx * dx + dy * dy > 36) return // 环绕/平移的拖拽不算空白点击
+            if (dx * dx + dy * dy > 36) return
             sceneActions.setFocus({ kind: 'global' })
           }}
         >
@@ -96,6 +89,9 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
             {fs.open ? '✕ 退出全屏' : '⛶ 全屏剧场'}
           </button>
         </div>
+        <div style={theaterLegendStyle} aria-hidden>
+          DRAG ORBIT · SCROLL ZOOM · CLICK ZONE · CLICK VOID RESET
+        </div>
       </div>
     </>
   )
@@ -103,8 +99,8 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
 
 const theaterFsBarStyle: CSSProperties = {
   position: 'absolute',
-  top: 8,
-  right: 10,
+  top: 10,
+  right: 12,
   zIndex: 5,
   display: 'inline-flex',
   alignItems: 'center',
@@ -113,29 +109,134 @@ const theaterFsBarStyle: CSSProperties = {
 
 const theaterFsBadgeStyle: CSSProperties = {
   fontSize: 10,
+  fontWeight: 600,
   color: 'var(--ok)',
-  border: '1px solid rgba(34, 197, 94, 0.4)',
-  background: 'rgba(2, 6, 12, 0.78)',
-  padding: '2px 7px',
-  letterSpacing: '0.06em',
+  border: '1px solid color-mix(in srgb, var(--ok) 45%, var(--rule))',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-3) 86%, transparent)',
+  backdropFilter: 'blur(6px)',
+  padding: '3px 8px',
+  letterSpacing: '0.08em',
 }
 
 const theaterFsBtnStyle: CSSProperties = {
-  border: '1px solid var(--accent-dim)',
-  background: 'rgba(2, 6, 12, 0.78)',
+  border: '1px solid var(--border-accent)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-3) 84%, transparent)',
+  backdropFilter: 'blur(6px)',
   color: 'var(--accent)',
   fontSize: 10.5,
-  padding: '2px 8px',
+  fontWeight: 500,
+  padding: '3px 9px',
+  letterSpacing: '0.04em',
   cursor: 'pointer',
+  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.38)',
 }
 
 const theaterFsExitBtnStyle: CSSProperties = {
-  border: '1px solid var(--warn)',
-  background: 'rgba(2, 6, 12, 0.88)',
+  border: '1px solid color-mix(in srgb, var(--warn) 70%, var(--rule))',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-3) 92%, transparent)',
+  backdropFilter: 'blur(6px)',
   color: 'var(--warn)',
   fontSize: 10.5,
-  padding: '2px 9px',
+  fontWeight: 600,
+  padding: '3px 10px',
+  letterSpacing: '0.04em',
   cursor: 'pointer',
+  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.44)',
+}
+
+const theaterLegendStyle: CSSProperties = {
+  position: 'absolute',
+  left: 12,
+  bottom: 10,
+  zIndex: 4,
+  pointerEvents: 'none',
+  fontSize: 9.5,
+  letterSpacing: '0.12em',
+  color: 'var(--faint)',
+  opacity: 0.72,
+  padding: '2px 7px',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-1) 70%, transparent)',
+  border: '1px solid var(--border-subtle)',
+}
+
+/**
+ * Architectural ground stage: subtle coordinate grid, concentric radar
+ * calibration rings, and faint axis guides that anchor zones in 3D space.
+ */
+function StageFloor({ materials }: { materials: TheaterMaterials }) {
+  const { gridGeo, axisGeo, gridMat, axisMat, ringMat } = useMemo(() => {
+    // Coarse tactical grid (-96..96 every 16 units)
+    const gridPts: number[] = []
+    const extent = 96
+    const step = 16
+    for (let v = -extent; v <= extent; v += step) {
+      if (v === 0) continue
+      gridPts.push(-extent, -0.22, v, extent, -0.22, v)
+      gridPts.push(v, -0.22, -extent, v, -0.22, extent)
+    }
+    const gGeo = new THREE.BufferGeometry()
+    gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridPts, 3))
+
+    const aGeo = new THREE.BufferGeometry()
+    aGeo.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(
+        [-extent, -0.18, 0, extent, -0.18, 0, 0, -0.18, -extent, 0, -0.18, extent],
+        3,
+      ),
+    )
+
+    const gMat = new THREE.LineBasicMaterial({
+      color: materials.rule,
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false,
+    })
+    const aMat = new THREE.LineBasicMaterial({
+      color: materials.faint,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+    })
+    const rMat = new THREE.MeshBasicMaterial({
+      color: materials.rule,
+      transparent: true,
+      opacity: 0.22,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+
+    return { gridGeo: gGeo, axisGeo: aGeo, gridMat: gMat, axisMat: aMat, ringMat: rMat }
+  }, [materials])
+
+  useEffect(
+    () => () => {
+      gridGeo.dispose()
+      axisGeo.dispose()
+      gridMat.dispose()
+      axisMat.dispose()
+      ringMat.dispose()
+    },
+    [gridGeo, axisGeo, gridMat, axisMat, ringMat],
+  )
+
+  return (
+    <group>
+      <lineSegments geometry={gridGeo} material={gridMat} />
+      <lineSegments geometry={axisGeo} material={axisMat} />
+      {/* Concentric forensic calibration rings centered on EXP */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, -0.16, 0]} material={ringMat}>
+        <ringGeometry args={[41.6, 42, 96]} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position={[0, -0.16, 0]} material={ringMat}>
+        <ringGeometry args={[73.6, 74, 112]} />
+      </mesh>
+    </group>
+  )
 }
 
 function SceneRoot({
@@ -158,16 +259,19 @@ function SceneRoot({
   return (
     <>
       <color attach="background" args={[materials.bg.getHex()]} />
-      <fog attach="fog" args={[materials.bg.getHex(), 150, 320]} />
-      <ambientLight intensity={0.4} />
-      {/* EXP 上方 cyan 主光 + AUD 上方 violet 补光 */}
-      <pointLight position={[0, 34, 0]} color={materials.accent} intensity={1.1} decay={0} />
-      <pointLight position={[0, 34, -60]} color={materials.violet} intensity={0.9} decay={0} />
+      <fog attach="fog" args={[materials.bg.getHex(), 138, 295]} />
+      <ambientLight intensity={0.32} />
+      <hemisphereLight args={[materials.accent, materials.bg, 0.45]} />
+      {/* Crisp architectural key light for specular facets on optical-glass cores */}
+      <directionalLight position={[42, 82, 58]} intensity={0.78} color={materials.text} />
+      {/* Accent wash over EXP/HYP + violet rim over AUD */}
+      <pointLight position={[0, 36, 12]} color={materials.accent} intensity={1.05} decay={0} />
+      <pointLight position={[0, 36, -62]} color={materials.violet} intensity={0.85} decay={0} />
+      <StageFloor materials={materials} />
       <CameraRig />
       <PointerDownProbe />
       <TheaterDebugBridge />
       {scene.empty ? (
-        // 空态：只挂 TRI 入口呼吸光（呼应 ░ NO SIGNAL ░）
         <ZoneMarker zone={zoneOf('TRI')} materials={materials} breathing />
       ) : (
         <>
@@ -187,7 +291,7 @@ function SceneRoot({
   )
 }
 
-/** 记录 pointerdown 坐标（供 onPointerMissed 判定拖拽距离）。 */
+/** Tracks pointerdown coords so onPointerMissed separates clicks from orbit drags. */
 function PointerDownProbe(): null {
   const gl = useThree((s) => s.gl)
   useEffect(() => {
@@ -202,7 +306,7 @@ function PointerDownProbe(): null {
   return null
 }
 
-/** e2e 调试钩子：把区中心用 camera.project 投到页面像素坐标（点击 canvas 内目标用）。 */
+/** E2E debug bridge: projects zone center into viewport pixels. */
 function TheaterDebugBridge(): null {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)

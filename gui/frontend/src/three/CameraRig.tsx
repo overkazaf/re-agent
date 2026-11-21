@@ -10,10 +10,11 @@ import { nodePositionIndex } from './DagLayer'
 import { useSceneStore } from '../store/scene'
 import { useThrottledScene } from './useThrottledScene'
 
-// 全局取景：视点前移（target z=+4）让房间在 2:1 横向画布居中，
-// TRI（z=+60）与 AUD（z=-60）两端各留约 3° 视锥余量，无底部裁切。
-export const HOME_POS: readonly [number, number, number] = [0, 64, 106]
-export const HOME_TARGET: readonly [number, number, number] = [0, 0, 4]
+// Framed global view: pulls camera back slightly so TRI (z=+60, r=14) and
+// AUD (z=-60) plus left/right HoloPanels fit cleanly inside 1440x900 without
+// bottom-edge clipping.
+export const HOME_POS: readonly [number, number, number] = [0, 74, 126]
+export const HOME_TARGET: readonly [number, number, number] = [0, 3, 2]
 
 /** 全局视角的观察方向（target→pos），聚焦时保持同一角度推近。 */
 const VIEW_DIR = new THREE.Vector3(...HOME_POS).sub(new THREE.Vector3(...HOME_TARGET)).normalize()

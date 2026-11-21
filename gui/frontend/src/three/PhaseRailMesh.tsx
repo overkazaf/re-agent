@@ -1,7 +1,7 @@
-// PhaseRailMesh — 相位主线能量脊：TRI→…→DEL 沿 9 阶段骨架的折线管道
-// （CatmullRomCurve3 + TubeGeometry 线框）。按 rail.activeIndex 分段着色：
-// 已走段实心 emissive、当前段 useFrame 脉冲、未到段半透明虚化（opacity 0.25）；
-// archived 后整条转金色（--amber）并停止脉冲。
+// PhaseRailMesh — Dual-layer optical conduit along the 9-phase RE workflow spine
+// (TRI→SCR→HYP→EXP→VER→AUD→DEL): inner luminous core tube + subtle outer
+// wireframe sheath + traveling telemetry pulse bead along the active segment.
+// Archived workflow transitions cleanly to calm golden amber.
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
@@ -10,7 +10,7 @@ import type { TheaterMaterials } from './ThemeMaterials'
 
 const PHASES = 9
 
-/** 主线路径：按 PHASE_ZONE 顺序去重后的区中心（TRI→SCR→HYP→EXP→VER→AUD→DEL）。 */
+/** Deduplicated zone waypoints in workflow order. */
 const WAYPOINTS: THREE.Vector3[] = (() => {
   const seen: ZoneKey[] = []
   for (const z of PHASE_ZONE) {
@@ -19,58 +19,102 @@ const WAYPOINTS: THREE.Vector3[] = (() => {
   return seen.map((z) => new THREE.Vector3(...zoneOf(z).center))
 })()
 
-/** 每相位一段的管道几何（9 段等参数分割，段序号 == phaseIndex，与 PHASE_ZONE 对齐）。 */
-function buildChunkGeometries(): THREE.TubeGeometry[] {
-  const curve = new THREE.CatmullRomCurve3(WAYPOINTS, false, 'catmullrom', 0.25)
-  const geoms: THREE.TubeGeometry[] = []
+interface ChunkData {
+  curve: THREE.CatmullRomCurve3
+  coreGeo: THREE.TubeGeometry
+  sheathGeo: THREE.TubeGeometry
+}
+
+function buildChunks(): ChunkData[] {
+  const spine = new THREE.CatmullRomCurve3(WAYPOINTS, false, 'catmullrom', 0.25)
+  const chunks: ChunkData[] = []
   const SUBDIV = 6
   for (let k = 0; k < PHASES; k++) {
     const pts: THREE.Vector3[] = []
     for (let j = 0; j <= SUBDIV; j++) {
-      pts.push(curve.getPoint((k + j / SUBDIV) / PHASES))
+      pts.push(spine.getPoint((k + j / SUBDIV) / PHASES))
     }
-    geoms.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.32, 6, false))
+    const curve = new THREE.CatmullRomCurve3(pts)
+    chunks.push({
+      curve,
+      coreGeo: new THREE.TubeGeometry(curve, 12, 0.14, 8, false),
+      sheathGeo: new THREE.TubeGeometry(curve, 10, 0.36, 6, false),
+    })
   }
-  return geoms
+  return chunks
 }
 
+const PULSE_GEO = new THREE.SphereGeometry(0.42, 12, 12)
+
 export function PhaseRailMesh({ rail, materials }: { rail: PhaseRail; materials: TheaterMaterials }) {
-  const geoms = useMemo(buildChunkGeometries, [])
+  const chunks = useMemo(buildChunks, [])
   useEffect(
     () => () => {
-      geoms.forEach((g) => g.dispose())
+      chunks.forEach((c) => {
+        c.coreGeo.dispose()
+        c.sheathGeo.dispose()
+      })
     },
-    [geoms],
+    [chunks],
   )
-  const activeMatRef = useRef<THREE.MeshStandardMaterial | null>(null)
+
+  const activeCoreRef = useRef<THREE.MeshStandardMaterial | null>(null)
+  const pulseRef = useRef<THREE.Mesh | null>(null)
+  const activeChunk = !rail.archived && rail.activeIndex >= 0 && rail.activeIndex < PHASES ? chunks[rail.activeIndex] : null
 
   useFrame(({ clock }) => {
-    if (activeMatRef.current) {
-      activeMatRef.current.emissiveIntensity = 1.6 + Math.sin(clock.elapsedTime * 3.4) * 0.9
+    const t = clock.elapsedTime
+    if (activeCoreRef.current) {
+      activeCoreRef.current.emissiveIntensity = 1.45 + Math.sin(t * 3.0) * 0.55
+    }
+    if (pulseRef.current && activeChunk) {
+      const u = (t * 0.45) % 1
+      const p = activeChunk.curve.getPoint(u)
+      pulseRef.current.position.copy(p)
     }
   })
 
   return (
     <group>
-      {geoms.map((g, i) => {
+      {chunks.map((c, i) => {
         const isActive = !rail.archived && i === rail.activeIndex
         const done = rail.archived || i < rail.activeIndex
         const color = rail.archived ? materials.amber : materials.accent
         return (
-          <mesh key={i} geometry={g}>
-            <meshStandardMaterial
-              ref={isActive ? activeMatRef : undefined}
-              color={color}
-              emissive={color}
-              emissiveIntensity={done ? 1.3 : isActive ? 1.6 : 0.25}
-              wireframe
-              transparent
-              opacity={done ? 0.85 : isActive ? 0.95 : 0.25}
-              depthWrite={false}
-            />
-          </mesh>
+          <group key={i}>
+            {/* Inner luminous optical spine */}
+            <mesh geometry={c.coreGeo}>
+              <meshStandardMaterial
+                ref={isActive ? activeCoreRef : undefined}
+                color={color}
+                emissive={color}
+                emissiveIntensity={done ? 1.15 : isActive ? 1.45 : 0.22}
+                transparent
+                opacity={done ? 0.88 : isActive ? 0.96 : 0.22}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Outer architectural wireframe sheath */}
+            <mesh geometry={c.sheathGeo}>
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={done ? 0.65 : isActive ? 0.95 : 0.15}
+                wireframe
+                transparent
+                opacity={done ? 0.36 : isActive ? 0.55 : 0.12}
+                depthWrite={false}
+              />
+            </mesh>
+          </group>
         )
       })}
+      {/* Traveling telemetry pulse bead on the active phase segment */}
+      {activeChunk && (
+        <mesh ref={pulseRef} geometry={PULSE_GEO}>
+          <meshBasicMaterial color={materials.accent} transparent opacity={0.95} />
+        </mesh>
+      )}
     </group>
   )
 }

@@ -1,11 +1,12 @@
 /* ============================================================================
-   0xAF·RE — base layer (WS2)
+   0xAF·RE — Base Layer
 
-   Reset, the terminal monospace stack, CRT scrollbar, selection, and the
-   data-theme crossfade. Loads after tokens.css and crt.css (see main.tsx).
+   Reset, calibrated terminal monospace typography with tabular-nums,
+   architectural scrollbar, precision focus rings, subtle ambient backdrop,
+   and crisp theme crossfades. Loads after tokens.css and crt.css (main.tsx).
    ========================================================================== */
 
-/* --- reset ------------------------------------------------------------------- */
+/* --- reset ------------------------------------------------------------------ */
 
 *,
 *::before,
@@ -23,16 +24,34 @@ body,
   height: 100%;
 }
 
+html {
+  color-scheme: dark;
+  background-color: var(--bg);
+  transition: background-color var(--dur-slow) var(--ease-out);
+}
+
 body {
-  /* Terminal stack: JetBrains Mono ships locally via @fontsource, everything
-     behind it is a system fallback with matching metrics. */
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
-    'Liberation Mono', monospace;
+  /* Terminal stack: JetBrains Mono ships locally via @fontsource */
+  font-family: var(--font-mono);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.48;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1, 'liga' 0;
   color: var(--text);
-  background: var(--bg);
+  background:
+    radial-gradient(
+      110% 70% at 50% -10%,
+      color-mix(in srgb, var(--accent) 5%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      85% 60% at 92% 108%,
+      color-mix(in srgb, var(--violet) 4%, transparent) 0%,
+      transparent 55%
+    ),
+    var(--bg);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow: hidden;
 }
@@ -58,55 +77,69 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: default;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--faint) 82%, transparent);
+}
+
+select option {
+  background: var(--surface-0);
+  color: var(--text);
+}
+
 a {
   color: var(--accent);
   text-decoration: none;
 }
 
 a:hover {
-  text-shadow: 0 0 calc(6px * var(--glow-strength)) var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 code, pre, kbd {
   font-family: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
-/* --- theme crossfade -----------------------------------------------------------
-   data-theme swaps swap a dozen vars at once; a short color transition makes
-   /theme feel like retuning a tube instead of cutting the feed. Only
-   colors/borders/shadows transition — layout stays instant. */
-html {
-  transition: background-color 0.3s ease;
-}
+/* --- theme crossfade & tactile interaction transitions ---------------------- */
 
 body,
 .crt-panel,
-input, textarea, button {
+.shell-cell,
+input, textarea, button, select {
   transition:
-    color 0.25s ease,
-    border-color 0.25s ease,
-    background-color 0.25s ease,
-    box-shadow 0.25s ease;
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-normal) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
 }
 
-/* --- selection ------------------------------------------------------------------ */
+/* --- selection -------------------------------------------------------------- */
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
   color: var(--text);
   text-shadow: none;
 }
 
-/* --- CRT scrollbar ----------------------------------------------------------------
-   Thin square thumb, accent-lit, barely-there track. */
+/* --- architectural scrollbar ------------------------------------------------
+   Quiet slate thumb at rest, crisp accent illumination on hover/drag. */
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted) 28%, transparent) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -114,31 +147,69 @@ input, textarea, button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 0; /* square: phosphor has no antialiasing */
+  background: color-mix(in srgb, var(--muted) 26%, transparent);
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--accent) 70%, transparent);
-  box-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 58%, transparent);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: color-mix(in srgb, var(--accent) 80%, transparent);
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-/* --- focus ------------------------------------------------------------------------ */
+/* --- precision focus ring --------------------------------------------------- */
 
 :focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 1px;
-  box-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
-/* --- shared placeholder block (scaffold compatibility) ----------------------------- */
+/* --- semantic surface & telemetry utilities --------------------------------- */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.mono-addr {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.surface-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.surface-popover {
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+}
+
+/* --- shared placeholder block (scaffold compatibility) ---------------------- */
 
 .placeholder {
   color: var(--faint);
   font-size: 12px;
   padding: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  .crt-panel,
+  .shell-cell,
+  input, textarea, button, select {
+    transition: none;
+  }
 }

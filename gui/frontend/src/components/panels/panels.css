@@ -1,5 +1,5 @@
-/* panels/panels.css — WS3 panel-level styles only. Tone colors come straight
-   from the theme tokens (styles/tokens.css); no new color values here. */
+/* panels/panels.css — Precision forensic panel styles.
+   All tones, surfaces, radii, and glows read straight from styles/tokens.css. */
 
 /* ---- shared tone utilities (color only) ---- */
 .t-accent { color: var(--accent); }
@@ -11,70 +11,113 @@
 .t-muted  { color: var(--muted); }
 .t-faint  { color: var(--faint); }
 
-.glow-ok  { color: var(--ok); text-shadow: 0 0 6px var(--ok); }
-.glow-err { color: var(--err); text-shadow: 0 0 6px var(--err); }
+/* Keep glow-ok / glow-err consistent with calibrated --glow-strength */
+.glow-ok {
+  color: var(--ok);
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--ok) 45%, transparent);
+}
+.glow-err {
+  color: var(--err);
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--err) 45%, transparent);
+}
 
-.panel-empty { font-size: 11px; padding: 4px 0; }
+.panel-empty {
+  font-size: 11px;
+  padding: 6px 2px;
+  color: var(--faint);
+}
 
 /* =============================================================
    FlowPanel — dual wires, packet particles, stage rail
    ============================================================= */
-.flow-body { min-width: 0; }
+.flow-body {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
 
 .stage-rail {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .stage-badge {
-  border: 1px solid var(--rule);
-  border-radius: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-0) 45%, transparent);
   color: var(--faint);
-  font-size: 10px;
+  font-size: 9.5px;
+  font-weight: 500;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
   padding: 1px 6px;
   white-space: nowrap;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
-.stage-on { background: rgba(255, 255, 255, 0.05); }
+.stage-on {
+  background: color-mix(in srgb, currentColor 13%, var(--surface-2));
+  font-weight: 600;
+  box-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, currentColor 22%, transparent);
+}
 
 .flow-spacer { flex: 1 1 0; }
 
-.flow-plan { color: var(--muted); font-size: 11px; white-space: nowrap; }
-.flow-plan b { color: var(--accent); font-weight: 500; }
+.flow-plan {
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+.flow-plan b { color: var(--accent); font-weight: 600; }
 .flow-plan i { color: var(--faint); font-style: normal; }
 
 .flow-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
 }
 
-.flow-row2 { margin-top: 6px; }
+.flow-row2 { margin-top: 7px; }
 
-.flow-node { white-space: nowrap; font-size: 12px; }
+.flow-node {
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
 
 .flow-model-wrap { position: relative; white-space: nowrap; }
 
 .flow-backmark {
   position: absolute;
-  left: -11px;
+  left: -10px;
   top: 50%;
   transform: translateY(-55%);
   color: var(--ok);
-  font-size: 10px;
+  font-size: 9px;
 }
 
-/* a wire is a flexible track; the arrow head rides the travel direction */
+/* Telemetry bus wire: crisp architectural rail + directional chevron */
 .wire {
   position: relative;
   flex: 1 1 40px;
   min-width: 28px;
-  height: 1em;
+  height: 1.1em;
 }
 
 .wire::before {
@@ -83,34 +126,34 @@
   left: 0;
   right: 0;
   top: 50%;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid color-mix(in srgb, var(--rule) 90%, transparent);
 }
 
 .wire::after {
   content: '▶';
   position: absolute;
-  right: -4px;
+  right: -3px;
   top: 50%;
-  transform: translateY(-56%);
+  transform: translateY(-55%);
   color: var(--faint);
-  font-size: 10px;
+  font-size: 8.5px;
 }
 
 .wire-left::after {
   content: '◀';
   right: auto;
-  left: -4px;
+  left: -3px;
 }
 
 .packet {
   position: absolute;
   top: 50%;
-  width: 5px;
-  height: 5px;
-  margin: -2px 0 0 -2px;
-  border-radius: 50%;
+  width: 6px;
+  height: 3px;
+  margin: -1px 0 0 -3px;
+  border-radius: 999px;
   background: var(--wire-tone);
-  box-shadow: 0 0 5px var(--wire-tone);
+  box-shadow: 0 0 calc(6px * var(--glow-strength)) var(--wire-tone);
   animation: packet-right 1.6s linear infinite;
 }
 
@@ -133,7 +176,7 @@
   color: var(--muted);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .flow-sub {
@@ -141,7 +184,8 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 10px;
-  margin: 2px 2px 0;
+  margin: 4px 2px 0;
+  letter-spacing: 0.02em;
 }
 
 .flow-tool-line {
@@ -154,57 +198,101 @@
   white-space: nowrap;
 }
 
-.flow-tally { white-space: nowrap; }
+.flow-tally {
+  white-space: nowrap;
+  padding: 0 5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  font-size: 10.5px;
+}
 
 .flow-error {
-  margin-top: 6px;
-  padding-top: 4px;
-  border-top: 1px solid var(--rule);
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--err) 45%, var(--rule));
+  border-left: 2px solid var(--err);
+  border-radius: var(--radius-xs);
+  background: var(--err-soft);
   font-size: 11px;
   color: var(--err);
-  text-shadow: 0 0 6px var(--err);
   word-break: break-word;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* freeze packets at their contract offsets (inline `left`) */
   .packet { animation: none; }
 }
 
 /* =============================================================
-   ToolsPanel — tree tool-run cards
+   ToolsPanel — structured forensic tool-run cards
    ============================================================= */
 .tools-head {
   display: flex;
-  gap: 12px;
-  font-size: 11px;
-  margin-bottom: 6px;
+  align-items: center;
+  gap: 10px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .tool-cards {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
-.tool-card { font-size: 11px; }
+.tool-card {
+  font-size: 11px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid color-mix(in srgb, var(--ok) 55%, var(--rule));
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-2) 52%, transparent);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.tool-card:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+}
 
 .tool-line {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
 }
 
-.tool-name { white-space: nowrap; }
-
-/* running row: the whole header line hums in accent */
-.tool-running .tool-line:first-child {
-  color: var(--accent);
-  text-shadow: 0 0 6px var(--accent);
+.tool-name {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text);
 }
 
+/* running row: crisp accent left bar + subtle luminous highlight */
+.tool-running {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--rule));
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-2));
+}
+
+.tool-running .tool-line:first-child {
+  color: var(--accent);
+  text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.tool-running .tool-name { color: var(--accent); }
 .tool-running .tool-line:first-child .t-faint { text-shadow: none; }
+
+.tool-failed {
+  border-color: color-mix(in srgb, var(--err) 45%, var(--rule));
+  border-left-color: var(--err);
+  background: color-mix(in srgb, var(--err) 6%, var(--surface-2));
+}
 
 .tool-failed .tool-name { color: var(--err); }
 
@@ -214,14 +302,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 10.5px;
 }
 
 .tool-dur {
   margin-left: auto;
   white-space: nowrap;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 
-.tool-preview { color: var(--muted); }
+.tool-preview {
+  color: var(--muted);
+  margin-top: 2px;
+  font-size: 10.5px;
+}
 
 .tool-preview-text {
   min-width: 0;
@@ -239,23 +334,33 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.plan-src { font-size: 10px; }
+.plan-src {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0 5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+}
 
 .plan-kind {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 10.5px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.plan-flash { animation: plan-flash 700ms ease-out; }
+.plan-flash { animation: plan-flash 700ms var(--ease-out); }
 
 @keyframes plan-flash {
   0% {
-    text-shadow: 0 0 10px currentColor;
-    filter: brightness(1.7);
+    text-shadow: 0 0 8px currentColor;
+    filter: brightness(1.45);
   }
   100% {
     text-shadow: none;
@@ -266,25 +371,36 @@
 .plan-note {
   color: var(--muted);
   font-size: 11px;
-  border-left: 2px solid var(--rule);
-  padding-left: 6px;
-  margin: 2px 0 6px;
+  line-height: 1.45;
+  border-left: 2px solid color-mix(in srgb, var(--warn) 60%, var(--rule));
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  padding: 4px 8px;
+  margin: 2px 0 7px;
 }
 
 .plan-steps {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
-.plan-done { font-size: 11px; }
+.plan-done {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--ok-soft);
+  width: fit-content;
+}
 
 .plan-step {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
+  padding: 2px 5px;
+  border-radius: var(--radius-xs);
 }
 
 .plan-glyph { flex: 0 0 auto; }
@@ -296,8 +412,15 @@
   white-space: nowrap;
 }
 
-.plan-active { color: var(--text); }
-.plan-active .plan-glyph { text-shadow: 0 0 6px var(--accent); }
+.plan-active {
+  color: var(--text);
+  font-weight: 500;
+  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+}
+.plan-active .plan-glyph {
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--accent) 60%, transparent);
+}
 .plan-pending { color: var(--faint); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -320,25 +443,37 @@
   gap: 8px;
   background: none;
   border: none;
-  padding: 0 0 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 2px 5px;
+  margin-bottom: 4px;
   font: inherit;
   color: inherit;
   text-align: left;
-  font-size: 11px;
+  font-size: 10.5px;
   cursor: pointer;
 }
 
-.think-head-hint { margin-left: auto; }
+.think-head:hover {
+  color: var(--text);
+}
+
+.think-head-hint {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
 
 .think-body {
-  height: calc(var(--think-rows, 3) * 1.5em + 6px);
+  height: calc(var(--think-rows, 3) * 1.55em + 6px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   font-size: 11px;
-  line-height: 1.5;
-  transition: height 200ms ease;
+  line-height: 1.55;
+  transition: height 200ms var(--ease-out);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, #000 22%, #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, #000 22%, #000 100%);
 }
 
 .think-line {
@@ -346,17 +481,20 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 6px;
+  border-left: 1px solid transparent;
 }
 
 .think-newest {
   color: var(--text);
-  animation: think-in 450ms ease-out;
+  border-left-color: color-mix(in srgb, var(--violet) 72%, var(--rule));
+  animation: think-in 360ms var(--ease-out);
 }
 
 @keyframes think-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -370,24 +508,36 @@
 }
 
 /* =============================================================
-   TelePanel — telemetry rows
+   TelePanel — precision cockpit telemetry rows
    ============================================================= */
 .tele-rows {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .tele-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
-.tele-chip { white-space: nowrap; }
+.tele-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 62%, transparent);
+  font-size: 11px;
+  line-height: 1.4;
+}
 
 /* =============================================================
    Dashboard — five-panel grid
@@ -400,7 +550,7 @@
 
 .dash-grid {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto auto auto;
   grid-template-areas:

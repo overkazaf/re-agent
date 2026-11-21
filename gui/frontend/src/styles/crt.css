@@ -1,20 +1,17 @@
 /* ============================================================================
-   0xAF·RE — CRT effects layer (WS2)
+   0xAF·RE — Refined CRT & Architectural Instrument Chrome
 
-   Scanlines, phosphor glow, vignette, subpixel flicker, power-on. Everything
-   reads its intensity from tokens.css (--glow-strength, --scanline-opacity)
-   so each theme controls how hard its tube blooms (amber blooms hard, mono
-   stays flat).
+   Calibrated phosphor atmosphere: razor-sharp 1px hairlines, subtle optical
+   luminance halos that preserve dense RE text legibility, flush geometric
+   corner ticks, disciplined panel tiering, and rock-steady calm optics.
 
-   Overlay conventions: .crt-scanlines / .crt-vignette are fixed full-viewport
-   layers with pointer-events: none — AppShell mounts them once; every
-   animation here is disabled under prefers-reduced-motion.
+   All existing class names preserved for full backwards compatibility.
    ========================================================================== */
 
 /* --- screen overlays -------------------------------------------------------- */
 
-/* Slow-drifting scanlines. ~3px period: 1px lit, 2px dark, plus a second
-   gradient moving at a different rate for a subtle moiré-free roll. */
+/* Ultra-delicate micro-scanlines — felt as subtle CRT texture, never obscuring
+   10-12px hex dumps, disassembly, or SVG telemetry graphs. */
 .crt-scanlines {
   position: fixed;
   inset: 0;
@@ -23,45 +20,46 @@
   opacity: var(--scanline-opacity);
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.03) 0px,
-    rgba(255, 255, 255, 0.03) 1px,
-    transparent 1px,
-    transparent 3px
+    rgba(255, 255, 255, 0.018) 0px,
+    rgba(255, 255, 255, 0.018) 1px,
+    rgba(0, 0, 0, 0.065) 1px,
+    rgba(0, 0, 0, 0.065) 2px,
+    transparent 2px,
+    transparent 4px
   );
 }
 
+/* Subtle top-bezel glass reflection instead of dark horizontal banding */
 .crt-scanlines::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 44px,
-    rgba(0, 0, 0, 0.14) 45px,
-    transparent 48px
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 4%, transparent) 0%,
+    transparent 14%,
+    transparent 88%,
+    rgba(0, 0, 0, 0.14) 100%
   );
 }
 
-/* Edge darkening — the tube falls off toward the bezel. */
+/* Peripheral monitor vignette — gentle outer depth framing without dimming rails */
 .crt-vignette {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9998;
   background: radial-gradient(
-    ellipse at center,
-    transparent 58%,
-    rgba(0, 0, 0, 0.22) 86%,
-    rgba(0, 0, 0, 0.42) 100%
+    ellipse 82% 78% at 50% 48%,
+    transparent 64%,
+    rgba(0, 0, 0, 0.15) 89%,
+    rgba(0, 0, 0, 0.34) 100%
   );
 }
 
-/* --- phosphor glow utilities -------------------------------------------------
-   Double-layer text-shadow: a tight core halo + a wide faint bloom, both
-   scaled by the theme's --glow-strength (calc keeps the knob per-theme).
-   Color comes from color-mix so we derive halos from the exact palette RGB
-   instead of hand-picking shadow colors per theme. */
+/* --- phosphor glow utilities ------------------------------------------------
+   Tight optical luminance lift: sharp character edges with a restrained halo,
+   scaled by --glow-strength so dense telemetry stays crisp at all sizes. */
 
 .glow-accent,
 .glow-violet,
@@ -70,8 +68,8 @@
 .glow-err,
 .glow-text {
   text-shadow:
-    0 0 calc(3px * var(--glow-strength)) currentColor,
-    0 0 calc(10px * var(--glow-strength)) color-mix(in srgb, currentColor 45%, transparent);
+    0 0 calc(2px * var(--glow-strength)) color-mix(in srgb, currentColor 38%, transparent),
+    0 0 calc(9px * var(--glow-strength)) color-mix(in srgb, currentColor 18%, transparent);
 }
 
 .glow-accent { color: var(--accent); }
@@ -82,62 +80,57 @@
 .glow-text   { color: var(--text); }
 .glow-muted {
   color: var(--muted);
-  text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--muted) 30%, transparent);
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--muted) 18%, transparent);
 }
 
-/* Panel titles get a wider, dimmer bloom than body glow text. */
 .glow-title {
   color: var(--accent);
   text-shadow:
-    0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--accent) 80%, transparent),
-    0 0 calc(14px * var(--glow-strength)) color-mix(in srgb, var(--accent) 30%, transparent);
+    0 0 calc(3px * var(--glow-strength)) color-mix(in srgb, var(--accent) 52%, transparent),
+    0 0 calc(12px * var(--glow-strength)) color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
-/* --- flicker ------------------------------------------------------------------
-   Subpixel brightness wander. Kept near-invisible (99%+ opacity) so it reads
-   as phosphor, not as a display fault; steps() avoids smooth pulsing. */
+/* --- calm steady optics (.crt-flicker retained as stable compatibility hook) - */
+
 .crt-flicker {
-  animation: crt-flicker 4s steps(1) infinite;
+  /* Intentionally rock-steady in default refined instrument mode: avoids
+     full-viewport opacity repaints and long-session visual fatigue. */
+  opacity: 1;
+}
+
+:root[data-crt='vivid'] .crt-flicker {
+  animation: crt-flicker 5s steps(1) infinite;
 }
 
 @keyframes crt-flicker {
   0%, 100% { opacity: 1; }
-  7%  { opacity: 0.986; }
-  9%  { opacity: 1; }
-  38% { opacity: 0.99; }
-  41% { opacity: 1; }
-  67% { opacity: 0.988; }
-  69% { opacity: 1; }
-  83% { opacity: 0.995; }
-  85% { opacity: 1; }
+  12% { opacity: 0.992; }
+  14% { opacity: 1; }
+  61% { opacity: 0.99; }
+  63% { opacity: 1; }
 }
 
-/* --- power-on ------------------------------------------------------------------
-   Tube warm-up: vertical collapse blooming open, brightness overshooting then
-   settling. ~400ms, applied to a full-screen container (BootSplash). */
+/* --- power-on (BootSplash entrance) ----------------------------------------- */
+
 .crt-power-on {
   transform-origin: center center;
-  animation: crt-power-on 0.42s cubic-bezier(0.16, 0.9, 0.24, 1) both;
+  animation: crt-power-on 0.38s var(--ease-out) both;
 }
 
 @keyframes crt-power-on {
   0% {
-    transform: scaleY(0.004) scaleX(0.7);
-    filter: brightness(6);
+    transform: scaleY(0.01) scaleX(0.86);
+    filter: brightness(3.2);
     opacity: 0;
   }
-  32% {
-    transform: scaleY(0.02) scaleX(1);
-    filter: brightness(5);
+  38% {
+    transform: scaleY(0.08) scaleX(1);
+    filter: brightness(2.4);
     opacity: 1;
   }
-  58% {
-    transform: scaleY(0.65);
-    filter: brightness(1.9);
-  }
-  82% {
-    transform: scaleY(1.02);
-    filter: brightness(1.15);
+  72% {
+    transform: scaleY(1.01);
+    filter: brightness(1.18);
   }
   100% {
     transform: scaleY(1) scaleX(1);
@@ -145,37 +138,61 @@
   }
 }
 
-/* --- panel chrome (consumed by crt/PanelBox, shell/AppShell) ------------------- */
+/* --- panel chrome (PanelBox, Dashboard, Side Rail) -------------------------- */
 
 .crt-panel {
+  --panel-tone: var(--rule);
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  flex: 1 1 auto; /* fills flex-column layouts; inert inside grid/block parents */
-  background: var(--bg-panel);
-  border: 1px solid var(--rule);
+  flex: 1 1 auto;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--accent) 7%, transparent),
-    inset 0 0 calc(24px * var(--glow-strength)) color-mix(in srgb, var(--accent) 4%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent),
+    var(--shadow-panel);
 }
 
 .crt-panel-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  padding: 4px 10px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  gap: 8px;
+  min-height: var(--header-height);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 52%, transparent);
+  border-top-left-radius: calc(var(--radius-sm) - 1px);
+  border-top-right-radius: calc(var(--radius-sm) - 1px);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
   color: var(--muted);
   white-space: pre;
   user-select: none;
 }
 
+.crt-panel-title-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.crt-panel-title-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .crt-panel-title--toggle {
   cursor: pointer;
+}
+
+.crt-panel-title--toggle:hover {
+  background: color-mix(in srgb, var(--panel-tone) 8%, var(--surface-2));
 }
 
 .crt-panel-title--toggle:hover .crt-panel-fold-btn {
@@ -183,11 +200,23 @@
 }
 
 .crt-panel-fold-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-xs);
   color: var(--faint);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
-  padding: 0 2px;
+  padding: 0;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.crt-panel-fold-btn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
 }
 
 .crt-panel--collapsed {
@@ -196,9 +225,202 @@
 
 .crt-panel--collapsed > .crt-panel-title {
   border-bottom: none;
+  border-radius: calc(var(--radius-sm) - 1px);
 }
 
-/* --- resizable split handles & collapsed strips ------------------------------- */
+.crt-panel-body {
+  padding: 8px 10px;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Accent variants — calm unified architectural frame; semantic color lives in
+   the crisp left indicator stripe, corner ticks, and subtle header accent wash
+   rather than competing bright neon outlines on every panel. */
+.crt-panel--accent {
+  --panel-tone: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--rule));
+}
+.crt-panel--violet {
+  --panel-tone: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 18%, var(--rule));
+}
+.crt-panel--ok {
+  --panel-tone: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 18%, var(--rule));
+}
+.crt-panel--warn {
+  --panel-tone: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 20%, var(--rule));
+}
+.crt-panel--err {
+  --panel-tone: var(--err);
+  border-color: color-mix(in srgb, var(--err) 28%, var(--rule));
+}
+
+.crt-panel--accent > .crt-panel-title,
+.crt-panel--violet > .crt-panel-title,
+.crt-panel--ok > .crt-panel-title,
+.crt-panel--warn > .crt-panel-title,
+.crt-panel--err > .crt-panel-title {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--panel-tone) 9%, var(--surface-2)) 0%,
+    color-mix(in srgb, var(--panel-tone) 2.5%, var(--surface-2)) 48%,
+    color-mix(in srgb, var(--surface-2) 65%, transparent) 100%
+  );
+  border-bottom-color: color-mix(in srgb, var(--panel-tone) 18%, var(--rule));
+}
+
+/* Primary tier: crisp 2px left status hairline */
+.crt-panel--tier-primary.crt-panel--accent,
+.crt-panel--tier-primary.crt-panel--violet,
+.crt-panel--tier-primary.crt-panel--ok,
+.crt-panel--tier-primary.crt-panel--warn,
+.crt-panel--tier-primary.crt-panel--err {
+  border-left: 2px solid color-mix(in srgb, var(--panel-tone) 76%, var(--rule));
+}
+
+/* Spotlight tier (Governance Graph & Evidence Ledger): elevated instrument focus */
+.crt-panel--tier-spotlight {
+  border-left: 2px solid var(--panel-tone);
+  border-color: color-mix(in srgb, var(--panel-tone) 32%, var(--rule));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-tone) 4.5%, var(--surface-1)) 0%,
+    var(--surface-1) 92px
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--panel-tone) 20%, transparent),
+    0 4px 18px rgba(0, 0, 0, 0.34);
+}
+
+.crt-panel--tier-spotlight > .crt-panel-title {
+  min-height: 30px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--panel-tone) 18%, var(--surface-2)) 0%,
+    color-mix(in srgb, var(--panel-tone) 6%, var(--surface-2)) 65%,
+    var(--surface-2) 100%
+  );
+}
+
+/* Secondary support tier (TELE / QUEUE / NOTICES): calm recessed surface */
+.crt-panel--tier-secondary {
+  background: color-mix(in srgb, var(--surface-0) 48%, var(--surface-1));
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+.crt-panel--tier-secondary > .crt-panel-title {
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.crt-panel-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid color-mix(in srgb, currentColor 36%, var(--rule));
+  background: color-mix(in srgb, currentColor 11%, var(--surface-0));
+  text-shadow: none;
+  font-weight: 600;
+}
+
+/* Precision architectural 1px corner L-brackets flush to panel corners */
+.crt-panel-corner {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  opacity: 0.85;
+}
+
+.crt-panel-corner.tl {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid currentColor;
+  border-left: 1.5px solid currentColor;
+  border-top-left-radius: var(--radius-sm);
+}
+.crt-panel-corner.tr {
+  top: -1px;
+  right: -1px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  border-top-right-radius: var(--radius-sm);
+}
+.crt-panel-corner.bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 1.5px solid currentColor;
+  border-left: 1.5px solid currentColor;
+  border-bottom-left-radius: var(--radius-sm);
+}
+.crt-panel-corner.br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+/* --- corner brackets (CornerFrame) ------------------------------------------ */
+
+.corner-frame {
+  position: relative;
+  padding: 6px;
+  border-radius: var(--radius-xs);
+}
+
+.corner-frame > .corner-frame-tick {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  color: color-mix(in srgb, var(--accent) 55%, var(--rule));
+  pointer-events: none;
+  user-select: none;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.corner-frame:hover > .corner-frame-tick {
+  color: var(--accent);
+}
+
+.corner-frame > .corner-frame-tick.tl {
+  top: 0;
+  left: 0;
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+}
+.corner-frame > .corner-frame-tick.tr {
+  top: 0;
+  right: 0;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+}
+.corner-frame > .corner-frame-tick.bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+}
+.corner-frame > .corner-frame-tick.br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+}
+
+/* --- resizable split handles & collapsed strips ----------------------------- */
 
 .split-handle {
   position: relative;
@@ -222,24 +444,41 @@
 .split-handle::after {
   content: '';
   display: block;
-  background: transparent;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--rule) 50%, transparent);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    width var(--dur-fast) var(--ease-out),
+    height var(--dur-fast) var(--ease-out);
 }
 
 .split-handle--col::after {
-  width: 2px;
-  height: 100%;
+  width: 1px;
+  height: 36px;
 }
 
 .split-handle--row::after {
-  height: 2px;
-  width: 100%;
+  height: 1px;
+  width: 48px;
 }
 
 .split-handle:hover::after,
 .split-handle--active::after {
   background: var(--accent);
-  box-shadow: 0 0 calc(8px * var(--glow-strength)) var(--accent);
+  box-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+.split-handle--col:hover::after,
+.split-handle--col.split-handle--active::after {
+  width: 2px;
+  height: 100%;
+}
+
+.split-handle--row:hover::after,
+.split-handle--row.split-handle--active::after {
+  height: 2px;
+  width: 100%;
 }
 
 .collapsed-rail-btn {
@@ -248,20 +487,23 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  width: 26px;
-  flex: 0 0 26px;
-  padding: 8px 0;
-  border: 1px solid var(--rule);
-  background: var(--bg-panel);
+  width: 28px;
+  flex: 0 0 28px;
+  padding: 10px 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
   color: var(--muted);
   font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.14em;
   cursor: pointer;
   user-select: none;
 }
 
 .collapsed-rail-btn:hover {
-  border-color: var(--accent);
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-2));
   color: var(--accent);
 }
 
@@ -275,238 +517,185 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 3px 10px;
-  border: 1px solid var(--rule);
-  background: var(--bg-panel);
+  min-height: var(--header-height);
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
+  font-weight: 500;
   letter-spacing: 0.1em;
   cursor: pointer;
   user-select: none;
 }
 
 .collapsed-bar-btn:hover {
-  border-color: var(--accent);
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-2));
   color: var(--accent);
 }
 
 .layout-toggle-btn {
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
   color: var(--muted);
   font-size: 11px;
-  padding: 1px 6px;
+  line-height: 1.35;
+  padding: 2px 7px;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .layout-toggle-btn:hover {
-  border-color: var(--accent-dim);
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
   color: var(--text);
 }
 
 .layout-toggle-btn--off {
   color: var(--faint);
-  opacity: 0.65;
+  background: transparent;
+  opacity: 0.72;
   border-style: dashed;
 }
 
-.crt-panel-body {
-  padding: 6px 10px;
-  overflow: auto;
-  min-height: 0;
-  flex: 1;
-}
+/* --- status badge & crisp pulse --------------------------------------------- */
 
-/* Accent variant tints the frame, header wash, and left indicator bar so focal
-   functional zones stand apart immediately from secondary telemetry blocks. */
-.crt-panel {
-  --panel-tone: var(--rule);
-}
-
-.crt-panel--accent {
-  --panel-tone: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 52%, var(--rule));
-}
-.crt-panel--violet {
-  --panel-tone: var(--violet);
-  border-color: color-mix(in srgb, var(--violet) 54%, var(--rule));
-}
-.crt-panel--ok {
-  --panel-tone: var(--ok);
-  border-color: color-mix(in srgb, var(--ok) 56%, var(--rule));
-}
-.crt-panel--warn {
-  --panel-tone: var(--warn);
-  border-color: color-mix(in srgb, var(--warn) 56%, var(--rule));
-}
-.crt-panel--err {
-  --panel-tone: var(--err);
-  border-color: color-mix(in srgb, var(--err) 62%, var(--rule));
-}
-
-.crt-panel--accent > .crt-panel-title,
-.crt-panel--violet > .crt-panel-title,
-.crt-panel--ok > .crt-panel-title,
-.crt-panel--warn > .crt-panel-title,
-.crt-panel--err > .crt-panel-title {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--panel-tone) 17%, transparent) 0%,
-    color-mix(in srgb, var(--panel-tone) 5%, transparent) 55%,
-    transparent 100%
-  );
-  border-bottom-color: color-mix(in srgb, var(--panel-tone) 36%, var(--rule));
-  font-weight: 600;
-}
-
-/* Primary panels carry a crisp 2px left indicator stripe when accented */
-.crt-panel--tier-primary.crt-panel--accent,
-.crt-panel--tier-primary.crt-panel--violet,
-.crt-panel--tier-primary.crt-panel--ok,
-.crt-panel--tier-primary.crt-panel--warn,
-.crt-panel--tier-primary.crt-panel--err {
-  border-left: 2px solid color-mix(in srgb, var(--panel-tone) 82%, var(--rule));
-}
-
-/* Spotlight panels (Governance Graph & Evidence Ledger): elevated contrast + ambient halo */
-.crt-panel--tier-spotlight {
-  border-left: 3px solid var(--panel-tone);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-tone) 7%, var(--bg-panel)) 0%,
-    var(--bg-panel) 110px
-  );
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--panel-tone) 28%, transparent),
-    0 0 calc(16px * var(--glow-strength)) color-mix(in srgb, var(--panel-tone) 11%, transparent);
-}
-
-.crt-panel--tier-spotlight > .crt-panel-title {
-  padding: 5px 10px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--panel-tone) 24%, transparent) 0%,
-    color-mix(in srgb, var(--panel-tone) 7%, transparent) 68%,
-    transparent 100%
-  );
-}
-
-/* Secondary support panels (TELE / QUEUE / NOTICES): recessed slate so focal zones pop */
-.crt-panel--tier-secondary {
-  background: color-mix(in srgb, var(--bg) 55%, var(--bg-panel));
-  border-color: color-mix(in srgb, var(--rule) 72%, transparent);
-  box-shadow: none;
-}
-
-.crt-panel-badge {
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  padding: 0 5px;
-  border: 1px solid color-mix(in srgb, currentColor 48%, var(--rule));
-  background: color-mix(in srgb, currentColor 12%, rgba(3, 6, 10, 0.7));
-  text-shadow: none;
-  font-weight: 600;
-}
-
-/* ╭╮╰╯ glyphs sit on the square border corners (TUI box hybrid). */
-.crt-panel-corner {
-  position: absolute;
-  font-size: 12px;
-  line-height: 1;
-  user-select: none;
-  text-shadow: 0 0 calc(5px * var(--glow-strength)) currentColor;
-}
-
-.crt-panel-corner.tl { top: -6px; left: -5px; }
-.crt-panel-corner.tr { top: -6px; right: -5px; }
-.crt-panel-corner.bl { bottom: -6px; left: -5px; }
-.crt-panel-corner.br { bottom: -6px; right: -5px; }
-
-/* --- corner brackets (CornerFrame) -------------------------------------------- */
-
-.corner-frame {
+.status-badge {
   position: relative;
-  padding: 4px;
-}
-
-.corner-frame > .corner-frame-tick {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  color: var(--accent-dim);
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
   line-height: 1;
-  user-select: none;
+  font-size: 10px;
+  flex-shrink: 0;
 }
-
-.corner-frame > .corner-frame-tick.tl { top: -2px; left: -2px; }
-.corner-frame > .corner-frame-tick.tr { top: -2px; right: -2px; }
-.corner-frame > .corner-frame-tick.bl { bottom: -2px; left: -2px; }
-.corner-frame > .corner-frame-tick.br { bottom: -2px; right: -2px; }
-
-/* --- status badge breathing ---------------------------------------------------- */
 
 .status-badge--ok {
   color: var(--ok);
-  text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent);
-  animation: badge-breathe 2.6s ease-in-out infinite;
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--ok) 60%, transparent);
+  animation: badge-breathe 2.4s ease-in-out infinite;
+}
+
+.status-badge--ok::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);
+  animation: badge-ring 2.4s var(--ease-out) infinite;
+  pointer-events: none;
 }
 
 @keyframes badge-breathe {
   0%, 100% {
+    opacity: 0.88;
     text-shadow: 0 0 calc(3px * var(--glow-strength)) color-mix(in srgb, var(--ok) 35%, transparent);
   }
   50% {
-    text-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--ok) 75%, transparent);
+    opacity: 1;
+    text-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--ok) 72%, transparent);
+  }
+}
+
+@keyframes badge-ring {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.75;
+  }
+  70% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
   }
 }
 
 .status-badge--pending {
   color: var(--warn);
-  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--warn) 45%, transparent);
+  text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--warn) 48%, transparent);
 }
 
 .status-badge--off {
   color: var(--faint);
 }
 
-/* --- spinner -------------------------------------------------------------------- */
+/* --- progress chip ---------------------------------------------------------- */
+
+.crt-progress-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: pre;
+  font-variant-numeric: tabular-nums;
+}
+
+.crt-progress-chip__bar {
+  display: inline-flex;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+.crt-progress-chip__off {
+  color: color-mix(in srgb, var(--faint) 55%, var(--rule));
+}
+
+.crt-progress-chip__count {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.crt-progress-chip__pct {
+  color: var(--faint);
+  font-size: 10px;
+}
+
+/* --- spinner ---------------------------------------------------------------- */
 
 .crt-spinner {
   display: inline-block;
+  width: 1ch;
+  text-align: center;
   white-space: pre;
+  font-variant-numeric: tabular-nums;
 }
 
-.crt-spinner--accent { color: var(--accent); text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--accent) 55%, transparent); }
-.crt-spinner--violet { color: var(--violet); text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--violet) 55%, transparent); }
-.crt-spinner--ok     { color: var(--ok);     text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent); }
-.crt-spinner--warn   { color: var(--warn);   text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--warn) 55%, transparent); }
-.crt-spinner--err    { color: var(--err);    text-shadow: 0 0 calc(7px * var(--glow-strength)) color-mix(in srgb, var(--err) 55%, transparent); }
+.crt-spinner--accent { color: var(--accent); text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--accent) 48%, transparent); }
+.crt-spinner--violet { color: var(--violet); text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--violet) 48%, transparent); }
+.crt-spinner--ok     { color: var(--ok);     text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--ok) 48%, transparent); }
+.crt-spinner--warn   { color: var(--warn);   text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--warn) 48%, transparent); }
+.crt-spinner--err    { color: var(--err);    text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--err) 48%, transparent); }
 
-/* --- shell chrome (consumed by shell/AppShell, shell/TopBar) ---------------------- */
+/* --- shell chrome (AppShell, TopBar) ---------------------------------------- */
 
-/* Inset instrument cells: panel wash + hairline rule + a single lit top edge,
-   like modules screwed into a rack. */
 .shell-cell {
   min-width: 0;
   min-height: 0;
-  background: var(--bg-panel);
-  border: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 3.5%, transparent);
 }
 
 .shell-cell--nav {
-  background: color-mix(in srgb, var(--bg) 48%, var(--bg-panel));
-  border-color: color-mix(in srgb, var(--rule) 80%, transparent);
+  background: color-mix(in srgb, var(--surface-0) 62%, var(--surface-1));
+  border-color: var(--border-subtle);
 }
 
 .shell-cell--focus {
-  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, var(--rule));
+  border-top: 2px solid color-mix(in srgb, var(--accent) 62%, var(--rule));
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 4%, var(--bg-panel)) 0%,
-    var(--bg-panel) 96px
+    color-mix(in srgb, var(--accent) 3.5%, var(--surface-1)) 0%,
+    var(--surface-1) 88px
   );
 }
 
@@ -514,38 +703,52 @@
   border-top: 2px solid color-mix(in srgb, var(--ok) 58%, var(--rule));
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--ok) 4%, var(--bg-panel)) 0%,
-    var(--bg-panel) 96px
+    color-mix(in srgb, var(--ok) 3.5%, var(--surface-1)) 0%,
+    var(--surface-1) 88px
   );
 }
 
 .shell-cell--transcript {
-  background: color-mix(in srgb, var(--bg) 38%, var(--bg-panel));
-  border-left: 2px solid color-mix(in srgb, var(--violet) 42%, var(--rule));
+  background: color-mix(in srgb, var(--surface-0) 44%, var(--surface-1));
+  border-left: 2px solid color-mix(in srgb, var(--violet) 48%, var(--rule));
 }
 
 .shell-cell--prompt {
-  border-color: color-mix(in srgb, var(--accent) 52%, var(--rule));
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--rule));
   border-left: 3px solid var(--accent);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--accent) 8%, var(--bg-panel)) 0%,
-    var(--bg-panel) 45%
+    color-mix(in srgb, var(--accent) 7%, var(--surface-1)) 0%,
+    var(--surface-1) 38%
   );
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--accent) 22%, transparent),
-    0 0 calc(12px * var(--glow-strength)) color-mix(in srgb, var(--accent) 8%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent),
+    0 2px 14px rgba(0, 0, 0, 0.28);
+}
+
+.shell-cell--prompt:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 78%, var(--rule));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 28%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 4px 18px rgba(0, 0, 0, 0.34);
 }
 
 .shell-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 65%, transparent) 0%,
+    color-mix(in srgb, var(--surface-1) 45%, transparent) 100%
+  );
+  border-radius: var(--radius-sm);
 }
 
 .topbar-logo {
-  font-size: 13px;
+  font-size: 12.5px;
   letter-spacing: 0.08em;
   white-space: pre;
   display: inline-flex;
@@ -556,28 +759,51 @@
 .topbar-live {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 7px;
+  border-radius: var(--radius-xs);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--rule));
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
 .topbar-live-dot {
-  animation: live-breathe 2s ease-in-out infinite;
+  animation: live-breathe 2.2s ease-in-out infinite;
   text-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 @keyframes live-breathe {
   0%, 100% {
-    opacity: 0.75;
+    opacity: 0.72;
     text-shadow: 0 0 calc(3px * var(--glow-strength)) color-mix(in srgb, var(--accent) 35%, transparent);
   }
   50% {
     opacity: 1;
-    text-shadow: 0 0 calc(9px * var(--glow-strength)) color-mix(in srgb, var(--accent) 70%, transparent);
+    text-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, var(--accent) 70%, transparent);
   }
 }
 
-/* --- boot splash ----------------------------------------------------------------- */
+/* --- boot splash ------------------------------------------------------------ */
+
+.boot-splash-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 28px;
+}
+
+.boot-splash-card {
+  position: relative;
+  width: min(520px, 92vw);
+  padding: 24px 28px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+}
 
 .boot-logo {
   margin: 0;
@@ -585,23 +811,36 @@
   line-height: 1.15;
   color: var(--accent);
   text-shadow:
-    0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--accent) 70%, transparent),
-    0 0 calc(18px * var(--glow-strength)) color-mix(in srgb, var(--accent) 28%, transparent);
-  animation: boot-logo-in 1.6s ease-out both;
+    0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 calc(14px * var(--glow-strength)) color-mix(in srgb, var(--accent) 22%, transparent);
+  animation: boot-logo-in 1.2s var(--ease-out) both;
   white-space: pre;
 }
 
 @keyframes boot-logo-in {
-  0%   { opacity: 0; filter: brightness(3); }
-  45%  { opacity: 1; filter: brightness(1.35); }
-  100% { opacity: 0.92; filter: brightness(1); }
+  0%   { opacity: 0; filter: brightness(2.2); }
+  50%  { opacity: 1; filter: brightness(1.18); }
+  100% { opacity: 0.96; filter: brightness(1); }
+}
+
+.boot-probes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .boot-probe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 12px;
   color: var(--ok);
-  text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--ok) 40%, transparent);
-  animation: boot-probe-in 0.24s ease-out both;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--ok) 35%, transparent);
+  animation: boot-probe-in 0.2s var(--ease-out) both;
 }
 
 .boot-probe .boot-probe-fail {
@@ -624,8 +863,9 @@
 
 .boot-cursor {
   display: inline-block;
+  margin-top: 8px;
   color: var(--accent);
-  animation: boot-cursor-blink 1.1s steps(1) infinite;
+  animation: boot-cursor-blink 1.05s steps(1) infinite;
 }
 
 @keyframes boot-cursor-blink {
@@ -635,11 +875,88 @@
 
 .boot-tagline {
   color: var(--faint);
-  letter-spacing: 0.14em;
-  animation: boot-logo-in 2.2s ease-out both;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 8px;
+  margin-bottom: 14px;
+  animation: boot-logo-in 1.5s var(--ease-out) both;
 }
 
-/* --- reduced motion: every animation above degrades to its static end-state ----- */
+/* --- 3D Forensic Theater HTML HUD cards (shared styles for three/* overlays) - */
+
+.theater-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-3) 86%, transparent);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+.theater-chip--active {
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--rule));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-3));
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.52),
+    0 0 calc(10px * var(--glow-strength)) color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.theater-chip--interactive {
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.theater-chip--interactive:hover {
+  border-color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 14%, var(--surface-3));
+  transform: translateY(-1px);
+}
+
+.theater-zone-code {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  padding-right: 5px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.theater-zone-name {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.theater-hyp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-3) 88%, transparent);
+  border: 1px solid var(--border-default);
+  border-left-width: 2.5px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- reduced motion: degrade all animations cleanly to static end-states ---- */
 
 @media (prefers-reduced-motion: reduce) {
   .crt-scanlines,
@@ -661,16 +978,11 @@
   }
 
   .boot-logo,
-  .boot-tagline {
-    animation: none;
-    opacity: 0.92;
-    filter: none;
-  }
-
-  .boot-probe,
-  .boot-tagline {
+  .boot-tagline,
+  .boot-probe {
     animation: none;
     opacity: 1;
+    filter: none;
     transform: none;
   }
 
@@ -681,12 +993,17 @@
 
   .status-badge--ok {
     animation: none;
-    text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--ok) 55%, transparent);
+    text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--ok) 48%, transparent);
+  }
+
+  .status-badge--ok::after {
+    animation: none;
+    display: none;
   }
 
   .topbar-live-dot {
     animation: none;
     opacity: 1;
-    text-shadow: 0 0 calc(5px * var(--glow-strength)) color-mix(in srgb, var(--accent) 55%, transparent);
+    text-shadow: 0 0 calc(4px * var(--glow-strength)) color-mix(in srgb, var(--accent) 48%, transparent);
   }
 }

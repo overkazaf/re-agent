@@ -1,7 +1,5 @@
-// Panel chrome: square CSS border + ╭╮╰╯ phosphor corner glyphs + glowing
-// title, per the TUI box language (internal/ui/hud.go boxTL/TR/BL/BR).
-// Supports per-panel folding via the header toggle so operators can collapse
-// busy panels (e.g. FLOW / TOOLS / NOTICES) when working on smaller windows.
+// Panel chrome: architectural 1px frame + flush L-bracket corner ticks +
+// disciplined header bar with collapsible toggle and tiered visual weight.
 import { useState, type ReactNode } from 'react'
 import { PanelCorners, toneColor } from './corners'
 
@@ -35,8 +33,8 @@ export function PanelBox({
         onClick={collapsible ? () => setCollapsed((v) => !v) : undefined}
         title={collapsible ? (collapsed ? `展开 ${title}` : `折叠 ${title}`) : undefined}
       >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0, overflow: 'hidden' }}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{title.toUpperCase()}</span>
+        <span className="crt-panel-title-main">
+          <span className="crt-panel-title-label">{title.toUpperCase()}</span>
           {badge && <span className="crt-panel-badge">{badge}</span>}
         </span>
         {collapsible && (

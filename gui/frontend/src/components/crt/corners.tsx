@@ -1,5 +1,6 @@
-// Internal corner-glyph chrome shared by PanelBox and CornerFrame. Not part of
-// the public barrel (index.ts) — WS3/WS4 never need this directly.
+// Precision architectural corner brackets shared by PanelBox and BootSplash.
+// Uses crisp 1px CSS border L-brackets aligned flush to panel corners instead
+// of floating glyph offsets, eliminating clipping and font-metric drift.
 
 type Tone = 'accent' | 'violet' | 'ok' | 'warn' | 'err' | 'muted'
 
@@ -8,27 +9,27 @@ export function toneColor(tone: Tone): string {
   return `var(--${tone})`
 }
 
-const CORNER_GLYPHS = ['╭', '╮', '╰', '╯'] as const
 const CORNER_CLASSES = ['tl', 'tr', 'bl', 'br'] as const
 
 /**
- * Rounded box-drawing corners (╭╮╰╯) overlaid on the panel's square CSS
- * border — the TUI box hybrid: crisp 1px edges, phosphor-rounded corners.
- * Spans are absolutely positioned by .crt-panel-corner / .corner-frame-tick.
+ * Flush 1.5px architectural L-brackets positioned at the four panel corners.
+ * Spans are positioned by `.crt-panel-corner.{tl,tr,bl,br}` in crt.css.
  */
 export function PanelCorners({ tone = 'muted', className }: { tone?: Tone; className?: string }) {
   const color = toneColor(tone)
+  const bracketColor =
+    tone === 'muted'
+      ? 'color-mix(in srgb, var(--muted) 42%, var(--rule))'
+      : `color-mix(in srgb, ${color} 72%, var(--rule))`
   return (
     <>
-      {CORNER_GLYPHS.map((glyph, i) => (
+      {CORNER_CLASSES.map((pos) => (
         <span
-          key={CORNER_CLASSES[i]}
+          key={pos}
           aria-hidden
-          className={`${className ?? 'crt-panel-corner'} ${CORNER_CLASSES[i]}`}
-          style={{ color: `color-mix(in srgb, ${color} 60%, var(--rule))` }}
-        >
-          {glyph}
-        </span>
+          className={`${className ?? 'crt-panel-corner'} ${pos}`}
+          style={{ color: bracketColor }}
+        />
       ))}
     </>
   )

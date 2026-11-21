@@ -1,9 +1,10 @@
-// ThemeMaterials — 主题 CSS 变量 → three 颜色/材质参数的唯一桥梁。
-// CRT 质感：线框 + 自发光 + 透明；主题名变化时重读 computed style，
-// 缓存对象整体换新引用，消费方用 useMemo 依赖它重建材质（旧材质 dispose）。
+// ThemeMaterials — CSS design tokens -> Three.js color & material bridge.
+// Re-reads computed styles whenever the active theme changes and exposes
+// calibrated optical-glass + crisp wireframe/edge material factories.
 //
-// 注意：R3F <Canvas> 是独立 reconciler root，React context 不穿透；
-// 主题材料在 Canvas 外读取（useTheaterMaterials），再以 props 传入场景树。
+// Note: R3F <Canvas> uses a separate reconciler root where React context does
+// not cross automatically; materials are resolved outside Canvas via
+// useTheaterMaterials() and passed as props.
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { useTheme } from '../theme/ThemeContext'
@@ -15,14 +16,20 @@ export interface TheaterMaterials {
   err: THREE.Color
   violet: THREE.Color
   amber: THREE.Color
-  /** --accent-dim：暗化的主色（普通 ev 节点、次级结构） */
+  /** --accent-dim: subdued primary tone for secondary geometry */
   faint: THREE.Color
+  /** --rule: architectural grid & framing hairlines */
+  rule: THREE.Color
+  /** --muted: subdued metadata & rejected nodes */
+  muted: THREE.Color
+  /** --text: key directional highlight tint */
+  text: THREE.Color
   glowStrength: number
 }
 
 let cache: TheaterMaterials | null = null
 
-/** 从 <html> 的 CSS 变量读主题色（模块级缓存；force=true 强制重读）。 */
+/** Reads theme colors from <html> computed CSS variables (cached; force=true refreshes). */
 export function readThemeMaterials(force = false): TheaterMaterials {
   if (cache && !force) return cache
   const style = getComputedStyle(document.documentElement)
@@ -34,28 +41,31 @@ export function readThemeMaterials(force = false): TheaterMaterials {
       return new THREE.Color(fallback)
     }
   }
+  const amberRaw = style.getPropertyValue('--amber').trim() || style.getPropertyValue('--warn').trim()
   const glow = parseFloat(style.getPropertyValue('--glow-strength').trim())
   cache = {
-    bg: read('--bg', '#05080c'),
+    bg: read('--bg', '#070b11'),
     accent: read('--accent', 'rgb(34, 211, 238)'),
     ok: read('--ok', 'rgb(74, 222, 128)'),
     err: read('--err', 'rgb(248, 113, 113)'),
     violet: read('--violet', 'rgb(167, 139, 250)'),
-    amber: read('--amber', 'rgb(251, 191, 36)'),
+    amber: amberRaw ? new THREE.Color(amberRaw) : new THREE.Color('rgb(251, 191, 36)'),
     faint: read('--accent-dim', 'rgb(14, 116, 144)'),
-    glowStrength: Number.isFinite(glow) && glow > 0 ? glow : 1,
+    rule: read('--rule', 'rgb(42, 56, 76)'),
+    muted: read('--muted', 'rgb(156, 171, 192)'),
+    text: read('--text', 'rgb(232, 237, 244)'),
+    glowStrength: Number.isFinite(glow) && glow > 0 ? glow : 0.62,
   }
   return cache
 }
 
-/** Canvas 外层使用：主题切换时返回全新对象（引用变化驱动下游重建）。 */
+/** Call outside <Canvas>: returns a fresh object reference whenever theme changes. */
 export function useTheaterMaterials(): TheaterMaterials {
   const { theme } = useTheme()
-  // 主题名是唯一依赖：切换即重读 computed style。
   return useMemo(() => readThemeMaterials(true), [theme])
 }
 
-/** 挂在 Canvas 外：主题切换时刷新模块级缓存（供不便走 props 的场合直接 readThemeMaterials()）。 */
+/** Mount outside <Canvas> to keep the module cache synced on theme switches. */
 export function ThemeSync(): null {
   const { theme } = useTheme()
   useEffect(() => {
@@ -64,17 +74,48 @@ export function ThemeSync(): null {
   return null
 }
 
-/** CRT 线框自发光材质（剧场统一质感）。调用方在 useEffect 清理里 dispose。 */
+/** Crisp emissive wireframe material (dispose in caller cleanup). */
 export function makeWireMaterial(
   color: THREE.Color,
   opacity = 0.55,
-  emissiveIntensity = 0.9,
+  emissiveIntensity = 0.85,
 ): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color,
     emissive: color,
     emissiveIntensity,
     wireframe: true,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+  })
+}
+
+/**
+ * Translucent optical-glass solid core material for architectural depth &
+ * specular sheen beneath wireframe/edge cages (dispose in caller cleanup).
+ */
+export function makeGlassCoreMaterial(
+  color: THREE.Color,
+  opacity = 0.22,
+  emissiveIntensity = 0.35,
+): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color,
+    emissive: color,
+    emissiveIntensity,
+    roughness: 0.28,
+    metalness: 0.35,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+  })
+}
+
+/** Crisp razor-sharp edge-cage LineBasicMaterial (dispose in caller cleanup). */
+export function makeEdgeLineMaterial(color: THREE.Color, opacity = 0.82): THREE.LineBasicMaterial {
+  return new THREE.LineBasicMaterial({
+    color,
     transparent: true,
     opacity,
     depthWrite: false,

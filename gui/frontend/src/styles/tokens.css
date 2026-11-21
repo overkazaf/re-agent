@@ -1,40 +1,105 @@
 /* ============================================================================
-   0xAF·RE — CRT design tokens (WS2)
+   0xAF·RE — Forensic Instrument Design Tokens
 
-   The 11 tone colors are a literal transcription of internal/ui/theme.go
-   (palette structs `deck`, `amber`, `matrix`, `mono`). RGB values are the
-   source of truth; do not invent colors here — if a tone needs to change,
-   change theme.go first and mirror it.
+   Preserves all 11 legacy palette tokens + chrome variables (--accent,
+   --accent-dim, --violet, --violet-dim, --ok, --warn, --err, --text, --muted,
+   --faint, --rule, --bg, --bg-panel, --glow-strength, --scanline-opacity)
+   while introducing a 4-step surface ladder, crisp architectural borders,
+   WCAG AA+ text contrast across all 4 themes, and spacing/radius/elevation
+   scales.
 
-   Per-theme chrome tokens (--bg, --bg-panel, --glow-strength,
-   --scanline-opacity) are GUI-specific: Go has no canvas background, so these
-   set the "tube" each phosphor palette lives in.
-
-   Consumers: everything. Components read var(--accent) etc.; crt.css reads
-   --glow-strength / --scanline-opacity. Theme switching happens by setting
-   data-theme on <html> (see theme/ThemeContext.tsx).
+   Theme switching sets data-theme on <html> (see theme/ThemeContext.tsx).
+   Optional calm-atmosphere override sets data-crt="calm" | "refined" | "vivid".
    ========================================================================== */
 
-/* Default = deck, so pages that never set data-theme still render correctly. */
+/* Shared structural geometry, spacing, typography, and motion scales */
 :root {
+  /* Geometry */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  /* Spacing rhythm (4px base grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+
+  /* Instrument layout metrics */
+  --header-height: 28px;
+  --topbar-height: 36px;
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-normal: 200ms;
+  --dur-slow: 320ms;
+
+  /* Default = deck, so pages without data-theme still render crisply */
   --accent: rgb(34, 211, 238);
   --accent-dim: rgb(14, 116, 144);
   --violet: rgb(167, 139, 250);
   --violet-dim: rgb(91, 71, 156);
   --ok: rgb(74, 222, 128);
   --warn: rgb(251, 191, 36);
+  --amber: rgb(251, 191, 36);
   --err: rgb(248, 113, 113);
-  --text: rgb(229, 231, 235);
-  --muted: rgb(148, 163, 184);
-  --faint: rgb(100, 116, 139);
-  --rule: rgb(51, 65, 85);
-  --bg: #05080c;
-  --bg-panel: rgba(13, 22, 32, 0.6);
-  --glow-strength: 1;
-  --scanline-opacity: 0.4;
+
+  /* Text hierarchy (WCAG AA+ verified against --surface-1/#0d131d) */
+  --text: rgb(232, 237, 244);
+  --muted: rgb(156, 171, 192);
+  --faint: rgb(122, 138, 162);
+  --rule: rgb(42, 56, 76);
+
+  /* Legacy canvas/panel chrome */
+  --bg: #070b11;
+  --bg-panel: rgba(13, 19, 29, 0.9);
+  --glow-strength: 0.62;
+  --scanline-opacity: 0.16;
+
+  /* 4-step surface depth ladder: canvas -> panel -> elevated -> popover */
+  --surface-0: #070b11;
+  --surface-1: rgba(13, 19, 29, 0.9);
+  --surface-2: rgba(20, 29, 43, 0.94);
+  --surface-3: rgba(25, 36, 54, 0.97);
+
+  /* Semantic surface aliases */
+  --surface-canvas: var(--surface-0);
+  --surface-panel: var(--surface-1);
+  --surface-elevated: var(--surface-2);
+  --surface-popover: var(--surface-3);
+
+  /* Semantic text aliases */
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --text-tertiary: var(--faint);
+
+  /* Architectural hairline borders */
+  --border-subtle: color-mix(in srgb, var(--rule) 58%, transparent);
+  --border-default: var(--rule);
+  --border-strong: color-mix(in srgb, var(--muted) 42%, var(--rule));
+  --border-accent: color-mix(in srgb, var(--accent) 52%, var(--rule));
+
+  /* Soft semantic fills for badges, active rows, and hover states */
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --violet-soft: color-mix(in srgb, var(--violet) 12%, transparent);
+  --ok-soft: color-mix(in srgb, var(--ok) 12%, transparent);
+  --warn-soft: color-mix(in srgb, var(--warn) 13%, transparent);
+  --err-soft: color-mix(in srgb, var(--err) 14%, transparent);
+
+  /* Elevation shadows */
+  --shadow-panel: 0 2px 10px rgba(0, 0, 0, 0.28);
+  --shadow-elevated: 0 6px 22px rgba(0, 0, 0, 0.38);
+  --shadow-popover: 0 14px 40px rgba(0, 0, 0, 0.56);
 }
 
-/* deck — cyan + violet cyberdeck (theme.go:42) */
+/* deck — obsidian slate + cyan/violet forensic instrument */
 :root[data-theme='deck'] {
   --accent: rgb(34, 211, 238);
   --accent-dim: rgb(14, 116, 144);
@@ -42,72 +107,102 @@
   --violet-dim: rgb(91, 71, 156);
   --ok: rgb(74, 222, 128);
   --warn: rgb(251, 191, 36);
+  --amber: rgb(251, 191, 36);
   --err: rgb(248, 113, 113);
-  --text: rgb(229, 231, 235);
-  --muted: rgb(148, 163, 184);
-  --faint: rgb(100, 116, 139);
-  --rule: rgb(51, 65, 85);
-  --bg: #05080c;
-  --bg-panel: rgba(13, 22, 32, 0.6);
-  --glow-strength: 1;
-  --scanline-opacity: 0.4;
+  --text: rgb(232, 237, 244);
+  --muted: rgb(156, 171, 192);
+  --faint: rgb(122, 138, 162);
+  --rule: rgb(42, 56, 76);
+  --bg: #070b11;
+  --bg-panel: rgba(13, 19, 29, 0.9);
+  --surface-0: #070b11;
+  --surface-1: rgba(13, 19, 29, 0.9);
+  --surface-2: rgba(20, 29, 43, 0.94);
+  --surface-3: rgba(25, 36, 54, 0.97);
+  --glow-strength: 0.62;
+  --scanline-opacity: 0.16;
 }
 
-/* amber — amber phosphor CRT (theme.go:58); everything in the amber family,
-   only err breaks out. Warm deep-brown tube, heavy bloom. */
+/* amber — warm obsidian + amber phosphor CRT (high legibility AA+) */
 :root[data-theme='amber'] {
   --accent: rgb(255, 176, 0);
-  --accent-dim: rgb(166, 112, 0);
+  --accent-dim: rgb(172, 116, 12);
   --violet: rgb(255, 210, 127);
-  --violet-dim: rgb(140, 100, 40);
+  --violet-dim: rgb(148, 106, 44);
   --ok: rgb(255, 214, 51);
   --warn: rgb(255, 149, 0);
-  --err: rgb(255, 95, 86);
-  --text: rgb(255, 204, 102);
-  --muted: rgb(193, 143, 43);
-  --faint: rgb(125, 88, 20);
-  --rule: rgb(74, 52, 12);
-  --bg: #0c0702;
-  --bg-panel: rgba(30, 18, 5, 0.55);
-  --glow-strength: 1.25;
-  --scanline-opacity: 0.35;
+  --amber: rgb(255, 186, 42);
+  --err: rgb(255, 104, 94);
+  --text: rgb(255, 218, 138);
+  --muted: rgb(212, 164, 74);
+  --faint: rgb(166, 126, 54);
+  --rule: rgb(78, 56, 22);
+  --bg: #0b0804;
+  --bg-panel: rgba(22, 16, 8, 0.91);
+  --surface-0: #0b0804;
+  --surface-1: rgba(22, 16, 8, 0.91);
+  --surface-2: rgba(34, 24, 12, 0.95);
+  --surface-3: rgba(44, 31, 16, 0.97);
+  --glow-strength: 0.76;
+  --scanline-opacity: 0.18;
 }
 
-/* matrix — green phosphor (theme.go:73). Deep green-black tube, brisk glow. */
+/* matrix — deep emerald obsidian + crisp mint phosphor (high legibility AA+) */
 :root[data-theme='matrix'] {
   --accent: rgb(0, 255, 156);
-  --accent-dim: rgb(0, 168, 104);
+  --accent-dim: rgb(16, 168, 108);
   --violet: rgb(124, 255, 178);
-  --violet-dim: rgb(40, 120, 80);
-  --ok: rgb(0, 255, 156);
+  --violet-dim: rgb(46, 128, 86);
+  --ok: rgb(52, 245, 162);
   --warn: rgb(255, 209, 102);
-  --err: rgb(255, 107, 107);
-  --text: rgb(200, 255, 217);
-  --muted: rgb(78, 142, 106);
-  --faint: rgb(47, 92, 70);
-  --rule: rgb(30, 58, 44);
-  --bg: #030905;
-  --bg-panel: rgba(7, 26, 16, 0.55);
-  --glow-strength: 1.15;
-  --scanline-opacity: 0.45;
+  --amber: rgb(255, 209, 102);
+  --err: rgb(255, 112, 112);
+  --text: rgb(214, 252, 228);
+  --muted: rgb(126, 192, 152);
+  --faint: rgb(92, 150, 116);
+  --rule: rgb(33, 66, 48);
+  --bg: #050a07;
+  --bg-panel: rgba(10, 22, 15, 0.91);
+  --surface-0: #050a07;
+  --surface-1: rgba(10, 22, 15, 0.91);
+  --surface-2: rgba(16, 33, 23, 0.95);
+  --surface-3: rgba(21, 43, 30, 0.97);
+  --glow-strength: 0.68;
+  --scanline-opacity: 0.18;
 }
 
-/* mono — hueless, contrast-only (theme.go:89). Neutral tube, minimal bloom:
-   hierarchy must come from contrast, not from glow. */
+/* mono — precision Swiss monochrome instrument, contrast-led, near-zero bloom */
 :root[data-theme='mono'] {
-  --accent: rgb(255, 255, 255);
-  --accent-dim: rgb(160, 160, 160);
-  --violet: rgb(214, 214, 214);
-  --violet-dim: rgb(120, 120, 120);
-  --ok: rgb(235, 235, 235);
-  --warn: rgb(190, 190, 190);
+  --accent: rgb(248, 250, 252);
+  --accent-dim: rgb(156, 160, 170);
+  --violet: rgb(212, 214, 222);
+  --violet-dim: rgb(122, 126, 136);
+  --ok: rgb(236, 238, 242);
+  --warn: rgb(196, 198, 206);
+  --amber: rgb(218, 220, 226);
   --err: rgb(255, 255, 255);
-  --text: rgb(224, 224, 224);
-  --muted: rgb(150, 150, 150);
-  --faint: rgb(110, 110, 110);
-  --rule: rgb(68, 68, 68);
-  --bg: #0a0a0a;
-  --bg-panel: rgba(20, 20, 20, 0.6);
-  --glow-strength: 0.45;
-  --scanline-opacity: 0.3;
+  --text: rgb(236, 236, 240);
+  --muted: rgb(164, 164, 174);
+  --faint: rgb(126, 126, 138);
+  --rule: rgb(56, 56, 66);
+  --bg: #09090b;
+  --bg-panel: rgba(18, 18, 22, 0.92);
+  --surface-0: #09090b;
+  --surface-1: rgba(18, 18, 22, 0.92);
+  --surface-2: rgba(27, 27, 32, 0.95);
+  --surface-3: rgba(34, 34, 41, 0.98);
+  --glow-strength: 0.24;
+  --scanline-opacity: 0.1;
+}
+
+/* Optional calm atmosphere mode (for zero-scanline / ultra-clean forensic reading) */
+:root[data-crt='calm'] {
+  --glow-strength: 0.25;
+  --scanline-opacity: 0;
+}
+
+/* Optional vivid CRT mode for users who want heavier retro phosphor presence */
+:root[data-crt='vivid'] {
+  --glow-strength: 1;
+  --scanline-opacity: 0.34;
 }
