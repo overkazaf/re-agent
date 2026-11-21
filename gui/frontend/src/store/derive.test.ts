@@ -468,7 +468,7 @@ describe('scene store reconcile wiring', () => {
     const before = sceneActions.scene
     sceneActions.reconcile(
       ['s1'],
-      new Map([['s1', tick({ re: re(5), ledger: { hypotheses: [], evidence: [ev('ev_001')] } })]]),
+      new Map([['s1', tick({ re: re(2), ledger: { hypotheses: [], evidence: [ev('ev_001')] } })]]),
     )
     const first = sceneActions.scene
     expect(first).not.toBe(before)
@@ -477,7 +477,7 @@ describe('scene store reconcile wiring', () => {
 
     sceneActions.reconcile(
       ['s1'],
-      new Map([['s1', tick({ re: re(5), ledger: { hypotheses: [], evidence: [ev('ev_001'), ev('ev_002')] } })]]),
+      new Map([['s1', tick({ re: re(2), ledger: { hypotheses: [], evidence: [ev('ev_001'), ev('ev_002')] } })]]),
     )
     const second = sceneActions.scene
     expect(second).not.toBe(first)
