@@ -251,13 +251,39 @@ go test ./gui/ -run TestE2E -v   <span class="c">无头端到端冒烟测试</sp
       <table>
         <thead><tr><th>能力面</th><th>具体内容</th></tr></thead>
         <tbody>
+          <tr><td>3D 取证剧场（默认视图）</td><td>基于 three.js + react-three-fiber 的全 3D 取证作战室：9 阶段发光相位脊、实时生长的 <code class="inline">H-NNN</code> / <code class="inline">ev_NNN</code> 证据 DAG、全息遥测面板，支持一键切回经典 2D 布局，且在无 WebGL / 减动效 / 低帧率下自动降级</td></tr>
+          <tr><td>引导式假设向导</td><td>顶部建议条常驻提示下一步，按「可证伪假设 → 沙箱 scope 引导实验配置 → <code class="inline">verify_artifact</code> 回放验证 → 审计签章」推进，失败自动回流至预填的修正假设步</td></tr>
           <tr><td>多会话并发</td><td>同时运行多个逆向会话，侧栏实时展示 idle / running / awaiting approval 状态并支持一键 <code class="inline">Interrupt</code> 中断</td></tr>
           <tr><td>90ms 实时仪表盘 + 9 阶段 RE HUD</td><td>FLOW / TOOLS / PLAN / THINK / TELE 五面板实时重绘，叠加 9 阶段逆向进度条（<code class="inline">TRI → … → WRI</code> 与 <code class="inline">H:N</code> / <code class="inline">E:N</code> 计数）</td></tr>
           <tr><td>风险审批弹窗</td><td>写盘/执行/网络调用弹出带命中风险项说明的审批对话框，支持 allow / allow-always / deny / deny-always</td></tr>
           <tr><td>34 工具与契约对齐</td><td>完整支持 <code class="inline">/inspect</code>、<code class="inline">/anti</code>、<code class="inline">/diff</code>、<code class="inline">verify_artifact</code>、<code class="inline">/goal</code>、<code class="inline">/cap</code>、<code class="inline">/audit</code> 与原生 <code class="inline">/workflow reverse</code> 选择器</td></tr>
-          <tr><td>主题与会话恢复</td><td>内置 <code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code> 四套主题，恢复历史会话时同步还原转录、假设栈、证据账本与沙箱权限</td></tr>
+          <tr><td>主题与会话恢复</td><td>内置 <code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code> 四套主题联动驱动 2D 与 3D 材质，恢复历史会话时同步还原转录、假设栈、证据账本与沙箱权限</td></tr>
         </tbody>
       </table>
+    </div>
+    <h3>3D 取证剧场与引导式假设主线</h3>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>3D 取证剧场 · 作战室全景（相位脊 + 实时证据 DAG）</div>
+      <div class="capture__scroll">
+        <img src="shots/gui-3d-overview.png" alt="0xAF-Re 3D 取证剧场全景：9 阶段相位脊、七区字形与假设塔周围实时生长的证据 DAG" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
+      </div>
+      <figcaption>默认进入 3D 取证作战室：点击任意功能区或节点即可自动运镜，随时一键切回经典 2D 视图（<code class="inline">▣ 经典视图</code> / <code class="inline">◈ 3D 剧场</code>）。</figcaption>
+    </figure>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:1rem">
+      <figure class="capture" style="margin:0">
+        <div class="capture__bar"><span class="dot" aria-hidden="true"></span>引导式实验配置 + 沙箱 scope</div>
+        <div class="capture__scroll">
+          <img src="shots/gui-3d-wizard.png" alt="引导式实验配置与沙箱 scope 芯片和预填命令" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
+        </div>
+        <figcaption>实验配置自带沙箱 scope 引导（可写路径、网络状态、越界告警），并预填可执行命令。</figcaption>
+      </figure>
+      <figure class="capture" style="margin:0">
+        <div class="capture__bar"><span class="dot" aria-hidden="true"></span>Amber CRT 主题下的 3D 剧场</div>
+        <div class="capture__scroll">
+          <img src="shots/gui-3d-amber.png" alt="Amber 主题下的 3D 取证剧场" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
+        </div>
+        <figcaption>四套 CRT 配色（<code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code>）直接联动驱动 3D 线框与自发光材质。</figcaption>
+      </figure>
     </div>
   </div>
 </section>

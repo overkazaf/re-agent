@@ -610,13 +610,39 @@ go test ./gui/ -run TestE2E -v   <span class="c">headless E2E smoke test</span><
       <table>
         <thead><tr><th>surface</th><th>what you get</th></tr></thead>
         <tbody>
+          <tr><td>3D Forensic Theater (default)</td><td>Full-3D ops room (three.js + react-three-fiber): 9-phase glowing spatial rail, live <code class="inline">H-NNN</code> / <code class="inline">ev_NNN</code> evidence DAG, holo telemetry panels, 1-click classic 2D toggle, and auto-fallback when WebGL / reduced-motion / FPS drops</td></tr>
+          <tr><td>Guided Hypothesis Wizard</td><td>Persistent next-step advice bar walking claim + evidence → sandbox-scoped experiment config → <code class="inline">verify_artifact</code> replay → audit sign-off, routing failures back to a prefilled revise step</td></tr>
           <tr><td>Multi-session</td><td>Run multiple RE sessions concurrently; sidebar tracks lifecycle (idle / running / awaiting approval) with mid-turn <code class="inline">Interrupt</code></td></tr>
           <tr><td>Live 90ms dashboard + 9-phase RE HUD</td><td>FLOW / TOOLS / PLAN / THINK / TELE panels plus the 9-phase reverse HUD (<code class="inline">TRI → … → WRI</code> with live <code class="inline">H:N</code> / <code class="inline">E:N</code> counts)</td></tr>
           <tr><td>Approval dialog</td><td>Write/exec/network calls push a risk-coded modal listing matched safety concerns; allow / allow-always / deny / deny-always round-trips into session policy</td></tr>
           <tr><td>Full 34-tool &amp; contract parity</td><td><code class="inline">/inspect</code>, <code class="inline">/anti</code>, <code class="inline">/diff</code>, <code class="inline">verify_artifact</code>, <code class="inline">/goal</code>, <code class="inline">/cap</code>, <code class="inline">/audit</code>, and native <code class="inline">/workflow reverse</code> picker</td></tr>
-          <tr><td>Themes &amp; resume</td><td><code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code> CRT palettes, prompt queueing, and full transcript + ledger + sandbox hydration on resume</td></tr>
+          <tr><td>Themes &amp; resume</td><td><code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code> CRT palettes drive both 2D and 3D wireframe/emissive materials, with prompt queueing and full transcript + ledger + sandbox hydration on resume</td></tr>
         </tbody>
       </table>
+    </div>
+    <h3>3D Forensic Theater &amp; Guided Hypothesis Flow</h3>
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>3D Forensic Theater · ops-room overview (phase rail + live evidence DAG)</div>
+      <div class="capture__scroll">
+        <img src="shots/gui-3d-overview.png" alt="0xAF-Re 3D Forensic Theater overview showing the 9-phase spatial rail, zone glyphs, and live evidence DAG around the hypothesis tower" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
+      </div>
+      <figcaption>Default 3D ops room: click any zone or node to fly the camera, or toggle back to the classic 2D deck in one click (<code class="inline">▣ 经典视图</code> / <code class="inline">◈ 3D 剧场</code>).</figcaption>
+    </figure>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:1rem">
+      <figure class="capture" style="margin:0">
+        <div class="capture__bar"><span class="dot" aria-hidden="true"></span>Guided experiment wizard + sandbox scope</div>
+        <div class="capture__scroll">
+          <img src="shots/gui-3d-wizard.png" alt="Guided experiment wizard with sandbox scope guidance chips and prefilled command" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
+        </div>
+        <figcaption>Sandbox-scope guidance chips (writable paths, network state, out-of-scope warnings) before running experiments.</figcaption>
+      </figure>
+      <figure class="capture" style="margin:0">
+        <div class="capture__bar"><span class="dot" aria-hidden="true"></span>Amber CRT theme in 3D</div>
+        <div class="capture__scroll">
+          <img src="shots/gui-3d-amber.png" alt="3D Forensic Theater rendered in the amber CRT palette" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
+        </div>
+        <figcaption>All four CRT palettes (<code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code>) drive the 3D emissive &amp; wireframe materials directly.</figcaption>
+      </figure>
     </div>
   </div>
 </section>
