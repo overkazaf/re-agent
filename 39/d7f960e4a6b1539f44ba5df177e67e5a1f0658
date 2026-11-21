@@ -1,0 +1,49 @@
+gui/frontend/src/components/wizard/index.ts
+  6dcd1ee682d8c61b 1-8
+gui/frontend/src/components/wizard/VerificationWizard.tsx
+  6dcd1ee682d8c61b 1-236
+gui/frontend/src/components/wizard/ReviewWizard.tsx
+  6dcd1ee682d8c61b 1-258
+gui/frontend/src/components/wizard/SuggestionBar.tsx
+  6dcd1ee682d8c61b 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "39d7f960e4a6b1539f44ba5df177e67e5a1f0658",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 603,
+      "total_deletions": 6,
+      "accepted_lines": 597,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/wizard/ReviewWizard.tsx": {
+          "additions": 258,
+          "accepted_lines": 258
+        },
+        "gui/frontend/src/components/wizard/SuggestionBar.tsx": {
+          "additions": 99,
+          "deletions": 4,
+          "accepted_lines": 95
+        },
+        "gui/frontend/src/components/wizard/VerificationWizard.tsx": {
+          "additions": 238,
+          "deletions": 2,
+          "accepted_lines": 236
+        },
+        "gui/frontend/src/components/wizard/index.ts": {
+          "additions": 8,
+          "accepted_lines": 8
+        }
+      }
+    }
+  }
+}
