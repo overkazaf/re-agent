@@ -1,0 +1,29 @@
+gui/frontend/src/components/wizard/WizardCard.tsx
+  6dcd1ee682d8c61b 1-230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "bd2f3935f11eb41f69c7afdf67ccd8c2639437ac",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 230,
+      "total_deletions": 0,
+      "accepted_lines": 230,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/wizard/WizardCard.tsx": {
+          "additions": 230,
+          "accepted_lines": 230
+        }
+      }
+    }
+  }
+}
