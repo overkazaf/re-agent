@@ -13,6 +13,8 @@ import {
   synthesizeProcessSummary,
   type WriteupTemplateId,
 } from './cognitiveSynthesis'
+import { buildForensicJsonBundle } from './forensics'
+import './re-pro.css'
 
 const mdPreviewComponents = {
   p: ({ children }: { children?: ReactNode }) => <p style={{ margin: '0.35em 0', lineHeight: 1.55 }}>{children}</p>,
@@ -121,6 +123,30 @@ export function WriteupStudioPanel({
     a.click()
     URL.revokeObjectURL(url)
   }
+
+  const downloadForensicBundle = () => {
+    const bundle = buildForensicJsonBundle(tick, template, workspace, draft)
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const base = (tick?.ledger?.goal?.targetFile || tick?.re?.sampleType || '0xaf-re').replace(/[^a-zA-Z0-9._-]/g, '_')
+    a.href = url
+    a.download = `${base}-forensic-bundle.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const sectionChecks = useMemo(() => {
+    const txt = draft.toLowerCase()
+    return [
+      { key: 'exec', label: 'Executive Summary', ok: /总结|tl;dr|summary|一、/.test(txt) },
+      { key: 'triage', label: 'Triage & Mitigations', ok: /契约|指纹|sha256|mitigation|沙箱|题目/.test(txt) },
+      { key: 'root', label: 'Root-Cause & Hyps', ok: /假设|h-\d{3}|结论|算法/.test(txt) },
+      { key: 'chain', label: 'Evidence Chain', ok: /ev_\d{3}|证据链|evidence/.test(txt) },
+      { key: 'verify', label: 'Verify & Audit', ok: /verify_artifact|\/audit|审计|重放/.test(txt) },
+      { key: 'repro', label: 'Reproduction Script', ok: /```(?:bash|sh|python)|复现|solver/.test(txt) },
+    ]
+  }, [draft])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -328,6 +354,26 @@ export function WriteupStudioPanel({
           <button type="button" onClick={downloadMarkdown} style={smallBtnStyle}>
             ⬇ 导出 .md
           </button>
+          <button
+            type="button"
+            onClick={downloadForensicBundle}
+            title="导出完整取证归档包 (含 SHA256 账本、假设校准、仲裁日志与 Markdown 报告)"
+            style={{ ...smallBtnStyle, borderColor: 'var(--violet-dim)', color: 'var(--violet)' }}
+          >
+            ⬇ 导出 .json 取证包
+          </button>
+        </div>
+
+        {/* Report Section Completeness Strip */}
+        <div className="re-writeup-sections re-mono-num">
+          <span style={{ color: 'var(--faint)' }}>
+            报告结构完备度 ({sectionChecks.filter((s) => s.ok).length}/{sectionChecks.length}):
+          </span>
+          {sectionChecks.map((s) => (
+            <span key={s.key} className="re-sec-pill" data-present={s.ok ? '1' : undefined}>
+              {s.ok ? '✓' : '○'} {s.label}
+            </span>
+          ))}
         </div>
 
         {/* Citation quick-insert bar */}

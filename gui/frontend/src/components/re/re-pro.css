@@ -1,0 +1,423 @@
+/* re-pro.css — Forensic instrumentation styles for RE & telemetry panels.
+   Strictly uses theme tokens from styles/tokens.css (zero hard-coded theme colors)
+   and tabular monospace numerals for addresses, entropy, offsets, and telemetry. */
+
+.re-mono-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---- Security Mitigation Posture Bar ---- */
+.re-posture-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-default, var(--rule));
+  background: color-mix(in srgb, var(--surface-1, var(--bg-panel)) 85%, transparent);
+  font-size: 10.5px;
+}
+
+.re-posture-grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--rule);
+  text-transform: uppercase;
+}
+
+.re-posture-grade[data-tone="ok"] {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+.re-posture-grade[data-tone="warn"] {
+  color: var(--warn);
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.re-posture-grade[data-tone="err"] {
+  color: var(--err);
+  border-color: var(--err);
+  background: color-mix(in srgb, var(--err) 12%, transparent);
+}
+.re-posture-grade[data-tone="accent"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.re-mit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.re-mit-pill[data-status="secure"] {
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--rule));
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 8%, transparent);
+}
+.re-mit-pill[data-status="partial"] {
+  border-color: color-mix(in srgb, var(--warn) 60%, var(--rule));
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
+}
+.re-mit-pill[data-status="weak"],
+.re-mit-pill[data-status="alert"] {
+  border-color: color-mix(in srgb, var(--err) 70%, var(--rule));
+  color: var(--err);
+  background: color-mix(in srgb, var(--err) 10%, transparent);
+  font-weight: 600;
+}
+.re-mit-pill[data-status="info"] {
+  border-color: var(--rule);
+  color: var(--muted);
+}
+
+/* ---- One-click Copyable Address / Citation Chips ---- */
+.re-copy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.re-copy-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.re-copy-chip[data-copied="1"] {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.re-copy-chip-k {
+  color: var(--faint);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---- Section / Symbol Table & Risk Breakdown ---- */
+.re-forensic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.re-forensic-card {
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--bg-panel) 78%, transparent);
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.re-forensic-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+  text-transform: uppercase;
+  border-bottom: 1px dashed var(--rule);
+  padding-bottom: 4px;
+}
+
+.re-sec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-sec-table th {
+  text-align: left;
+  color: var(--faint);
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-bottom: 1px solid var(--rule);
+  letter-spacing: 0.05em;
+}
+
+.re-sec-table td {
+  padding: 3px 5px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 45%, transparent);
+  white-space: nowrap;
+}
+
+.re-sec-row {
+  cursor: pointer;
+}
+
+.re-sec-row:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.re-sec-row[data-selected="1"] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.re-entropy-meter {
+  display: inline-block;
+  width: 44px;
+  height: 5px;
+  background: var(--rule);
+  vertical-align: middle;
+  margin-right: 5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.re-entropy-fill {
+  display: block;
+  height: 100%;
+}
+
+/* ---- Provenance Chain (Static -> Dynamic -> Oracle -> Audit) ---- */
+.re-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.re-chain-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-chain-step[data-hit="1"] {
+  border-color: color-mix(in srgb, var(--ok) 65%, var(--rule));
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 9%, transparent);
+}
+
+.re-chain-step[data-hit="static"] {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--rule));
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.re-chain-step[data-hit="audit"] {
+  border-color: color-mix(in srgb, var(--violet) 65%, var(--rule));
+  color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 10%, transparent);
+}
+
+.re-chain-step[data-hit="conflict"] {
+  border-color: color-mix(in srgb, var(--err) 75%, var(--rule));
+  color: var(--err);
+  background: color-mix(in srgb, var(--err) 10%, transparent);
+}
+
+.re-chain-arrow {
+  color: var(--faint);
+  font-size: 9px;
+}
+
+/* ---- Calibration & Alignment Verdict Badges ---- */
+.re-verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--rule);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.re-verdict-badge[data-verdict="VERIFIED"] {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+.re-verdict-badge[data-verdict="DIVERGED"] {
+  color: var(--err);
+  border-color: var(--err);
+  background: color-mix(in srgb, var(--err) 12%, transparent);
+}
+.re-verdict-badge[data-verdict="UNCOVERED"] {
+  color: var(--warn);
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.re-verdict-badge[data-verdict="ANTI_ANALYSIS"] {
+  color: var(--violet);
+  border-color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 12%, transparent);
+}
+
+.re-calib-pill {
+  font-size: 9.5px;
+  padding: 0 5px;
+  border: 1px dashed var(--rule);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.re-calib-pill[data-tone="ok"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 55%, var(--rule)); }
+.re-calib-pill[data-tone="warn"] { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, var(--rule)); }
+.re-calib-pill[data-tone="err"] { color: var(--err); border-color: color-mix(in srgb, var(--err) 65%, var(--rule)); }
+
+/* ---- Filter Pill Strip ---- */
+.re-filter-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.re-filter-chip {
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 9.5px;
+  cursor: pointer;
+}
+
+.re-filter-chip[data-active="1"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* ---- Tool Category & Telemetry Strip ---- */
+.re-tool-cat {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--rule);
+  color: var(--muted);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.re-tool-cat[data-cat="STATIC"]  { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, var(--rule)); }
+.re-tool-cat[data-cat="DYNAMIC"] { color: var(--warn);   border-color: color-mix(in srgb, var(--warn) 55%, var(--rule)); }
+.re-tool-cat[data-cat="VERIFY"]  { color: var(--ok);     border-color: color-mix(in srgb, var(--ok) 55%, var(--rule)); }
+.re-tool-cat[data-cat="CRYPTO"]  { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 55%, var(--rule)); }
+.re-tool-cat[data-cat="LEDGER"]  { color: var(--muted);  border-color: var(--rule); }
+
+.re-tool-target {
+  color: var(--violet);
+  font-size: 10px;
+  padding: 0 4px;
+  border: 1px solid color-mix(in srgb, var(--violet) 40%, var(--rule));
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.re-tool-exit {
+  font-size: 9px;
+  padding: 0 4px;
+  border: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.re-tool-exit[data-state="ok"]   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 45%, var(--rule)); }
+.re-tool-exit[data-state="fail"] { color: var(--err);  border-color: color-mix(in srgb, var(--err) 60%, var(--rule)); }
+.re-tool-exit[data-state="run"]  { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 60%, var(--rule)); }
+
+/* ---- Phase-Gate Readiness Matrix ---- */
+.re-gate-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-gate-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border: 1px solid var(--rule);
+  color: var(--faint);
+}
+
+.re-gate-pill[data-ready="pass"] {
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--rule));
+  color: var(--ok);
+}
+
+.re-gate-pill[data-ready="current"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 700;
+}
+
+.re-gate-pill[data-ready="blocked"] {
+  border-color: color-mix(in srgb, var(--warn) 60%, var(--rule));
+  color: var(--warn);
+}
+
+/* ---- Telemetry KPI & Latency Bar ---- */
+.re-tele-kpi {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--rule) 75%, transparent);
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.re-writeup-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 9.5px;
+}
+
+.re-sec-pill {
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+}
+.re-sec-pill[data-present="1"] {
+  border-color: color-mix(in srgb, var(--ok) 50%, var(--rule));
+  color: var(--ok);
+}

@@ -5,7 +5,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { PanelBox, ProgressChip } from '../crt'
-import type { FlowDTO, PlanBadge, PlanSnapshot } from '../../lib/types'
+import type { FlowDTO, PlanBadge, PlanSnapshot, TickDTO } from '../../lib/types'
+import { evaluatePhaseGates } from '../re/forensics'
+import '../re/re-pro.css'
+import { fmtDuration } from './format'
 
 type FlashTone = 'ok' | 'accent' | 'violet'
 type PlanKind = Exclude<FlowDTO['planKind'], ''>
@@ -37,6 +40,11 @@ function planRows(steps: PlanSnapshot['steps']): ReactNode[] {
         <div key={step.id !== '' ? step.id : `live-${i}`} className="plan-step plan-active">
           <span className="plan-glyph t-accent">◈</span>
           <span className="plan-text">{step.text}</span>
+          {step.startedAt > 0 && (
+            <span className="t-faint re-mono-num" style={{ marginLeft: 'auto', fontSize: 10 }}>
+              {fmtDuration(Math.max(0, Date.now() - step.startedAt))}
+            </span>
+          )}
         </div>,
       )
       i++
@@ -53,10 +61,11 @@ function planRows(steps: PlanSnapshot['steps']): ReactNode[] {
   return rows
 }
 
-export function PlanPanel({ plan, badge, planKind }: {
+export function PlanPanel({ plan, badge, planKind, tick }: {
   plan: PlanSnapshot | null
   badge: FlowDTO['plan']
   planKind: FlowDTO['planKind']
+  tick?: TickDTO | null
 }) {
   const [flash, setFlash] = useState<FlashTone | null>(null)
   const prevKind = useRef<FlowDTO['planKind']>(planKind)
@@ -80,15 +89,29 @@ export function PlanPanel({ plan, badge, planKind }: {
       total: steps.length,
       source: plan?.source ?? '',
     }
+  const pct = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0
+  const phaseGates = tick?.re ? evaluatePhaseGates(tick) : null
+  const nextBlocked = phaseGates?.find((g) => g.ready === 'blocked') ?? null
+  const wriReady = phaseGates ? phaseGates[phaseGates.length - 1]?.ready === 'pass' || tick?.re?.phase === 'writeup' : false
 
   return (
     <PanelBox title="plan" accent={flash ?? 'warn'} tier="primary" badge="任务路线">
-      <div className="plan-head">
+      <div className="plan-head re-mono-num">
         {counts.total > 0 && (
           <>
             <ProgressChip done={counts.done} total={counts.total} />
+            <span className="t-muted" style={{ fontSize: 10 }}>{pct}%</span>
             <span className="plan-src t-faint">{counts.source}</span>
           </>
+        )}
+        {phaseGates && (
+          <span
+            className="re-gate-pill"
+            data-ready={wriReady ? 'pass' : nextBlocked ? 'blocked' : 'current'}
+            title={nextBlocked ? `下一阶段 ${nextBlocked.code} 门禁: ${nextBlocked.criterion}` : '阶段门禁已达标'}
+          >
+            {wriReady ? '✓ WRI READY' : nextBlocked ? `🔒 ${nextBlocked.code}: ${nextBlocked.progress}` : '▸ GATE OK'}
+          </span>
         )}
         {planKind !== '' && (
           <span

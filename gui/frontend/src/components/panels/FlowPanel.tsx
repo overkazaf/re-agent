@@ -6,6 +6,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { PanelBox, Spinner } from '../crt'
 import type { FlowDTO, FlowStage } from '../../lib/types'
+import '../re/re-pro.css'
 import { compactNumber, fmtDuration } from './format'
 
 export const STAGES: readonly FlowStage[] = [
@@ -136,8 +137,13 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
           </span>
           <span className="flow-phase">{phaseLabel(flow)}</span>
         </div>
-        <div className="flow-sub">
-          <span className="t-muted">{flow.model}</span>
+        <div className="flow-sub re-mono-num">
+          <span className="t-muted">
+            {flow.model}
+            {flow.turn > 0 && <span className="t-faint"> · T#{flow.turn}</span>}
+            {flow.messages > 0 && <span className="t-faint"> · {flow.messages} msgs</span>}
+            {flow.sentTokens > 0 && <span className="t-faint"> · ctx {compactNumber(flow.sentTokens)}tok</span>}
+          </span>
           <span className="t-faint">{flow.endpoint}</span>
         </div>
 

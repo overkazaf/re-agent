@@ -8,13 +8,15 @@
 //
 // Enforces the core provenance invariant: Evidence (ev_NNN) can NEVER be
 // edited, deleted, or hand-typed; only real execution or grounded audit mints it.
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { api } from '../../lib/api'
 import type {
   LedgerDTO,
   VerificationCaseDTO,
 } from '../../lib/types'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
+import { buildProvenanceChain, formatHypothesisCitation } from './forensics'
+import './re-pro.css'
 
 export type WorkbenchTab = 'hypothesis' | 'verify' | 'review'
 
@@ -54,6 +56,30 @@ export function HypothesisWorkbenchDialog({
   const [expExpected, setExpExpected] = useState('')
 
   const selectedHyp = hypotheses.find((h) => h.id === selectedHypId) ?? null
+  const [copiedCite, setCopiedCite] = useState(false)
+
+  const selectedChain = useMemo(
+    () => (selectedHyp ? buildProvenanceChain(selectedHyp, evidence, findings) : null),
+    [selectedHyp, evidence, findings],
+  )
+
+  // Live confidence calibration preview as the analyst adjusts the slider
+  const liveCalibrationHint = useMemo(() => {
+    const citedEvs = evidence.filter((e) => citeEvIds.includes(e.id))
+    const hasDyn =
+      (selectedChain ? selectedChain.dynamicEvs.length + selectedChain.verifyEvs.length > 0 : false) ||
+      citedEvs.some((e) => e.view === 'dynamic' || e.kind === 'runtime_trace' || e.kind === 'verification_result')
+    if (confidencePct >= 80 && !hasDyn) {
+      return { tone: 'warn' as const, text: '⚠ ≥80% 且无动态/重放实证 → 触发 single-view 过自信风险' }
+    }
+    if (selectedChain && selectedChain.contradictEvs.length > 0 && confidencePct >= 45) {
+      return { tone: 'err' as const, text: `⚠ 存在 ${selectedChain.contradictEvs.length} 条反证，建议先验证或下调置信度` }
+    }
+    if (hasDyn) {
+      return { tone: 'ok' as const, text: '✓ 已含动态/重放凭证支撑，置信度校准良好' }
+    }
+    return { tone: 'muted' as const, text: '○ 探索期假设建议初始置信度 ≤75%，并配置可证伪实验' }
+  }, [confidencePct, evidence, citeEvIds, selectedChain])
 
   useEffect(() => {
     if (selectedHypId === '__new__') {
@@ -434,6 +460,26 @@ export function HypothesisWorkbenchDialog({
               <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 12 }}>
                 {selectedHyp ? `编辑假设 ${selectedHyp.id} [${selectedHyp.status.toUpperCase()}]` : '新建可证伪假设 (H-NNN)'}
               </span>
+              {selectedHyp && selectedChain && (
+                <>
+                  <span className="re-verdict-badge" data-verdict={selectedChain.verdict}>
+                    {selectedChain.verdict === 'ANTI_ANALYSIS' ? 'ANTI-ANALYSIS' : selectedChain.verdict}
+                  </span>
+                  <button
+                    type="button"
+                    className="re-copy-chip"
+                    data-copied={copiedCite ? '1' : undefined}
+                    onClick={() => {
+                      navigator.clipboard?.writeText(formatHypothesisCitation(selectedHyp)).catch(() => {})
+                      setCopiedCite(true)
+                      setTimeout(() => setCopiedCite(false), 1400)
+                    }}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    {copiedCite ? '✓ 已复制引用' : '⎘ 复制引用'}
+                  </button>
+                </>
+              )}
               {!selectedHyp && (
                 <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 5 }}>
                   <button type="button" onClick={() => applyHypothesisPreset('positive')} style={miniPresetBtnStyle}>
@@ -445,6 +491,38 @@ export function HypothesisWorkbenchDialog({
                 </span>
               )}
             </div>
+
+            {selectedChain && (
+              <div className="re-chain" style={{ fontSize: 10 }}>
+                <span className="re-chain-step" data-hit={selectedChain.staticEvs.length > 0 ? 'static' : undefined}>
+                  Static ({selectedChain.staticEvs.length})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span
+                  className="re-chain-step"
+                  data-hit={
+                    selectedChain.contradictEvs.length > 0
+                      ? 'conflict'
+                      : selectedChain.dynamicEvs.length > 0
+                        ? '1'
+                        : undefined
+                  }
+                >
+                  Dynamic ({selectedChain.dynamicEvs.length}{selectedChain.contradictEvs.length > 0 ? `/✗${selectedChain.contradictEvs.length}` : ''})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span className="re-chain-step" data-hit={selectedChain.verifyEvs.length > 0 ? '1' : undefined}>
+                  Oracle ({selectedChain.verifyEvs.length})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span className="re-chain-step" data-hit={selectedChain.auditEvs.length > 0 ? 'audit' : undefined}>
+                  Audit ({selectedChain.auditEvs.length})
+                </span>
+                <span className="re-calib-pill" data-tone={selectedChain.calibration.tone} title={selectedChain.calibration.reason}>
+                  {selectedChain.calibration.status}
+                </span>
+              </div>
+            )}
 
             <label style={lblStyle}>
               假设声明 (Falsifiable Claim)
@@ -459,7 +537,7 @@ export function HypothesisWorkbenchDialog({
 
             <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 8 }}>
               <label style={lblStyle}>
-                置信度 ({confidencePct}%)
+                <span className="re-mono-num">置信度 ({confidencePct}%)</span>
                 <input
                   type="range"
                   min={5}
@@ -467,6 +545,13 @@ export function HypothesisWorkbenchDialog({
                   value={confidencePct}
                   onChange={(e) => setConfidencePct(Number(e.target.value))}
                 />
+                <span
+                  className="re-calib-pill"
+                  data-tone={liveCalibrationHint.tone}
+                  style={{ whiteSpace: 'normal', lineHeight: 1.35 }}
+                >
+                  {liveCalibrationHint.text}
+                </span>
               </label>
               <label style={lblStyle}>
                 推导依据 / 修订备注 (Note)

@@ -29,6 +29,15 @@ import { actions } from '../../store/sessions'
 import { sceneActions } from '../../store/scene'
 import { PanelBox } from '../crt'
 import type { LedgerTab } from './LedgerPanel'
+import {
+  buildProvenanceChain,
+  classifyEntropy,
+  evaluateMitigationPosture,
+  formatHypothesisCitation,
+  resolveOffsetMapping,
+  type AlignmentVerdict,
+} from './forensics'
+import './re-pro.css'
 
 export type TerrainSubTab = 'terrain' | 'alignment'
 
@@ -89,6 +98,13 @@ export function BinaryTerrainPanel({
   const [selected, setSelected] = useState<SelectedItem | null>(null)
   const [hoverOff, setHoverOff] = useState<number | null>(null)
   const [zoomRange, setZoomRange] = useState<[number, number] | null>(null)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  const copyToken = useCallback((key: string, value: string) => {
+    navigator.clipboard?.writeText(value).catch(() => {})
+    setCopiedKey(key)
+    setTimeout(() => setCopiedKey((cur) => (cur === key ? null : cur)), 1400)
+  }, [])
 
   // Load workspace files when session changes.
   useEffect(() => {
@@ -209,6 +225,12 @@ export function BinaryTerrainPanel({
     if (!selected) return 0
     return selected.data.offset
   }, [selected])
+
+  const posture = useMemo(() => (terrain ? evaluateMitigationPosture(terrain) : null), [terrain])
+  const offsetMap = useMemo(
+    () => (terrain && selected ? resolveOffsetMapping(terrain, selectedOffset) : null),
+    [terrain, selected, selectedOffset],
+  )
 
   const selectedSummary = useMemo(() => {
     if (!selected || !terrain) return ''
@@ -352,7 +374,7 @@ export function BinaryTerrainPanel({
             type="button"
             onClick={fs.toggle}
             title={fs.open ? '退出全屏 (Esc)' : '进入系统真全屏检视二进制地形与动静对齐'}
-            style={fs.open ? { ...chipBtn, borderColor: 'var(--warn)', color: 'var(--warn)' } : { ...chipBtn, borderColor: 'var(--accent-dim)', color: 'var(--accent)' }}
+            style={fs.open ? { ...chipBtn, border: '1px solid var(--warn)', color: 'var(--warn)' } : { ...chipBtn, border: '1px solid var(--accent-dim)', color: 'var(--accent)' }}
           >
             {fs.open ? '✕ 退出全屏' : '⛶ 全屏放大'}
           </button>
@@ -368,34 +390,58 @@ export function BinaryTerrainPanel({
             <div style={emptyBox}>{loading ? '正在通过纯 Go 解析器构建区段/熵值/反调试/补丁地形…' : '工作区暂无可解析文件。'}</div>
           ) : (
             <>
-              {/* Format, hash & mitigation telemetry bar */}
-              <div style={metaStrip}>
+              {/* Security Mitigation Posture & Forensic Telemetry Bar */}
+              <div className="re-posture-bar re-mono-num" data-testid="mitigation-posture-bar">
                 <span style={badgeAccent}>
                   {terrain.format}
                   {terrain.arch ? ` · ${terrain.arch}` : ''}
                 </span>
-                <span style={metaItem}>大小 {fmtBytes(terrain.size)}</span>
-                {terrain.entryPoint && <span style={metaItem}>Entry {terrain.entryPoint}</span>}
+                {posture && (
+                  <span
+                    className="re-posture-grade"
+                    data-tone={posture.tone}
+                    title={`Hardening Score ${posture.score}/100 · Entropy ${posture.entropyVerdict}`}
+                  >
+                    {posture.grade} {posture.score}
+                  </span>
+                )}
+                <span style={metaItem}>{fmtBytes(terrain.size)}</span>
+                {terrain.entryPoint && (
+                  <button
+                    type="button"
+                    className="re-copy-chip"
+                    data-copied={copiedKey === 'entry' ? '1' : undefined}
+                    onClick={() => copyToken('entry', terrain.entryPoint!)}
+                    title="点击复制入口虚拟地址 (Entry VA)"
+                  >
+                    <span className="re-copy-chip-k">EP</span>
+                    {copiedKey === 'entry' ? '✓ COPIED' : terrain.entryPoint}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="re-copy-chip"
+                  data-copied={copiedKey === 'sha256' ? '1' : undefined}
+                  onClick={() => copyToken('sha256', terrain.sha256)}
+                  title={`点击复制完整 SHA256: ${terrain.sha256}`}
+                >
+                  <span className="re-copy-chip-k">SHA256</span>
+                  {copiedKey === 'sha256' ? '✓ COPIED' : `${terrain.sha256.slice(0, 12)}…`}
+                </button>
                 <span style={{ ...metaItem, color: entropyColor(terrain.maxEntropy) }}>
-                  熵值 avg {terrain.overallEntropy.toFixed(2)} / max {terrain.maxEntropy.toFixed(2)} b/B
+                  H avg {terrain.overallEntropy.toFixed(2)} / max {terrain.maxEntropy.toFixed(2)} b/B
                 </span>
-                <span style={metaItem} title={terrain.sha256}>
-                  sha256 {terrain.sha256.slice(0, 12)}…
-                </span>
-                {terrain.mitigations &&
-                  Object.entries(terrain.mitigations)
-                    .filter(([k]) => ['PIE', 'NX', 'canary', 'RELRO', 'RWX', 'stripped'].includes(k))
-                    .map(([k, v]) => {
-                      const alert =
-                        (k === 'RWX' && v.toLowerCase().includes('yes')) ||
-                        (k === 'NX' && v.toLowerCase().startsWith('no')) ||
-                        (k === 'PIE' && v.toLowerCase().startsWith('no'))
-                      return (
-                        <span key={k} style={alert ? badgeErr : badgeMuted} title={`${k}: ${v}`}>
-                          {k}: {v.split(' ')[0]}
-                        </span>
-                      )
-                    })}
+                {posture?.pills.map((pill) => (
+                  <span
+                    key={pill.key}
+                    className="re-mit-pill"
+                    data-status={pill.status}
+                    title={`${pill.label}: ${pill.raw} — ${pill.detail}`}
+                  >
+                    <span>{pill.label}</span>
+                    <b>{pill.value}</b>
+                  </span>
+                ))}
               </div>
 
               {/* Interactive 3-track Binary Forensic Terrain SVG */}
@@ -848,6 +894,73 @@ export function BinaryTerrainPanel({
                     </div>
                   </div>
 
+                  {/* One-click VA / File Offset / RVA / Citation copy bar */}
+                  {offsetMap && (
+                    <div
+                      className="re-mono-num"
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginTop: 6,
+                        paddingBottom: 6,
+                        borderBottom: '1px dashed var(--rule)',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="re-copy-chip"
+                        data-copied={copiedKey === 'off' ? '1' : undefined}
+                        onClick={() => copyToken('off', offsetMap.fileOffsetHex)}
+                        title="复制文件偏移 (File Offset)"
+                      >
+                        <span className="re-copy-chip-k">OFF</span>
+                        {copiedKey === 'off' ? '✓ COPIED' : offsetMap.fileOffsetHex}
+                      </button>
+                      {offsetMap.vaddrHex && (
+                        <button
+                          type="button"
+                          className="re-copy-chip"
+                          data-copied={copiedKey === 'va' ? '1' : undefined}
+                          onClick={() => copyToken('va', offsetMap.vaddrHex!)}
+                          title="复制虚拟地址 (Virtual Address)"
+                        >
+                          <span className="re-copy-chip-k">VA</span>
+                          {copiedKey === 'va' ? '✓ COPIED' : offsetMap.vaddrHex}
+                        </button>
+                      )}
+                      {offsetMap.rvaHex && (
+                        <button
+                          type="button"
+                          className="re-copy-chip"
+                          data-copied={copiedKey === 'rva' ? '1' : undefined}
+                          onClick={() => copyToken('rva', offsetMap.rvaHex!)}
+                          title="复制相对虚拟地址 (RVA)"
+                        >
+                          <span className="re-copy-chip-k">RVA</span>
+                          {copiedKey === 'rva' ? '✓ COPIED' : offsetMap.rvaHex}
+                        </button>
+                      )}
+                      {offsetMap.section && (
+                        <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+                          {offsetMap.section.name}
+                          {offsetMap.sectionDeltaHex ? ` ${offsetMap.sectionDeltaHex}` : ''} · {offsetMap.section.flags}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="re-copy-chip"
+                        data-copied={copiedKey === 'cite' ? '1' : undefined}
+                        onClick={() => copyToken('cite', offsetMap.citation)}
+                        style={{ marginLeft: 'auto' }}
+                        title={`复制取证坐标引用: ${offsetMap.citation}`}
+                      >
+                        {copiedKey === 'cite' ? '✓ 已复制坐标' : '⎘ 复制取证坐标'}
+                      </button>
+                    </div>
+                  )}
+
                   <div style={inspectorBody}>
                     {selected.kind === 'diff' && (
                       <>
@@ -915,6 +1028,168 @@ export function BinaryTerrainPanel({
                   </div>
                 </div>
               )}
+
+              {/* Section / Entropy / Anti-Analysis Forensic Breakdown Grid */}
+              <div className="re-forensic-grid">
+                <div className="re-forensic-card">
+                  <div className="re-forensic-card-title">
+                    <span>▤ Section &amp; Entropy Matrix</span>
+                    <span className="re-mono-num" style={{ color: 'var(--faint)', fontWeight: 400 }}>
+                      {terrain.sections.length} sections
+                    </span>
+                  </div>
+                  {terrain.sections.length === 0 ? (
+                    <div style={{ color: 'var(--faint)', fontSize: 10.5 }}>无区段头（原始二进制流）</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="re-sec-table">
+                        <thead>
+                          <tr>
+                            <th>Section</th>
+                            <th>VAddr</th>
+                            <th>Offset</th>
+                            <th>Size</th>
+                            <th>Flags</th>
+                            <th>Entropy</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {terrain.sections.map((sec, idx) => {
+                            const isSel =
+                              selected?.kind === 'section' &&
+                              selected.data.name === sec.name &&
+                              selected.data.offset === sec.offset
+                            const entInfo = classifyEntropy(sec.entropy)
+                            const pct = Math.min(100, Math.round((sec.entropy / 8) * 100))
+                            return (
+                              <tr
+                                key={`${sec.name}-${idx}`}
+                                className="re-sec-row"
+                                data-selected={isSel ? '1' : undefined}
+                                onClick={() => setSelected({ kind: 'section', data: sec })}
+                                onDoubleClick={() =>
+                                  setZoomRange([sec.offset, Math.min(terrain.size, sec.offset + Math.max(256, sec.size))])
+                                }
+                                title="单击检视 · 双击放大此区段"
+                              >
+                                <td style={{ color: sec.rwx ? 'var(--err)' : sec.isConstructor ? 'var(--warn)' : 'var(--text)', fontWeight: 600 }}>
+                                  {sec.name}
+                                </td>
+                                <td style={{ color: 'var(--accent)' }}>{sec.vaddr || '—'}</td>
+                                <td style={{ color: 'var(--muted)' }}>{fmtHex(sec.offset)}</td>
+                                <td style={{ color: 'var(--muted)' }}>{fmtBytes(sec.size)}</td>
+                                <td style={{ color: sec.rwx ? 'var(--err)' : 'var(--faint)' }}>
+                                  {sec.rwx ? 'RWX!' : sec.isConstructor ? `${sec.flags}·CTOR` : sec.flags}
+                                </td>
+                                <td>
+                                  <span className="re-entropy-meter">
+                                    <span
+                                      className="re-entropy-fill"
+                                      style={{ width: `${pct}%`, background: `var(--${entInfo.tone})` }}
+                                    />
+                                  </span>
+                                  <span style={{ color: `var(--${entInfo.tone})` }}>{sec.entropy.toFixed(2)}</span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="re-forensic-card">
+                  <div className="re-forensic-card-title">
+                    <span>▲ Anti-Analysis, Carve &amp; Patch Risk</span>
+                    <span className="re-mono-num" style={{ color: 'var(--faint)', fontWeight: 400 }}>
+                      {terrain.anti.length} anti · {terrain.carves.length} carve · {terrain.diffs.length} patch
+                    </span>
+                  </div>
+                  {terrain.anti.length === 0 && terrain.carves.length === 0 && terrain.diffs.length === 0 ? (
+                    <div style={{ color: 'var(--faint)', fontSize: 10.5 }}>
+                      ○ 未检出显著反分析、内嵌容器或补丁差分特征
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {terrain.anti.map((a, i) => (
+                        <button
+                          key={`risk-anti-${i}`}
+                          type="button"
+                          onClick={() => setSelected({ kind: 'anti', data: a })}
+                          style={{
+                            textAlign: 'left',
+                            background: 'color-mix(in srgb, var(--err) 6%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--err) 40%, var(--rule))',
+                            padding: '4px 7px',
+                            cursor: 'pointer',
+                            font: 'inherit',
+                            fontSize: 10.5,
+                          }}
+                        >
+                          <div className="re-mono-num" style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+                            <span style={{ color: a.confidence === 'high' ? 'var(--err)' : 'var(--warn)', fontWeight: 700 }}>
+                              [{a.category.toUpperCase()}] {a.detail}
+                            </span>
+                            <span style={{ color: 'var(--faint)' }}>{fmtHex(a.offset)}</span>
+                          </div>
+                          <div style={{ color: 'var(--muted)', fontSize: 10, marginTop: 2 }}>{a.description}</div>
+                        </button>
+                      ))}
+                      {terrain.carves.map((c, i) => (
+                        <button
+                          key={`risk-carve-${i}`}
+                          type="button"
+                          onClick={() => setSelected({ kind: 'carve', data: c })}
+                          style={{
+                            textAlign: 'left',
+                            background: 'color-mix(in srgb, var(--violet) 6%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--violet) 40%, var(--rule))',
+                            padding: '4px 7px',
+                            cursor: 'pointer',
+                            font: 'inherit',
+                            fontSize: 10.5,
+                          }}
+                        >
+                          <div className="re-mono-num" style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+                            <span style={{ color: 'var(--violet)', fontWeight: 700 }}>[CARVE · {c.kind}]</span>
+                            <span style={{ color: 'var(--faint)' }}>{fmtHex(c.offset)}</span>
+                          </div>
+                          <div style={{ color: 'var(--muted)', fontSize: 10, marginTop: 2 }}>{c.signature}</div>
+                        </button>
+                      ))}
+                      {terrain.diffs.map((d, i) => (
+                        <button
+                          key={`risk-diff-${i}`}
+                          type="button"
+                          onClick={() => setSelected({ kind: 'diff', data: d })}
+                          style={{
+                            textAlign: 'left',
+                            background: 'color-mix(in srgb, var(--ok) 6%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--ok) 45%, var(--rule))',
+                            padding: '4px 7px',
+                            cursor: 'pointer',
+                            font: 'inherit',
+                            fontSize: 10.5,
+                          }}
+                        >
+                          <div className="re-mono-num" style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+                            <span style={{ color: 'var(--ok)', fontWeight: 700 }}>
+                              [PATCH #{i + 1}] {d.bytesA} → {d.bytesB}
+                            </span>
+                            <span style={{ color: 'var(--faint)' }}>{fmtHex(d.offset)} ({d.length}B)</span>
+                          </div>
+                          {d.classification && d.classification.length > 0 && (
+                            <div style={{ color: 'var(--muted)', fontSize: 10, marginTop: 2 }}>
+                              {d.classification.join(' · ')}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -943,6 +1218,9 @@ function StaticDynamicAlignmentView({
   ledger?: LedgerDTO | null
   onOpenLedger?: (tab: LedgerTab, highlightId?: string) => void
 }) {
+  const [verdictFilter, setVerdictFilter] = useState<'ALL' | AlignmentVerdict>('ALL')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
   const hyps: Hypothesis[] = ledger?.hypotheses ?? []
   const evs: EvidenceRecord[] = ledger?.evidence ?? []
   const findings: FindingDTO[] = ledger?.findings ?? []
@@ -964,6 +1242,33 @@ function StaticDynamicAlignmentView({
     [evs],
   )
 
+  const chains = useMemo(
+    () => hyps.map((h) => ({ hyp: h, chain: buildProvenanceChain(h, evs, findings) })),
+    [hyps, evs, findings],
+  )
+
+  const counts = useMemo(() => {
+    const tally: Record<AlignmentVerdict, number> = {
+      VERIFIED: 0,
+      DIVERGED: 0,
+      UNCOVERED: 0,
+      ANTI_ANALYSIS: 0,
+    }
+    for (const item of chains) tally[item.chain.verdict] += 1
+    return tally
+  }, [chains])
+
+  const filteredChains = useMemo(
+    () => (verdictFilter === 'ALL' ? chains : chains.filter((item) => item.chain.verdict === verdictFilter)),
+    [chains, verdictFilter],
+  )
+
+  const copyCite = (id: string, text: string) => {
+    navigator.clipboard?.writeText(text).catch(() => {})
+    setCopiedId(id)
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1400)
+  }
+
   if (hyps.length === 0 && evs.length === 0) {
     return (
       <div style={emptyBox}>
@@ -974,17 +1279,39 @@ function StaticDynamicAlignmentView({
 
   return (
     <div style={scrollBody}>
-      {/* Hypothesis Dual-View Cross-Check Matrix */}
-      <div style={sectionTitle}>◈ 假设双视角交叉核验（静态推断 ↔ 动态实测）</div>
+      {/* Hypothesis Dual-View Cross-Check Matrix + Verdict Filter */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+        <div style={sectionTitle}>◈ 假设双视角交叉核验（静态推断 ↔ 动态实测）</div>
+        <div className="re-filter-strip re-mono-num">
+          {(
+            [
+              ['ALL', `全部 ${chains.length}`],
+              ['VERIFIED', `Verified ${counts.VERIFIED}`],
+              ['DIVERGED', `Diverged ${counts.DIVERGED}`],
+              ['UNCOVERED', `Uncovered ${counts.UNCOVERED}`],
+              ['ANTI_ANALYSIS', `Anti-Analysis ${counts.ANTI_ANALYSIS}`],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className="re-filter-chip"
+              data-active={verdictFilter === key ? '1' : undefined}
+              onClick={() => setVerdictFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-        {hyps.map((h) => {
+        {filteredChains.map(({ hyp: h, chain }) => {
           const sup = (h.supporting ?? []).map((id) => evMap.get(id)).filter((x): x is EvidenceRecord => Boolean(x))
           const con = (h.contradicting ?? []).map((id) => evMap.get(id)).filter((x): x is EvidenceRecord => Boolean(x))
-          const hasStatic = sup.some((e) => e.view === 'static' || e.kind === 'tool_observation')
-          const hasDynamic = sup.some(
-            (e) => e.view === 'dynamic' || e.kind === 'runtime_trace' || e.kind === 'verification_result',
-          )
-          const hasConflict = con.length > 0 || h.status === 'rejected' || h.status === 'reevaluate'
+          const hasStatic = chain.staticEvs.length > 0
+          const hasDynamic = chain.dynamicEvs.length > 0 || chain.verifyEvs.length > 0
+          const hasConflict = chain.verdict === 'DIVERGED'
           const statusBadge = hasConflict
             ? { text: '✗ 动静冲突 / 待重查', style: badgeErr }
             : hasStatic && hasDynamic
@@ -1001,13 +1328,32 @@ function StaticDynamicAlignmentView({
                 borderColor: hasConflict ? 'var(--err)' : hasStatic && hasDynamic ? 'var(--ok)' : 'var(--rule)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <strong style={{ color: 'var(--accent)', fontSize: 12 }}>{h.id}</strong>
-                <span style={{ color: 'var(--faint)', fontSize: 11 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <strong className="re-mono-num" style={{ color: 'var(--accent)', fontSize: 12 }}>{h.id}</strong>
+                <span className="re-mono-num" style={{ color: 'var(--faint)', fontSize: 11 }}>
                   {Math.round(h.confidence * 100)}% · {h.status}
                 </span>
+                <span className="re-verdict-badge" data-verdict={chain.verdict}>
+                  {chain.verdict === 'ANTI_ANALYSIS' ? 'ANTI-ANALYSIS' : chain.verdict}
+                </span>
                 <span style={statusBadge.style}>{statusBadge.text}</span>
+                <span
+                  className="re-calib-pill"
+                  data-tone={chain.calibration.tone}
+                  title={chain.calibration.reason}
+                >
+                  {chain.calibration.status}
+                </span>
                 <span style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  className="re-copy-chip"
+                  data-copied={copiedId === h.id ? '1' : undefined}
+                  onClick={() => copyCite(h.id, formatHypothesisCitation(h))}
+                  title="复制取证引用编号"
+                >
+                  {copiedId === h.id ? '✓ 已复制' : '⎘ 引用'}
+                </button>
                 {sessionId && !hasDynamic && !hasConflict && (
                   <button
                     type="button"
@@ -1035,6 +1381,40 @@ function StaticDynamicAlignmentView({
                 )}
               </div>
               <div style={{ color: 'var(--text)', fontSize: 11.5, marginTop: 4 }}>{h.claim}</div>
+
+              {/* Explicit Provenance Chain: Static -> Dynamic -> Verification Oracle -> Audit */}
+              <div className="re-chain" style={{ marginTop: 5 }}>
+                <span className="re-chain-step" data-hit={chain.staticEvs.length > 0 ? 'static' : undefined}>
+                  Static ({chain.staticEvs.length})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span
+                  className="re-chain-step"
+                  data-hit={
+                    chain.contradictEvs.length > 0
+                      ? 'conflict'
+                      : chain.dynamicEvs.length > 0
+                        ? '1'
+                        : undefined
+                  }
+                >
+                  Dynamic ({chain.dynamicEvs.length}{chain.contradictEvs.length > 0 ? ` / ✗${chain.contradictEvs.length}` : ''})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span className="re-chain-step" data-hit={chain.verifyEvs.length > 0 ? '1' : undefined}>
+                  Oracle ({chain.verifyEvs.length})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span className="re-chain-step" data-hit={chain.auditEvs.length > 0 ? 'audit' : undefined}>
+                  Audit ({chain.auditEvs.length})
+                </span>
+                {chain.falsificationCriteria && (
+                  <span style={{ color: 'var(--faint)', fontSize: 10, marginLeft: 4 }}>
+                    · 证伪判据: {chain.falsificationCriteria}
+                  </span>
+                )}
+              </div>
+
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 5, fontSize: 10.5 }}>
                 {sup.map((e) => (
                   <button
@@ -1186,7 +1566,7 @@ const tabIdle: CSSProperties = {
 
 const tabActive: CSSProperties = {
   ...tabIdle,
-  borderColor: 'var(--accent)',
+  border: '1px solid var(--accent)',
   color: 'var(--accent)',
   background: 'rgba(34, 211, 238, 0.1)',
   fontWeight: 600,
@@ -1218,17 +1598,6 @@ const chipBtn: CSSProperties = {
   padding: '2px 7px',
   cursor: 'pointer',
   fontFamily: 'inherit',
-}
-
-const metaStrip: CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  alignItems: 'center',
-  gap: 8,
-  fontSize: 11,
-  padding: '5px 8px',
-  background: 'rgba(15, 23, 42, 0.5)',
-  border: '1px solid var(--rule)',
 }
 
 const metaItem: CSSProperties = { color: 'var(--muted)' }

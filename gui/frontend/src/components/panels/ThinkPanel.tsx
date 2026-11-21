@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { PanelBox } from '../crt'
+import '../re/re-pro.css'
 
 const ROWS_COLLAPSED = 3
 const ROWS_EXPANDED = 24
@@ -32,7 +33,7 @@ export function ThinkPanel({ lines, expanded, onToggle }: {
   return (
     <PanelBox title="think" accent="violet" tier="primary" badge="推理脉络">
       <div className="think-root">
-        <button type="button" className="think-head" onClick={toggle} title={open ? 'collapse' : 'expand'}>
+        <button type="button" className="think-head re-mono-num" onClick={toggle} title={open ? 'collapse' : 'expand'}>
           <span className="t-muted">{open ? '⌃' : '⌄'}</span>
           <span className="t-faint">{lines.length} lines</span>
           <span className="think-head-hint t-faint">{open ? 'collapse' : 'last 3'}</span>

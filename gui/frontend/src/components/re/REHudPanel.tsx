@@ -4,9 +4,21 @@
 import type { CSSProperties } from 'react'
 import type { ReDTO } from '../../lib/types'
 import { GlowText, PanelBox } from '../crt'
+import './re-pro.css'
 
 // Glyphs match workflow.PhaseCodes / internal/ui/rehud.go exactly.
 const PHASES = ['TRI', 'STA', 'DYN', 'EVI', 'IFC', 'HYP', 'VER', 'AUD', 'WRI']
+const PHASE_GATES: Record<string, string> = {
+  TRI: '样本指纹 / 格式 / 保护初筛',
+  STA: '静态观测入账 (ev ≥ 1)',
+  DYN: '可证伪假设建栈 (H ≥ 1)',
+  EVI: '动静双视角证据采集',
+  IFC: '核心接口 / 偏移定位',
+  HYP: '冲突仲裁与置信度校准',
+  VER: '动态追踪 ≥ 1 或静态观测 ≥ 3',
+  AUD: 'verify_artifact 重放凭证 ≥ 1',
+  WRI: 'audit_finding ≥ 1 + /goal 达标',
+}
 const BAR_W = 14
 
 export function REHudPanel({
@@ -64,9 +76,29 @@ export function REHudPanel({
               ))}
             </div>
 
-            <div style={{ fontSize: 12, letterSpacing: 1 }}>
-              <span style={{ color: 'var(--accent)' }}>{'▰'.repeat(filled(re))}</span>
-              <span style={{ color: 'var(--faint)' }}>{'▱'.repeat(BAR_W - filled(re))}</span>
+            <div className="re-mono-num" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ fontSize: 12, letterSpacing: 1 }}>
+                <span style={{ color: 'var(--accent)' }}>{'▰'.repeat(filled(re))}</span>
+                <span style={{ color: 'var(--faint)' }}>{'▱'.repeat(BAR_W - filled(re))}</span>
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: re.phaseIndex >= PHASES.length - 1 ? 'var(--ok)' : 'var(--muted)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+                title={
+                  re.phaseIndex >= PHASES.length - 1
+                    ? '✓ WRI 交付门禁就绪'
+                    : `NEXT → ${PHASES[re.phaseIndex + 1]}: ${PHASE_GATES[PHASES[re.phaseIndex + 1]] ?? ''}`
+                }
+              >
+                {re.phaseIndex >= PHASES.length - 1
+                  ? '✓ WRI 交付门禁就绪'
+                  : `NEXT → ${PHASES[re.phaseIndex + 1]}: ${PHASE_GATES[PHASES[re.phaseIndex + 1]] ?? ''}`}
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>

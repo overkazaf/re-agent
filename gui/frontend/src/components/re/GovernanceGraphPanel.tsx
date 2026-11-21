@@ -21,6 +21,13 @@ import {
 import { WriteupStudioPanel } from './WriteupStudioPanel'
 import { ZoomableSvgViewport } from './ZoomableSvgViewport'
 import type { WorkbenchTab } from './HypothesisWorkbenchDialog'
+import {
+  buildProvenanceChain,
+  evaluatePhaseGates,
+  formatEvidenceCitation,
+  formatHypothesisCitation,
+} from './forensics'
+import './re-pro.css'
 
 export type GraphViewMode = 'pipeline' | 'dag' | 'writeup'
 
@@ -237,6 +244,7 @@ export function GovernanceGraphPanel({
   const activeFrame: ReplayFrame | null =
     replayIdx !== null && replayFrames[replayIdx] ? replayFrames[replayIdx] : null
   const effectiveTick = activeFrame ? activeFrame.tick : tick
+  const phaseGates = useMemo(() => evaluatePhaseGates(effectiveTick), [effectiveTick])
 
   const ledger = effectiveTick?.ledger
   const evidence = ledger?.evidence ?? []
@@ -415,6 +423,25 @@ export function GovernanceGraphPanel({
             </span>
           </div>
         </div>
+
+        {/* 9-Phase Hard-Gate Readiness Strip (Pipeline & DAG modes) */}
+        {mode !== 'writeup' && (
+          <div className="re-gate-strip" data-testid="phase-gate-strip">
+            <span style={{ color: 'var(--faint)', letterSpacing: '0.06em' }}>GATES:</span>
+            {phaseGates.map((g) => (
+              <span
+                key={g.code}
+                className="re-gate-pill"
+                data-ready={g.ready}
+                title={`${g.code} (${g.phase}) — ${g.criterion} [${g.progress}]`}
+              >
+                <span>{g.ready === 'pass' ? '✓' : g.ready === 'current' ? '▸' : g.ready === 'blocked' ? '🔒' : '○'}</span>
+                <b>{g.code}</b>
+                <span style={{ opacity: 0.78 }}>{g.progress}</span>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Cognitive Replay Scrubber (available in both Pipeline & DAG views whenever frames exist) */}
         {mode !== 'writeup' && replayFrames.length > 0 && (
@@ -1242,6 +1269,26 @@ function ProvenanceDagView({
 
   const activeEv = selected?.kind === 'ev' ? evidence.find((e) => e.id === selected.id) : null
   const activeHyp = selected?.kind === 'hyp' ? hypotheses.find((h) => h.id === selected.id) : null
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const activeChain = useMemo(
+    () => (activeHyp ? buildProvenanceChain(activeHyp, evidence, findings) : null),
+    [activeHyp, evidence, findings],
+  )
+  const activeHypFindings = useMemo(
+    () => (activeHyp ? findings.filter((f) => f.hypothesisId === activeHyp.id) : []),
+    [activeHyp, findings],
+  )
+  const activeEvFindings = useMemo(
+    () => (activeEv ? findings.filter((f) => f.evidenceId === activeEv.id) : []),
+    [activeEv, findings],
+  )
+
+  const copyCite = (id: string, text: string) => {
+    navigator.clipboard?.writeText(text).catch(() => {})
+    setCopiedId(id)
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1400)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1528,33 +1575,121 @@ function ProvenanceDagView({
 
         {activeEv && (
           <div style={liveStripStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ color: 'var(--ok)', fontWeight: 700 }}>
                 {activeEv.id} · {activeEv.source} ({activeEv.kind || 'tool_observation'} · {activeEv.view || 'static'})
               </span>
+              {activeEv.sha256 && (
+                <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+                  sha256:{activeEv.sha256.slice(0, 12)}…
+                </span>
+              )}
               <span style={{ fontSize: 10, color: 'var(--faint)', border: '1px solid var(--rule)', padding: '0 5px' }}>
                 🔒 IMMUTABLE · 实跑产物入账（禁止人工修改或删除）
               </span>
+              <button
+                type="button"
+                className="re-copy-chip"
+                data-copied={copiedId === activeEv.id ? '1' : undefined}
+                onClick={() => copyCite(activeEv.id, formatEvidenceCitation(activeEv))}
+                style={{ marginLeft: 'auto' }}
+              >
+                {copiedId === activeEv.id ? '✓ 已复制引用' : '⎘ 复制取证引用'}
+              </button>
             </div>
             {activeEv.summary && <div style={{ color: 'var(--text)' }}>{activeEv.summary}</div>}
             <pre style={{ margin: '4px 0 0', color: 'var(--muted)', whiteSpace: 'pre-wrap' }}>{activeEv.excerpt}</pre>
+            {activeEvFindings.length > 0 && (
+              <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ color: 'var(--warn)', fontSize: 10, fontWeight: 700 }}>⚖ 关联仲裁理由:</span>
+                {activeEvFindings.map((f, i) => (
+                  <div key={i} style={{ color: 'var(--muted)', fontSize: 10.5 }}>
+                    [{f.rule} · {f.action || 'advisory'}] {f.hypothesisId}: {f.message}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {activeHyp && (
           <div style={liveStripStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
               <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
                 {activeHyp.id} [{activeHyp.status}] · 置信度 {Math.round(activeHyp.confidence * 100)}%
               </span>
+              {activeChain && (
+                <>
+                  <span className="re-verdict-badge" data-verdict={activeChain.verdict}>
+                    {activeChain.verdict === 'ANTI_ANALYSIS' ? 'ANTI-ANALYSIS' : activeChain.verdict}
+                  </span>
+                  <span
+                    className="re-calib-pill"
+                    data-tone={activeChain.calibration.tone}
+                    title={activeChain.calibration.reason}
+                  >
+                    {activeChain.calibration.status}
+                  </span>
+                </>
+              )}
               {activeHyp.experiments && activeHyp.experiments.length > 0 && (
                 <span style={{ color: 'var(--ok)', fontSize: 10 }}>
                   🧪 已挂实验: {activeHyp.experiments.length} 项
                 </span>
               )}
+              <button
+                type="button"
+                className="re-copy-chip"
+                data-copied={copiedId === activeHyp.id ? '1' : undefined}
+                onClick={() => copyCite(activeHyp.id, formatHypothesisCitation(activeHyp))}
+                style={{ marginLeft: 'auto' }}
+              >
+                {copiedId === activeHyp.id ? '✓ 已复制引用' : '⎘ 复制假设引用'}
+              </button>
             </div>
-            <div style={{ color: 'var(--text)' }}>{activeHyp.claim}</div>
-            {activeHyp.note && <div style={{ color: 'var(--warn)' }}>原因/备注: {activeHyp.note}</div>}
+            <div style={{ color: 'var(--text)', marginTop: 2 }}>{activeHyp.claim}</div>
+            {activeChain && (
+              <div className="re-chain" style={{ marginTop: 4 }}>
+                <span className="re-chain-step" data-hit={activeChain.staticEvs.length > 0 ? 'static' : undefined}>
+                  Static ({activeChain.staticEvs.length})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span
+                  className="re-chain-step"
+                  data-hit={
+                    activeChain.contradictEvs.length > 0
+                      ? 'conflict'
+                      : activeChain.dynamicEvs.length > 0
+                        ? '1'
+                        : undefined
+                  }
+                >
+                  Dynamic ({activeChain.dynamicEvs.length}{activeChain.contradictEvs.length > 0 ? `/✗${activeChain.contradictEvs.length}` : ''})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span className="re-chain-step" data-hit={activeChain.verifyEvs.length > 0 ? '1' : undefined}>
+                  Oracle ({activeChain.verifyEvs.length})
+                </span>
+                <span className="re-chain-arrow">→</span>
+                <span className="re-chain-step" data-hit={activeChain.auditEvs.length > 0 ? 'audit' : undefined}>
+                  Audit ({activeChain.auditEvs.length})
+                </span>
+              </div>
+            )}
+            {activeHyp.note && <div style={{ color: 'var(--warn)', marginTop: 3 }}>原因/备注: {activeHyp.note}</div>}
+            {activeHypFindings.length > 0 && (
+              <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ color: 'var(--violet)', fontSize: 10, fontWeight: 700 }}>
+                  ⚖ 仲裁与对抗审计理由 ({activeHypFindings.length}):
+                </span>
+                {activeHypFindings.map((f, i) => (
+                  <div key={i} style={{ color: f.action === 'support' ? 'var(--ok)' : 'var(--warn)', fontSize: 10.5 }}>
+                    [{f.rule} · {f.action || 'advisory'}{f.applied ? ' · applied' : ''}]
+                    {f.evidenceId ? ` ← ${f.evidenceId}` : ''}: {f.message}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

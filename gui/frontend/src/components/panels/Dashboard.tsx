@@ -25,7 +25,7 @@ export function Dashboard({ tick, thinkLines, onThinkToggle }: {
           <ToolsPanel flow={tick.flow} />
         </div>
         <div className="dash-cell dash-plan">
-          <PlanPanel plan={tick.plan} badge={tick.flow.plan} planKind={tick.flow.planKind} />
+          <PlanPanel plan={tick.plan} badge={tick.flow.plan} planKind={tick.flow.planKind} tick={tick} />
         </div>
         <div className="dash-cell dash-think">
           <ThinkPanel lines={thinkLines} onToggle={onThinkToggle} />

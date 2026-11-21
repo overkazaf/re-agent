@@ -6,6 +6,12 @@ import type { HypothesisStatus, LedgerDTO } from '../../lib/types'
 import { PanelBox } from '../crt'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
 import type { WorkbenchTab } from './HypothesisWorkbenchDialog'
+import {
+  buildProvenanceChain,
+  formatEvidenceCitation,
+  formatHypothesisCitation,
+} from './forensics'
+import './re-pro.css'
 
 export type LedgerTab = 'evidence' | 'hypotheses'
 
@@ -76,10 +82,40 @@ export function LedgerPanel({
 }) {
   const [tab, setTab] = useState<LedgerTab>('evidence')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [evQuickFilter, setEvQuickFilter] = useState<'all' | 'static' | 'dynamic' | 'verified' | 'err'>('all')
+  const [hypQuickFilter, setHypQuickFilter] = useState<'all' | 'active' | 'conflict'>('all')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const evidence = ledger?.evidence ?? []
   const hypotheses = ledger?.hypotheses ?? []
-  const recentEv = evidence.slice(-12).reverse()
+  const findings = ledger?.findings ?? []
+
+  const copyCite = (id: string, citation: string) => {
+    navigator.clipboard?.writeText(citation).catch(() => {})
+    setCopiedId(id)
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1400)
+  }
+
+  const recentEv = useMemo(() => {
+    return evidence
+      .filter((ev) => {
+        if (evQuickFilter === 'all') return true
+        if (evQuickFilter === 'err') return Boolean(ev.isError)
+        if (evQuickFilter === 'verified') return ev.kind === 'verification_result' || ev.kind === 'audit_finding'
+        if (evQuickFilter === 'dynamic') return ev.view === 'dynamic' || ev.kind === 'runtime_trace'
+        return (ev.view || 'static') === 'static' && !ev.isError
+      })
+      .slice(-12)
+      .reverse()
+  }, [evidence, evQuickFilter])
+
+  const filteredHyps = useMemo(() => {
+    return hypotheses.filter((h) => {
+      if (hypQuickFilter === 'all') return true
+      if (hypQuickFilter === 'active') return h.status === 'active' || h.status === 'revised'
+      return h.status === 'rejected' || h.status === 'reevaluate' || (h.contradicting?.length ?? 0) > 0
+    })
+  }, [hypotheses, hypQuickFilter])
 
   return (
     <div style={style}>
@@ -137,38 +173,173 @@ export function LedgerPanel({
           </div>
 
           {tab === 'evidence' ? (
-            recentEv.length === 0 ? (
-              <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 0' }}>
-                ○ 暂无证据 — 工具运行后自动盖章 ev_NNN
+            <>
+              {evidence.length > 0 && (
+                <div className="re-filter-strip re-mono-num">
+                  {(
+                    [
+                      ['all', 'ALL'],
+                      ['static', 'STA'],
+                      ['dynamic', 'DYN'],
+                      ['verified', 'VER/AUD'],
+                      ['err', 'ERR'],
+                    ] as const
+                  ).map(([k, lbl]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className="re-filter-chip"
+                      data-active={evQuickFilter === k ? '1' : undefined}
+                      onClick={() => setEvQuickFilter(k)}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {recentEv.length === 0 ? (
+                <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 0' }}>
+                  {evidence.length === 0
+                    ? '○ 暂无证据 — 工具运行后自动盖章 ev_NNN'
+                    : '○ 当前筛选无匹配证据'}
+                </div>
+              ) : (
+                <div style={listStyle}>
+                  {recentEv.map((ev) => {
+                    const meta = kindMeta(ev.kind, ev.isError)
+                    const open = expandedId === ev.id
+                    const headline = ev.summary || ev.excerpt
+                    return (
+                      <div
+                        key={ev.id}
+                        onClick={() => setExpandedId(open ? null : ev.id)}
+                        style={{
+                          ...itemStyle,
+                          borderColor: open ? `var(--${meta.tone})` : 'var(--rule)',
+                        }}
+                      >
+                        <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                          <span style={{ color: 'var(--ok)', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                            {ev.id}
+                          </span>
+                          <span style={chipStyle(meta.tone)}>{meta.label}</span>
+                          <span style={{ color: 'var(--muted)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                            {ev.source}
+                          </span>
+                          {ev.view && <span style={{ color: 'var(--faint)', fontSize: 9 }}>{ev.view}</span>}
+                          <button
+                            type="button"
+                            className="re-copy-chip"
+                            data-copied={copiedId === ev.id ? '1' : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              copyCite(ev.id, formatEvidenceCitation(ev))
+                            }}
+                            title={`复制取证引用: ${formatEvidenceCitation(ev)}`}
+                            style={{ padding: '0 4px', fontSize: 9 }}
+                          >
+                            {copiedId === ev.id ? '✓' : '⎘'}
+                          </button>
+                        </div>
+                        <div
+                          style={{
+                            color: ev.isError ? 'var(--err)' : 'var(--text)',
+                            fontSize: 11,
+                            lineHeight: 1.4,
+                            whiteSpace: open ? 'pre-wrap' : 'nowrap',
+                            overflow: open ? 'visible' : 'hidden',
+                            textOverflow: open ? 'clip' : 'ellipsis',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {open ? ev.summary || ev.excerpt : shortText(headline, 72)}
+                        </div>
+                        {open && ev.summary && ev.excerpt && ev.excerpt !== ev.summary && (
+                          <pre style={miniExcerptStyle}>{ev.excerpt}</pre>
+                        )}
+                        {open && ev.verification && (
+                          <div className="re-mono-num" style={{ color: 'var(--ok)', fontSize: 10 }}>
+                            ✓ verify: {ev.verification.passed}/{ev.verification.total} passed
+                            {ev.verification.build ? ' · build ok' : ''}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          ) : hypotheses.length === 0 ? (
+            <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 0' }}>
+              ○ 暂无假设 — hypothesis_create 后在此跟踪
+            </div>
+          ) : (
+            <>
+              <div className="re-filter-strip re-mono-num">
+                {(
+                  [
+                    ['all', 'ALL'],
+                    ['active', 'ACTIVE'],
+                    ['conflict', 'CONFLICT'],
+                  ] as const
+                ).map(([k, lbl]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className="re-filter-chip"
+                    data-active={hypQuickFilter === k ? '1' : undefined}
+                    onClick={() => setHypQuickFilter(k)}
+                  >
+                    {lbl}
+                  </button>
+                ))}
               </div>
-            ) : (
               <div style={listStyle}>
-                {recentEv.map((ev) => {
-                  const meta = kindMeta(ev.kind, ev.isError)
-                  const open = expandedId === ev.id
-                  const headline = ev.summary || ev.excerpt
+                {filteredHyps.map((h) => {
+                  const tone = HYP_TONE[h.status] ?? 'accent'
+                  const open = expandedId === h.id
+                  const chain = buildProvenanceChain(h, evidence, findings)
                   return (
                     <div
-                      key={ev.id}
-                      onClick={() => setExpandedId(open ? null : ev.id)}
+                      key={h.id}
+                      onClick={() => setExpandedId(open ? null : h.id)}
                       style={{
                         ...itemStyle,
-                        borderColor: open ? `var(--${meta.tone})` : 'var(--rule)',
+                        borderColor: open ? `var(--${tone})` : 'var(--rule)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                        <span style={{ color: 'var(--ok)', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                          {ev.id}
+                      <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: `var(--${tone})`, fontSize: 10, fontWeight: 700 }}>{h.id}</span>
+                        <span style={chipStyle(tone)}>{h.status}</span>
+                        <span
+                          className="re-verdict-badge"
+                          data-verdict={chain.verdict}
+                          style={{ fontSize: 8.5, padding: '0 4px' }}
+                          title={chain.calibration.reason}
+                        >
+                          {chain.verdict === 'ANTI_ANALYSIS' ? 'ANTI' : chain.verdict}
                         </span>
-                        <span style={chipStyle(meta.tone)}>{meta.label}</span>
-                        <span style={{ color: 'var(--muted)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                          {ev.source}
+                        <span style={{ color: 'var(--muted)', fontSize: 10, marginLeft: 'auto' }}>
+                          {fmtConf(h.confidence)}
                         </span>
-                        {ev.view && <span style={{ color: 'var(--faint)', fontSize: 9 }}>{ev.view}</span>}
+                        <button
+                          type="button"
+                          className="re-copy-chip"
+                          data-copied={copiedId === h.id ? '1' : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            copyCite(h.id, formatHypothesisCitation(h))
+                          }}
+                          title={`复制假设引用: ${formatHypothesisCitation(h)}`}
+                          style={{ padding: '0 4px', fontSize: 9 }}
+                        >
+                          {copiedId === h.id ? '✓' : '⎘'}
+                        </button>
                       </div>
                       <div
                         style={{
-                          color: ev.isError ? 'var(--err)' : 'var(--text)',
+                          color: h.status === 'rejected' ? 'var(--faint)' : 'var(--text)',
+                          textDecoration: h.status === 'rejected' ? 'line-through' : 'none',
                           fontSize: 11,
                           lineHeight: 1.4,
                           whiteSpace: open ? 'pre-wrap' : 'nowrap',
@@ -177,88 +348,57 @@ export function LedgerPanel({
                           wordBreak: 'break-word',
                         }}
                       >
-                        {open ? ev.summary || ev.excerpt : shortText(headline, 72)}
+                        {open ? h.claim : shortText(h.claim, 68)}
                       </div>
-                      {open && ev.summary && ev.excerpt && ev.excerpt !== ev.summary && (
-                        <pre style={miniExcerptStyle}>{ev.excerpt}</pre>
+                      {open && (
+                        <div className="re-chain" style={{ fontSize: 9.5 }}>
+                          <span className="re-chain-step" data-hit={chain.staticEvs.length > 0 ? 'static' : undefined}>
+                            S:{chain.staticEvs.length}
+                          </span>
+                          <span className="re-chain-arrow">→</span>
+                          <span
+                            className="re-chain-step"
+                            data-hit={chain.contradictEvs.length > 0 ? 'conflict' : chain.dynamicEvs.length > 0 ? '1' : undefined}
+                          >
+                            D:{chain.dynamicEvs.length}
+                          </span>
+                          <span className="re-chain-arrow">→</span>
+                          <span className="re-chain-step" data-hit={chain.verifyEvs.length > 0 ? '1' : undefined}>
+                            V:{chain.verifyEvs.length}
+                          </span>
+                          <span className="re-calib-pill" data-tone={chain.calibration.tone} title={chain.calibration.reason}>
+                            {chain.calibration.status}
+                          </span>
+                        </div>
                       )}
-                      {open && ev.verification && (
-                        <div style={{ color: 'var(--ok)', fontSize: 10 }}>
-                          ✓ verify: {ev.verification.passed}/{ev.verification.total} passed
-                          {ev.verification.build ? ' · build ok' : ''}
+                      {open && h.note && (
+                        <div style={{ color: 'var(--muted)', fontSize: 10, borderLeft: '2px solid var(--rule)', paddingLeft: 6 }}>
+                          note: {h.note}
+                        </div>
+                      )}
+                      {h.supporting && h.supporting.length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {h.supporting.map((evId) => (
+                            <button
+                              key={evId}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onOpenDetail?.('evidence', evId)
+                              }}
+                              title={`查看引用证据 ${evId}`}
+                              style={refLinkStyle}
+                            >
+                              {evId}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
                   )
                 })}
               </div>
-            )
-          ) : hypotheses.length === 0 ? (
-            <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 0' }}>
-              ○ 暂无假设 — hypothesis_create 后在此跟踪
-            </div>
-          ) : (
-            <div style={listStyle}>
-              {hypotheses.map((h) => {
-                const tone = HYP_TONE[h.status] ?? 'accent'
-                const open = expandedId === h.id
-                return (
-                  <div
-                    key={h.id}
-                    onClick={() => setExpandedId(open ? null : h.id)}
-                    style={{
-                      ...itemStyle,
-                      borderColor: open ? `var(--${tone})` : 'var(--rule)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ color: `var(--${tone})`, fontSize: 10, fontWeight: 700 }}>{h.id}</span>
-                      <span style={chipStyle(tone)}>{h.status}</span>
-                      <span style={{ color: 'var(--muted)', fontSize: 10, marginLeft: 'auto' }}>
-                        {fmtConf(h.confidence)}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        color: h.status === 'rejected' ? 'var(--faint)' : 'var(--text)',
-                        textDecoration: h.status === 'rejected' ? 'line-through' : 'none',
-                        fontSize: 11,
-                        lineHeight: 1.4,
-                        whiteSpace: open ? 'pre-wrap' : 'nowrap',
-                        overflow: open ? 'visible' : 'hidden',
-                        textOverflow: open ? 'clip' : 'ellipsis',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {open ? h.claim : shortText(h.claim, 68)}
-                    </div>
-                    {open && h.note && (
-                      <div style={{ color: 'var(--muted)', fontSize: 10, borderLeft: '2px solid var(--rule)', paddingLeft: 6 }}>
-                        note: {h.note}
-                      </div>
-                    )}
-                    {h.supporting && h.supporting.length > 0 && (
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {h.supporting.map((evId) => (
-                          <button
-                            key={evId}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onOpenDetail?.('evidence', evId)
-                            }}
-                            title={`查看引用证据 ${evId}`}
-                            style={refLinkStyle}
-                          >
-                            {evId}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+            </>
           )}
         </div>
       </PanelBox>
@@ -284,10 +424,20 @@ export function LedgerDetailDialog({
   const [tab, setTab] = useState<LedgerTab>(initialTab)
   const [query, setQuery] = useState('')
   const [kindFilter, setKindFilter] = useState<string>('all')
+  const [viewFilter, setViewFilter] = useState<'all' | 'static' | 'dynamic' | 'error'>('all')
+  const [hypStatusFilter, setHypStatusFilter] = useState<'all' | HypothesisStatus>('all')
   const [highlightId, setHighlightId] = useState<string | null>(initialHighlightId ?? null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const evidence = ledger?.evidence ?? []
   const hypotheses = ledger?.hypotheses ?? []
+  const findings = ledger?.findings ?? []
+
+  const copyCite = (id: string, citation: string) => {
+    navigator.clipboard?.writeText(citation).catch(() => {})
+    setCopiedId(id)
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1400)
+  }
 
   const filteredEv = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -295,26 +445,31 @@ export function LedgerDetailDialog({
       .reverse()
       .filter((ev) => {
         if (kindFilter !== 'all' && (ev.kind || 'tool_observation') !== kindFilter) return false
+        if (viewFilter === 'error' && !ev.isError) return false
+        if (viewFilter === 'static' && (ev.view || 'static') !== 'static') return false
+        if (viewFilter === 'dynamic' && ev.view !== 'dynamic' && ev.kind !== 'runtime_trace' && ev.kind !== 'verification_result') return false
         if (!q) return true
         return [ev.id, ev.source, ev.kind, ev.view, ev.summary, ev.excerpt, ev.artifact]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q))
       })
-  }, [evidence, query, kindFilter])
+  }, [evidence, query, kindFilter, viewFilter])
 
   const filteredHyp = useMemo(() => {
     const q = query.trim().toLowerCase()
     return hypotheses.filter((h) => {
+      if (hypStatusFilter !== 'all' && h.status !== hypStatusFilter) return false
       if (!q) return true
       return [h.id, h.claim, h.status, h.note, ...(h.supporting ?? []), ...(h.contradicting ?? [])]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     })
-  }, [hypotheses, query])
+  }, [hypotheses, query, hypStatusFilter])
 
   function jumpToEvidence(evId: string) {
     setTab('evidence')
     setKindFilter('all')
+    setViewFilter('all')
     setQuery('')
     setHighlightId(evId)
   }
@@ -374,9 +529,9 @@ export function LedgerDetailDialog({
       </div>
 
       {/* Filter row */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
-          style={{ ...fieldStyle, flex: 1 }}
+          style={{ ...fieldStyle, flex: 1, minWidth: 200 }}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -384,19 +539,64 @@ export function LedgerDetailDialog({
           }}
           placeholder={tab === 'evidence' ? '搜索 ev_NNN / 工具来源 / 摘录内容…' : '搜索 H-NNN / 假设内容 / 引用证据…'}
         />
-        {tab === 'evidence' && (
-          <select
-            style={{ ...fieldStyle, width: 170 }}
-            value={kindFilter}
-            onChange={(e) => setKindFilter(e.target.value)}
-          >
-            <option value="all">全部类型 ({evidence.length})</option>
-            <option value="tool_observation">tool_observation</option>
-            <option value="verification_result">verification_result</option>
-            <option value="audit_finding">audit_finding</option>
-            <option value="artifact">artifact</option>
-            <option value="runtime_trace">runtime_trace</option>
-          </select>
+        {tab === 'evidence' ? (
+          <>
+            <select
+              aria-label="evidence kind filter"
+              style={{ ...fieldStyle, width: 165 }}
+              value={kindFilter}
+              onChange={(e) => setKindFilter(e.target.value)}
+            >
+              <option value="all">全部类型 ({evidence.length})</option>
+              <option value="tool_observation">tool_observation</option>
+              <option value="verification_result">verification_result</option>
+              <option value="audit_finding">audit_finding</option>
+              <option value="artifact">artifact</option>
+              <option value="runtime_trace">runtime_trace</option>
+            </select>
+            <div className="re-filter-strip re-mono-num">
+              {(
+                [
+                  ['all', '全部视角'],
+                  ['static', 'Static'],
+                  ['dynamic', 'Dynamic'],
+                  ['error', 'ERR'],
+                ] as const
+              ).map(([k, lbl]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className="re-filter-chip"
+                  data-active={viewFilter === k ? '1' : undefined}
+                  onClick={() => setViewFilter(k)}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="re-filter-strip re-mono-num">
+            {(
+              [
+                ['all', `全部 (${hypotheses.length})`],
+                ['active', 'ACTIVE'],
+                ['revised', 'REVISED'],
+                ['reevaluate', 'REEVAL'],
+                ['rejected', 'REJECTED'],
+              ] as const
+            ).map(([k, lbl]) => (
+              <button
+                key={k}
+                type="button"
+                className="re-filter-chip"
+                data-active={hypStatusFilter === k ? '1' : undefined}
+                onClick={() => setHypStatusFilter(k)}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -424,15 +624,26 @@ export function LedgerDetailDialog({
                     gap: 5,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
+                  <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
                     <span style={{ color: 'var(--ok)', fontWeight: 700 }}>{ev.id}</span>
                     <span style={chipStyle(meta.tone)}>{ev.kind || 'tool_observation'}</span>
                     <span style={{ color: 'var(--accent)' }}>{ev.source}</span>
                     {ev.view && <span style={{ color: 'var(--faint)' }}>view:{ev.view}</span>}
                     {ev.bytes > 0 && <span style={{ color: 'var(--faint)' }}>{ev.bytes}B</span>}
                     {ev.artifact && <span style={{ color: 'var(--violet)' }}>artifact:{ev.artifact}</span>}
-                    <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10 }}>
-                      {fmtStamp(ev.createdAt)}
+                    <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        className="re-copy-chip"
+                        data-copied={copiedId === ev.id ? '1' : undefined}
+                        onClick={() => copyCite(ev.id, formatEvidenceCitation(ev))}
+                        title={`复制取证引用: ${formatEvidenceCitation(ev)}`}
+                      >
+                        {copiedId === ev.id ? '✓ 已复制' : '⎘ 引用'}
+                      </button>
+                      <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+                        {fmtStamp(ev.createdAt)}
+                      </span>
                     </span>
                   </div>
 
@@ -472,6 +683,7 @@ export function LedgerDetailDialog({
         ) : (
           filteredHyp.map((h) => {
             const tone = HYP_TONE[h.status] ?? 'accent'
+            const chain = buildProvenanceChain(h, evidence, findings)
             return (
               <div
                 key={h.id}
@@ -485,13 +697,34 @@ export function LedgerDetailDialog({
                   gap: 5,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
+                <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', fontSize: 11 }}>
                   <span style={{ color: `var(--${tone})`, fontWeight: 700 }}>{h.id}</span>
                   <span style={chipStyle(tone)}>{h.status}</span>
+                  <span className="re-verdict-badge" data-verdict={chain.verdict}>
+                    {chain.verdict === 'ANTI_ANALYSIS' ? 'ANTI-ANALYSIS' : chain.verdict}
+                  </span>
                   <span style={{ color: 'var(--accent)', letterSpacing: 1 }}>{confBar(h.confidence)}</span>
                   <span style={{ color: 'var(--muted)' }}>{fmtConf(h.confidence)}</span>
-                  <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10 }}>
-                    {fmtStamp(h.updatedAt)}
+                  <span
+                    className="re-calib-pill"
+                    data-tone={chain.calibration.tone}
+                    title={chain.calibration.reason}
+                  >
+                    {chain.calibration.status}
+                  </span>
+                  <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      type="button"
+                      className="re-copy-chip"
+                      data-copied={copiedId === h.id ? '1' : undefined}
+                      onClick={() => copyCite(h.id, formatHypothesisCitation(h))}
+                      title={`复制取证引用: ${formatHypothesisCitation(h)}`}
+                    >
+                      {copiedId === h.id ? '✓ 已复制' : '⎘ 引用'}
+                    </button>
+                    <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+                      {fmtStamp(h.updatedAt)}
+                    </span>
                   </span>
                 </div>
 
@@ -504,6 +737,39 @@ export function LedgerDetailDialog({
                   }}
                 >
                   {h.claim}
+                </div>
+
+                {/* Provenance Chain: Static Finding -> Dynamic Trace -> Verification Oracle -> Audit */}
+                <div className="re-chain">
+                  <span className="re-chain-step" data-hit={chain.staticEvs.length > 0 ? 'static' : undefined}>
+                    Static ({chain.staticEvs.length})
+                  </span>
+                  <span className="re-chain-arrow">→</span>
+                  <span
+                    className="re-chain-step"
+                    data-hit={
+                      chain.contradictEvs.length > 0
+                        ? 'conflict'
+                        : chain.dynamicEvs.length > 0
+                          ? '1'
+                          : undefined
+                    }
+                  >
+                    Dynamic ({chain.dynamicEvs.length}{chain.contradictEvs.length > 0 ? `/✗${chain.contradictEvs.length}` : ''})
+                  </span>
+                  <span className="re-chain-arrow">→</span>
+                  <span className="re-chain-step" data-hit={chain.verifyEvs.length > 0 ? '1' : undefined}>
+                    Oracle ({chain.verifyEvs.length})
+                  </span>
+                  <span className="re-chain-arrow">→</span>
+                  <span className="re-chain-step" data-hit={chain.auditEvs.length > 0 ? 'audit' : undefined}>
+                    Audit ({chain.auditEvs.length})
+                  </span>
+                  {chain.falsificationCriteria && (
+                    <span style={{ color: 'var(--faint)', fontSize: 10, marginLeft: 4 }}>
+                      证伪判据: {chain.falsificationCriteria}
+                    </span>
+                  )}
                 </div>
 
                 {h.note && (
