@@ -1,0 +1,37 @@
+gui/frontend/src/store/scene.ts
+  6dcd1ee682d8c61b 4-5,15,80-93
+gui/frontend/src/store/derive.test.ts
+  6dcd1ee682d8c61b 471,480
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "66f2296c3149f90b0aade7b024c37705fef7bb92",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 6,
+      "accepted_lines": 19,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/store/scene.ts": {
+          "additions": 17,
+          "deletions": 4,
+          "accepted_lines": 17
+        },
+        "gui/frontend/src/store/derive.test.ts": {
+          "additions": 2,
+          "deletions": 2,
+          "accepted_lines": 2
+        }
+      }
+    }
+  }
+}
