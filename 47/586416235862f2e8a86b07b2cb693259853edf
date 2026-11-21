@@ -1,0 +1,29 @@
+gui/frontend/src/components/wizard/ExperimentWizard.tsx
+  6dcd1ee682d8c61b 1-300
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "47586416235862f2e8a86b07b2cb693259853edf",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 300,
+      "total_deletions": 0,
+      "accepted_lines": 300,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/wizard/ExperimentWizard.tsx": {
+          "additions": 300,
+          "accepted_lines": 300
+        }
+      }
+    }
+  }
+}
