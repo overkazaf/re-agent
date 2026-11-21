@@ -300,6 +300,9 @@ export const demoActions = {
   async enterDemo(scenarioId?: DemoScenarioId, openLauncher = false): Promise<void> {
     const target = scenarioId ?? state.scenarioId
     if (!state.active) {
+      // 同步置 __DEMO__：3D 剧场的 TheaterDebugBridge 在挂载 effect 里读它，
+      // 必须在 CommandCenter（及其子组件）渲染前就位，e2e 的 zoneScreenPos 才可用。
+      ;(window as unknown as { __DEMO__?: boolean }).__DEMO__ = true
       stashSessionsForDemo()
       stashShellsForDemo()
       setDemoEventsOnly(true)
@@ -320,6 +323,7 @@ export const demoActions = {
 
   exitDemo(): void {
     if (!state.active || !hasRealWailsBackend()) return
+    ;(window as unknown as { __DEMO__?: boolean }).__DEMO__ = undefined
     runSeq += 1
     backend.dispose()
     setDemoAppAPI(null)

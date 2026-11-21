@@ -148,6 +148,8 @@ function CommandCenter() {
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
     typeof localStorage !== 'undefined' && localStorage.getItem(VIEW_MODE_KEY) === 'classic' ? 'classic' : 'theater',
   )
+  // e2e / 无头环境确定性：?noFallback=1 关闭自动降级哨兵（WebGL 软件渲染帧率必挂 30fps）
+  const noFallback = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noFallback')
 
   useEffect(() => {
     try {
@@ -156,11 +158,6 @@ function CommandCenter() {
       /* private mode 等 — 记不住就每次默认 theater */
     }
   }, [viewMode])
-
-  // demo 沙箱下激活 3D 场景的 e2e 调试钩子（window.__theaterDebug）
-  useEffect(() => {
-    ;(window as unknown as { __DEMO__?: boolean }).__DEMO__ = demo.active || undefined
-  }, [demo.active])
 
   // reconcile 桥：3D 剧场的唯一数据喂入口。sessions 快照每个事件批都会换
   // 引用，这里随之重算派生场景；重活（场景树渲染）由 useThrottledScene 250ms 节流兜住。
@@ -178,10 +175,16 @@ function CommandCenter() {
   const openGraph = (mode: GraphViewMode) => {
     setGraphMode(mode)
     setCenterView('graph')
+    setViewMode('classic') // 图谱是经典视图的舞台面；3D 剧场下点它即落地到经典+图谱
     setExpandDashKey((k) => k + 1)
   }
 
   const toggleCenterGraph = () => {
+    if (viewMode === 'theater') {
+      // 3D 剧场中「机制图谱」= 带着图谱意图落回经典视图
+      openGraph('pipeline')
+      return
+    }
     setCenterView((cur) => {
       const next = cur === 'graph' ? 'dashboard' : 'graph'
       if (next === 'graph') setExpandDashKey((k) => k + 1)
@@ -216,11 +219,12 @@ function CommandCenter() {
         live={live}
         expandDashboardKey={expandDashKey}
         banner={
-          demo.active ? (
-            <DemoCoachBar graphOpen={centerView === 'graph'} onToggleGraph={toggleCenterGraph} />
-          ) : (
+          // 演示教练条与建议条可叠加：建议条是引导主线的「永远可见的线头」，
+          // 不该被 demo 模式独占的 banner 槽挤掉（它自己会在 none/dismiss 时静默）。
+          <>
+            {demo.active && <DemoCoachBar graphOpen={centerView === 'graph'} onToggleGraph={toggleCenterGraph} />}
             <SuggestionBar />
-          )
+          </>
         }
         topRight={
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
@@ -236,18 +240,24 @@ function CommandCenter() {
             >
               {viewMode === 'theater' ? '▣ 经典视图' : '◈ 3D 剧场'}
             </button>
-            {viewMode === 'classic' && (
+            {viewMode === 'classic' && centerView === 'graph' && (
               <button
                 type="button"
                 onClick={toggleCenterGraph}
-                title={
-                  centerView === 'graph'
-                    ? '切回五维实时仪表盘 (FLOW / TOOLS / PLAN / THINK / TELE)'
-                    : '以图谱形式查看假设、证据、仲裁审核与安全沙箱协同机制'
-                }
-                style={centerView === 'graph' ? graphBtnActiveStyle : graphBtnStyle}
+                title="切回五维实时仪表盘 (FLOW / TOOLS / PLAN / THINK / TELE)"
+                style={graphBtnActiveStyle}
               >
-                {centerView === 'graph' ? '▣ 五维仪表' : '◈ 机制图谱'}
+                ▣ 五维仪表
+              </button>
+            )}
+            {!(viewMode === 'classic' && centerView === 'graph') && (
+              <button
+                type="button"
+                onClick={toggleCenterGraph}
+                title="以图谱形式查看假设、证据、仲裁审核与安全沙箱协同机制（3D 剧场下将切至经典视图）"
+                style={graphBtnStyle}
+              >
+                ◈ 机制图谱
               </button>
             )}
             {demo.active ? (
@@ -292,7 +302,7 @@ function CommandCenter() {
         dashboard={
           viewMode === 'theater' ? (
             <>
-              <TheaterFallbackWatch onFallback={onTheaterFallback} />
+              {!noFallback && <TheaterFallbackWatch onFallback={onTheaterFallback} />}
               <ForensicTheater hud={holoHud} onExitToClassic={() => setViewMode('classic')} />
             </>
           ) : centerView === 'graph' ? (

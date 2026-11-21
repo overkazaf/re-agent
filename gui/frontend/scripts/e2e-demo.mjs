@@ -334,6 +334,112 @@ async function main() {
   }, page)
   await shot('layout-resizable-collapsible')
 
+  // ---------- Part 1.5: 3D Forensic Theater — wizard chain + view toggle + fallback ----------
+  const tPage = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  tPage.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(`[3d] ${m.text()}`) })
+  tPage.on('pageerror', (e) => pageErrors.push(`[3d] ${String(e?.stack ?? e)}`))
+  // noFallback=1：无头 Chrome 软件渲染帧率必低于 30fps，关掉自动降级哨兵保证用例确定性
+  await tPage.goto(`http://127.0.0.1:${PORT}/gui-demo/index.html?demo=1&noFallback=1`)
+
+  await step('theater: demo boots with 3D canvas + e2e debug hook', async () => {
+    await waitFor(tPage, '◈ DEMO')
+    await tPage.locator('canvas').first().waitFor({ state: 'visible', timeout: 10000 })
+    // R3F 的 effect 在 canvas 可见之后才装钩子 —— 轮询而不是一次性读取
+    await tPage.waitForFunction(
+      () => typeof window.__theaterDebug?.zoneScreenPos === 'function',
+      undefined,
+      { timeout: 10000 },
+    )
+    const pos = await tPage.evaluate(() => window.__theaterDebug?.zoneScreenPos?.('HYP'))
+    if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') {
+      throw new Error(`zoneScreenPos broken: ${JSON.stringify(pos)}`)
+    }
+  }, tPage)
+  await tPage.screenshot({ path: join(ARTIFACTS, 'theater-01-boot.png') })
+
+  await step('theater: jump to Case 2 via launcher and start RE session (seeds re + hyps)', async () => {
+    await tPage.getByRole('button', { name: '◈ 场景库' }).click()
+    await tPage.getByText('CASE 2', { exact: true }).click()
+    await waitFor(tPage, 'CASE 2/5')
+    await waitFor(tPage, 'reverse-lab')
+    // Case 2 step 1: RE picker → Firmware blob → start RE session
+    await tPage.getByRole('button', { name: /▶ 打开选择器/ }).click()
+    await waitFor(tPage, 'Embedded / IoT firmware image')
+    await tPage.getByText('Firmware blob', { exact: true }).click()
+    await tPage.getByRole('button', { name: /Firmware survey/ }).click()
+    await tPage.getByRole('button', { name: 'start RE session' }).click()
+    await waitFor(tPage, 'H:3')
+    await waitFor(tPage, '▸DYN')
+    await waitFor(tPage, '○ idle')
+  }, tPage)
+
+  await step('theater: suggestion bar routes into experiment wizard', async () => {
+    await tPage.getByRole('button', { name: /去处理/ }).waitFor({ state: 'visible', timeout: 10000 })
+    await tPage.getByRole('button', { name: /去处理/ }).click()
+    await tPage.getByText(/实验 · H-/).waitFor({ state: 'visible', timeout: 8000 })
+    await tPage.getByLabel('experiment command').waitFor({ state: 'visible', timeout: 5000 })
+  }, tPage)
+  await tPage.screenshot({ path: join(ARTIFACTS, 'theater-02-experiment-wizard.png') })
+
+  await step('theater: back-nav prefills claim (revise flow) and re-advances', async () => {
+    await tPage.getByRole('button', { name: '← 上一步' }).click()
+    await tPage.getByLabel('falsifiable prediction').waitFor({ state: 'visible', timeout: 8000 })
+    const claim = await tPage.getByLabel('hypothesis claim').inputValue()
+    if (claim.trim().length < 10) throw new Error(`claim not prefilled from existing hyp: "${claim}"`)
+    // demo 场景生成的 H-001 没带「可证伪预测：」note，需现场补写预测（必填项）
+    await tPage.getByLabel('falsifiable prediction').fill('动态重放 chall.js 应输出 accepted')
+    await tPage.getByRole('button', { name: /提交假设 · 配置实验/ }).click()
+    await tPage.getByText(/实验 · H-/).waitFor({ state: 'visible', timeout: 8000 })
+  }, tPage)
+
+  await step('theater: passing experiment auto-advances to verification', async () => {
+    await tPage.getByLabel('experiment command').fill('node chall.js 0xaf{warmup_deck}')
+    await tPage.getByLabel('experiment expected').fill('accepted')
+    await tPage.getByRole('button', { name: /运行实验并实跑取证/ }).click()
+    await waitFor(tPage, '验证 · 产物重放')
+  }, tPage)
+
+  await step('theater: verify_artifact → review wizard → archive closes wizard', async () => {
+    await tPage.getByLabel('verify artifact path').fill('notes/solve.md')
+    await tPage.getByLabel('case 1 command').fill('node chall.js 0xaf{warmup_deck}')
+    await tPage.getByLabel('case 1 expected').fill('accepted')
+    await tPage.getByRole('button', { name: /实跑 verify_artifact 签发验证凭证/ }).click()
+    // 通过后展示统计条；1.5s 自动进审计，手动按钮「▸ 进入审计 →」兜底
+    await tPage.getByRole('button', { name: /进入审计/ }).waitFor({ state: 'visible', timeout: 12000 }).catch(() => {})
+    await waitFor(tPage, '审计 · 审查签章')
+    await tPage.getByText('SUPPORT 核准支撑').click()
+    await tPage.getByRole('button', { name: /ev_0/ }).first().click()
+    await tPage.getByLabel('review summary').fill('静态解码与动态重放记录核对一致，结论闭环')
+    await tPage.getByRole('button', { name: /提交审查/ }).click()
+    await tPage.getByRole('button', { name: /完成归档/ }).waitFor({ state: 'visible', timeout: 12000 })
+    await tPage.getByRole('button', { name: /完成归档/ }).click()
+    await tPage.getByText('审计 · 审查签章').waitFor({ state: 'hidden', timeout: 8000 })
+  }, tPage)
+  await tPage.screenshot({ path: join(ARTIFACTS, 'theater-03-archived.png') })
+
+  await step('theater: view toggle round-trip classic ↔ 3D', async () => {
+    await tPage.getByRole('button', { name: '▣ 经典视图' }).click()
+    await waitFor(tPage, '◈ 机制图谱') // classic-only graph toggle appears
+    await tPage.locator('canvas').first().waitFor({ state: 'hidden', timeout: 8000 })
+    await tPage.getByRole('button', { name: '◈ 3D 剧场' }).click()
+    await tPage.locator('canvas').first().waitFor({ state: 'visible', timeout: 10000 })
+  }, tPage)
+
+  const rmPage = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  rmPage.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(`[rm] ${m.text()}`) })
+  rmPage.on('pageerror', (e) => pageErrors.push(`[rm] ${String(e?.stack ?? e)}`))
+  await rmPage.emulateMedia({ reducedMotion: 'reduce' })
+  await rmPage.goto(`http://127.0.0.1:${PORT}/gui-demo/index.html?demo=1`)
+
+  await step('theater: reduced-motion preference auto-falls back to classic', async () => {
+    await waitFor(rmPage, '◈ DEMO')
+    await waitFor(rmPage, '减弱动效') // fallback toast text
+    await rmPage.getByRole('button', { name: '◈ 3D 剧场' }).waitFor({ state: 'visible', timeout: 8000 })
+    await rmPage.locator('canvas').first().waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {
+      /* canvas 可能仍挂载在 DOM 但视图已切经典 — 按钮状态为准 */
+    })
+  }, rmPage)
+
   // ---------- Part 2: Desktop Wails Mode Enter & Exit Isolation ----------
   const deskPage = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   deskPage.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(`[desk] ${m.text()}`) })
