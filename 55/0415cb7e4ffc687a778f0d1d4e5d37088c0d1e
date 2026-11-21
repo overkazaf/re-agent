@@ -1,0 +1,26 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "550415cb7e4ffc687a778f0d1d4e5d37088c0d1e",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 4162,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "docs/gui-demo/assets/main-B0HvP8e3.js": {
+          "accepted_lines": 4162
+        }
+      }
+    }
+  }
+}
