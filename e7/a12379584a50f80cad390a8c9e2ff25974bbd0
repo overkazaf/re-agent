@@ -1,0 +1,100 @@
+README.zh-CN.md
+  6dcd1ee682d8c61b 391-415
+gui/frontend/scripts/visual-qa.mjs
+  6dcd1ee682d8c61b 1-98
+gui/frontend/src/three/ZoneMarker.tsx
+  6dcd1ee682d8c61b 155-156,160-161
+gui/frontend/src/three/CameraRig.tsx
+  6dcd1ee682d8c61b 13-16
+docs/gui-demo/index.html
+  6dcd1ee682d8c61b 8
+gui/frontend/src/three/HoloPanels.tsx
+  6dcd1ee682d8c61b 98
+README.md
+  6dcd1ee682d8c61b 430-459
+gui/frontend/src/three/DagLayer.tsx
+  6dcd1ee682d8c61b 138-139,161,166,219-224
+gui/frontend/src/three/ForensicTheater.tsx
+  6dcd1ee682d8c61b 49-67,92
+docs/gui-demo/assets/main-B0HvP8e3.js
+  6dcd1ee682d8c61b 1-4162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "e7a12379584a50f80cad390a8c9e2ff25974bbd0",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 16879,
+      "total_deletions": 60,
+      "accepted_lines": 4381,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/three/DagLayer.tsx": {
+          "additions": 10,
+          "deletions": 3,
+          "accepted_lines": 10
+        },
+        "gui/frontend/src/three/HoloPanels.tsx": {
+          "additions": 1,
+          "deletions": 1,
+          "accepted_lines": 1
+        },
+        "docs/gui-demo/assets/main-BLSlNfIA.js": {
+          "additions": 4162
+        },
+        "docs/gui-demo/index.html": {
+          "additions": 4,
+          "deletions": 4,
+          "accepted_lines": 1
+        },
+        "README.zh-CN.md": {
+          "additions": 25,
+          "accepted_lines": 25
+        },
+        "gui/frontend/scripts/visual-qa.mjs": {
+          "additions": 103,
+          "deletions": 5,
+          "accepted_lines": 98
+        },
+        "gui/frontend/src/three/CameraRig.tsx": {
+          "additions": 6,
+          "deletions": 4,
+          "accepted_lines": 4
+        },
+        "gui/frontend/src/three/ForensicTheater.tsx": {
+          "additions": 21,
+          "deletions": 15,
+          "accepted_lines": 20
+        },
+        "docs/gui-demo/assets/main-CIlklaqf.js": {
+          "additions": 4162
+        },
+        "README.md": {
+          "additions": 57,
+          "deletions": 26,
+          "accepted_lines": 56
+        },
+        "gui/frontend/src/three/ZoneMarker.tsx": {
+          "additions": 4,
+          "deletions": 2,
+          "accepted_lines": 4
+        },
+        "docs/gui-demo/assets/main-Bg75_-iV.js": {
+          "additions": 4162
+        },
+        "docs/gui-demo/assets/main-B0HvP8e3.js": {
+          "additions": 4162,
+          "accepted_lines": 4162
+        }
+      }
+    }
+  }
+}
