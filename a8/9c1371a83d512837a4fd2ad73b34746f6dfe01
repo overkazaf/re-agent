@@ -1,0 +1,29 @@
+gui/frontend/src/components/wizard/HypothesisWizard.tsx
+  6dcd1ee682d8c61b 1-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "a89c1371a83d512837a4fd2ad73b34746f6dfe01",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 194,
+      "total_deletions": 0,
+      "accepted_lines": 194,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/components/wizard/HypothesisWizard.tsx": {
+          "additions": 194,
+          "accepted_lines": 194
+        }
+      }
+    }
+  }
+}
