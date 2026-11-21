@@ -1,0 +1,37 @@
+gui/frontend/src/three/contract.ts
+  6dcd1ee682d8c61b 44-50,53-61
+gui/frontend/src/store/derive.test.ts
+  6dcd1ee682d8c61b 337-339,344-347,474,483
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8-ntes.10",
+  "base_commit_sha": "8a1b3e5828d31ad869ad6ef74a423fb2a746df95",
+  "prompts": {
+    "6dcd1ee682d8c61b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "17f5e05f-8845-47ce-838f-8f9390a65393",
+        "model": "group/smart-split"
+      },
+      "human_author": "nongjiawu",
+      "messages": [],
+      "total_additions": 25,
+      "total_deletions": 16,
+      "accepted_lines": 25,
+      "overriden_lines": 0,
+      "per_file_stats": {
+        "gui/frontend/src/three/contract.ts": {
+          "additions": 16,
+          "deletions": 10,
+          "accepted_lines": 16
+        },
+        "gui/frontend/src/store/derive.test.ts": {
+          "additions": 9,
+          "deletions": 6,
+          "accepted_lines": 9
+        }
+      }
+    }
+  }
+}
