@@ -124,7 +124,7 @@ describe('deriveScene', () => {
       ],
       evidence: [
         ev('ev_001', { kind: 'tool_observation', summary: 'MZ header', verification: { build: true, passed: 3, total: 3 } }),
-        ev('ev_002', { kind: 'runtime_trace', artifact: '/tmp/out.bin' }),
+        ev('ev_002', { artifact: '/tmp/out.bin' }),
         ev('ev_003', { kind: 'verification_result', isError: true, verification: { build: true, passed: 1, total: 2 } }),
       ],
     }
@@ -334,13 +334,13 @@ describe('suggestNext', () => {
 
   it('无 hyp 且阶段在 SCR/HYP 区 → new-hypothesis；其他区不触发', () => {
     const emptyLedger: LedgerDTO = { hypotheses: [], evidence: [] }
-    // phaseIndex 1（static）与 5（hypothesis）都落在 SCR/HYP 区（PHASE_ZONE 映射）
-    for (const idx of [1, 5]) {
+    // SCR/HYP 区 = PHASE_ZONE 按索引映射（契约冻结事实）：索引 1、2
+    for (const idx of [1, 2]) {
       const s = suggestNext(tick({ re: re(idx), ledger: emptyLedger }))
       expect(s.action).toEqual({ kind: 'new-hypothesis' })
       expect(s.text.length).toBeGreaterThan(0)
     }
-    // verify 区（phaseIndex 6）不触发
+    // 非 SCR/HYP 区（索引 6 → AUD）不触发
     expect(suggestNext(tick({ re: re(6), ledger: emptyLedger })).action.kind).toBe('none')
   })
 
@@ -413,8 +413,15 @@ describe('suggestNext', () => {
       kind: 'submit-review',
     })
 
-    // 非 audit/writeup 阶段或无 finding → 不触发（前面的规则也不命中）
-    const quiet = { hypotheses: [hyp('H-001')], evidence: [] }
+    // 非 audit/writeup 阶段或无 finding → 不触发（前面规则也不命中：实验已通过且已验证）
+    const quiet: LedgerDTO = {
+      hypotheses: [
+        hyp('H-001', {
+          experiments: [{ id: 'exp-1', title: 'x', command: 'x', status: 'passed', evidenceId: 'ev_q' }],
+        }),
+      ],
+      evidence: [ev('ev_q', { verification: { build: true, passed: 1, total: 1 } })],
+    }
     expect(suggestNext(tick({ re: re(6), ledger: { ...quiet, findings } })).action.kind).toBe('none')
     expect(suggestNext(tick({ re: re(7), ledger: { ...quiet, findings: [] } })).action.kind).toBe('none')
   })

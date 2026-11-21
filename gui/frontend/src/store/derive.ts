@@ -155,7 +155,65 @@ export function deriveEdges(ledger: LedgerDTO | null | undefined): SceneEdge[] {
   return edges
 }
 
+const NO_SUGGESTION: Suggestion = { text: '', action: { kind: 'none' } }
+
+/**
+ * HUD 建议条（优先级自上而下，第一个命中即返回）：
+ * 1. re 为 null → none
+ * 2. 无 hyp 且阶段落在 SCR/HYP 区（PHASE_ZONE 按 phaseIndex 映射）→ new-hypothesis
+ * 3. 存在 active hyp 且其实验全为 planned（或没有实验）→ configure-experiment
+ * 4. 某实验 passed 且其证据未跑 verification → run-verification（artifact 取 evidence.artifact）
+ * 5. audit/writeup 阶段存在 finding → submit-review（hypId 取第一条 finding 的 hypothesisId）
+ */
 export function suggestNext(tick: TickDTO | null): Suggestion {
-  void tick
-  throw new Error('not implemented')
+  const re = tick?.re ?? null
+  if (!re) return NO_SUGGESTION
+  const ledger = tick?.ledger ?? null
+  const hyps = ledger?.hypotheses ?? []
+  const evs = ledger?.evidence ?? []
+
+  const zone = re.phaseIndex >= 0 && re.phaseIndex < PHASE_ZONE.length ? PHASE_ZONE[re.phaseIndex] : null
+  if (hyps.length === 0 && (zone === 'SCR' || zone === 'HYP')) {
+    return { text: '还没有可证伪的假设——先立一个假设', action: { kind: 'new-hypothesis' } }
+  }
+
+  for (const hyp of hyps) {
+    if (hyp.status !== 'active') continue
+    const exps = hyp.experiments ?? []
+    if (exps.length === 0 || exps.every((exp) => exp.status === 'planned')) {
+      return {
+        text: `假设 ${hyp.id} 还没有执行过的实验——去配置实验`,
+        action: { kind: 'configure-experiment', hypId: hyp.id },
+      }
+    }
+  }
+
+  const evById = new Map(evs.map((ev) => [ev.id, ev]))
+  for (const hyp of hyps) {
+    for (const exp of hyp.experiments ?? []) {
+      if (exp.status !== 'passed' || !exp.evidenceId) continue
+      const ev = evById.get(exp.evidenceId)
+      if (ev && !ev.verification) {
+        return {
+          text: ev.artifact ? `实验已通过，验证产物 ${ev.artifact}` : '实验已通过，运行产物验证',
+          action: {
+            kind: 'run-verification',
+            hypId: hyp.id,
+            ...(ev.artifact ? { artifact: ev.artifact } : {}),
+          },
+        }
+      }
+    }
+  }
+
+  const findings = ledger?.findings ?? []
+  if ((re.phase === 'audit' || re.phase === 'writeup') && findings.length > 0) {
+    const first = findings[0]!
+    return {
+      text: '存在待复核的审计发现——提交复核',
+      action: { kind: 'submit-review', ...(first.hypothesisId ? { hypId: first.hypothesisId } : {}) },
+    }
+  }
+
+  return NO_SUGGESTION
 }
