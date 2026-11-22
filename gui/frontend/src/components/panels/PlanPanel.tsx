@@ -30,7 +30,7 @@ function planRows(steps: PlanSnapshot['steps']): ReactNode[] {
         j++
       }
       rows.push(
-        <div key={`done-${i}`} className="plan-done t-ok" title={texts.join('\n')}>
+        <div key={`done-${i}`} className="plan-done t-ok" data-hint={`已完成步骤：${texts.join(' → ')}`}>
           ✔ {texts.length} done
         </div>,
       )
@@ -95,20 +95,24 @@ export function PlanPanel({ plan, badge, planKind, tick }: {
   const wriReady = phaseGates ? phaseGates[phaseGates.length - 1]?.ready === 'pass' || tick?.re?.phase === 'writeup' : false
 
   return (
-    <PanelBox title="plan" accent={flash ?? 'warn'} tier="primary" badge="任务路线">
+    <PanelBox title="plan" accent={flash ?? 'warn'} tier="primary">
       <div className="plan-head re-mono-num">
         {counts.total > 0 && (
           <>
             <ProgressChip done={counts.done} total={counts.total} />
             <span className="t-muted" style={{ fontSize: 10 }}>{pct}%</span>
-            <span className="plan-src t-faint">{counts.source}</span>
+            {counts.source && (
+              <span className="plan-src t-faint" data-hint={`计划来源：${counts.source}`}>
+                {counts.source}
+              </span>
+            )}
           </>
         )}
         {phaseGates && (
           <span
             className="re-gate-pill"
             data-ready={wriReady ? 'pass' : nextBlocked ? 'blocked' : 'current'}
-            title={nextBlocked ? `下一阶段 ${nextBlocked.code} 门禁: ${nextBlocked.criterion}` : '阶段门禁已达标'}
+            data-hint={nextBlocked ? `下一阶段 ${nextBlocked.code} 硬门禁：${nextBlocked.criterion}` : '当前阶段门禁条件已全部达标'}
           >
             {wriReady ? '✓ WRI READY' : nextBlocked ? `🔒 ${nextBlocked.code}: ${nextBlocked.progress}` : '▸ GATE OK'}
           </span>
@@ -117,6 +121,7 @@ export function PlanPanel({ plan, badge, planKind, tick }: {
           <span
             className={flash !== null ? 'plan-kind plan-flash' : 'plan-kind'}
             style={{ color: `var(--${KIND_TONE[planKind]})` }}
+            data-hint={`最新计划变更类型：${planKind}`}
           >
             ◈ {planKind}
           </span>

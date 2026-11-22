@@ -396,45 +396,72 @@ export function HypothesisWorkbenchDialog({
 
   return (
     <Dialog
-      title="scientific re workbench — 假设演进 · 实验取证 · 重放验证 · 审查签章"
+      title="scientific re workbench"
       accent="accent"
       width={900}
       onClose={onClose}
     >
-      {/* Forensic Invariant Notice */}
+      {/* Compact Forensic Invariant Notice */}
       <div style={invariantBarStyle}>
-        <span style={{ color: 'var(--accent)', fontWeight: 700 }}>⚖ 科学逆向取证铁律：</span>
-        <span>
-          <b>假设 (H-NNN) 与实验方案</b>允许自由新增、修订与推演；
-          <b style={{ color: 'var(--ok)' }}> 证据账本 (ev_NNN) 严禁人工修改或凭空手填</b>
-          ——任何证据、实验结果与验证记录必须由宿主<b>真实执行命令/重放产物</b>后自动哈希盖章入账。
+        <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>⚖ 科学逆向取证铁律：</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          假设 (H-NNN) 可自由演进；<b style={{ color: 'var(--ok)' }}>证据 (ev_NNN) 仅由真实执行自动哈希入账</b>，禁止手改。
+        </span>
+        <span
+          className="re-hint-dot"
+          data-hint="任何证据、实验输出与 verify_artifact 重放记录均由宿主实跑命令后签发 SHA256 并追加写入 evidence-ledger.jsonl，确保结论零幻觉可复现"
+        >
+          ?
         </span>
       </div>
 
       {/* Mode Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => setTab('hypothesis')} style={wbTabStyle(tab === 'hypothesis', 'accent')}>
-          ◈ 新增 / 编辑假设与实验 (H:{hypotheses.length})
+        <button
+          type="button"
+          aria-label={`◈ 新增 / 编辑假设与实验 (H:${hypotheses.length})`}
+          data-hint="创建或修订可证伪假设，并挂载/实跑验证实验"
+          onClick={() => setTab('hypothesis')}
+          style={wbTabStyle(tab === 'hypothesis', 'accent')}
+        >
+          ◈ 假设与实验 <span className="re-mono-num" style={{ opacity: 0.78 }}>{hypotheses.length}</span>
         </button>
-        <button type="button" onClick={() => setTab('verify')} style={wbTabStyle(tab === 'verify', 'ok')}>
-          ✓ 实跑产物重放验证 (verify_artifact)
+        <button
+          type="button"
+          aria-label="✓ 实跑产物重放验证 (verify_artifact)"
+          data-hint="执行 verify_artifact 对脚本或样本跑通重放测试向量，签发解锁审计门禁的验证凭证"
+          onClick={() => setTab('verify')}
+          style={wbTabStyle(tab === 'verify', 'ok')}
+        >
+          ✓ 产物重放
         </button>
-        <button type="button" onClick={() => setTab('review')} style={wbTabStyle(tab === 'review', 'violet')}>
-          ⚖ 宿主仲裁与审查签章 (Findings:{findings.length})
+        <button
+          type="button"
+          aria-label={`⚖ 宿主仲裁与审查签章 (Findings:${findings.length})`}
+          data-hint="运行四规则确定性仲裁、独立第三席位对抗审计 (/audit) 或签发基于实测证据的人工审查"
+          onClick={() => setTab('review')}
+          style={wbTabStyle(tab === 'review', 'violet')}
+        >
+          ⚖ 仲裁与签章 <span className="re-mono-num" style={{ opacity: 0.78 }}>{findings.length}</span>
         </button>
-        <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10.5 }}>
-          🔒 当前账本实测证据 E:{evidence.length} (Append-Only)
+        <span
+          className="re-mono-num"
+          style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10.5 }}
+          data-hint="当前会话已实跑入账的只追加证据总数"
+        >
+          🔒 E:{evidence.length} · Append-Only
         </span>
       </div>
 
       {banner && (
         <div
           style={{
-            padding: '6px 10px',
+            padding: '7px 10px',
             fontSize: 11.5,
+            borderRadius: 'var(--radius-xs)',
             border: `1px solid var(--${banner.tone === 'err' ? 'err' : banner.tone === 'ok' ? 'ok' : 'accent'})`,
             color: `var(--${banner.tone === 'err' ? 'err' : banner.tone === 'ok' ? 'ok' : 'accent'})`,
-            background: 'rgba(5, 10, 16, 0.8)',
+            background: banner.tone === 'err' ? 'var(--err-soft)' : banner.tone === 'ok' ? 'var(--ok-soft)' : 'var(--accent-soft)',
           }}
         >
           {banner.tone === 'err' ? '✗ ' : '✓ '}
@@ -454,13 +481,14 @@ export function HypothesisWorkbenchDialog({
           }}
         >
           {/* Left selector list */}
-          <div style={{ minHeight: 0, border: '1px solid var(--rule)', padding: 6, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ minHeight: 0, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: 6, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
             <button
               type="button"
               onClick={() => setSelectedHypId('__new__')}
               style={{
                 ...hypItemBtnStyle,
-                borderColor: selectedHypId === '__new__' ? 'var(--accent)' : 'var(--rule)',
+                borderColor: selectedHypId === '__new__' ? 'var(--accent)' : 'var(--border-subtle)',
+                background: selectedHypId === '__new__' ? 'var(--accent-soft)' : 'transparent',
                 color: 'var(--accent)',
                 fontWeight: 700,
               }}
@@ -476,11 +504,11 @@ export function HypothesisWorkbenchDialog({
                   onClick={() => setSelectedHypId(h.id)}
                   style={{
                     ...hypItemBtnStyle,
-                    borderColor: active ? 'var(--accent)' : 'var(--rule)',
-                    background: active ? 'rgba(34, 211, 238, 0.1)' : 'rgba(5, 8, 12, 0.45)',
+                    borderColor: active ? 'var(--accent)' : 'var(--border-subtle)',
+                    background: active ? 'var(--accent-soft)' : 'color-mix(in srgb, var(--surface-2) 50%, transparent)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5 }}>
+                  <div className="re-mono-num" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5 }}>
                     <b style={{ color: h.status === 'rejected' ? 'var(--err)' : 'var(--accent)' }}>{h.id}</b>
                     <span style={{ color: 'var(--muted)' }}>
                       {h.status} · {Math.round(h.confidence * 100)}%
@@ -500,7 +528,7 @@ export function HypothesisWorkbenchDialog({
           </div>
 
           {/* Right editor + experiment lab */}
-          <div style={{ minHeight: 0, border: '1px solid var(--rule)', padding: '8px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ minHeight: 0, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 9 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 12 }}>
                 {selectedHyp ? `编辑假设 ${selectedHyp.id} [${selectedHyp.status.toUpperCase()}]` : '新建可证伪假设 (H-NNN)'}
@@ -514,6 +542,7 @@ export function HypothesisWorkbenchDialog({
                     type="button"
                     className="re-copy-chip"
                     data-copied={copiedCite ? '1' : undefined}
+                    data-hint={`复制假设引用：${formatHypothesisCitation(selectedHyp)}`}
                     onClick={() => {
                       navigator.clipboard?.writeText(formatHypothesisCitation(selectedHyp)).catch(() => {})
                       setCopiedCite(true)
@@ -521,17 +550,29 @@ export function HypothesisWorkbenchDialog({
                     }}
                     style={{ marginLeft: 'auto' }}
                   >
-                    {copiedCite ? '✓ 已复制引用' : '⎘ 复制引用'}
+                    {copiedCite ? '✓ 已复制' : '⎘ 引用'}
                   </button>
                 </>
               )}
               {!selectedHyp && (
                 <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 5 }}>
-                  <button type="button" onClick={() => applyHypothesisPreset('positive')} style={miniPresetBtnStyle}>
-                    ⚡ 填入正向实验示例
+                  <button
+                    type="button"
+                    aria-label="⚡ 填入正向实验示例"
+                    data-hint="一键填入正向验证假设与实跑命令示例"
+                    onClick={() => applyHypothesisPreset('positive')}
+                    style={miniPresetBtnStyle}
+                  >
+                    ⚡ 正向示例
                   </button>
-                  <button type="button" onClick={() => applyHypothesisPreset('decoy')} style={miniPresetBtnStyle}>
-                    ⚡ 填入反证折半示例
+                  <button
+                    type="button"
+                    aria-label="⚡ 填入反证折半示例"
+                    data-hint="一键填入反证实验示例，观察实跑失败后宿主自动折半置信度 (×0.5)"
+                    onClick={() => applyHypothesisPreset('decoy')}
+                    style={miniPresetBtnStyle}
+                  >
+                    ⚡ 反证示例
                   </button>
                 </span>
               )}
@@ -563,7 +604,7 @@ export function HypothesisWorkbenchDialog({
                 <span className="re-chain-step" data-hit={selectedChain.auditEvs.length > 0 ? 'audit' : undefined}>
                   Audit ({selectedChain.auditEvs.length})
                 </span>
-                <span className="re-calib-pill" data-tone={selectedChain.calibration.tone} title={selectedChain.calibration.reason}>
+                <span className="re-calib-pill" data-tone={selectedChain.calibration.tone} data-hint={selectedChain.calibration.reason}>
                   {selectedChain.calibration.status}
                 </span>
               </div>
@@ -817,9 +858,15 @@ export function HypothesisWorkbenchDialog({
 
       {/* ==================== TAB 2: VERIFY ARTIFACT REPLAY ==================== */}
       {tab === 'verify' && (
-        <div style={{ maxHeight: 'min(52vh, 430px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            调用内置 <code>verify_artifact</code> 对目标脚本/求解器/样本执行确定性重放测试：宿主计算目标文件真实 <code>SHA256</code>，逐条比对实跑 <code>stdout</code> 与预期值，生成唯一可解锁审计门禁的 <code>verification_result</code> 证据记录。
+        <div style={{ maxHeight: 'min(52vh, 430px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
+            <span><code>verify_artifact</code> 确定性产物重放验证</span>
+            <span
+              className="re-hint-dot"
+              data-hint="宿主实地计算目标文件 SHA256 并逐条比对实跑 stdout 与预期值，自动签发解锁审计门禁的 verification_result 证据"
+            >
+              ?
+            </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 220px', gap: 8 }}>
@@ -920,22 +967,34 @@ export function HypothesisWorkbenchDialog({
       {tab === 'review' && (
         <div style={{ maxHeight: 'min(52vh, 430px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Automated Host Arbitrator + Isolated GLM Model Audit */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', padding: '6px 8px', border: '1px solid var(--rule)', background: 'rgba(5, 8, 12, 0.5)' }}>
-            <div style={{ flex: 1, fontSize: 11, color: 'var(--muted)' }}>
-              <b>自动化审查通道：</b>可随时运行宿主四规则确定性仲裁器（悬空引用 / 报错充当支撑 / 动静矛盾 / 单视角盲区），或唤醒独立第三席位模型执行零上下文对抗审计。
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', padding: '7px 10px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', background: 'color-mix(in srgb, var(--surface-2) 55%, transparent)' }}>
+            <div style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
+              <b>自动化审查通道</b>
+              <span
+                className="re-hint-dot"
+                data-hint="支持四规则确定性仲裁（悬空引用 / 报错支撑 / 动静矛盾 / 单视角盲区），或唤醒独立第三席位模型执行零上下文对抗审计 (/audit)"
+              >
+                ?
+              </span>
             </div>
             <Btn disabled={busy} onClick={() => void handleSubmitReview('arbitrate')}>
-              ⚡ 运行宿主确定性仲裁
+              ⚡ 确定性仲裁
             </Btn>
             <Btn tone="accent" disabled={busy} onClick={() => void handleSubmitReview('model_audit')}>
-              🤖 运行隔离模型审计 (/audit)
+              🤖 隔离审计 (/audit)
             </Btn>
           </div>
 
           {/* Evidence-Grounded Operator Audit Review */}
-          <div style={{ border: '1px solid var(--rule)', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <div style={{ color: 'var(--violet)', fontWeight: 700, fontSize: 11.5 }}>
-              ✍ 签发基于实测证据链的审查记录 (Append-Only Audit Finding)
+          <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--violet)', fontWeight: 700, fontSize: 11.5 }}>
+              <span>✍ 人工证据审查签章</span>
+              <span
+                className="re-hint-dot"
+                data-hint="必须引用 ≥1 条实跑入账证据 (ev_NNN)；签发后以 audit_finding 追加写入 evidence-ledger.jsonl 不可修改"
+              >
+                ?
+              </span>
             </div>
 
             <div style={lblStyle}>
@@ -1024,8 +1083,12 @@ export function HypothesisWorkbenchDialog({
 }
 
 const invariantBarStyle: CSSProperties = {
-  border: '1px solid color-mix(in srgb, var(--accent) 45%, var(--rule))',
-  background: 'rgba(6, 14, 24, 0.8)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  border: '1px solid color-mix(in srgb, var(--accent) 36%, var(--border-subtle))',
+  borderRadius: 'var(--radius-sm)',
+  background: 'color-mix(in srgb, var(--accent) 5%, var(--surface-2))',
   padding: '6px 10px',
   fontSize: 11,
   lineHeight: 1.45,
@@ -1034,18 +1097,21 @@ const invariantBarStyle: CSSProperties = {
 
 function wbTabStyle(active: boolean, tone: 'accent' | 'ok' | 'violet'): CSSProperties {
   return {
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
-    background: active ? `color-mix(in srgb, var(--${tone}) 14%, transparent)` : 'transparent',
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle)'}`,
+    borderRadius: 'var(--radius-xs)',
+    background: active ? `color-mix(in srgb, var(--${tone}) 13%, transparent)` : 'transparent',
     color: active ? `var(--${tone})` : 'var(--muted)',
     fontSize: 11,
+    fontWeight: active ? 600 : 400,
     padding: '3px 10px',
     cursor: 'pointer',
   }
 }
 
 const hypItemBtnStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  padding: '5px 7px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  padding: '6px 8px',
   display: 'flex',
   flexDirection: 'column',
   gap: 2,
@@ -1061,8 +1127,9 @@ const lblStyle: CSSProperties = {
 }
 
 const miniPresetBtnStyle: CSSProperties = {
-  border: '1px solid var(--accent-dim)',
-  background: 'rgba(34, 211, 238, 0.08)',
+  border: '1px solid color-mix(in srgb, var(--accent) 48%, var(--rule))',
+  borderRadius: 'var(--radius-xs)',
+  background: 'var(--accent-soft)',
   color: 'var(--accent)',
   fontSize: 10,
   padding: '1px 7px',
@@ -1071,8 +1138,9 @@ const miniPresetBtnStyle: CSSProperties = {
 
 function pillSelectStyle(active: boolean, tone: 'ok' | 'err' | 'violet'): CSSProperties {
   return {
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
-    background: active ? `color-mix(in srgb, var(--${tone}) 16%, transparent)` : 'rgba(5, 8, 12, 0.6)',
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle)'}`,
+    borderRadius: 'var(--radius-xs)',
+    background: active ? `color-mix(in srgb, var(--${tone}) 15%, transparent)` : 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
     color: active ? `var(--${tone})` : 'var(--muted)',
     fontSize: 10,
     padding: '1px 6px',
@@ -1081,10 +1149,11 @@ function pillSelectStyle(active: boolean, tone: 'ok' | 'err' | 'violet'): CSSPro
 }
 
 const expCardStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(3, 6, 10, 0.65)',
-  padding: '5px 8px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
+  padding: '6px 9px',
   display: 'flex',
   flexDirection: 'column',
-  gap: 2,
+  gap: 3,
 }

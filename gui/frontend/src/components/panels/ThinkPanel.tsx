@@ -31,12 +31,17 @@ export function ThinkPanel({ lines, expanded, onToggle }: {
   const start = Math.max(0, lines.length - rows.length)
 
   return (
-    <PanelBox title="think" accent="violet" tier="primary" badge="推理脉络">
+    <PanelBox title="think" accent="violet" tier="primary">
       <div className="think-root">
-        <button type="button" className="think-head re-mono-num" onClick={toggle} title={open ? 'collapse' : 'expand'}>
+        <button
+          type="button"
+          className="think-head re-mono-num"
+          onClick={toggle}
+          data-hint={open ? '点击收起推理流（仅保留最近 3 行）' : '点击展开最近 24 行链式推理内容'}
+        >
           <span className="t-muted">{open ? '⌃' : '⌄'}</span>
           <span className="t-faint">{lines.length} lines</span>
-          <span className="think-head-hint t-faint">{open ? 'collapse' : 'last 3'}</span>
+          <span className="think-head-hint t-faint">{open ? '收起' : '展开'}</span>
         </button>
         {rows.length === 0 ? (
           <div className="panel-empty t-faint">no thinking yet</div>

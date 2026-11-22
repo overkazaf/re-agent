@@ -34,6 +34,18 @@ const BOX_ACCENT: Partial<Record<FlowStage, 'accent' | 'violet' | 'ok' | 'warn' 
   error: 'err',
 }
 
+const STAGE_HINT: Record<FlowStage, string> = {
+  idle: '空闲就绪：等待输入逆向任务或斜杠命令',
+  send: '发送上下文与提示词至规划/执行席模型',
+  wait: '等待上游模型返回首字节响应 (TTFT)',
+  think: '模型正在进行隐式链式推理 (Reasoning)',
+  calls: '模型已产出结构化工具调用请求',
+  tool: '宿主正在沙箱与策略门禁下执行逆向工具',
+  write: '模型正在流式输出分析结论与报告',
+  done: '本轮推理与取证闭环已完成',
+  error: '请求或工具链路发生异常，可查看下方错误详情',
+}
+
 /** Seconds one packet takes to cross a wire; negative delays phase packets. */
 const PACKET_PERIOD_S = 1.6
 
@@ -60,8 +72,16 @@ function Wire({ offsets, left = false, tone }: { offsets: number[]; left?: boole
   )
 }
 
-function Node({ label, on, tone = 'accent' }: { label: string; on: boolean; tone?: string }) {
-  return <span className="flow-node" style={{ color: on ? `var(--${tone})` : 'var(--faint)' }}>{label}</span>
+function Node({ label, on, tone = 'accent', hint }: { label: string; on: boolean; tone?: string; hint?: string }) {
+  return (
+    <span
+      className="flow-node"
+      data-hint={hint}
+      style={{ color: on ? `var(--${tone})` : 'var(--faint)' }}
+    >
+      {label}
+    </span>
+  )
 }
 
 /** Right-edge phase readout, TUI phaseLabel parity. */
@@ -100,7 +120,7 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
   const replyMode = flow.stage === 'write' || (flow.pendingCalls === 0 && flow.replyChars > 0)
 
   return (
-    <PanelBox title="flow" accent={BOX_ACCENT[flow.stage] ?? 'accent'} tier="primary" badge="核心链路">
+    <PanelBox title="flow" accent={BOX_ACCENT[flow.stage] ?? 'accent'} tier="primary">
       <div className="flow-body">
         {/* stage rail + plan badge */}
         <div className="stage-rail">
@@ -111,6 +131,7 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
               <span
                 key={s}
                 className={on ? 'stage-badge stage-on' : 'stage-badge'}
+                data-hint={STAGE_HINT[s]}
                 style={on ? { color: `var(--${tone})`, borderColor: `var(--${tone})` } : undefined}
               >
                 {s}
@@ -119,7 +140,10 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
           })}
           <span className="flow-spacer" />
           {flow.plan && (
-            <span className="flow-plan">
+            <span
+              className="flow-plan"
+              data-hint={`当前任务计划进度：已完成 ${flow.plan.done}/${flow.plan.total} 步 (${flow.plan.source || 'plan'})`}
+            >
               ◈ <b>{flow.plan.done}/{flow.plan.total}</b> <i>{flow.plan.source}</i>
             </span>
           )}
@@ -127,13 +151,18 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
 
         {/* request path: you → ctx → model */}
         <div className="flow-row">
-          <Node label="[you]" on={requestOn} />
+          <Node label="[you]" on={requestOn} hint="操作员输入与斜杠命令入口" />
           <Wire offsets={pk(0)} tone="accent" />
-          <Node label="[ctx]" on={requestOn} />
+          <Node label="[ctx]" on={requestOn} hint="宿主上下文组装器：自动重注入最新假设栈与证据摘要" />
           <Wire offsets={pk(1)} tone="accent" />
           <span className="flow-model-wrap">
-            {toolsRan && <span className="flow-backmark">▲</span>}
-            <Node label={`((${flow.provider}))`} on={modelHot} tone="violet" />
+            {toolsRan && <span className="flow-backmark" data-hint="工具实测结果已回流模型">▲</span>}
+            <Node
+              label={`((${flow.provider}))`}
+              on={modelHot}
+              tone="violet"
+              hint={`当前活跃席位：${flow.provider} · ${flow.model}${flow.endpoint ? ` (${flow.endpoint})` : ''}`}
+            />
           </span>
           <span className="flow-phase">{phaseLabel(flow)}</span>
         </div>
@@ -141,21 +170,32 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
           <span className="t-muted">
             {flow.model}
             {flow.turn > 0 && <span className="t-faint"> · T#{flow.turn}</span>}
-            {flow.messages > 0 && <span className="t-faint"> · {flow.messages} msgs</span>}
-            {flow.sentTokens > 0 && <span className="t-faint"> · ctx {compactNumber(flow.sentTokens)}tok</span>}
+            {flow.sentTokens > 0 && (
+              <span
+                className="t-faint"
+                data-hint={`上下文发送 ${compactNumber(flow.sentTokens)} tokens · ${flow.messages} 条消息`}
+              >
+                {' '}· ctx {compactNumber(flow.sentTokens)}tok
+              </span>
+            )}
           </span>
-          <span className="t-faint">{flow.endpoint}</span>
+          {flow.endpoint && (
+            <span className="t-faint" data-hint={`上游接入点：${flow.endpoint}`}>
+              {flow.endpoint}
+            </span>
+          )}
         </div>
 
         {/* tool path: tools ◀ calls (or the reply box once writing) */}
         {bottomOn && (
           <div className="flow-row flow-row2">
-            <Node label="[tools]" on={flow.stage === 'tool'} tone="ok" />
+            <Node label="[tools]" on={flow.stage === 'tool'} tone="ok" hint="宿主内置逆向工具与沙箱执行层" />
             <Wire offsets={pk(3)} left tone="violet" />
             <Node
               label={replyMode ? `[reply ${compactNumber(flow.usage.output)}tok]` : `[calls×${Math.max(flow.pendingCalls, 1)}]`}
               on={flow.stage === 'calls' || flow.stage === 'tool'}
               tone="violet"
+              hint={replyMode ? `已输出 ${flow.usage.output} tokens` : `待执行工具调用数：${Math.max(flow.pendingCalls, 1)}`}
             />
             <span className="flow-tool-line">
               {flow.activeTool !== '' && flow.stage === 'tool' && (
@@ -167,7 +207,10 @@ export function FlowPanel({ flow }: { flow: FlowDTO }) {
                   <span>{flow.toolMs > 0 ? fmtDuration(flow.toolMs) : 'running'}</span>
                 </>
               )}
-              <span className="flow-tally">
+              <span
+                className="flow-tally"
+                data-hint={`工具执行统计：成功 ${flow.toolsOk} 次 · 失败 ${flow.toolsFailed} 次`}
+              >
                 <span className="t-ok">✓{flow.toolsOk}</span>
                 {flow.toolsFailed > 0 && <span className="t-err"> ✗{flow.toolsFailed}</span>}
               </span>

@@ -36,21 +36,30 @@ export function REHudPanel({
 }) {
   return (
     <div style={style}>
-      <PanelBox title="re workflow" accent="violet" tier="primary" badge={re ? '9-GATE' : undefined}>
+      <PanelBox title="re workflow" accent="violet" tier="primary" badge={re ? `${re.phaseIndex + 1}/${re.phaseCount}` : undefined}>
         {!re ? (
-          <div style={{ color: 'var(--faint)', fontSize: 12, padding: '4px 0' }}>
-            ○ RE workflow off — /workflow reverse|ctf|research… 启用
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--faint)', fontSize: 11.5, padding: '3px 0' }}>
+            <span>○ RE workflow off</span>
+            <span
+              className="re-hint-dot"
+              data-hint="运行 /workflow reverse|ctf|research 启用 9 阶段硬门禁逆向流"
+            >
+              ?
+            </span>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', fontSize: 11 }}>
               <span
+                data-hint={`当前样本类型：${re.sampleType || '未指定'}`}
                 style={{
                   color: 'var(--violet)',
-                  border: '1px solid var(--violet)',
+                  border: '1px solid color-mix(in srgb, var(--violet) 55%, var(--rule))',
+                  background: 'var(--violet-soft)',
+                  borderRadius: 'var(--radius-xs)',
                   padding: '0 6px',
                   fontSize: 10,
-                  letterSpacing: '0.1em',
+                  letterSpacing: '0.08em',
                 }}
               >
                 {re.sampleType || '—'}
@@ -58,54 +67,61 @@ export function REHudPanel({
               <GlowText tone="accent">
                 <span style={{ fontWeight: 700 }}>{(re.phase || '').toUpperCase()}</span>
               </GlowText>
-              <span style={{ color: 'var(--faint)' }}>
+              <span className="re-mono-num" style={{ color: 'var(--faint)' }}>
                 [{re.phaseIndex + 1}/{re.phaseCount}]
+              </span>
+              <span
+                className="re-hint-dot"
+                style={{ marginLeft: 'auto' }}
+                data-hint={
+                  re.phaseIndex >= PHASES.length - 1
+                    ? '✓ WRI 交付门禁已全部达标，可导出完整取证 Writeup'
+                    : `下一阶段门禁 ${PHASES[re.phaseIndex + 1]}：${PHASE_GATES[PHASES[re.phaseIndex + 1]] ?? ''}`
+                }
+              >
+                ?
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, fontSize: 12, flexWrap: 'wrap' }}>
+            <div className="re-mono-num" style={{ display: 'flex', alignItems: 'baseline', gap: 3, fontSize: 11, flexWrap: 'wrap' }}>
               {PHASES.map((p, i) => (
-                <span key={p} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-                  {i > 0 && <span style={{ color: 'var(--faint)' }}>→</span>}
-                  {i < re.phaseIndex && <span style={{ color: 'var(--muted)' }}>{p}</span>}
-                  {i === re.phaseIndex && (
-                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>▸{p}</span>
-                  )}
-                  {i > re.phaseIndex && <span style={{ color: 'var(--faint)' }}>{p}</span>}
+                <span key={p} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 3 }}>
+                  {i > 0 && <span style={{ color: 'var(--rule)' }}>→</span>}
+                  <span
+                    data-hint={`${p} 门禁：${PHASE_GATES[p] ?? ''}`}
+                    style={
+                      i === re.phaseIndex
+                        ? { color: 'var(--accent)', fontWeight: 700 }
+                        : i < re.phaseIndex
+                          ? { color: 'var(--muted)' }
+                          : { color: 'var(--faint)' }
+                    }
+                  >
+                    {i === re.phaseIndex ? `▸${p}` : p}
+                  </span>
                 </span>
               ))}
             </div>
 
-            <div className="re-mono-num" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <div style={{ fontSize: 12, letterSpacing: 1 }}>
-                <span style={{ color: 'var(--accent)' }}>{'▰'.repeat(filled(re))}</span>
-                <span style={{ color: 'var(--faint)' }}>{'▱'.repeat(BAR_W - filled(re))}</span>
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: re.phaseIndex >= PHASES.length - 1 ? 'var(--ok)' : 'var(--muted)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-                title={
-                  re.phaseIndex >= PHASES.length - 1
-                    ? '✓ WRI 交付门禁就绪'
-                    : `NEXT → ${PHASES[re.phaseIndex + 1]}: ${PHASE_GATES[PHASES[re.phaseIndex + 1]] ?? ''}`
-                }
-              >
-                {re.phaseIndex >= PHASES.length - 1
-                  ? '✓ WRI 交付门禁就绪'
-                  : `NEXT → ${PHASES[re.phaseIndex + 1]}: ${PHASE_GATES[PHASES[re.phaseIndex + 1]] ?? ''}`}
-              </div>
+            <div
+              className="re-mono-num"
+              style={{ fontSize: 11.5, letterSpacing: 1 }}
+              data-hint={
+                re.phaseIndex >= PHASES.length - 1
+                  ? '✓ WRI 交付门禁就绪 (9/9)'
+                  : `阶段进度 ${re.phaseIndex + 1}/${re.phaseCount} · NEXT → ${PHASES[re.phaseIndex + 1]}: ${PHASE_GATES[PHASES[re.phaseIndex + 1]] ?? ''}`
+              }
+            >
+              <span style={{ color: 'var(--accent)' }}>{'▰'.repeat(filled(re))}</span>
+              <span style={{ color: 'var(--rule)' }}>{'▱'.repeat(BAR_W - filled(re))}</span>
             </div>
 
-            <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+            <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11.5 }}>
               <button
                 type="button"
                 onClick={() => onInspect?.('hypotheses')}
                 title="点击查看假设栈明细"
+                data-hint="点击打开假设栈明细，检视置信度与证据连线"
                 style={{
                   padding: 0,
                   cursor: onInspect ? 'pointer' : 'default',
@@ -118,6 +134,7 @@ export function REHudPanel({
                 type="button"
                 onClick={() => onInspect?.('evidence')}
                 title="点击查看证据账本明细"
+                data-hint="点击打开不可篡改证据账本明细 (ev_NNN)"
                 style={{
                   padding: 0,
                   cursor: onInspect ? 'pointer' : 'default',
@@ -126,17 +143,19 @@ export function REHudPanel({
               >
                 <GlowText tone="ok">E:{re.evidence}</GlowText>
               </button>
-              <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
+              <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 5 }}>
                 {onOpenGraph && (
                   <button
                     type="button"
                     onClick={onOpenGraph}
-                    title="打开假设/证据/审核/安全协同图谱"
+                    data-hint="打开多席位协同与因果证据图谱"
                     style={{
-                      padding: '0 5px',
+                      padding: '1px 6px',
                       fontSize: 10,
                       color: 'var(--violet)',
-                      border: '1px solid var(--violet-dim)',
+                      border: '1px solid color-mix(in srgb, var(--violet) 50%, var(--rule))',
+                      borderRadius: 'var(--radius-xs)',
+                      background: 'var(--violet-soft)',
                       cursor: 'pointer',
                     }}
                   >
@@ -147,12 +166,14 @@ export function REHudPanel({
                   <button
                     type="button"
                     onClick={onOpenWriteup}
-                    title="打开逆向过程总结与结构化 Writeup 报告工坊"
+                    data-hint="打开完整推理叙事与证据锚定 Writeup 报告工坊"
                     style={{
-                      padding: '0 5px',
+                      padding: '1px 6px',
                       fontSize: 10,
                       color: re.phase === 'writeup' ? 'var(--ok)' : 'var(--muted)',
-                      border: `1px solid ${re.phase === 'writeup' ? 'var(--ok)' : 'var(--rule)'}`,
+                      border: `1px solid ${re.phase === 'writeup' ? 'color-mix(in srgb, var(--ok) 55%, var(--rule))' : 'var(--border-subtle)'}`,
+                      borderRadius: 'var(--radius-xs)',
+                      background: re.phase === 'writeup' ? 'var(--ok-soft)' : 'transparent',
                       cursor: 'pointer',
                     }}
                   >

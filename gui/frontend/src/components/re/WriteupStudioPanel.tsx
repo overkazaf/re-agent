@@ -39,10 +39,19 @@ const WRITEUP_TEMPLATE_OPTIONS: readonly ProSelectOption<WriteupTemplateId>[] = 
   },
 ]
 
+const STAGE_SHORT: Record<number, string> = {
+  1: '①契约',
+  2: '②沙箱',
+  3: '③账本',
+  4: '④仲裁',
+  5: '⑤审计',
+  6: '⑥报告',
+}
+
 const mdPreviewComponents = {
-  p: ({ children }: { children?: ReactNode }) => <p style={{ margin: '0.35em 0', lineHeight: 1.55 }}>{children}</p>,
+  p: ({ children }: { children?: ReactNode }) => <p style={{ margin: '0.35em 0', lineHeight: 1.58 }}>{children}</p>,
   h1: ({ children }: { children?: ReactNode }) => (
-    <h1 style={{ fontSize: 15, margin: '0.4em 0 0.3em', color: 'var(--accent)', borderBottom: '1px solid var(--rule)', paddingBottom: 4 }}>
+    <h1 style={{ fontSize: 15, margin: '0.4em 0 0.3em', color: 'var(--accent)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 4 }}>
       {children}
     </h1>
   ),
@@ -57,11 +66,11 @@ const mdPreviewComponents = {
   li: ({ children }: { children?: ReactNode }) => <li style={{ margin: '0.2em 0', lineHeight: 1.5 }}>{children}</li>,
   code: ({ children, className }: { children?: ReactNode; className?: string }) =>
     className ? (
-      <code style={{ display: 'block', background: 'rgba(3, 6, 10, 0.85)', border: '1px solid var(--rule)', padding: 8, overflowX: 'auto', fontSize: 11.5 }}>
+      <code style={{ display: 'block', background: 'var(--surface-0)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', padding: 8, overflowX: 'auto', fontSize: 11.5 }}>
         {children}
       </code>
     ) : (
-      <code style={{ background: 'rgba(34, 211, 238, 0.08)', color: 'var(--accent)', padding: '0 4px', fontSize: 11.5 }}>
+      <code style={{ background: 'var(--accent-soft)', color: 'var(--accent)', borderRadius: 'var(--radius-xs)', padding: '0 4px', fontSize: 11.5 }}>
         {children}
       </code>
     ),
@@ -75,12 +84,12 @@ const mdPreviewComponents = {
     <table style={{ borderCollapse: 'collapse', fontSize: 11, margin: '0.4em 0', width: '100%' }}>{children}</table>
   ),
   th: ({ children }: { children?: ReactNode }) => (
-    <th style={{ border: '1px solid var(--rule)', padding: '3px 7px', textAlign: 'left', color: 'var(--accent)', background: 'rgba(15, 23, 42, 0.5)' }}>
+    <th style={{ border: '1px solid var(--border-subtle)', padding: '4px 8px', textAlign: 'left', color: 'var(--accent)', background: 'var(--surface-2)' }}>
       {children}
     </th>
   ),
   td: ({ children }: { children?: ReactNode }) => (
-    <td style={{ border: '1px solid var(--rule)', padding: '3px 7px', verticalAlign: 'top' }}>{children}</td>
+    <td style={{ border: '1px solid var(--border-subtle)', padding: '4px 8px', verticalAlign: 'top' }}>{children}</td>
   ),
 }
 
@@ -98,6 +107,8 @@ export function WriteupStudioPanel({
   const [dirty, setDirty] = useState(false)
   const [draft, setDraft] = useState('')
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [stagesOpen, setStagesOpen] = useState(false)
+  const [matrixOpen, setMatrixOpen] = useState(false)
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
   const summary = useMemo(() => synthesizeProcessSummary(tick), [tick])
@@ -171,117 +182,176 @@ export function WriteupStudioPanel({
     ]
   }, [draft])
 
+  const doneStages = summary.stages.filter((s) => s.status === 'done').length
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* 1. Article 6-Stage Cognitive Alignment Strip */}
-      <div style={cardBoxStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ color: 'var(--violet)', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em' }}>
-            ◈ 文章六大核心环节认知对齐 (模型负责叙述 · 宿主负责记账)
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* 1. Compact 1-Line 6-Stage Progress Strip (progressive disclosure) */}
+      <div className="re-compact-bar">
+        <div className="re-stage-strip">
+          <span style={{ color: 'var(--violet)', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em' }}>
+            ◈ 文章六大核心环节认知对齐
           </span>
-          <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10 }}>
-            已完成 {summary.stages.filter((s) => s.status === 'done').length} / 6 环节
+          <span
+            className="re-hint-dot"
+            data-hint="模型负责叙述，宿主负责记账：悬停各环节芯片查看原则与当前事实，或展开完整六格视图"
+          >
+            ?
           </span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            {summary.stages.map((st) => {
+              const glyph = st.status === 'done' ? '✓' : st.status === 'active' ? '▸' : '○'
+              return (
+                <span
+                  key={st.stageNo}
+                  className="re-stage-chip re-mono-num"
+                  data-status={st.status}
+                  data-hint={`${st.title} (${st.code}) · ${st.fact} — ${st.principle}`}
+                >
+                  <span>{glyph}</span>
+                  <span>{STAGE_SHORT[st.stageNo] ?? st.title}</span>
+                </span>
+              )
+            })}
+          </div>
+          <span className="re-mono-num" style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10 }}>
+            已完成 {doneStages} / 6 环节
+          </span>
+          <button
+            type="button"
+            className="re-disclosure-btn"
+            onClick={() => setStagesOpen((v) => !v)}
+            data-hint={stagesOpen ? '收起六大核心环节详情网格' : '展开全部六大核心环节的工程原则与当前证据事实'}
+          >
+            {stagesOpen ? '收起 ▴' : '展开详情 ▾'}
+          </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 6 }}>
-          {summary.stages.map((st) => {
-            const tone = st.status === 'done' ? 'ok' : st.status === 'active' ? 'accent' : 'muted'
-            const glyph = st.status === 'done' ? '✓' : st.status === 'active' ? '▸' : '○'
-            return (
-              <div
-                key={st.stageNo}
-                style={{
-                  border: `1px solid ${st.status === 'done' ? 'color-mix(in srgb, var(--ok) 45%, var(--rule))' : st.status === 'active' ? 'var(--accent)' : 'var(--rule)'}`,
-                  background: 'rgba(3, 6, 10, 0.6)',
-                  padding: '5px 8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
-                  <span style={{ color: `var(--${tone})`, fontWeight: 700 }}>
-                    {glyph} {st.title}
-                  </span>
-                  <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 9.5 }}>{st.code}</span>
+        {stagesOpen && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 7 }}>
+            {summary.stages.map((st) => {
+              const tone = st.status === 'done' ? 'ok' : st.status === 'active' ? 'accent' : 'muted'
+              const glyph = st.status === 'done' ? '✓' : st.status === 'active' ? '▸' : '○'
+              return (
+                <div
+                  key={st.stageNo}
+                  style={{
+                    border: `1px solid ${st.status === 'done' ? 'color-mix(in srgb, var(--ok) 40%, var(--rule))' : st.status === 'active' ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                    borderRadius: 'var(--radius-xs)',
+                    background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
+                    padding: '6px 9px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 3,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
+                    <span style={{ color: `var(--${tone})`, fontWeight: 700 }}>
+                      {glyph} {st.title}
+                    </span>
+                    <span className="re-mono-num" style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 9.5 }}>
+                      {st.code}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text)', fontSize: 10.5, lineHeight: 1.42 }}>{st.fact}</div>
+                  <div style={{ color: 'var(--faint)', fontSize: 9.5, lineHeight: 1.35 }}>{st.principle}</div>
                 </div>
-                <div style={{ color: 'var(--text)', fontSize: 10, lineHeight: 1.38 }}>{st.fact}</div>
-                <div style={{ color: 'var(--faint)', fontSize: 9.5, lineHeight: 1.32 }}>{st.principle}</div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 2. Structured Executive Conclusion Matrix + Narrative Summary */}
+      {/* 2. Compact Executive Summary Bar + Collapsible 4-Pillar Matrix */}
       <div
+        className="re-compact-bar"
         style={{
-          ...cardBoxStyle,
-          borderColor: 'color-mix(in srgb, var(--ok) 52%, var(--rule))',
+          borderColor: 'color-mix(in srgb, var(--ok) 40%, var(--border-subtle))',
           borderLeft: '3px solid var(--ok)',
-          background: 'linear-gradient(90deg, rgba(16, 42, 28, 0.36) 0%, rgba(5, 8, 12, 0.65) 55%)',
+          background: 'color-mix(in srgb, var(--ok) 5%, var(--surface-1))',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ color: 'var(--ok)', fontSize: 11, fontWeight: 700 }}>
-            ✦ 逆向过程总结语句 · 四维结构化结论矩阵 (Structured Conclusion)
+            ✦ 逆向过程总结语句
           </span>
-          <span style={{ flex: 1 }} />
+          <span
+            style={{
+              flex: '1 1 240px',
+              minWidth: 0,
+              color: 'var(--text)',
+              fontSize: 11,
+              lineHeight: 1.45,
+            }}
+          >
+            {summary.headline}
+          </span>
           <button
             type="button"
-            onClick={() => copyText('matrix', summary.structuredMarkdown)}
-            style={{ ...smallBtnStyle, borderColor: 'var(--ok)', color: 'var(--ok)' }}
+            className="re-disclosure-btn"
+            onClick={() => setMatrixOpen((v) => !v)}
+            data-hint="展开/收起「样本契约 · 核心结论 · 证据闭环 · 审计门禁」四维结论矩阵"
           >
-            {copiedKey === 'matrix' ? '✓ 已复制结论表' : '⎘ 复制结构化结论表'}
+            {matrixOpen ? '四维矩阵 ▴' : '四维矩阵 ▾'}
           </button>
           <button
             type="button"
             onClick={() => copyText('summary', summary.narrative.replace(/\*\*|`/g, ''))}
             style={smallBtnStyle}
+            data-hint="复制精简的一句话逆向过程总结"
           >
-            {copiedKey === 'summary' ? '✓ 已复制摘要' : '⎘ 复制一句话总结'}
+            {copiedKey === 'summary' ? '✓ 已复制' : '⎘ 复制摘要'}
+          </button>
+          <button
+            type="button"
+            onClick={() => copyText('matrix', summary.structuredMarkdown)}
+            style={{ ...smallBtnStyle, borderColor: 'color-mix(in srgb, var(--ok) 55%, var(--rule))', color: 'var(--ok)' }}
+            data-hint="复制 Markdown 四维结构化结论表"
+          >
+            {copiedKey === 'matrix' ? '✓ 已复制' : '⎘ 结论表'}
           </button>
         </div>
 
-        {/* 4-Pillar Structured Conclusion Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 6 }}>
-          {summary.pillars.map((p) => (
+        {matrixOpen && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 7 }}>
+              {summary.pillars.map((p) => (
+                <div
+                  key={p.key}
+                  style={{
+                    border: `1px solid color-mix(in srgb, var(--${p.tone}) 38%, var(--rule))`,
+                    borderLeft: `2px solid var(--${p.tone})`,
+                    borderRadius: 'var(--radius-xs)',
+                    background: 'color-mix(in srgb, var(--surface-2) 65%, transparent)',
+                    padding: '6px 9px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 3,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontSize: 10 }}>
+                    <b style={{ color: `var(--${p.tone})` }}>{p.label}</b>
+                    <span className="re-mono-num" style={{ color: 'var(--faint)', fontSize: 9.5 }}>{p.refs}</span>
+                  </div>
+                  <div style={{ color: 'var(--text)', fontSize: 10.5, lineHeight: 1.45 }}>{p.value}</div>
+                </div>
+              ))}
+            </div>
             <div
-              key={p.key}
               style={{
-                border: `1px solid color-mix(in srgb, var(--${p.tone}) 45%, var(--rule))`,
-                borderLeft: `2px solid var(--${p.tone})`,
-                background: 'rgba(3, 6, 10, 0.72)',
-                padding: '5px 8px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
+                fontSize: 11,
+                lineHeight: 1.55,
+                color: 'var(--muted)',
+                borderTop: '1px dashed var(--border-subtle)',
+                paddingTop: 6,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontSize: 10 }}>
-                <b style={{ color: `var(--${p.tone})` }}>{p.label}</b>
-                <span style={{ color: 'var(--faint)', fontSize: 9.5 }}>{p.refs}</span>
-              </div>
-              <div style={{ color: 'var(--text)', fontSize: 10.5, lineHeight: 1.4 }}>{p.value}</div>
+              <Markdown remarkPlugins={[remarkGfm]} components={mdPreviewComponents}>
+                {summary.narrative}
+              </Markdown>
             </div>
-          ))}
-        </div>
-
-        {/* Concise Narrative Line */}
-        <div
-          style={{
-            fontSize: 11,
-            lineHeight: 1.5,
-            color: 'var(--muted)',
-            borderTop: '1px dashed var(--rule)',
-            paddingTop: 5,
-          }}
-        >
-          <Markdown remarkPlugins={[remarkGfm]} components={mdPreviewComponents}>
-            {summary.narrative}
-          </Markdown>
-        </div>
+          </>
+        )}
       </div>
 
       {/* 2.5 Full Deductive Proof Narrative (Hypothesis -> Experiment -> Contradiction/Pivot -> Proof) */}
@@ -291,19 +361,24 @@ export function WriteupStudioPanel({
       <div style={cardBoxStyle}>
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ color: 'var(--ok)', fontSize: 11, fontWeight: 700 }}>✎ Writeup 分析文档工坊</span>
+          <span style={{ color: 'var(--ok)', fontSize: 11, fontWeight: 700 }}>✎ Writeup 工坊</span>
 
           <span
+            data-hint={
+              summary.writeupGate.unlocked
+                ? '验证凭证 (verify_artifact) 与独立审计 (audit_finding) 均已入账，满足 WRI 正式归档门禁'
+                : `正式归档前需满足：${summary.writeupGate.reasons.join('；') || '待补齐验证与审计凭证'}`
+            }
             style={{
               fontSize: 10,
-              padding: '1px 6px',
-              border: `1px solid ${summary.writeupGate.unlocked ? 'var(--ok)' : 'var(--warn)'}`,
+              padding: '1px 7px',
+              borderRadius: 'var(--radius-xs)',
+              border: `1px solid color-mix(in srgb, ${summary.writeupGate.unlocked ? 'var(--ok)' : 'var(--warn)'} 50%, var(--rule))`,
+              background: summary.writeupGate.unlocked ? 'var(--ok-soft)' : 'var(--warn-soft)',
               color: summary.writeupGate.unlocked ? 'var(--ok)' : 'var(--warn)',
             }}
           >
-            {summary.writeupGate.unlocked
-              ? '✓ WRI 硬闸门已通过（验证 + 审计齐备）'
-              : `🔒 正式落盘门禁未满足：${summary.writeupGate.reasons[0] ?? ''}`}
+            {summary.writeupGate.unlocked ? '✓ WRI 就绪' : '🔒 门禁未齐'}
           </span>
 
           <span style={{ flex: 1 }} />
@@ -326,6 +401,7 @@ export function WriteupStudioPanel({
             type="button"
             onClick={() => setViewMode('split')}
             style={tabToggleStyle(viewMode === 'split')}
+            data-hint="左右分栏同步编辑与预览 Markdown"
           >
             ◫ 双栏
           </button>
@@ -333,6 +409,7 @@ export function WriteupStudioPanel({
             type="button"
             onClick={() => setViewMode('preview')}
             style={tabToggleStyle(viewMode === 'preview')}
+            data-hint="专注阅读渲染后的 Writeup 报告"
           >
             👁 预览
           </button>
@@ -340,6 +417,7 @@ export function WriteupStudioPanel({
             type="button"
             onClick={() => setViewMode('edit')}
             style={tabToggleStyle(viewMode === 'edit')}
+            data-hint="编辑原始 Markdown 源码"
           >
             ✎ 编辑
           </button>
@@ -352,7 +430,7 @@ export function WriteupStudioPanel({
                 setDraft(autoMarkdown)
               }}
               style={smallBtnStyle}
-              title="按最新账本重新同步生成报告"
+              data-hint="放弃手动改动，按最新证据账本重新同步生成报告"
             >
               ↻ 同步账本
             </button>
@@ -362,41 +440,46 @@ export function WriteupStudioPanel({
             <button
               type="button"
               onClick={onRunAgentWriteup}
-              title="让 Agent 执行 WRI 阶段并归档至 notes/writeup.md"
+              data-hint="让 Agent 执行 WRI 阶段并归档至工作区 notes/writeup.md"
               style={{
                 ...smallBtnStyle,
-                borderColor: 'var(--ok)',
+                borderColor: 'color-mix(in srgb, var(--ok) 55%, var(--rule))',
                 color: 'var(--ok)',
-                background: 'rgba(74, 222, 128, 0.1)',
+                background: 'var(--ok-soft)',
               }}
             >
-              ⚡ Agent 落盘 writeup.md
+              ⚡ 落盘 writeup.md
             </button>
           )}
 
-          <button type="button" onClick={() => copyText('md', draft)} style={smallBtnStyle}>
-            {copiedKey === 'md' ? '✓ 已复制 Markdown' : '⎘ 复制 Markdown'}
+          <button type="button" onClick={() => copyText('md', draft)} style={smallBtnStyle} data-hint="复制当前完整 Markdown 源码">
+            {copiedKey === 'md' ? '✓ 已复制' : '⎘ MD'}
           </button>
-          <button type="button" onClick={downloadMarkdown} style={smallBtnStyle}>
-            ⬇ 导出 .md
+          <button type="button" onClick={downloadMarkdown} style={smallBtnStyle} data-hint="下载 .md 报告文件到本地">
+            ⬇ .md
           </button>
           <button
             type="button"
             onClick={downloadForensicBundle}
-            title="导出完整取证归档包 (含 SHA256 账本、假设校准、仲裁日志与 Markdown 报告)"
-            style={{ ...smallBtnStyle, borderColor: 'var(--violet-dim)', color: 'var(--violet)' }}
+            data-hint="导出完整取证归档包 (含 SHA256 账本、假设校准、仲裁日志与 Markdown 报告)"
+            style={{ ...smallBtnStyle, borderColor: 'color-mix(in srgb, var(--violet) 48%, var(--rule))', color: 'var(--violet)' }}
           >
-            ⬇ 导出 .json 取证包
+            ⬇ .json
           </button>
         </div>
 
         {/* Report Section Completeness Strip */}
-        <div className="re-writeup-sections re-mono-num">
+        <div className="re-writeup-sections re-mono-num" style={{ alignItems: 'center' }}>
           <span style={{ color: 'var(--faint)' }}>
-            报告结构完备度 ({sectionChecks.filter((s) => s.ok).length}/{sectionChecks.length}):
+            完备度 {sectionChecks.filter((s) => s.ok).length}/{sectionChecks.length}
           </span>
           {sectionChecks.map((s) => (
-            <span key={s.key} className="re-sec-pill" data-present={s.ok ? '1' : undefined}>
+            <span
+              key={s.key}
+              className="re-sec-pill"
+              data-present={s.ok ? '1' : undefined}
+              data-hint={s.ok ? `${s.label} 章节已包含` : `当前草稿缺少 ${s.label} 相关内容`}
+            >
               {s.ok ? '✓' : '○'} {s.label}
             </span>
           ))}
@@ -405,14 +488,14 @@ export function WriteupStudioPanel({
         {/* Citation quick-insert bar */}
         {(evidence.length > 0 || hypotheses.length > 0) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', fontSize: 10 }}>
-            <span style={{ color: 'var(--faint)' }}>点击插入溯源引用：</span>
+            <span style={{ color: 'var(--faint)' }}>引用</span>
             {hypotheses.map((h) => (
               <button
                 key={h.id}
                 type="button"
                 onClick={() => insertCitation(h.id)}
                 style={citeChipStyle(h.status === 'rejected' ? 'err' : 'accent')}
-                title={h.claim}
+                data-hint={`点击插入 [${h.id}] 引用：${h.claim}`}
               >
                 +{h.id}
               </button>
@@ -423,7 +506,7 @@ export function WriteupStudioPanel({
                 type="button"
                 onClick={() => insertCitation(ev.id)}
                 style={citeChipStyle(ev.kind === 'audit_finding' ? 'violet' : 'ok')}
-                title={`${ev.source}: ${ev.summary || ev.excerpt}`}
+                data-hint={`点击插入 [${ev.id}] (${ev.source})：${(ev.summary || ev.excerpt).slice(0, 110)}`}
               >
                 +{ev.id}
               </button>
@@ -438,7 +521,7 @@ export function WriteupStudioPanel({
             gridTemplateColumns: viewMode === 'split' ? '1fr 1fr' : '1fr',
             gap: 8,
             minHeight: 240,
-            maxHeight: 340,
+            maxHeight: 360,
           }}
         >
           {(viewMode === 'split' || viewMode === 'edit') && (
@@ -467,17 +550,19 @@ export function WriteupStudioPanel({
 }
 
 const cardBoxStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(5, 8, 12, 0.52)',
-  padding: '7px 10px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-sm)',
+  background: 'color-mix(in srgb, var(--surface-1) 90%, transparent)',
+  padding: '10px 12px',
   display: 'flex',
   flexDirection: 'column',
-  gap: 6,
+  gap: 8,
 }
 
 const smallBtnStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(8, 14, 22, 0.85)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-2) 72%, transparent)',
   color: 'var(--text)',
   fontSize: 10.5,
   padding: '2px 8px',
@@ -486,8 +571,9 @@ const smallBtnStyle: CSSProperties = {
 
 function tabToggleStyle(active: boolean): CSSProperties {
   return {
-    border: `1px solid ${active ? 'var(--accent)' : 'var(--rule)'}`,
-    background: active ? 'rgba(34, 211, 238, 0.12)' : 'transparent',
+    border: `1px solid ${active ? 'var(--accent)' : 'var(--border-subtle)'}`,
+    borderRadius: 'var(--radius-xs)',
+    background: active ? 'var(--accent-soft)' : 'transparent',
     color: active ? 'var(--accent)' : 'var(--muted)',
     fontSize: 10.5,
     padding: '2px 7px',
@@ -497,9 +583,10 @@ function tabToggleStyle(active: boolean): CSSProperties {
 
 function citeChipStyle(tone: 'accent' | 'ok' | 'violet' | 'err'): CSSProperties {
   return {
-    border: `1px solid color-mix(in srgb, var(--${tone}) 50%, var(--rule))`,
+    border: `1px solid color-mix(in srgb, var(--${tone}) 46%, var(--rule))`,
+    borderRadius: 'var(--radius-xs)',
     color: `var(--${tone})`,
-    background: 'rgba(5, 8, 12, 0.65)',
+    background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
     fontSize: 9.5,
     padding: '0 5px',
     cursor: 'pointer',
@@ -511,19 +598,21 @@ const editorStyle: CSSProperties = {
   height: '100%',
   minHeight: 230,
   resize: 'vertical',
-  background: 'rgba(2, 5, 9, 0.88)',
+  background: 'var(--surface-0)',
   color: 'var(--text)',
-  border: '1px solid var(--rule)',
-  padding: 8,
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  padding: 10,
   font: 'inherit',
   fontSize: 11,
-  lineHeight: 1.5,
+  lineHeight: 1.55,
 }
 
 const previewPaneStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(2, 5, 9, 0.78)',
-  padding: '8px 12px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'var(--surface-0)',
+  padding: '10px 14px',
   overflowY: 'auto',
   fontSize: 11.5,
   color: 'var(--text)',

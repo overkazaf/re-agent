@@ -66,6 +66,30 @@ function shortText(s: string, max = 96): string {
   return one.length > max ? `${one.slice(0, max)}…` : one
 }
 
+const KIND_HINT: Record<string, string> = {
+  OBS: 'tool_observation · 静态或工具原始观测记录',
+  VER: 'verification_result · verify_artifact 确定性重放验证凭证',
+  AUD: 'audit_finding · 独立对抗审计或人工审查签章',
+  TRC: 'runtime_trace · 动态执行或实验实跑轨迹',
+  ART: 'artifact · 逆向解包产物或输出文件指纹',
+  CLM: 'model_claim · 模型声明记录',
+  ERR: 'error · 执行异常、报错或拦截记录（不可充当正向支撑）',
+}
+
+const EV_FILTER_HINT: Record<'all' | 'static' | 'dynamic' | 'verified' | 'err', string> = {
+  all: '显示全部已入账证据 (ev_NNN)',
+  static: '仅显示静态观测视角 (static)',
+  dynamic: '仅显示动态执行与运行轨迹 (dynamic)',
+  verified: '仅显示重放验证凭证与审计签章 (VER / AUD)',
+  err: '仅显示报错或失败记录 (ERR)',
+}
+
+const HYP_FILTER_HINT: Record<'all' | 'active' | 'conflict', string> = {
+  all: '显示全部假设 (H-NNN)',
+  active: '仅显示活跃或已修订假设 (active / revised)',
+  conflict: '仅显示含反证冲突、待重审或已淘汰假设',
+}
+
 // ---------- compact side-rail panel ----------
 
 export function LedgerPanel({
@@ -128,13 +152,14 @@ export function LedgerPanel({
 
   return (
     <div style={style}>
-      <PanelBox title="ledger" accent="ok" tier="spotlight" badge="🔒 取证账本">
+      <PanelBox title="ledger" accent="ok" tier="spotlight">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {/* Tab strip + full detail trigger */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setTab('evidence')}
+              data-hint="只追加不可篡改证据账本 (ev_NNN)"
               style={tabBtnStyle(tab === 'evidence', 'ok')}
             >
               证据 {evidence.length}
@@ -142,6 +167,7 @@ export function LedgerPanel({
             <button
               type="button"
               onClick={() => setTab('hypotheses')}
+              data-hint="显式可证伪假设栈 (H-NNN)，支持反证折半与级联重审"
               style={tabBtnStyle(tab === 'hypotheses', 'accent')}
             >
               假设 {hypotheses.length}
@@ -151,22 +177,22 @@ export function LedgerPanel({
               <button
                 type="button"
                 onClick={() => onOpenWorkbench(tab === 'hypotheses' ? 'hypothesis' : 'verify')}
-                title={
+                data-hint={
                   tab === 'hypotheses'
-                    ? '新增/编辑可证伪假设并运行实验'
+                    ? '新增/编辑可证伪假设并挂载实跑实验'
                     : '实跑产物重放验证 (证据仅可通过真实执行入账，不可手改)'
                 }
-                style={{ ...detailBtnStyle, borderColor: 'var(--accent-dim)', color: 'var(--accent)' }}
+                style={{ ...detailBtnStyle, borderColor: 'color-mix(in srgb, var(--accent) 48%, var(--rule))', color: 'var(--accent)' }}
               >
-                {tab === 'hypotheses' ? '+ 假设/实验' : '+ 实跑验证'}
+                {tab === 'hypotheses' ? '+ 实验' : '+ 验证'}
               </button>
             )}
             {onOpenGraph && (
               <button
                 type="button"
                 onClick={onOpenGraph}
-                title="以因果图谱 (DAG) 形式查看证据与假设关联"
-                style={{ ...detailBtnStyle, borderColor: 'var(--violet-dim)', color: 'var(--violet)' }}
+                data-hint="以因果图谱 (DAG) 形式查看证据与假设关联"
+                style={{ ...detailBtnStyle, borderColor: 'color-mix(in srgb, var(--violet) 48%, var(--rule))', color: 'var(--violet)' }}
               >
                 ☍ 图谱
               </button>
@@ -174,7 +200,7 @@ export function LedgerPanel({
             <button
               type="button"
               onClick={() => onOpenDetail?.(tab)}
-              title="展开完整账本与假设检视器"
+              data-hint="展开完整证据账本与假设栈检视器"
               style={detailBtnStyle}
             >
               ⤢ 详情
@@ -199,6 +225,7 @@ export function LedgerPanel({
                       type="button"
                       className="re-filter-chip"
                       data-active={evQuickFilter === k ? '1' : undefined}
+                      data-hint={EV_FILTER_HINT[k]}
                       onClick={() => setEvQuickFilter(k)}
                     >
                       {lbl}
@@ -209,8 +236,8 @@ export function LedgerPanel({
               {recentEv.length === 0 ? (
                 <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 0' }}>
                   {evidence.length === 0
-                    ? '○ 暂无证据 — 工具运行后自动盖章 ev_NNN'
-                    : '○ 当前筛选无匹配证据'}
+                    ? '○ 暂无证据'
+                    : '○ 无匹配记录'}
                 </div>
               ) : (
                 <div style={listStyle}>
@@ -224,18 +251,27 @@ export function LedgerPanel({
                         onClick={() => setExpandedId(open ? null : ev.id)}
                         style={{
                           ...itemStyle,
-                          borderColor: open ? `var(--${meta.tone})` : 'var(--rule)',
+                          borderColor: open ? `var(--${meta.tone})` : 'var(--border-subtle)',
                         }}
                       >
                         <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                           <span style={{ color: 'var(--ok)', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                             {ev.id}
                           </span>
-                          <span style={chipStyle(meta.tone)}>{meta.label}</span>
+                          <span style={chipStyle(meta.tone)} data-hint={KIND_HINT[meta.label]}>
+                            {meta.label}
+                          </span>
                           <span style={{ color: 'var(--muted)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                             {ev.source}
                           </span>
-                          {ev.view && <span style={{ color: 'var(--faint)', fontSize: 9 }}>{ev.view}</span>}
+                          {ev.view && (
+                            <span
+                              style={{ color: 'var(--faint)', fontSize: 9 }}
+                              data-hint={ev.view === 'dynamic' ? '动态运行视角' : '静态分析视角'}
+                            >
+                              {ev.view}
+                            </span>
+                          )}
                           <button
                             type="button"
                             className="re-copy-chip"
@@ -244,7 +280,7 @@ export function LedgerPanel({
                               e.stopPropagation()
                               copyCite(ev.id, formatEvidenceCitation(ev))
                             }}
-                            title={`复制取证引用: ${formatEvidenceCitation(ev)}`}
+                            data-hint={`复制取证引用：${formatEvidenceCitation(ev)}`}
                             style={{ padding: '0 4px', fontSize: 9 }}
                           >
                             {copiedId === ev.id ? '✓' : '⎘'}
@@ -280,7 +316,7 @@ export function LedgerPanel({
             </>
           ) : hypotheses.length === 0 ? (
             <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 0' }}>
-              ○ 暂无假设 — hypothesis_create 后在此跟踪
+              ○ 暂无假设
             </div>
           ) : (
             <>
@@ -297,6 +333,7 @@ export function LedgerPanel({
                     type="button"
                     className="re-filter-chip"
                     data-active={hypQuickFilter === k ? '1' : undefined}
+                    data-hint={HYP_FILTER_HINT[k]}
                     onClick={() => setHypQuickFilter(k)}
                   >
                     {lbl}
@@ -315,7 +352,7 @@ export function LedgerPanel({
                       onClick={() => setExpandedId(open ? null : h.id)}
                       style={{
                         ...itemStyle,
-                        borderColor: open ? `var(--${tone})` : 'var(--rule)',
+                        borderColor: open ? `var(--${tone})` : 'var(--border-subtle)',
                       }}
                     >
                       <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -325,7 +362,7 @@ export function LedgerPanel({
                           className="re-verdict-badge"
                           data-verdict={chain.verdict}
                           style={{ fontSize: 8.5, padding: '0 4px' }}
-                          title={chain.calibration.reason}
+                          data-hint={chain.calibration.reason}
                         >
                           {chain.verdict === 'ANTI_ANALYSIS' ? 'ANTI' : chain.verdict}
                         </span>
@@ -340,7 +377,7 @@ export function LedgerPanel({
                             e.stopPropagation()
                             copyCite(h.id, formatHypothesisCitation(h))
                           }}
-                          title={`复制假设引用: ${formatHypothesisCitation(h)}`}
+                          data-hint={`复制假设引用：${formatHypothesisCitation(h)}`}
                           style={{ padding: '0 4px', fontSize: 9 }}
                         >
                           {copiedId === h.id ? '✓' : '⎘'}
@@ -362,21 +399,22 @@ export function LedgerPanel({
                       </div>
                       {open && (
                         <div className="re-chain" style={{ fontSize: 9.5 }}>
-                          <span className="re-chain-step" data-hit={chain.staticEvs.length > 0 ? 'static' : undefined}>
+                          <span className="re-chain-step" data-hit={chain.staticEvs.length > 0 ? 'static' : undefined} data-hint={`静态视角证据 ${chain.staticEvs.length} 条`}>
                             S:{chain.staticEvs.length}
                           </span>
                           <span className="re-chain-arrow">→</span>
                           <span
                             className="re-chain-step"
                             data-hit={chain.contradictEvs.length > 0 ? 'conflict' : chain.dynamicEvs.length > 0 ? '1' : undefined}
+                            data-hint={`动态实测证据 ${chain.dynamicEvs.length} 条 · 反证 ${chain.contradictEvs.length} 条`}
                           >
                             D:{chain.dynamicEvs.length}
                           </span>
                           <span className="re-chain-arrow">→</span>
-                          <span className="re-chain-step" data-hit={chain.verifyEvs.length > 0 ? '1' : undefined}>
+                          <span className="re-chain-step" data-hit={chain.verifyEvs.length > 0 ? '1' : undefined} data-hint={`verify_artifact 重放凭证 ${chain.verifyEvs.length} 条`}>
                             V:{chain.verifyEvs.length}
                           </span>
-                          <span className="re-calib-pill" data-tone={chain.calibration.tone} title={chain.calibration.reason}>
+                          <span className="re-calib-pill" data-tone={chain.calibration.tone} data-hint={chain.calibration.reason}>
                             {chain.calibration.status}
                           </span>
                         </div>
@@ -519,13 +557,33 @@ export function LedgerDetailDialog({
   return (
     <Dialog title="evidence ledger & hypothesis stack" accent="accent" width={780} onClose={onClose}>
       {/* Top bar: path + tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => setTab('evidence')} style={tabBtnStyle(tab === 'evidence', 'ok')}>
-          🔒 证据账本 E:{evidence.length} (只追加·不可篡改)
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setTab('evidence')}
+          data-hint="只追加不可篡改：ev_NNN 仅由工具实跑、实验命令或 verify_artifact 自动生成并附 SHA256 指纹"
+          style={tabBtnStyle(tab === 'evidence', 'ok')}
+        >
+          🔒 证据 E:{evidence.length}
         </button>
-        <button type="button" onClick={() => setTab('hypotheses')} style={tabBtnStyle(tab === 'hypotheses', 'accent')}>
-          ◈ 假设栈 H:{hypotheses.length} (可演进·实验驱动)
+        <button
+          type="button"
+          onClick={() => setTab('hypotheses')}
+          data-hint="可演进实验驱动：支持新增/修订假设并挂载可证伪实验，反证自动触发置信度折半 (×0.5)"
+          style={tabBtnStyle(tab === 'hypotheses', 'accent')}
+        >
+          ◈ 假设 H:{hypotheses.length}
         </button>
+        <span
+          className="re-hint-dot"
+          data-hint={
+            tab === 'evidence'
+              ? 'ev_NNN 严格只追加不可手改或删除；点击右上角按钮可发起新的实跑验证'
+              : '点击假设下的 ev_NNN 标签可直接跳转定位对应原始实测记录'
+          }
+        >
+          ?
+        </span>
         <span style={{ flex: 1 }} />
         {onOpenWorkbench && (
           <>
@@ -535,9 +593,10 @@ export function LedgerDetailDialog({
                 onClose()
                 onOpenWorkbench('hypothesis')
               }}
-              style={{ ...detailBtnStyle, borderColor: 'var(--accent)', color: 'var(--accent)', padding: '2px 8px' }}
+              data-hint="打开假设实验台新增或修订假设"
+              style={{ ...detailBtnStyle, borderColor: 'color-mix(in srgb, var(--accent) 55%, var(--rule))', color: 'var(--accent)', padding: '2px 8px' }}
             >
-              + 新增/编辑假设与实验
+              + 假设/实验
             </button>
             <button
               type="button"
@@ -545,7 +604,8 @@ export function LedgerDetailDialog({
                 onClose()
                 onOpenWorkbench('verify')
               }}
-              style={{ ...detailBtnStyle, borderColor: 'var(--ok)', color: 'var(--ok)', padding: '2px 8px' }}
+              data-hint="执行 verify_artifact 确定性产物重放验证"
+              style={{ ...detailBtnStyle, borderColor: 'color-mix(in srgb, var(--ok) 55%, var(--rule))', color: 'var(--ok)', padding: '2px 8px' }}
             >
               ▶ 实跑验证
             </button>
@@ -555,19 +615,13 @@ export function LedgerDetailDialog({
                 onClose()
                 onOpenWorkbench('review')
               }}
-              style={{ ...detailBtnStyle, borderColor: 'var(--violet)', color: 'var(--violet)', padding: '2px 8px' }}
+              data-hint="触发宿主确定性仲裁、独立模型审计或人工审查签章"
+              style={{ ...detailBtnStyle, borderColor: 'color-mix(in srgb, var(--violet) 55%, var(--rule))', color: 'var(--violet)', padding: '2px 8px' }}
             >
               ⚖ 仲裁/审查
             </button>
           </>
         )}
-      </div>
-
-      {/* Provenance rule notice */}
-      <div style={{ fontSize: 10.5, color: 'var(--muted)', padding: '4px 8px', border: '1px dashed var(--rule)', background: 'rgba(5, 10, 16, 0.55)' }}>
-        {tab === 'evidence'
-          ? '🔒 证据不可篡改原则：ev_NNN 仅能由工具实跑、实验命令执行或 verify_artifact 重放自动生成并附 SHA256 指纹，禁止人工编辑或删除。'
-          : '◈ 假设可演进原则：支持新增/修订假设并挂载可证伪实验；实验实跑后由宿主自动比对预期输出并绑定支撑或触发置信度折半（×0.5）。'}
       </div>
 
       {/* Filter row */}
@@ -654,10 +708,11 @@ export function LedgerDetailDialog({
                 <div
                   key={ev.id}
                   style={{
-                    border: `1px solid ${hi ? 'var(--accent)' : 'var(--rule)'}`,
-                    boxShadow: hi ? '0 0 14px var(--accent-dim)' : 'none',
-                    background: 'rgba(5, 8, 12, 0.5)',
-                    padding: '8px 10px',
+                    border: `1px solid ${hi ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                    borderRadius: 'var(--radius-sm)',
+                    boxShadow: hi ? '0 0 12px var(--accent-soft)' : 'none',
+                    background: 'color-mix(in srgb, var(--surface-2) 55%, transparent)',
+                    padding: '9px 11px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 5,
@@ -665,7 +720,9 @@ export function LedgerDetailDialog({
                 >
                   <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
                     <span style={{ color: 'var(--ok)', fontWeight: 700 }}>{ev.id}</span>
-                    <span style={chipStyle(meta.tone)}>{ev.kind || 'tool_observation'}</span>
+                    <span style={chipStyle(meta.tone)} data-hint={KIND_HINT[meta.label]}>
+                      {ev.kind || 'tool_observation'}
+                    </span>
                     <span style={{ color: 'var(--accent)' }}>{ev.source}</span>
                     {ev.view && <span style={{ color: 'var(--faint)' }}>view:{ev.view}</span>}
                     {ev.bytes > 0 && <span style={{ color: 'var(--faint)' }}>{ev.bytes}B</span>}
@@ -676,7 +733,7 @@ export function LedgerDetailDialog({
                         className="re-copy-chip"
                         data-copied={copiedId === ev.id ? '1' : undefined}
                         onClick={() => copyCite(ev.id, formatEvidenceCitation(ev))}
-                        title={`复制取证引用: ${formatEvidenceCitation(ev)}`}
+                        data-hint={`复制取证引用：${formatEvidenceCitation(ev)}`}
                       >
                         {copiedId === ev.id ? '✓ 已复制' : '⎘ 引用'}
                       </button>
@@ -728,13 +785,14 @@ export function LedgerDetailDialog({
               <div
                 key={h.id}
                 style={{
-                  border: `1px solid var(--rule)`,
+                  border: `1px solid var(--border-subtle)`,
                   borderLeft: `3px solid var(--${tone})`,
-                  background: 'rgba(5, 8, 12, 0.5)',
-                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'color-mix(in srgb, var(--surface-2) 55%, transparent)',
+                  padding: '9px 11px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 5,
+                  gap: 6,
                 }}
               >
                 <div className="re-mono-num" style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', fontSize: 11 }}>
@@ -748,7 +806,7 @@ export function LedgerDetailDialog({
                   <span
                     className="re-calib-pill"
                     data-tone={chain.calibration.tone}
-                    title={chain.calibration.reason}
+                    data-hint={chain.calibration.reason}
                   >
                     {chain.calibration.status}
                   </span>
@@ -758,7 +816,7 @@ export function LedgerDetailDialog({
                       className="re-copy-chip"
                       data-copied={copiedId === h.id ? '1' : undefined}
                       onClick={() => copyCite(h.id, formatHypothesisCitation(h))}
-                      title={`复制取证引用: ${formatHypothesisCitation(h)}`}
+                      data-hint={`复制假设引用：${formatHypothesisCitation(h)}`}
                     >
                       {copiedId === h.id ? '✓ 已复制' : '⎘ 引用'}
                     </button>
@@ -886,10 +944,7 @@ export function LedgerDetailDialog({
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <span style={{ color: 'var(--faint)', fontSize: 11 }}>
-          点击假设中的 ev_NNN 标签可直接跳转定位对应原始证据 · 也可在输入框运行 /phase 查看摘要
-        </span>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
         <Btn onClick={onClose}>close</Btn>
       </div>
     </Dialog>
@@ -900,11 +955,13 @@ export function LedgerDetailDialog({
 
 function tabBtnStyle(active: boolean, tone: 'ok' | 'accent'): CSSProperties {
   return {
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle)'}`,
+    borderRadius: 'var(--radius-xs)',
     background: active ? `color-mix(in srgb, var(--${tone}) 12%, transparent)` : 'transparent',
     color: active ? `var(--${tone})` : 'var(--muted)',
     fontSize: 11,
-    padding: '1px 7px',
+    fontWeight: active ? 600 : 400,
+    padding: '2px 8px',
     cursor: 'pointer',
   }
 }
@@ -912,7 +969,8 @@ function tabBtnStyle(active: boolean, tone: 'ok' | 'accent'): CSSProperties {
 function chipStyle(tone: string): CSSProperties {
   return {
     color: `var(--${tone})`,
-    border: `1px solid color-mix(in srgb, var(--${tone}) 55%, var(--rule))`,
+    border: `1px solid color-mix(in srgb, var(--${tone}) 48%, var(--rule))`,
+    borderRadius: 'var(--radius-xs)',
     padding: '0 4px',
     fontSize: 9,
     letterSpacing: '0.06em',
@@ -922,7 +980,9 @@ function chipStyle(tone: string): CSSProperties {
 }
 
 const detailBtnStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'transparent',
   color: 'var(--muted)',
   fontSize: 10,
   padding: '1px 6px',
@@ -938,9 +998,10 @@ const listStyle: CSSProperties = {
 }
 
 const itemStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(5, 8, 12, 0.35)',
-  padding: '5px 7px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-2) 48%, transparent)',
+  padding: '6px 8px',
   display: 'flex',
   flexDirection: 'column',
   gap: 3,
@@ -949,9 +1010,10 @@ const itemStyle: CSSProperties = {
 
 const miniExcerptStyle: CSSProperties = {
   margin: 0,
-  padding: '4px 6px',
-  background: 'rgba(5, 8, 12, 0.55)',
-  border: '1px solid var(--rule)',
+  padding: '5px 7px',
+  background: 'var(--surface-0)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   color: 'var(--muted)',
   fontSize: 10,
   whiteSpace: 'pre-wrap',
@@ -962,9 +1024,10 @@ const miniExcerptStyle: CSSProperties = {
 
 const fullExcerptStyle: CSSProperties = {
   margin: 0,
-  padding: '6px 8px',
-  background: 'rgba(5, 8, 12, 0.65)',
-  border: '1px solid var(--rule)',
+  padding: '7px 9px',
+  background: 'var(--surface-0)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   color: 'var(--muted)',
   fontSize: 11,
   whiteSpace: 'pre-wrap',
@@ -974,9 +1037,10 @@ const fullExcerptStyle: CSSProperties = {
 }
 
 const refLinkStyle: CSSProperties = {
-  border: '1px solid color-mix(in srgb, var(--ok) 50%, var(--rule))',
+  border: '1px solid color-mix(in srgb, var(--ok) 48%, var(--rule))',
+  borderRadius: 'var(--radius-xs)',
   color: 'var(--ok)',
-  background: 'rgba(74, 222, 128, 0.08)',
+  background: 'var(--ok-soft)',
   fontSize: 10,
   padding: '0 5px',
   cursor: 'pointer',

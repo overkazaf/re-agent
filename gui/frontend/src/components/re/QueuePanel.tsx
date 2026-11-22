@@ -9,25 +9,34 @@ export function QueuePanel({ count, style }: { count: number; style?: CSSPropert
     <div style={style}>
       <PanelBox title="queue" accent={count > 0 ? 'warn' : undefined} tier="secondary" badge={count > 0 ? `FIFO·${count}` : undefined}>
         {count > 0 ? (
-          <div className="re-mono-num" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '4px 0' }}>
-            <GlowText tone="accent">
-              <span style={{ fontSize: 14 }}>⠿ {count} pending</span>
-            </GlowText>
-            <div style={{ color: 'var(--faint)', fontSize: 11, lineHeight: 1.6 }}>
-              运行中提交的 prompt 按 FIFO 队列挂起，当前 turn 结束自动顺序注入。
-              <br />
-              管理命令：<span style={{ color: 'var(--muted)' }}>/queue list</span> · <span style={{ color: 'var(--muted)' }}>/queue clear</span>
+          <div className="re-mono-num" style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '3px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <GlowText tone="accent">
+                <span style={{ fontSize: 13 }}>⠿ {count} pending</span>
+              </GlowText>
+              <span
+                className="re-hint-dot"
+                data-hint="运行中提交的指令按 FIFO 顺序排队，当前轮结束后自动注入；可用 /queue list 或 /queue clear 管理"
+              >
+                ?
+              </span>
             </div>
-            <div style={{ color: 'var(--faint)', fontSize: 11 }}>
-              {Array.from({ length: Math.min(count, 5) }, (_, i) => (
+            <div style={{ color: 'var(--faint)', fontSize: 10.5, lineHeight: 1.5 }}>
+              {Array.from({ length: Math.min(count, 4) }, (_, i) => (
                 <div key={i}>├─ slot #{i + 1} · queued</div>
               ))}
-              {count > 5 && <div>└─ +{count - 5} more queued</div>}
+              {count > 4 && <div>└─ +{count - 4} more</div>}
             </div>
           </div>
         ) : (
-          <div style={{ color: 'var(--faint)', fontSize: 12, padding: '4px 0' }}>
-            ○ empty — 运行中提交的 prompt 自动排队
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--faint)', fontSize: 11.5, padding: '3px 0' }}>
+            <span>○ empty</span>
+            <span
+              className="re-hint-dot"
+              data-hint="Agent 运行中继续输入会自动排入 FIFO 队列，当前 turn 结束后顺次执行"
+            >
+              ?
+            </span>
           </div>
         )}
       </PanelBox>

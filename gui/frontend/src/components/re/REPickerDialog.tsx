@@ -12,9 +12,10 @@ const gridItem = (selected: boolean): CSSProperties => ({
   display: 'flex',
   flexDirection: 'column',
   gap: 3,
-  padding: '7px 9px',
-  border: `1px solid ${selected ? 'var(--violet)' : 'var(--rule)'}`,
-  background: selected ? 'rgba(139, 92, 246, 0.10)' : 'transparent',
+  padding: '8px 10px',
+  border: `1px solid ${selected ? 'var(--violet)' : 'var(--border-subtle)'}`,
+  borderRadius: 'var(--radius-xs)',
+  background: selected ? 'var(--violet-soft)' : 'color-mix(in srgb, var(--surface-2) 45%, transparent)',
   cursor: 'pointer',
   textAlign: 'left',
   font: 'inherit',
@@ -85,20 +86,31 @@ export function REPickerDialog({ sessionId, onClose }: { sessionId: string; onCl
           <div style={{ color: 'var(--faint)', fontSize: 12 }}>loading sample types…</div>
         ) : (
           <>
-            <div style={labelStyle}>sample type — {types.length} kinds</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={labelStyle}>sample type — {types.length} kinds</span>
+              <span
+                className="re-hint-dot"
+                data-hint="也可直接在输入框执行 /workflow reverse <type> 跳过此选择弹窗"
+              >
+                ?
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
               {types.map((st) => (
-                <button key={st.key} style={gridItem(false)} onClick={() => setPicked(st)}>
-                  <span style={{ color: 'var(--violet)', fontSize: 12, letterSpacing: '0.06em' }}>
+                <button
+                  key={st.key}
+                  type="button"
+                  style={gridItem(false)}
+                  onClick={() => setPicked(st)}
+                  data-hint={`命令行快捷方式：/workflow reverse ${st.key}`}
+                >
+                  <span style={{ color: 'var(--violet)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }}>
                     {st.label}
                   </span>
-                  <span style={{ color: 'var(--faint)', fontSize: 11 }}>{st.desc}</span>
-                  <span style={{ color: 'var(--rule)', fontSize: 10 }}>{st.key}</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>{st.desc}</span>
+                  <span className="re-mono-num" style={{ color: 'var(--faint)', fontSize: 10 }}>{st.key}</span>
                 </button>
               ))}
-            </div>
-            <div style={{ color: 'var(--faint)', fontSize: 11 }}>
-              直接 /workflow reverse &lt;type&gt; 可跳过此对话框
             </div>
           </>
         ))}

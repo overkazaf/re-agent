@@ -45,13 +45,19 @@ export function ProofNarrativePanel({
     >
       {/* Header + mode switch + copy button */}
       <div className="re-narrative-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <span className="re-narrative-title">
-            ◈ 完整推理与证明过程（从假设提出到证据闭环）
+            ◈ 推理与证明脉络
+          </span>
+          <span
+            className="re-hint-dot"
+            data-hint="按「假设 → 实验 → 冲突/转向 → 重放验证 → 独立审计」连贯还原完整证明链；可切换按时间叙事或逐假设五拍拆解，点击 [ev_NNN] 展开原始实测摘录"
+          >
+            ?
           </span>
           {!story.isEmpty && (
             <span className="re-narrative-meta re-mono-num">
-              {story.chapters.length} 步递进 · {story.hypothesisArcs.length} 条假设链路
+              {story.chapters.length} 步递进 · {story.hypothesisArcs.length} 条假设
             </span>
           )}
         </div>
@@ -63,24 +69,30 @@ export function ProofNarrativePanel({
               className="re-narrative-tab"
               data-active={mode === 'timeline' ? '1' : undefined}
               onClick={() => setMode('timeline')}
+              aria-label="完整推理脉络（按时间叙事）"
+              data-hint="按时间演进顺序串起完整取证与转向逻辑"
             >
-              完整推理脉络（按时间叙事）
+              时间叙事
             </button>
             <button
               type="button"
               className="re-narrative-tab"
               data-active={mode === 'hypotheses' ? '1' : undefined}
               onClick={() => setMode('hypotheses')}
+              aria-label="逐假设证明链路（按 H-NNN 拆解）"
+              data-hint="逐条展开每个假设的「起因 → 主张 → 实测 → 推导 → 后续」五拍证明链"
             >
-              逐假设证明链路（按 H-NNN 拆解）
+              逐假设拆解
             </button>
             <button
               type="button"
               className="re-narrative-copy"
               data-copied={copied ? '1' : undefined}
               onClick={copyStory}
+              aria-label="复制完整推理叙述"
+              data-hint="复制纯文本完整推理叙述"
             >
-              {copied ? '✓ 已复制完整叙述' : '⎘ 复制完整推理叙述'}
+              {copied ? '✓ 已复制' : '⎘ 复制叙述'}
             </button>
           </div>
         )}
@@ -141,24 +153,21 @@ function ChapterBlock({
     <div className="re-narrative-step-wrap">
       {chapter.transitionFromPrev && (
         <div className="re-narrative-bridge">
-          <span className="re-narrative-bridge-arrow" aria-hidden="true">↓</span>
-          <span>
-            <b>承接逻辑：</b>
-            {chapter.transitionFromPrev}
-          </span>
+          <span className="re-narrative-bridge-arrow" aria-hidden="true">↳</span>
+          <span>{chapter.transitionFromPrev}</span>
         </div>
       )}
 
       <article className="re-narrative-card" data-tone={chapter.tone}>
         <div className="re-narrative-card-head">
           <span className="re-step-badge re-mono-num" data-tone={chapter.tone}>
-            第 {chapter.stepNo} 步
+            0{chapter.stepNo}
           </span>
           <span className="re-step-phase">{chapter.phaseLabel}</span>
           <span className="re-step-role">{chapter.roleTag}</span>
           {chapter.hypothesisIds.length > 0 && (
             <span className="re-step-hyps re-mono-num">
-              涉及 {chapter.hypothesisIds.join(' · ')}
+              {chapter.hypothesisIds.join(' · ')}
             </span>
           )}
         </div>
@@ -184,10 +193,11 @@ function ChapterBlock({
 
         {chapter.evidenceRefs.length > 0 && (
           <div className="re-ev-pill-row">
-            <span className="re-ev-pill-label">引用原始证据（点击展开摘录）：</span>
+            <span className="re-ev-pill-label">凭证</span>
             {chapter.evidenceRefs.map((ev) => {
               const key = `${chapter.id}:${ev.id}`
               const open = expandedEvKey === key
+              const preview = (ev.summary || ev.excerpt || '').replace(/\s+/g, ' ').slice(0, 120)
               return (
                 <button
                   key={ev.id}
@@ -196,7 +206,7 @@ function ChapterBlock({
                   data-open={open ? '1' : undefined}
                   data-tone={ev.isError ? 'err' : ev.kind === 'audit_finding' ? 'violet' : ev.view === 'dynamic' ? 'ok' : 'accent'}
                   onClick={() => onToggleEv(key)}
-                  title={`${ev.source} (${ev.view})：${ev.summary}`}
+                  data-hint={`${ev.source} (${ev.view}) · ${preview} — 点击展开原始摘录`}
                 >
                   [{ev.id}] {ev.source}
                 </button>
@@ -287,11 +297,12 @@ function HypothesisArcCard({
 
       {allRefs.length > 0 && (
         <div className="re-ev-pill-row">
-          <span className="re-ev-pill-label">关联凭证：</span>
+          <span className="re-ev-pill-label">凭证</span>
           {allRefs.map((ev) => {
             const key = `${arc.id}:${ev.id}`
             const open = expandedEvKey === key
             const isContra = arc.contradictingRefs.some((c) => c.id === ev.id)
+            const preview = (ev.summary || ev.excerpt || '').replace(/\s+/g, ' ').slice(0, 120)
             return (
               <button
                 key={ev.id}
@@ -300,7 +311,7 @@ function HypothesisArcCard({
                 data-open={open ? '1' : undefined}
                 data-tone={isContra || ev.isError ? 'err' : ev.kind === 'audit_finding' ? 'violet' : ev.view === 'dynamic' ? 'ok' : 'accent'}
                 onClick={() => onToggleEv(key)}
-                title={`${ev.source} (${ev.view})：${ev.summary}`}
+                data-hint={`${isContra ? '反证' : '支撑'} · ${ev.source} (${ev.view})：${preview}`}
               >
                 {isContra ? '✗' : '+'}[{ev.id}] {ev.source}
               </button>

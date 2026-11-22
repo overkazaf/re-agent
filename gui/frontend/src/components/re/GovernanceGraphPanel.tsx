@@ -361,66 +361,82 @@ export function GovernanceGraphPanel({
 
   return (
     <PanelBox
-      title="governance & provenance graph — 假设 · 证据 · 审核 · 安全 · Writeup 闭环"
+      title="governance & provenance graph"
       accent={mode === 'writeup' ? 'ok' : mode === 'dag' ? 'violet' : 'accent'}
       tier="spotlight"
-      badge="◈ 焦点中枢"
       collapsible={false}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
         {/* Sub-header mode switch + seat legend */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <button
             type="button"
+            aria-label="◈ 机制协同架构图"
+            data-hint="9 节点多席位协同与双层安全门禁实时拓扑"
             onClick={() => setMode('pipeline')}
             style={modeTabStyle(mode === 'pipeline', 'accent')}
           >
-            ◈ 机制协同架构图
+            ◈ 架构图
           </button>
           <button
             type="button"
+            aria-label={`☍ 实时因果证据图谱 (ev:${evidence.length} ↔ H:${hypotheses.length})`}
+            data-hint="实时因果引用图谱：点击 ev_NNN 或 H-NNN 节点查看支撑/反证与依赖级联链路"
             onClick={() => setMode('dag')}
             style={modeTabStyle(mode === 'dag', 'violet')}
           >
-            ☍ 实时因果证据图谱 (ev:{evidence.length} ↔ H:{hypotheses.length})
+            ☍ 证据图谱 <span className="re-mono-num" style={{ opacity: 0.78 }}>{evidence.length}·{hypotheses.length}</span>
           </button>
           <button
             type="button"
+            aria-label="✎ 过程总结与 Writeup 工坊"
+            data-hint="完整推理叙事、六阶段认知对齐与证据锚定 Writeup 导出"
             onClick={() => setMode('writeup')}
             style={modeTabStyle(mode === 'writeup', 'ok')}
           >
-            ✎ 过程总结与 Writeup 工坊
+            ✎ 报告
           </button>
 
           {onOpenWorkbench && (
             <button
               type="button"
+              aria-label="🧪 假设实验与验证台"
               onClick={() => onOpenWorkbench('hypothesis')}
-              title="新增/编辑假设、挂载并实跑实验、执行 verify_artifact 验证或签发审查结论（证据账本严格只追加不可手改）"
+              data-hint="新增/编辑可证伪假设、实跑实验取证、执行 verify_artifact 重放或签发审查结论（证据账本严格只追加）"
               style={{
-                border: '1px solid var(--accent)',
-                background: 'rgba(34, 211, 238, 0.1)',
+                border: '1px solid color-mix(in srgb, var(--accent) 55%, var(--rule))',
+                borderRadius: 'var(--radius-xs)',
+                background: 'var(--accent-soft)',
                 color: 'var(--accent)',
                 fontSize: 11,
                 padding: '3px 10px',
                 cursor: 'pointer',
               }}
             >
-              🧪 假设实验与验证台
+              🧪 实验台
             </button>
           )}
 
           <span style={{ flex: 1 }} />
 
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5 }}>
-            <span style={seatBadgeStyle('accent', activeProvider === plannerName && Boolean(busy))}>
-              Planner: <b>{plannerName}</b>
+          <div className="re-mono-num" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5 }}>
+            <span
+              style={seatBadgeStyle('accent', activeProvider === plannerName && Boolean(busy))}
+              data-hint={`规划席 (Planner: ${plannerName}) — 负责 /goal 契约、任务拆解与假设栈建模`}
+            >
+              P:<b>{plannerName}</b>
             </span>
-            <span style={seatBadgeStyle('ok', activeProvider === executorName && Boolean(busy))}>
-              Executor: <b>{executorName}</b>
+            <span
+              style={seatBadgeStyle('ok', activeProvider === executorName && Boolean(busy))}
+              data-hint={`执行席 (Executor: ${executorName}) — 负责高频调用 34 项静态/动态逆向工具取证`}
+            >
+              E:<b>{executorName}</b>
             </span>
-            <span style={seatBadgeStyle('violet', activeProvider === auditorName && Boolean(busy))}>
-              Auditor: <b>{auditorName}</b>
+            <span
+              style={seatBadgeStyle('violet', activeProvider === auditorName && Boolean(busy))}
+              data-hint={`对抗审计席 (Auditor: ${auditorName}) — 零对话历史隔离复核假设与证据闭环`}
+            >
+              A:<b>{auditorName}</b>
             </span>
           </div>
         </div>
@@ -428,13 +444,18 @@ export function GovernanceGraphPanel({
         {/* 9-Phase Hard-Gate Readiness Strip (Pipeline & DAG modes) */}
         {mode !== 'writeup' && (
           <div className="re-gate-strip" data-testid="phase-gate-strip">
-            <span style={{ color: 'var(--faint)', letterSpacing: '0.06em' }}>GATES:</span>
+            <span
+              style={{ color: 'var(--faint)', letterSpacing: '0.06em' }}
+              data-hint="9 阶段机械硬门禁：前置阶段凭证不足时宿主拒绝跨级推进或提前输出总结"
+            >
+              GATES
+            </span>
             {phaseGates.map((g) => (
               <span
                 key={g.code}
                 className="re-gate-pill"
                 data-ready={g.ready}
-                title={`${g.code} (${g.phase}) — ${g.criterion} [${g.progress}]`}
+                data-hint={`${g.code} (${g.phase}) — ${g.criterion} [${g.progress}]`}
               >
                 <span>{g.ready === 'pass' ? '✓' : g.ready === 'current' ? '▸' : g.ready === 'blocked' ? '🔒' : '○'}</span>
                 <b>{g.code}</b>
@@ -451,11 +472,12 @@ export function GovernanceGraphPanel({
               <button
                 type="button"
                 onClick={startOrToggleReplay}
+                data-hint="按时间轴逐步回放多席位推理、实验冲突与仲裁决策演化过程"
                 style={{
                   ...replayBtnStyle,
                   borderColor: playing ? 'var(--warn)' : 'var(--accent)',
                   color: playing ? 'var(--warn)' : 'var(--accent)',
-                  background: playing ? 'rgba(251, 191, 36, 0.1)' : 'rgba(34, 211, 238, 0.1)',
+                  background: playing ? 'var(--warn-soft)' : 'var(--accent-soft)',
                 }}
               >
                 {playing ? '⏸ 暂停回放' : '▶ 回放思考过程'}
@@ -463,7 +485,7 @@ export function GovernanceGraphPanel({
               <button
                 type="button"
                 onClick={() => jumpReplayFrame(0)}
-                title="跳至第 1 帧"
+                data-hint="跳至第 1 演化帧"
                 style={replayBtnStyle}
               >
                 ⏮
@@ -471,7 +493,7 @@ export function GovernanceGraphPanel({
               <button
                 type="button"
                 onClick={() => jumpReplayFrame((replayIdx ?? replayFrames.length - 1) - 1)}
-                title="上一演化帧"
+                data-hint="上一演化帧"
                 style={replayBtnStyle}
               >
                 ◀
@@ -479,7 +501,7 @@ export function GovernanceGraphPanel({
               <button
                 type="button"
                 onClick={() => jumpReplayFrame((replayIdx ?? -1) + 1)}
-                title="下一演化帧"
+                data-hint="下一演化帧"
                 style={replayBtnStyle}
               >
                 ▶
@@ -487,7 +509,7 @@ export function GovernanceGraphPanel({
               <button
                 type="button"
                 onClick={() => setFastReplay((v) => !v)}
-                title="切换回放倍速"
+                data-hint="切换回放倍速 (1× / 2×)"
                 style={{ ...replayBtnStyle, color: fastReplay ? 'var(--accent)' : 'var(--faint)' }}
               >
                 {fastReplay ? '2×' : '1×'}
@@ -501,12 +523,12 @@ export function GovernanceGraphPanel({
                       key={fr.id}
                       type="button"
                       onClick={() => jumpReplayFrame(idx)}
-                      title={`${fr.stageTag} — ${fr.title}`}
+                      data-hint={`${fr.stageTag} — ${fr.title}`}
                       style={{
                         ...replayBtnStyle,
-                        borderColor: cur ? `var(--${fr.actorTone})` : 'var(--rule)',
+                        borderColor: cur ? `var(--${fr.actorTone})` : 'var(--border-subtle)',
                         color: cur ? `var(--${fr.actorTone})` : 'var(--muted)',
-                        background: cur ? 'rgba(15, 23, 42, 0.9)' : 'transparent',
+                        background: cur ? 'var(--surface-2)' : 'transparent',
                         fontSize: 10,
                       }}
                     >
@@ -522,13 +544,13 @@ export function GovernanceGraphPanel({
                 <button
                   type="button"
                   onClick={exitReplayToLive}
-                  style={{ ...replayBtnStyle, borderColor: 'var(--ok)', color: 'var(--ok)' }}
+                  style={{ ...replayBtnStyle, borderColor: 'var(--ok)', color: 'var(--ok)', background: 'var(--ok-soft)' }}
                 >
                   ● 回到实时 (LIVE)
                 </button>
               ) : (
-                <span style={{ color: 'var(--ok)', fontSize: 10 }}>
-                  ● LIVE ({replayFrames.length} 个演化节点可回放)
+                <span className="re-mono-num" style={{ color: 'var(--ok)', fontSize: 10 }} data-hint={`当前同步实时态，共捕获 ${replayFrames.length} 个可回放决策节点`}>
+                  ● LIVE · {replayFrames.length} 帧
                 </span>
               )}
             </div>
@@ -629,8 +651,8 @@ export function GovernanceGraphPanel({
                       y={8}
                       width={z.w}
                       height={402}
-                      fill="rgba(5, 8, 12, 0.35)"
-                      stroke="var(--rule)"
+                      fill="color-mix(in srgb, var(--surface-2) 38%, transparent)"
+                      stroke="var(--border-subtle)"
                       strokeDasharray="3 3"
                     />
                     <text x={z.x + 10} y={26} fill="var(--faint)" fontSize="10" letterSpacing="0.08em">
@@ -939,51 +961,54 @@ export function GovernanceGraphPanel({
           />
         )}
 
-        {/* Structured Executive Process Summary Strip (visible in Pipeline & DAG modes once analysis begins) */}
+        {/* Compact Executive Process Summary Strip (visible in Pipeline & DAG modes once analysis begins) */}
         {mode !== 'writeup' && (evidence.length > 0 || hypotheses.length > 0) && (
           <div style={summaryBannerStyle}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', fontSize: 11 }}>
                 <span style={{ color: 'var(--ok)', fontWeight: 700 }}>✦ 逆向过程总结：</span>
                 <span style={{ color: 'var(--text)', fontWeight: 600 }}>{processSummary.headline}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 5 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {processSummary.pillars.map((p) => (
-                  <div
+                  <span
                     key={p.key}
+                    data-hint={`${p.label} (${p.refs})：${p.value}`}
                     style={{
-                      border: `1px solid color-mix(in srgb, var(--${p.tone}) 40%, var(--rule))`,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      border: `1px solid color-mix(in srgb, var(--${p.tone}) 38%, var(--border-subtle))`,
                       borderLeft: `2px solid var(--${p.tone})`,
-                      background: 'rgba(3, 6, 10, 0.65)',
-                      padding: '3px 7px',
+                      borderRadius: 'var(--radius-xs)',
+                      background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
+                      padding: '2px 7px',
                       fontSize: 10,
-                      lineHeight: 1.35,
+                      maxWidth: 260,
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
-                      <b style={{ color: `var(--${p.tone})` }}>{p.label}</b>
-                      <span style={{ color: 'var(--faint)', fontSize: 9 }}>{p.refs}</span>
-                    </div>
-                    <div style={{ color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.value}>
+                    <b style={{ color: `var(--${p.tone})`, flexShrink: 0 }}>{p.label}</b>
+                    <span style={{ color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.value}
-                    </div>
-                  </div>
+                    </span>
+                  </span>
                 ))}
               </div>
             </div>
             <button
               type="button"
               onClick={() => setMode('writeup')}
+              data-hint="切换至完整推理叙事与 Markdown Writeup 工坊"
               style={{
                 ...replayBtnStyle,
-                borderColor: 'var(--ok)',
+                borderColor: 'color-mix(in srgb, var(--ok) 55%, var(--rule))',
                 color: 'var(--ok)',
-                background: 'rgba(74, 222, 128, 0.12)',
+                background: 'var(--ok-soft)',
                 flexShrink: 0,
                 alignSelf: 'center',
               }}
             >
-              ✎ 生成 Writeup 报告 →
+              ✎ 报告工坊 →
             </button>
           </div>
         )}
@@ -1024,7 +1049,8 @@ function renderSvgNode(opts: {
         y={opts.y}
         width={opts.w}
         height={opts.h}
-        fill={opts.selected ? 'rgba(16, 28, 42, 0.92)' : 'rgba(8, 14, 22, 0.88)'}
+        rx={3}
+        fill={opts.selected ? 'var(--surface-2)' : 'var(--surface-1)'}
         stroke={stroke}
         strokeWidth={opts.selected ? 1.8 : 1}
       />
@@ -1469,7 +1495,8 @@ function ProvenanceDagView({
                   y={p.y}
                   width={250}
                   height={36}
-                  fill={isSel ? 'rgba(18, 32, 48, 0.95)' : 'rgba(8, 14, 22, 0.9)'}
+                  rx={3}
+                  fill={isSel ? 'var(--surface-2)' : 'var(--surface-1)'}
                   stroke={isSel ? tone : 'var(--rule)'}
                   strokeWidth={isSel ? 1.8 : 1}
                 />
@@ -1510,7 +1537,8 @@ function ProvenanceDagView({
                   y={p.y}
                   width={270}
                   height={54}
-                  fill={isSel ? 'rgba(18, 32, 48, 0.95)' : 'rgba(8, 14, 22, 0.9)'}
+                  rx={3}
+                  fill={isSel ? 'var(--surface-2)' : 'var(--surface-1)'}
                   stroke={tone}
                   strokeWidth={isSel ? 2 : 1.2}
                 />
@@ -1537,7 +1565,8 @@ function ProvenanceDagView({
               y={gatePos.y}
               width={216}
               height={146}
-              fill="rgba(8, 14, 22, 0.92)"
+              rx={3}
+              fill="var(--surface-1)"
               stroke="var(--violet)"
               strokeWidth="1.4"
             />
@@ -1586,11 +1615,17 @@ function ProvenanceDagView({
 
       {/* Legend + Clicked Entity Detail */}
       <div style={inspectorBoxStyle}>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: 'var(--muted)' }}>
-          <span><b style={{ color: 'var(--ok)' }}>━━▶</b> 支撑引用 (supporting)</span>
-          <span><b style={{ color: 'var(--err)' }}>╌╌▶</b> 反证挑战 (contradicting · 置信度×0.5)</span>
-          <span><b style={{ color: 'var(--violet)' }}>┈┈▶</b> 假设依赖 (dependsOn · 级联 reevaluate)</span>
-          <span style={{ marginLeft: 'auto', color: 'var(--faint)' }}>点击图中任意 ev_NNN 或 H-NNN 节点查看原始详情</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 10.5, color: 'var(--muted)' }}>
+          <span data-hint="实测证据正向支撑假设"><b style={{ color: 'var(--ok)' }}>━━▶</b> 支撑</span>
+          <span data-hint="实测或仲裁反证挑战假设，触发置信度折半 (×0.5)"><b style={{ color: 'var(--err)' }}>╌╌▶</b> 反证 ×0.5</span>
+          <span data-hint="父假设被修订或淘汰时，下游依赖子假设自动级联重审"><b style={{ color: 'var(--violet)' }}>┈┈▶</b> 依赖级联</span>
+          <span
+            className="re-hint-dot"
+            style={{ marginLeft: 'auto' }}
+            data-hint="点击图中任意 ev_NNN 或 H-NNN 节点即可展开原始实测摘录、校准状态与因果推导链"
+          >
+            ?
+          </span>
         </div>
 
         {activeEv && (
@@ -1600,21 +1635,25 @@ function ProvenanceDagView({
                 {activeEv.id} · {activeEv.source} ({activeEv.kind || 'tool_observation'} · {activeEv.view || 'static'})
               </span>
               {activeEv.sha256 && (
-                <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+                <span style={{ color: 'var(--faint)', fontSize: 10 }} data-hint={`完整 SHA256: ${activeEv.sha256}`}>
                   sha256:{activeEv.sha256.slice(0, 12)}…
                 </span>
               )}
-              <span style={{ fontSize: 10, color: 'var(--faint)', border: '1px solid var(--rule)', padding: '0 5px' }}>
-                🔒 IMMUTABLE · 实跑产物入账（禁止人工修改或删除）
+              <span
+                data-hint="所有证据均由宿主实跑工具或验证命令后自动哈希盖章入账，严格只追加不可修改"
+                style={{ fontSize: 10, color: 'var(--faint)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', padding: '0 5px' }}
+              >
+                🔒 IMMUTABLE
               </span>
               <button
                 type="button"
                 className="re-copy-chip"
                 data-copied={copiedId === activeEv.id ? '1' : undefined}
                 onClick={() => copyCite(activeEv.id, formatEvidenceCitation(activeEv))}
+                data-hint={`复制取证引用：${formatEvidenceCitation(activeEv)}`}
                 style={{ marginLeft: 'auto' }}
               >
-                {copiedId === activeEv.id ? '✓ 已复制引用' : '⎘ 复制取证引用'}
+                {copiedId === activeEv.id ? '✓ 已复制' : '⎘ 引用'}
               </button>
             </div>
             {activeEv.summary && <div style={{ color: 'var(--text)' }}>{activeEv.summary}</div>}
@@ -1646,7 +1685,7 @@ function ProvenanceDagView({
                   <span
                     className="re-calib-pill"
                     data-tone={activeChain.calibration.tone}
-                    title={activeChain.calibration.reason}
+                    data-hint={activeChain.calibration.reason}
                   >
                     {activeChain.calibration.status}
                   </span>
@@ -1654,7 +1693,7 @@ function ProvenanceDagView({
               )}
               {activeHyp.experiments && activeHyp.experiments.length > 0 && (
                 <span style={{ color: 'var(--ok)', fontSize: 10 }}>
-                  🧪 已挂实验: {activeHyp.experiments.length} 项
+                  🧪 {activeHyp.experiments.length} 项实验
                 </span>
               )}
               <button
@@ -1662,9 +1701,10 @@ function ProvenanceDagView({
                 className="re-copy-chip"
                 data-copied={copiedId === activeHyp.id ? '1' : undefined}
                 onClick={() => copyCite(activeHyp.id, formatHypothesisCitation(activeHyp))}
+                data-hint={`复制假设引用：${formatHypothesisCitation(activeHyp)}`}
                 style={{ marginLeft: 'auto' }}
               >
-                {copiedId === activeHyp.id ? '✓ 已复制引用' : '⎘ 复制假设引用'}
+                {copiedId === activeHyp.id ? '✓ 已复制' : '⎘ 引用'}
               </button>
             </div>
             <div style={{ color: 'var(--text)', marginTop: 2 }}>{activeHyp.claim}</div>
@@ -1741,46 +1781,52 @@ function ProvenanceDagView({
 
 function modeTabStyle(active: boolean, tone: 'accent' | 'violet' | 'ok'): CSSProperties {
   return {
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
-    background: active ? `color-mix(in srgb, var(--${tone}) 14%, transparent)` : 'transparent',
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle)'}`,
+    borderRadius: 'var(--radius-xs)',
+    background: active ? `color-mix(in srgb, var(--${tone}) 13%, transparent)` : 'transparent',
     color: active ? `var(--${tone})` : 'var(--muted)',
     fontSize: 11,
+    fontWeight: active ? 600 : 400,
     padding: '3px 10px',
     cursor: 'pointer',
   }
 }
 
 const replayBarStyle: CSSProperties = {
-  border: '1px solid color-mix(in srgb, var(--violet) 38%, var(--rule))',
-  background: 'rgba(6, 10, 18, 0.72)',
-  padding: '5px 8px',
+  border: '1px solid color-mix(in srgb, var(--violet) 32%, var(--border-subtle))',
+  borderRadius: 'var(--radius-sm)',
+  background: 'color-mix(in srgb, var(--surface-2) 68%, transparent)',
+  padding: '6px 9px',
   display: 'flex',
   flexDirection: 'column',
-  gap: 5,
+  gap: 6,
 }
 
 const replayBtnStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(8, 14, 22, 0.85)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  background: 'color-mix(in srgb, var(--surface-1) 90%, transparent)',
   color: 'var(--text)',
   fontSize: 10.5,
-  padding: '1px 7px',
+  padding: '2px 7px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
 }
 
 const replayThoughtBoxStyle: CSSProperties = {
-  borderTop: '1px dashed var(--rule)',
-  paddingTop: 4,
+  borderTop: '1px dashed var(--border-subtle)',
+  paddingTop: 5,
   display: 'flex',
   flexDirection: 'column',
-  gap: 2,
+  gap: 3,
 }
 
 const summaryBannerStyle: CSSProperties = {
-  border: '1px solid color-mix(in srgb, var(--accent) 40%, var(--rule))',
-  background: 'rgba(5, 12, 20, 0.72)',
-  padding: '6px 10px',
+  border: '1px solid color-mix(in srgb, var(--ok) 35%, var(--border-subtle))',
+  borderLeft: '3px solid var(--ok)',
+  borderRadius: 'var(--radius-sm)',
+  background: 'color-mix(in srgb, var(--ok) 4%, var(--surface-1))',
+  padding: '8px 11px',
   display: 'flex',
   alignItems: 'center',
   gap: 10,
@@ -1788,37 +1834,41 @@ const summaryBannerStyle: CSSProperties = {
 
 function seatBadgeStyle(tone: 'accent' | 'ok' | 'violet', active: boolean): CSSProperties {
   return {
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
-    background: active ? `color-mix(in srgb, var(--${tone}) 15%, transparent)` : 'rgba(5, 8, 12, 0.45)',
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle)'}`,
+    borderRadius: 'var(--radius-xs)',
+    background: active ? `color-mix(in srgb, var(--${tone}) 14%, transparent)` : 'color-mix(in srgb, var(--surface-2) 55%, transparent)',
     color: `var(--${tone})`,
     padding: '1px 7px',
+    cursor: 'default',
   }
 }
 
 const inspectorBoxStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(5, 8, 12, 0.5)',
-  padding: '8px 10px',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-sm)',
+  background: 'color-mix(in srgb, var(--surface-1) 86%, transparent)',
+  padding: '9px 11px',
   display: 'flex',
   flexDirection: 'column',
-  gap: 5,
+  gap: 6,
 }
 
 const liveStripStyle: CSSProperties = {
   marginTop: 4,
-  paddingTop: 6,
-  borderTop: '1px dashed var(--rule)',
+  paddingTop: 7,
+  borderTop: '1px dashed var(--border-subtle)',
   fontSize: 11,
-  lineHeight: 1.5,
+  lineHeight: 1.55,
 }
 
 const liveCardStyle: CSSProperties = {
   borderLeft: '2px solid var(--accent-dim)',
-  background: 'rgba(3, 6, 10, 0.55)',
-  padding: '6px 10px',
+  borderRadius: '0 var(--radius-xs) var(--radius-xs) 0',
+  background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
+  padding: '7px 10px',
   fontSize: 10.5,
-  lineHeight: 1.48,
+  lineHeight: 1.5,
   display: 'flex',
   flexDirection: 'column',
-  gap: 2,
+  gap: 3,
 }

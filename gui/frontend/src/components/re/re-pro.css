@@ -7,15 +7,111 @@
   font-feature-settings: "tnum" 1;
 }
 
+/* ---- Subtle Contextual Hint Dot (? trigger for global HintOverlay) ---- */
+.re-hint-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-2, var(--bg-panel)) 75%, transparent);
+  color: var(--faint);
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.re-hint-dot:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 12%, transparent));
+}
+
+/* ---- Progressive Disclosure & Compact Editorial Strips ---- */
+.re-compact-bar {
+  border: 1px solid var(--border-subtle, var(--rule));
+  border-radius: var(--radius-sm, 3px);
+  background: color-mix(in srgb, var(--surface-1, var(--bg-panel)) 88%, transparent);
+  padding: 7px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.re-stage-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.re-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-2, var(--bg-panel)) 62%, transparent);
+  color: var(--faint);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: default;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.re-stage-chip[data-status="done"] {
+  border-color: color-mix(in srgb, var(--ok) 42%, var(--rule));
+  background: var(--ok-soft, color-mix(in srgb, var(--ok) 10%, transparent));
+  color: var(--ok);
+}
+
+.re-stage-chip[data-status="active"] {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--rule));
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 11%, transparent));
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.re-disclosure-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border-subtle, var(--rule));
+  border-radius: var(--radius-xs, 2px);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  padding: 2px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.re-disclosure-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 9%, transparent));
+}
+
 /* ---- Security Mitigation Posture Bar ---- */
 .re-posture-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border: 1px solid var(--border-default, var(--rule));
-  background: color-mix(in srgb, var(--surface-1, var(--bg-panel)) 85%, transparent);
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-subtle, var(--rule));
+  border-radius: var(--radius-sm, 3px);
+  background: color-mix(in srgb, var(--surface-1, var(--bg-panel)) 88%, transparent);
   font-size: 10.5px;
 }
 
@@ -425,13 +521,14 @@
 
 /* ---- Deductive Proof Narrative Panel (Typography-first, Theme-token Safe) ---- */
 .re-narrative-panel {
-  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--rule));
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border-subtle, var(--rule)));
   border-left: 3px solid var(--accent);
-  background: color-mix(in srgb, var(--bg-panel) 90%, transparent);
-  padding: 9px 12px;
+  border-radius: var(--radius-sm, 3px);
+  background: color-mix(in srgb, var(--surface-1, var(--bg-panel)) 94%, transparent);
+  padding: 11px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .re-narrative-header {
@@ -456,14 +553,15 @@
 
 .re-narrative-tab,
 .re-narrative-copy {
-  border: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  border: 1px solid var(--border-subtle, var(--rule));
+  border-radius: var(--radius-xs, 2px);
+  background: color-mix(in srgb, var(--surface-2, var(--bg)) 68%, transparent);
   color: var(--muted);
   font: inherit;
   font-size: 10.5px;
-  padding: 2px 8px;
+  padding: 2px 9px;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
 }
 
 .re-narrative-tab:hover,
@@ -475,7 +573,7 @@
 .re-narrative-tab[data-active="1"] {
   border-color: var(--accent);
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 13%, transparent));
   font-weight: 600;
 }
 
@@ -486,11 +584,12 @@
 
 .re-narrative-lead {
   font-size: 11.5px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--text);
-  padding: 6px 9px;
-  border: 1px dashed var(--rule);
-  background: color-mix(in srgb, var(--bg) 65%, transparent);
+  padding: 7px 11px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px dashed var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-2, var(--bg)) 52%, transparent);
 }
 
 .re-narrative-empty {
@@ -502,7 +601,7 @@
 .re-narrative-rail {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .re-narrative-step-wrap {
@@ -513,35 +612,32 @@
 
 .re-narrative-bridge {
   display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  margin-left: 12px;
-  padding: 3px 9px;
-  border-left: 2px dashed color-mix(in srgb, var(--accent) 55%, var(--rule));
-  color: var(--muted);
+  align-items: baseline;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 2px 10px;
+  border-left: 1.5px dashed color-mix(in srgb, var(--accent) 42%, var(--rule));
+  color: var(--faint);
   font-size: 10.5px;
   line-height: 1.5;
 }
 
-.re-narrative-bridge b {
-  color: var(--accent);
-  font-weight: 600;
-}
-
 .re-narrative-bridge-arrow {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 600;
   flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .re-narrative-card {
-  border: 1px solid var(--rule);
+  border: 1px solid var(--border-subtle, var(--rule));
   border-left: 3px solid var(--accent);
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  padding: 8px 11px;
+  border-radius: var(--radius-xs, 2px);
+  background: color-mix(in srgb, var(--surface-0, var(--bg)) 68%, var(--surface-1, var(--bg-panel)));
+  padding: 10px 13px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .re-narrative-card[data-tone="ok"]     { border-left-color: var(--ok); }

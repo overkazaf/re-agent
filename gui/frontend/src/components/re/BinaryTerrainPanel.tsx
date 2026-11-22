@@ -327,7 +327,7 @@ export function BinaryTerrainPanel({
       }
     >
       <PanelBox
-        title="BINARY FORENSIC RADAR · 二进制解剖与动静对齐"
+        title="BINARY FORENSIC RADAR"
         accent="accent"
         collapsible={false}
         badge={fs.open ? (fs.nativeActive ? 'OS FULLSCREEN' : '100% VIEWPORT') : undefined}
@@ -337,17 +337,21 @@ export function BinaryTerrainPanel({
         <div style={{ display: 'inline-flex', gap: 6 }}>
           <button
             type="button"
+            aria-label="▤ 二进制地形图"
+            data-hint="ELF/PE/Mach-O 区段分布、香农熵曲线、内嵌载荷与补丁热点定位"
             onClick={() => setSubTab('terrain')}
             style={subTab === 'terrain' ? tabActive : tabIdle}
           >
-            ▤ 二进制地形图
+            ▤ 地形图
           </button>
           <button
             type="button"
+            aria-label={`⇄ 动静证据对齐 (${evCount} ev · ${hypCount} H${findingCount > 0 ? ` · ${findingCount} 裁定` : ''})`}
+            data-hint="将静态推断与动态实测双轨对齐，自动标记单视角盲区与仲裁冲突"
             onClick={() => setSubTab('alignment')}
             style={subTab === 'alignment' ? tabActive : tabIdle}
           >
-            ⇄ 动静证据对齐 ({evCount} ev · {hypCount} H{findingCount > 0 ? ` · ${findingCount} 裁定` : ''})
+            ⇄ 动静对齐 <span className="re-mono-num" style={{ opacity: 0.78 }}>{evCount}·{hypCount}</span>
           </button>
         </div>
 
@@ -367,7 +371,7 @@ export function BinaryTerrainPanel({
                 />
               </label>
               <label style={selectLabel}>
-                Diff 对比
+                Diff
                 <ProSelect
                   ariaLabel="diff compare target"
                   size="sm"
@@ -380,11 +384,22 @@ export function BinaryTerrainPanel({
                 />
               </label>
               {zoomRange && (
-                <button type="button" onClick={() => setZoomRange(null)} style={chipBtn}>
-                  ↺ 全景 1×
+                <button
+                  type="button"
+                  onClick={() => setZoomRange(null)}
+                  style={chipBtn}
+                  data-hint="重置区段缩放，回到全文件 1× 视图"
+                >
+                  ↺ 1×
                 </button>
               )}
-              <button type="button" onClick={() => void loadTerrain()} disabled={loading} style={chipBtn}>
+              <button
+                type="button"
+                onClick={() => void loadTerrain()}
+                disabled={loading}
+                style={chipBtn}
+                data-hint="重新通过纯 Go 解析器扫描二进制结构与熵曲线"
+              >
                 {loading ? '扫描中…' : '↻ 重扫'}
               </button>
             </>
@@ -392,8 +407,9 @@ export function BinaryTerrainPanel({
           <button
             type="button"
             onClick={fs.toggle}
-            title={fs.open ? '退出全屏 (Esc)' : '进入系统真全屏检视二进制地形与动静对齐'}
-            style={fs.open ? { ...chipBtn, border: '1px solid var(--warn)', color: 'var(--warn)' } : { ...chipBtn, border: '1px solid var(--accent-dim)', color: 'var(--accent)' }}
+            data-hint={fs.open ? '退出全屏检视' : '进入 100% 视口真全屏检视二进制地形与动静对齐'}
+            data-hint-kbd={fs.open ? 'Esc' : undefined}
+            style={fs.open ? { ...chipBtn, border: '1px solid var(--warn)', color: 'var(--warn)', background: 'var(--warn-soft)' } : { ...chipBtn, border: '1px solid color-mix(in srgb, var(--accent) 55%, var(--rule))', color: 'var(--accent)', background: 'var(--accent-soft)' }}
           >
             {fs.open ? '✕ 退出全屏' : '⛶ 全屏放大'}
           </button>
@@ -411,7 +427,7 @@ export function BinaryTerrainPanel({
             <>
               {/* Security Mitigation Posture & Forensic Telemetry Bar */}
               <div className="re-posture-bar re-mono-num" data-testid="mitigation-posture-bar">
-                <span style={badgeAccent}>
+                <span style={badgeAccent} data-hint={`二进制格式与架构：${terrain.format}${terrain.arch ? ` · ${terrain.arch}` : ''}`}>
                   {terrain.format}
                   {terrain.arch ? ` · ${terrain.arch}` : ''}
                 </span>
@@ -419,19 +435,19 @@ export function BinaryTerrainPanel({
                   <span
                     className="re-posture-grade"
                     data-tone={posture.tone}
-                    title={`Hardening Score ${posture.score}/100 · Entropy ${posture.entropyVerdict}`}
+                    data-hint={`安全加固综合评分 ${posture.score}/100 · 熵特征 ${posture.entropyVerdict}`}
                   >
                     {posture.grade} {posture.score}
                   </span>
                 )}
-                <span style={metaItem}>{fmtBytes(terrain.size)}</span>
+                <span style={metaItem} data-hint={`文件总大小 ${terrain.size.toLocaleString()} bytes`}>{fmtBytes(terrain.size)}</span>
                 {terrain.entryPoint && (
                   <button
                     type="button"
                     className="re-copy-chip"
                     data-copied={copiedKey === 'entry' ? '1' : undefined}
                     onClick={() => copyToken('entry', terrain.entryPoint!)}
-                    title="点击复制入口虚拟地址 (Entry VA)"
+                    data-hint={`点击复制入口虚拟地址 (Entry Point VA: ${terrain.entryPoint})`}
                   >
                     <span className="re-copy-chip-k">EP</span>
                     {copiedKey === 'entry' ? '✓ COPIED' : terrain.entryPoint}
@@ -442,20 +458,23 @@ export function BinaryTerrainPanel({
                   className="re-copy-chip"
                   data-copied={copiedKey === 'sha256' ? '1' : undefined}
                   onClick={() => copyToken('sha256', terrain.sha256)}
-                  title={`点击复制完整 SHA256: ${terrain.sha256}`}
+                  data-hint={`点击复制完整 SHA256：${terrain.sha256}`}
                 >
                   <span className="re-copy-chip-k">SHA256</span>
                   {copiedKey === 'sha256' ? '✓ COPIED' : `${terrain.sha256.slice(0, 12)}…`}
                 </button>
-                <span style={{ ...metaItem, color: entropyColor(terrain.maxEntropy) }}>
-                  H avg {terrain.overallEntropy.toFixed(2)} / max {terrain.maxEntropy.toFixed(2)} b/B
+                <span
+                  style={{ ...metaItem, color: entropyColor(terrain.maxEntropy) }}
+                  data-hint={`香农熵（0–8 b/B）：全文件均值 ${terrain.overallEntropy.toFixed(3)} · 峰值 ${terrain.maxEntropy.toFixed(3)}（≥7.2 提示加壳/加密/压缩载荷）`}
+                >
+                  H {terrain.overallEntropy.toFixed(2)}/{terrain.maxEntropy.toFixed(2)}
                 </span>
                 {posture?.pills.map((pill) => (
                   <span
                     key={pill.key}
                     className="re-mit-pill"
                     data-status={pill.status}
-                    title={`${pill.label}: ${pill.raw} — ${pill.detail}`}
+                    data-hint={`${pill.label} (${pill.raw})：${pill.detail}`}
                   >
                     <span>{pill.label}</span>
                     <b>{pill.value}</b>
@@ -488,7 +507,7 @@ export function BinaryTerrainPanel({
                     }
                   }}
                 >
-                  <rect data-bg="1" x={0} y={0} width={W} height={252} fill="rgba(4, 10, 18, 0.55)" rx={4} />
+                  <rect data-bg="1" x={0} y={0} width={W} height={252} fill="var(--surface-0)" rx={4} />
 
                   {/* Track 1: Sections & RWX Map */}
                   <text x={8} y={24} fill="var(--faint)" fontSize={10}>
@@ -503,7 +522,7 @@ export function BinaryTerrainPanel({
                     y={12}
                     width={PLOT_W}
                     height={42}
-                    fill="rgba(15,23,42,0.55)"
+                    fill="color-mix(in srgb, var(--surface-2) 65%, transparent)"
                     stroke="var(--rule)"
                     strokeWidth={0.8}
                     rx={3}
@@ -578,7 +597,7 @@ export function BinaryTerrainPanel({
                     y={82}
                     width={PLOT_W}
                     height={104}
-                    fill="rgba(15,23,42,0.5)"
+                    fill="color-mix(in srgb, var(--surface-2) 60%, transparent)"
                     stroke="var(--rule)"
                     strokeWidth={0.8}
                     rx={3}
@@ -653,7 +672,7 @@ export function BinaryTerrainPanel({
                     y={196}
                     width={PLOT_W}
                     height={34}
-                    fill="rgba(15,23,42,0.55)"
+                    fill="color-mix(in srgb, var(--surface-2) 65%, transparent)"
                     stroke="var(--rule)"
                     strokeWidth={0.8}
                     rx={3}
@@ -804,26 +823,18 @@ export function BinaryTerrainPanel({
 
                 {/* Legend */}
                 <div style={legendRow}>
-                  <span>
-                    <span style={{ color: 'var(--accent)' }}>■</span> 可执行段 (.text)
-                  </span>
-                  <span>
-                    <span style={{ color: 'var(--warn)' }}>■</span> 构造函数 (.init_array/ctor)
-                  </span>
-                  <span>
-                    <span style={{ color: 'var(--err)' }}>■</span> RWX / 高熵 ≥7.2
-                  </span>
-                  <span>
-                    <span style={{ color: 'var(--violet)' }}>◆</span> 雕刻载荷 ({terrain.carves.length})
-                  </span>
-                  <span>
-                    <span style={{ color: 'var(--err)' }}>▲</span> 反分析 ({terrain.anti.length})
-                  </span>
-                  <span>
-                    <span style={{ color: 'var(--ok)' }}>■</span> Patch 差分 ({terrain.diffs.length})
-                  </span>
-                  <span style={{ marginLeft: 'auto', color: 'var(--faint)' }}>
-                    提示：点击任意区段/热点检视，双击区段放大
+                  <span data-hint="包含可执行权限的代码区段 (.text)"><span style={{ color: 'var(--accent)' }}>■</span> 可执行段</span>
+                  <span data-hint="早于 main / JNI_OnLoad 执行的初始化构造函数表 (.init_array / ctor)"><span style={{ color: 'var(--warn)' }}>■</span> 构造函数</span>
+                  <span data-hint="可写可执行段 (RWX) 或香农熵 ≥7.2 b/B，常见于运行时脱壳桩或加密载荷"><span style={{ color: 'var(--err)' }}>■</span> RWX/高熵</span>
+                  <span data-hint="在文件内部命中的内嵌容器/压缩包签名"><span style={{ color: 'var(--violet)' }}>◆</span> 雕刻 ({terrain.carves.length})</span>
+                  <span data-hint="检出的反调试、反分析或加壳特征点"><span style={{ color: 'var(--err)' }}>▲</span> 反分析 ({terrain.anti.length})</span>
+                  <span data-hint="与对比文件之间的二进制字节补丁差异点"><span style={{ color: 'var(--ok)' }}>■</span> Patch ({terrain.diffs.length})</span>
+                  <span
+                    className="re-hint-dot"
+                    style={{ marginLeft: 'auto' }}
+                    data-hint="点击任意区段、熵峰或热点即可在下方检视精确坐标；双击区段放大该偏移范围"
+                  >
+                    ?
                   </span>
                 </div>
               </div>
@@ -892,23 +903,39 @@ export function BinaryTerrainPanel({
                     <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6 }}>
                       <button
                         type="button"
+                        aria-label="HEX 查看 (/hex)"
+                        data-hint={`执行 /hex ${terrain.path} ${fmtHex(selectedOffset)} 256 查看该偏移原始十六进制字节`}
                         onClick={() => runDirectCmd(`/hex ${terrain.path} ${fmtHex(selectedOffset)} 256`)}
                         style={actionBtn}
                       >
-                        HEX 查看 (/hex)
+                        HEX 查看
                       </button>
                       <button
                         type="button"
+                        aria-label="反调试扫描 (/anti)"
+                        data-hint={`执行 /anti ${terrain.path} 扫描反调试与加壳特征`}
                         onClick={() => runDirectCmd(`/anti ${terrain.path}`)}
                         style={actionBtn}
                       >
-                        反调试扫描 (/anti)
+                        反调试
                       </button>
-                      <button type="button" onClick={openHypothesisFromSelection} style={actionBtnViolet}>
-                        ✦ 带入假设向导 (H+)
+                      <button
+                        type="button"
+                        aria-label="✦ 带入假设向导 (H+)"
+                        data-hint="将当前选中偏移与特征预填到可证伪假设向导，快速建立待验证假设"
+                        onClick={openHypothesisFromSelection}
+                        style={actionBtnViolet}
+                      >
+                        ✦ 建假设
                       </button>
-                      <button type="button" onClick={askAgentAboutSelection} style={actionBtnPrimary}>
-                        ▶ 让 Agent 分析该偏移
+                      <button
+                        type="button"
+                        aria-label="▶ 让 Agent 分析该偏移"
+                        data-hint="向 Agent 发送针对当前选中偏移的专项深度取证指令"
+                        onClick={askAgentAboutSelection}
+                        style={actionBtnPrimary}
+                      >
+                        ▶ Agent 分析
                       </button>
                     </div>
                   </div>
@@ -924,7 +951,7 @@ export function BinaryTerrainPanel({
                         gap: 6,
                         marginTop: 6,
                         paddingBottom: 6,
-                        borderBottom: '1px dashed var(--rule)',
+                        borderBottom: '1px dashed var(--border-subtle)',
                       }}
                     >
                       <button
@@ -932,7 +959,7 @@ export function BinaryTerrainPanel({
                         className="re-copy-chip"
                         data-copied={copiedKey === 'off' ? '1' : undefined}
                         onClick={() => copyToken('off', offsetMap.fileOffsetHex)}
-                        title="复制文件偏移 (File Offset)"
+                        data-hint="点击复制文件偏移 (File Offset)"
                       >
                         <span className="re-copy-chip-k">OFF</span>
                         {copiedKey === 'off' ? '✓ COPIED' : offsetMap.fileOffsetHex}
@@ -943,7 +970,7 @@ export function BinaryTerrainPanel({
                           className="re-copy-chip"
                           data-copied={copiedKey === 'va' ? '1' : undefined}
                           onClick={() => copyToken('va', offsetMap.vaddrHex!)}
-                          title="复制虚拟地址 (Virtual Address)"
+                          data-hint="点击复制虚拟地址 (Virtual Address)"
                         >
                           <span className="re-copy-chip-k">VA</span>
                           {copiedKey === 'va' ? '✓ COPIED' : offsetMap.vaddrHex}
@@ -955,7 +982,7 @@ export function BinaryTerrainPanel({
                           className="re-copy-chip"
                           data-copied={copiedKey === 'rva' ? '1' : undefined}
                           onClick={() => copyToken('rva', offsetMap.rvaHex!)}
-                          title="复制相对虚拟地址 (RVA)"
+                          data-hint="点击复制相对虚拟地址 (RVA)"
                         >
                           <span className="re-copy-chip-k">RVA</span>
                           {copiedKey === 'rva' ? '✓ COPIED' : offsetMap.rvaHex}
@@ -973,9 +1000,9 @@ export function BinaryTerrainPanel({
                         data-copied={copiedKey === 'cite' ? '1' : undefined}
                         onClick={() => copyToken('cite', offsetMap.citation)}
                         style={{ marginLeft: 'auto' }}
-                        title={`复制取证坐标引用: ${offsetMap.citation}`}
+                        data-hint={`点击复制标准取证坐标引用：${offsetMap.citation}`}
                       >
-                        {copiedKey === 'cite' ? '✓ 已复制坐标' : '⎘ 复制取证坐标'}
+                        {copiedKey === 'cite' ? '✓ 已复制' : '⎘ 复制坐标'}
                       </button>
                     </div>
                   )}
@@ -1361,14 +1388,26 @@ function StaticDynamicAlignmentView({
                 <span className="re-mono-num" style={{ color: 'var(--faint)', fontSize: 11 }}>
                   {Math.round(h.confidence * 100)}% · {h.status}
                 </span>
-                <span className="re-verdict-badge" data-verdict={chain.verdict}>
+                <span
+                  className="re-verdict-badge"
+                  data-verdict={chain.verdict}
+                  data-hint={
+                    chain.verdict === 'VERIFIED'
+                      ? '动静双视角交叉印证，结论闭环'
+                      : chain.verdict === 'DIVERGED'
+                        ? '动态实测与静态推断存在反证冲突，已触发置信度折半'
+                        : chain.verdict === 'ANTI_ANALYSIS'
+                          ? '命中反分析/反调试或加壳保护，需结合动态绕过核验'
+                          : '仅覆盖单视角证据，尚缺动态实测或重放凭证'
+                  }
+                >
                   {chain.verdict === 'ANTI_ANALYSIS' ? 'ANTI-ANALYSIS' : chain.verdict}
                 </span>
                 <span style={statusBadge.style}>{statusBadge.text}</span>
                 <span
                   className="re-calib-pill"
                   data-tone={chain.calibration.tone}
-                  title={chain.calibration.reason}
+                  data-hint={chain.calibration.reason}
                 >
                   {chain.calibration.status}
                 </span>
@@ -1378,7 +1417,7 @@ function StaticDynamicAlignmentView({
                   className="re-copy-chip"
                   data-copied={copiedId === h.id ? '1' : undefined}
                   onClick={() => copyCite(h.id, formatHypothesisCitation(h))}
-                  title="复制取证引用编号"
+                  data-hint={`复制假设引用：${formatHypothesisCitation(h)}`}
                 >
                   {copiedId === h.id ? '✓ 已复制' : '⎘ 引用'}
                 </button>
@@ -1599,7 +1638,7 @@ const headerRow: CSSProperties = {
   alignItems: 'center',
   gap: 8,
   paddingBottom: 8,
-  borderBottom: '1px solid var(--rule)',
+  borderBottom: '1px solid var(--border-subtle)',
   marginBottom: 8,
 }
 
@@ -1609,12 +1648,13 @@ const scrollBody: CSSProperties = {
   overflowY: 'auto',
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
+  gap: 9,
 }
 
 const tabIdle: CSSProperties = {
   background: 'transparent',
-  border: '1px solid var(--rule)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   color: 'var(--muted)',
   fontSize: 11,
   padding: '4px 10px',
@@ -1626,7 +1666,7 @@ const tabActive: CSSProperties = {
   ...tabIdle,
   border: '1px solid var(--accent)',
   color: 'var(--accent)',
-  background: 'rgba(34, 211, 238, 0.1)',
+  background: 'var(--accent-soft)',
   fontWeight: 600,
 }
 
@@ -1640,7 +1680,8 @@ const selectLabel: CSSProperties = {
 
 const chipBtn: CSSProperties = {
   background: 'transparent',
-  border: '1px solid var(--rule)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   color: 'var(--muted)',
   fontSize: 10.5,
   padding: '2px 7px',
@@ -1653,30 +1694,33 @@ const metaItem: CSSProperties = { color: 'var(--muted)' }
 const badgeBase: CSSProperties = {
   padding: '1px 6px',
   fontSize: 10,
-  border: '1px solid var(--rule)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   letterSpacing: '0.04em',
 }
-const badgeAccent: CSSProperties = { ...badgeBase, borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 700 }
-const badgeOk: CSSProperties = { ...badgeBase, borderColor: 'var(--ok)', color: 'var(--ok)' }
-const badgeWarn: CSSProperties = { ...badgeBase, borderColor: 'var(--warn)', color: 'var(--warn)' }
-const badgeErr: CSSProperties = { ...badgeBase, borderColor: 'var(--err)', color: 'var(--err)', fontWeight: 700 }
+const badgeAccent: CSSProperties = { ...badgeBase, borderColor: 'color-mix(in srgb, var(--accent) 55%, var(--rule))', background: 'var(--accent-soft)', color: 'var(--accent)', fontWeight: 700 }
+const badgeOk: CSSProperties = { ...badgeBase, borderColor: 'color-mix(in srgb, var(--ok) 55%, var(--rule))', background: 'var(--ok-soft)', color: 'var(--ok)' }
+const badgeWarn: CSSProperties = { ...badgeBase, borderColor: 'color-mix(in srgb, var(--warn) 55%, var(--rule))', background: 'var(--warn-soft)', color: 'var(--warn)' }
+const badgeErr: CSSProperties = { ...badgeBase, borderColor: 'color-mix(in srgb, var(--err) 55%, var(--rule))', background: 'var(--err-soft)', color: 'var(--err)', fontWeight: 700 }
 const badgeMuted: CSSProperties = { ...badgeBase, color: 'var(--faint)' }
 
 const svgWrap: CSSProperties = {
-  border: '1px solid var(--rule)',
-  padding: 6,
-  background: 'rgba(2, 6, 23, 0.55)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-sm)',
+  padding: 7,
+  background: 'color-mix(in srgb, var(--surface-1) 92%, transparent)',
 }
 
 const legendRow: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
+  alignItems: 'center',
   gap: 12,
   fontSize: 10,
   color: 'var(--muted)',
-  marginTop: 5,
-  paddingTop: 4,
-  borderTop: '1px dashed var(--rule)',
+  marginTop: 6,
+  paddingTop: 5,
+  borderTop: '1px dashed var(--border-subtle)',
 }
 
 const hotspotBar: CSSProperties = {
@@ -1687,8 +1731,9 @@ const hotspotBar: CSSProperties = {
 }
 
 const jumpChip: CSSProperties = {
-  background: 'rgba(15, 23, 42, 0.55)',
-  border: '1px solid var(--rule)',
+  background: 'color-mix(in srgb, var(--surface-2) 65%, transparent)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   fontSize: 10.5,
   padding: '2px 8px',
   cursor: 'pointer',
@@ -1696,9 +1741,10 @@ const jumpChip: CSSProperties = {
 }
 
 const inspectorCard: CSSProperties = {
-  border: '1px solid var(--accent-dim)',
-  background: 'rgba(8, 22, 34, 0.65)',
-  padding: '8px 10px',
+  border: '1px solid color-mix(in srgb, var(--accent) 40%, var(--border-subtle))',
+  borderRadius: 'var(--radius-sm)',
+  background: 'color-mix(in srgb, var(--surface-1) 92%, transparent)',
+  padding: '9px 11px',
 }
 
 const inspectorHead: CSSProperties = {
@@ -1707,22 +1753,23 @@ const inspectorHead: CSSProperties = {
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: 8,
-  paddingBottom: 6,
-  borderBottom: '1px solid var(--rule)',
+  paddingBottom: 7,
+  borderBottom: '1px solid var(--border-subtle)',
 }
 
 const inspectorBody: CSSProperties = {
-  marginTop: 6,
+  marginTop: 7,
   fontSize: 11.5,
   color: 'var(--muted)',
-  lineHeight: 1.5,
+  lineHeight: 1.55,
 }
 
 const dimLbl: CSSProperties = { color: 'var(--faint)' }
 
 const actionBtn: CSSProperties = {
-  background: 'transparent',
-  border: '1px solid var(--rule)',
+  background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
   color: 'var(--text)',
   fontSize: 10.5,
   padding: '3px 8px',
@@ -1732,22 +1779,24 @@ const actionBtn: CSSProperties = {
 
 const actionBtnPrimary: CSSProperties = {
   ...actionBtn,
-  borderColor: 'var(--accent)',
+  borderColor: 'color-mix(in srgb, var(--accent) 55%, var(--rule))',
   color: 'var(--accent)',
-  background: 'rgba(34, 211, 238, 0.1)',
+  background: 'var(--accent-soft)',
   fontWeight: 600,
 }
 
 const actionBtnViolet: CSSProperties = {
   ...actionBtn,
-  borderColor: 'var(--violet)',
+  borderColor: 'color-mix(in srgb, var(--violet) 55%, var(--rule))',
   color: 'var(--violet)',
-  background: 'rgba(139, 92, 246, 0.1)',
+  background: 'var(--violet-soft)',
 }
 
 const errBanner: CSSProperties = {
   color: 'var(--err)',
-  border: '1px solid var(--err)',
+  border: '1px solid color-mix(in srgb, var(--err) 55%, var(--rule))',
+  borderRadius: 'var(--radius-xs)',
+  background: 'var(--err-soft)',
   padding: '6px 10px',
   fontSize: 11.5,
 }
@@ -1763,14 +1812,15 @@ const sectionTitle: CSSProperties = {
   color: 'var(--accent)',
   fontSize: 11,
   fontWeight: 700,
-  letterSpacing: '0.06em',
+  letterSpacing: '0.05em',
   marginBottom: 4,
 }
 
 const alignCard: CSSProperties = {
-  border: '1px solid var(--rule)',
-  padding: '8px 10px',
-  background: 'rgba(15, 23, 42, 0.45)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '9px 11px',
+  background: 'color-mix(in srgb, var(--surface-1) 88%, transparent)',
 }
 
 const dualGrid: CSSProperties = {
@@ -1783,14 +1833,16 @@ const dimBox: CSSProperties = {
   color: 'var(--faint)',
   fontSize: 11,
   padding: '10px',
-  border: '1px dashed var(--rule)',
+  border: '1px dashed var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
 }
 
 const evCardBtn: CSSProperties = {
   textAlign: 'left',
-  background: 'rgba(15, 23, 42, 0.5)',
-  border: '1px solid var(--rule)',
-  padding: '6px 8px',
+  background: 'color-mix(in srgb, var(--surface-2) 60%, transparent)',
+  border: '1px solid var(--border-subtle)',
+  borderRadius: 'var(--radius-xs)',
+  padding: '7px 9px',
   cursor: 'pointer',
   fontFamily: 'inherit',
   color: 'var(--text)',

@@ -16,7 +16,7 @@ export function Dashboard({ tick, thinkLines, onThinkToggle }: {
   onThinkToggle?: () => void
 }) {
   return (
-    <div className="dash-root">
+    <div className="dash-root" aria-label="五维实时遥测仪表盘">
       <div className="dash-grid">
         <div className="dash-cell dash-flow">
           <FlowPanel flow={tick.flow} />
