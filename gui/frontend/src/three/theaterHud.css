@@ -1,0 +1,746 @@
+/* ============================================================================
+   3D Forensic Theater — Tactical Command Deck HUD & Cyber-Forensic HoloPanels
+   Designed to harmonize across all 10 themes (dark CRT/IDE + Daylight paper).
+   ========================================================================== */
+
+/* --- Corner Targeting Reticles (pure CSS, zero pointer interception) -------- */
+
+.thud-reticles {
+  position: absolute;
+  inset: 8px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.thud-reticle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  opacity: 0.36;
+  border-color: var(--accent);
+  border-style: solid;
+  border-width: 0;
+}
+
+.thud-reticle--tl {
+  top: 0;
+  left: 0;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.thud-reticle--tr {
+  top: 0;
+  right: 0;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.thud-reticle--bl {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.thud-reticle--br {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+/* --- Shared Glassmorphic Tactical Surface ----------------------------------- */
+
+.thud-glass {
+  background: color-mix(in srgb, var(--surface-3) 82%, transparent);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.38);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Top-Left Telemetry Strip ----------------------------------------------- */
+
+.thud-telemetry {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--muted);
+  max-width: calc(100% - 28px);
+  user-select: none;
+}
+
+.thud-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.thud-sep {
+  width: 1px;
+  height: 11px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.thud-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  white-space: nowrap;
+}
+
+.thud-phase--archived {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+.thud-phase--idle {
+  color: var(--faint);
+  background: transparent;
+  border-color: var(--border-subtle);
+}
+
+.thud-counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.thud-counts-key {
+  color: var(--faint);
+  font-weight: 600;
+}
+
+.thud-cam-readout {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  min-width: 158px;
+}
+
+/* --- Top-Right Tactical Control Dock ---------------------------------------- */
+
+.thud-dock {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.thud-group {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  gap: 2px;
+}
+
+.thud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-btn:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.thud-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.thud-btn--active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+  font-weight: 600;
+}
+
+.thud-btn--orbit-on {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+  font-weight: 600;
+}
+
+.thud-btn--layer-off {
+  color: var(--faint);
+  opacity: 0.68;
+}
+
+.thud-btn-kbd {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--faint);
+  opacity: 0.85;
+}
+
+.thud-btn--active .thud-btn-kbd {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.thud-orbit-glyph {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.thud-btn--orbit-on .thud-orbit-glyph {
+  animation: thud-spin 6s linear infinite;
+}
+
+@keyframes thud-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.thud-fs-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--rule));
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-3) 86%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 4px 8px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.thud-fs-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-3) 84%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.36);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-fs-btn:hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-3));
+}
+
+.thud-fs-btn--exit {
+  border-color: color-mix(in srgb, var(--warn) 70%, var(--rule));
+  color: var(--warn);
+}
+
+.thud-fs-btn--exit:hover {
+  background: color-mix(in srgb, var(--warn) 16%, var(--surface-3));
+}
+
+/* --- Bottom-Left Micro Key Legend ------------------------------------------- */
+
+.thud-legend {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 4;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  opacity: 0.78;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+/* --- Bottom-Right Tactical Inspector Drawer --------------------------------- */
+
+.thud-inspector {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 6;
+  width: 316px;
+  max-width: calc(100% - 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 2px solid var(--accent);
+  animation: thud-slide-in 160ms var(--ease-out);
+}
+
+.thud-inspector--violet {
+  border-top-color: var(--violet);
+}
+
+.thud-inspector--ok {
+  border-top-color: var(--ok);
+}
+
+.thud-inspector--warn {
+  border-top-color: var(--warn);
+}
+
+.thud-inspector--err {
+  border-top-color: var(--err);
+}
+
+@keyframes thud-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.thud-insp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.thud-insp-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.thud-insp-code {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.thud-insp-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thud-insp-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.thud-insp-badge--accent {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.thud-insp-badge--ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+.thud-insp-badge--warn {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+}
+
+.thud-insp-badge--err {
+  color: var(--err);
+  background: var(--err-soft);
+  border-color: color-mix(in srgb, var(--err) 45%, transparent);
+}
+
+.thud-insp-badge--violet {
+  color: var(--violet);
+  background: var(--violet-soft);
+  border-color: color-mix(in srgb, var(--violet) 45%, transparent);
+}
+
+.thud-insp-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-insp-close:hover {
+  color: var(--text);
+  border-color: var(--border-default);
+}
+
+.thud-insp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.thud-insp-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--rule) 55%, transparent);
+  overflow: hidden;
+}
+
+.thud-insp-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms var(--ease-out);
+}
+
+.thud-insp-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.thud-insp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  border: 1px solid var(--border-subtle);
+  color: var(--muted);
+}
+
+.thud-insp-body {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.thud-insp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.thud-insp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-insp-cta:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.thud-insp-cta--muted {
+  border-color: var(--border-default);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.thud-insp-cta--muted:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+}
+
+/* --- Cyber-Forensic 3D HoloPanel Cards -------------------------------------- */
+
+.tholo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 10px;
+  background: color-mix(in srgb, var(--surface-3) 86%, transparent);
+  border: 1px solid var(--border-default);
+  border-left-width: 2px;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+
+.tholo-card--violet {
+  border-left-color: var(--violet);
+  min-width: 212px;
+  max-width: 248px;
+}
+
+.tholo-card--accent {
+  border-left-color: var(--accent);
+  min-width: 152px;
+}
+
+.tholo-card--ok {
+  border-left-color: var(--ok);
+  min-width: 126px;
+}
+
+.tholo-card--interactive {
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.tholo-card--interactive:hover {
+  border-color: var(--violet);
+  background: color-mix(in srgb, var(--violet) 16%, var(--surface-3));
+  transform: translateY(-1px);
+}
+
+.tholo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tholo-index {
+  opacity: 0.72;
+  margin-right: 4px;
+}
+
+.tholo-action {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+
+.tholo-card--interactive:hover .tholo-action {
+  color: var(--violet);
+}
+
+.tholo-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tholo-line--latest {
+  color: var(--text);
+}
+
+.tholo-line-idx {
+  font-size: 8.5px;
+  color: var(--faint);
+  flex-shrink: 0;
+}
+
+.tholo-empty {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.tholo-metric-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tholo-status-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+
+.tholo-bars {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  height: 4px;
+}
+
+.tholo-bars--6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.tholo-bar-seg {
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--rule) 65%, transparent);
+}
+
+.tholo-bar-seg--accent {
+  background: var(--accent);
+}
+
+.tholo-bar-seg--ok {
+  background: var(--ok);
+}
+
+/* --- Daylight Lab (paper) Light Theme Crisp Technical Draft Overrides ------- */
+
+:root[data-theme='paper'] .thud-reticle {
+  opacity: 0.42;
+  border-color: var(--faint);
+}
+
+:root[data-theme='paper'] .thud-glass,
+:root[data-theme='paper'] .thud-fs-btn,
+:root[data-theme='paper'] .thud-fs-badge,
+:root[data-theme='paper'] .tholo-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-elevated);
+}
+
+:root[data-theme='paper'] .thud-legend {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: var(--border-default);
+  color: var(--muted);
+}
+
+:root[data-theme='paper'] .tholo-card--interactive:hover {
+  background: color-mix(in srgb, var(--violet) 9%, #ffffff);
+}
+
+/* --- Narrow Viewport Compact Layout ----------------------------------------- */
+
+@media (max-width: 1020px) {
+  .thud-cam-readout {
+    display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .thud-legend {
+    display: none;
+  }
+}
