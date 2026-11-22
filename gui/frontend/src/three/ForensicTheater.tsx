@@ -593,7 +593,14 @@ function extractWriteupSummary(rt: SessionRuntime | null, ledger: LedgerDTO | nu
   if (rt) {
     for (let i = rt.loopBuffer.length - 1; i >= 0; i--) {
       const ev = rt.loopBuffer[i]
-      if (ev && ev.type === 'reply' && ev.text && ev.text.trim().length > 0) {
+      if (
+        ev &&
+        ev.type === 'reply' &&
+        ev.phase !== 'command' &&
+        ev.provider !== 'shell' &&
+        ev.text &&
+        ev.text.trim().length > 0
+      ) {
         return ev.text.trim()
       }
     }
