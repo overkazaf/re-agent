@@ -5,7 +5,7 @@
 // focus inspector drawer, and cyber-forensic HoloPanels.
 //
 // Preserves window.__theaterDebug.zoneScreenPos(zone) and data-fullscreen-stage="theater".
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import {
@@ -37,6 +37,7 @@ import {
   isEditableEventTarget,
   resolveTheaterShortcut,
 } from './CameraRig'
+import { StageEnvironment } from './StageEnvironment'
 import { ZoneMarker } from './ZoneMarker'
 import { PhaseRailMesh } from './PhaseRailMesh'
 import { DagLayer } from './DagLayer'
@@ -82,7 +83,8 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
   const materials = useTheaterMaterials()
   const scene = useThrottledScene(250)
   const fs = useStageFullscreen()
-  const { focus, wizard, cameraPreset, autoOrbit, showGrid, showHoloPanels } = useSceneStore()
+  const { focus, wizard, cameraPreset, autoOrbit, showGrid, showHoloPanels, showLabels } =
+    useSceneStore()
   const telemetryRef = useRef<HTMLSpanElement | null>(null)
 
   // Cooperate LIFO with global escStack so Esc clears focus before exiting fullscreen/modals.
@@ -160,6 +162,7 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
             hud={hud}
             showGrid={showGrid}
             showHoloPanels={showHoloPanels}
+            showLabels={showLabels}
             telemetryRef={telemetryRef}
             onExitToClassic={onExitToClassic}
           />
@@ -289,6 +292,16 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
               data-hint-side="bottom"
             >
               浮窗
+            </button>
+            <button
+              type="button"
+              onClick={() => sceneActions.toggleLabels()}
+              className={`thud-btn${showLabels ? ' thud-btn--active' : ' thud-btn--layer-off'}`}
+              aria-pressed={showLabels}
+              data-hint="显示/隐藏 3D 节点 ID 标签"
+              data-hint-side="bottom"
+            >
+              标签
             </button>
           </div>
 
@@ -670,90 +683,13 @@ function TacticalInspector({
   )
 }
 
-/**
- * Architectural ground stage: subtle coordinate grid, concentric radar
- * calibration rings, and faint axis guides that anchor zones in 3D space.
- */
-function StageFloor({ materials, showGrid = true }: { materials: TheaterMaterials; showGrid?: boolean }) {
-  const { gridGeo, axisGeo, gridMat, axisMat, ringMat } = useMemo(() => {
-    // Coarse tactical grid (-96..96 every 16 units)
-    const gridPts: number[] = []
-    const extent = 96
-    const step = 16
-    for (let v = -extent; v <= extent; v += step) {
-      if (v === 0) continue
-      gridPts.push(-extent, -0.22, v, extent, -0.22, v)
-      gridPts.push(v, -0.22, -extent, v, -0.22, extent)
-    }
-    const gGeo = new THREE.BufferGeometry()
-    gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridPts, 3))
-
-    const aGeo = new THREE.BufferGeometry()
-    aGeo.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(
-        [-extent, -0.18, 0, extent, -0.18, 0, 0, -0.18, -extent, 0, -0.18, extent],
-        3,
-      ),
-    )
-
-    const gMat = new THREE.LineBasicMaterial({
-      color: materials.rule,
-      transparent: true,
-      opacity: 0.26,
-      depthWrite: false,
-    })
-    const aMat = new THREE.LineBasicMaterial({
-      color: materials.faint,
-      transparent: true,
-      opacity: 0.34,
-      depthWrite: false,
-    })
-    const rMat = new THREE.MeshBasicMaterial({
-      color: materials.rule,
-      transparent: true,
-      opacity: 0.22,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    })
-
-    return { gridGeo: gGeo, axisGeo: aGeo, gridMat: gMat, axisMat: aMat, ringMat: rMat }
-  }, [materials])
-
-  useEffect(
-    () => () => {
-      gridGeo.dispose()
-      axisGeo.dispose()
-      gridMat.dispose()
-      axisMat.dispose()
-      ringMat.dispose()
-    },
-    [gridGeo, axisGeo, gridMat, axisMat, ringMat],
-  )
-
-  if (!showGrid) return null
-
-  return (
-    <group>
-      <lineSegments geometry={gridGeo} material={gridMat} />
-      <lineSegments geometry={axisGeo} material={axisMat} />
-      {/* Concentric forensic calibration rings centered on EXP */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, -0.16, 0]} material={ringMat}>
-        <ringGeometry args={[41.6, 42, 96]} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, -0.16, 0]} material={ringMat}>
-        <ringGeometry args={[73.6, 74, 112]} />
-      </mesh>
-    </group>
-  )
-}
-
 function SceneRoot({
   materials,
   scene,
   hud,
   showGrid,
   showHoloPanels,
+  showLabels,
   telemetryRef,
   onExitToClassic,
 }: {
@@ -762,6 +698,7 @@ function SceneRoot({
   hud: HoloHudData | null
   showGrid: boolean
   showHoloPanels: boolean
+  showLabels: boolean
   telemetryRef: React.RefObject<HTMLSpanElement | null>
   onExitToClassic?: () => void
 }) {
@@ -782,8 +719,7 @@ function SceneRoot({
       {/* Accent wash over EXP/HYP + violet rim over AUD */}
       <pointLight position={[0, 36, 12]} color={materials.accent} intensity={1.05} decay={0} />
       <pointLight position={[0, 36, -62]} color={materials.violet} intensity={0.85} decay={0} />
-      {/* STAGE_FLOOR_SLOT — integrator-4: swap to <StageEnvironment materials={materials} showGrid={showGrid} /> */}
-      <StageFloor materials={materials} showGrid={showGrid} />
+      <StageEnvironment materials={materials} showGrid={showGrid} />
       <CameraRig telemetryRef={telemetryRef} />
       <PointerDownProbe />
       <TheaterDebugBridge />
@@ -797,8 +733,7 @@ function SceneRoot({
           {scene.sessions.map((s) => (
             <group key={s.sessionId} position={s.offset}>
               <PhaseRailMesh rail={s.rail} materials={materials} />
-              {/* DAG_LAYER_SLOT — integrator-4: pass showLabels={showLabels} after merging dag-optics */}
-              <DagLayer session={s} materials={materials} />
+              <DagLayer session={s} materials={materials} showLabels={showLabels} />
             </group>
           ))}
           <HoloPanels
