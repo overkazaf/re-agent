@@ -37,6 +37,7 @@ import {
   resolveOffsetMapping,
   type AlignmentVerdict,
 } from './forensics'
+import { buildHypothesisArcs } from './cognitiveSynthesis'
 import './re-pro.css'
 
 export type TerrainSubTab = 'terrain' | 'alignment'
@@ -1247,6 +1248,14 @@ function StaticDynamicAlignmentView({
     [hyps, evs, findings],
   )
 
+  const arcsById = useMemo(
+    () =>
+      new Map(
+        buildHypothesisArcs(evs, hyps, findings, ledger?.auditorProvider).map((arc) => [arc.id, arc]),
+      ),
+    [evs, hyps, findings, ledger?.auditorProvider],
+  )
+
   const counts = useMemo(() => {
     const tally: Record<AlignmentVerdict, number> = {
       VERIFIED: 0,
@@ -1307,6 +1316,7 @@ function StaticDynamicAlignmentView({
 
       <div style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
         {filteredChains.map(({ hyp: h, chain }) => {
+          const arc = arcsById.get(h.id)
           const sup = (h.supporting ?? []).map((id) => evMap.get(id)).filter((x): x is EvidenceRecord => Boolean(x))
           const con = (h.contradicting ?? []).map((id) => evMap.get(id)).filter((x): x is EvidenceRecord => Boolean(x))
           const hasStatic = chain.staticEvs.length > 0
@@ -1414,6 +1424,36 @@ function StaticDynamicAlignmentView({
                   </span>
                 )}
               </div>
+
+              {/* Readable Causal Narrative: Basis -> Dynamic Check -> Verdict */}
+              {arc && (
+                <div
+                  className="re-causal-strip"
+                  data-tone={arc.tone === 'err' ? 'err' : arc.tone === 'ok' ? 'ok' : arc.tone === 'warn' ? 'warn' : undefined}
+                  style={{ marginTop: 6 }}
+                >
+                  <div className="re-causal-row">
+                    <span className="re-causal-k">提出依据</span>
+                    <span>{arc.triggerClues}</span>
+                  </div>
+                  <div className="re-causal-row">
+                    <span className="re-causal-k">动态验证</span>
+                    <span>{arc.testAndObservation}</span>
+                  </div>
+                  <div className="re-causal-row">
+                    <span className="re-causal-k">结论裁定</span>
+                    <span>{arc.deductionVerdict}</span>
+                  </div>
+                  {arc.contrast && (
+                    <div className="re-causal-row" style={{ color: 'var(--err)' }}>
+                      <span className="re-causal-k" style={{ color: 'var(--err)' }}>预期冲突</span>
+                      <span>
+                        预期「{arc.contrast.expected}」↔ 实测「{arc.contrast.observed}」
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 5, fontSize: 10.5 }}>
                 {sup.map((e) => (

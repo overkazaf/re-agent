@@ -11,6 +11,7 @@ import {
   formatEvidenceCitation,
   formatHypothesisCitation,
 } from './forensics'
+import { buildHypothesisArcs } from './cognitiveSynthesis'
 import './re-pro.css'
 
 export type LedgerTab = 'evidence' | 'hypotheses'
@@ -116,6 +117,14 @@ export function LedgerPanel({
       return h.status === 'rejected' || h.status === 'reevaluate' || (h.contradicting?.length ?? 0) > 0
     })
   }, [hypotheses, hypQuickFilter])
+
+  const arcsById = useMemo(
+    () =>
+      new Map(
+        buildHypothesisArcs(evidence, hypotheses, findings, ledger?.auditorProvider).map((a) => [a.id, a]),
+      ),
+    [evidence, hypotheses, findings, ledger?.auditorProvider],
+  )
 
   return (
     <div style={style}>
@@ -299,6 +308,7 @@ export function LedgerPanel({
                   const tone = HYP_TONE[h.status] ?? 'accent'
                   const open = expandedId === h.id
                   const chain = buildProvenanceChain(h, evidence, findings)
+                  const arc = arcsById.get(h.id)
                   return (
                     <div
                       key={h.id}
@@ -369,6 +379,18 @@ export function LedgerPanel({
                           <span className="re-calib-pill" data-tone={chain.calibration.tone} title={chain.calibration.reason}>
                             {chain.calibration.status}
                           </span>
+                        </div>
+                      )}
+                      {open && arc && (
+                        <div
+                          className="re-causal-strip"
+                          data-tone={arc.tone === 'err' ? 'err' : arc.tone === 'ok' ? 'ok' : arc.tone === 'warn' ? 'warn' : undefined}
+                          style={{ fontSize: 10 }}
+                        >
+                          <div className="re-causal-row">
+                            <span className="re-causal-k">来龙去脉</span>
+                            <span>{arc.oneLineStory}</span>
+                          </div>
                         </div>
                       )}
                       {open && h.note && (
@@ -465,6 +487,14 @@ export function LedgerDetailDialog({
         .some((v) => String(v).toLowerCase().includes(q))
     })
   }, [hypotheses, query, hypStatusFilter])
+
+  const detailArcsById = useMemo(
+    () =>
+      new Map(
+        buildHypothesisArcs(evidence, hypotheses, findings, ledger?.auditorProvider).map((a) => [a.id, a]),
+      ),
+    [evidence, hypotheses, findings, ledger?.auditorProvider],
+  )
 
   function jumpToEvidence(evId: string) {
     setTab('evidence')
@@ -684,6 +714,7 @@ export function LedgerDetailDialog({
           filteredHyp.map((h) => {
             const tone = HYP_TONE[h.status] ?? 'accent'
             const chain = buildProvenanceChain(h, evidence, findings)
+            const arc = detailArcsById.get(h.id)
             return (
               <div
                 key={h.id}
@@ -771,6 +802,26 @@ export function LedgerDetailDialog({
                     </span>
                   )}
                 </div>
+
+                {arc && (
+                  <div
+                    className="re-causal-strip"
+                    data-tone={arc.tone === 'err' ? 'err' : arc.tone === 'ok' ? 'ok' : arc.tone === 'warn' ? 'warn' : undefined}
+                  >
+                    <div className="re-causal-row">
+                      <span className="re-causal-k">提出依据</span>
+                      <span>{arc.triggerClues}</span>
+                    </div>
+                    <div className="re-causal-row">
+                      <span className="re-causal-k">检验结果</span>
+                      <span>{arc.testAndObservation}</span>
+                    </div>
+                    <div className="re-causal-row">
+                      <span className="re-causal-k">当前定论</span>
+                      <span>{arc.deductionVerdict}</span>
+                    </div>
+                  </div>
+                )}
 
                 {h.note && (
                   <div style={{ color: 'var(--muted)', fontSize: 11, borderLeft: '2px solid var(--rule)', paddingLeft: 8 }}>

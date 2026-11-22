@@ -16,6 +16,7 @@ import type {
 } from '../../lib/types'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
 import { buildProvenanceChain, formatHypothesisCitation } from './forensics'
+import { buildHypothesisArcs } from './cognitiveSynthesis'
 import './re-pro.css'
 
 export type WorkbenchTab = 'hypothesis' | 'verify' | 'review'
@@ -62,6 +63,14 @@ export function HypothesisWorkbenchDialog({
     () => (selectedHyp ? buildProvenanceChain(selectedHyp, evidence, findings) : null),
     [selectedHyp, evidence, findings],
   )
+  const selectedArc = useMemo(() => {
+    if (!selectedHyp) return null
+    return (
+      buildHypothesisArcs(evidence, hypotheses, findings, ledger?.auditorProvider).find(
+        (a) => a.id === selectedHyp.id,
+      ) ?? null
+    )
+  }, [selectedHyp, evidence, hypotheses, findings, ledger?.auditorProvider])
 
   // Live confidence calibration preview as the analyst adjusts the slider
   const liveCalibrationHint = useMemo(() => {
@@ -521,6 +530,26 @@ export function HypothesisWorkbenchDialog({
                 <span className="re-calib-pill" data-tone={selectedChain.calibration.tone} title={selectedChain.calibration.reason}>
                   {selectedChain.calibration.status}
                 </span>
+              </div>
+            )}
+
+            {selectedArc && (
+              <div
+                className="re-causal-strip"
+                data-tone={selectedArc.tone === 'err' ? 'err' : selectedArc.tone === 'ok' ? 'ok' : selectedArc.tone === 'warn' ? 'warn' : undefined}
+              >
+                <div className="re-causal-row">
+                  <span className="re-causal-k">提出依据</span>
+                  <span>{selectedArc.triggerClues}</span>
+                </div>
+                <div className="re-causal-row">
+                  <span className="re-causal-k">检验结果</span>
+                  <span>{selectedArc.testAndObservation}</span>
+                </div>
+                <div className="re-causal-row">
+                  <span className="re-causal-k">当前定论</span>
+                  <span>{selectedArc.deductionVerdict}</span>
+                </div>
               </div>
             )}
 

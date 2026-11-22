@@ -2844,6 +2844,15 @@ export class DemoBackend implements AppAPI {
         confidence: 0.84,
         supporting: ['ev_002', 'ev_003'],
         status: 'active',
+        experiments: [
+          {
+            id: 'exp_01',
+            title: '解压测试 PK_0x5f 完整性',
+            command: 'unzip -t carrier.bin',
+            expected: 'No errors detected',
+            status: 'planned',
+          },
+        ],
       })
       this.upsertHypothesis(s, {
         id: 'H-003',
@@ -2852,7 +2861,7 @@ export class DemoBackend implements AppAPI {
         supporting: ['ev_003', 'ev_004'],
         dependsOn: ['H-002'],
         status: 'active',
-        note: '依赖上游父假设 H-002 成立 (dependsOn: H-002)',
+        note: '依赖上游父假设 H-002 成立 (dependsOn: H-002)：仅当 PK_0x5f 为有效压缩流时，前缀派生密钥的推论才成立',
       })
       if (!(await this.runTool(s, 'hypothesis_create', 'H-001, H-002, H-003 (dependsOn: H-002)', 'registered 3 hypotheses backed by ev_001..ev_004', 260))) {
         return this.finishAborted(s)
@@ -2891,11 +2900,9 @@ export class DemoBackend implements AppAPI {
       reply = [
         `### 阶段一：\`${s.planner}\` 规划建模 + \`${s.executor}\` 静态取证`,
         '',
-        '| 席位 / 模块 | 动作与产出 |',
-        '| --- | --- |',
-        `| **Executor (\`${s.executor}\`)** | 执行 \`ctf_triage\` / \`carve_artifacts\` / \`find_bytes\` / \`entropy_scan\`，自动盖章静态证据 **\`ev_001..ev_004\`** |`,
-        `| **Planner (\`${s.planner}\`)** | 建立 **\`H-001\`** (PDF 空壳, 92%)、**\`H-002\`** (PK_0x5f 含加密流, 84%) 及依赖子假设 **\`H-003\`** (\`dependsOn: H-002\`, 76%) |`,
-        '| **Host Arbitrator** | 命中 **`[single-view]`** 规则：`H-002` 置信度 ≥ 80% 但仅有 `static` 单视角证据，要求进入 `DYN` 阶段交叉验证 |',
+        '1. **静态勘察起点（`ev_001..ev_004`）**：`ctf_triage` 与 `carve_artifacts` 在 121B 的 `carrier.bin` 中发现了 3 段结构——偏移 `0x00` 的明文前缀、偏移 `0x21` 的 60B `%PDF-1.7` 单对象空壳，以及偏移 `0x5f` 的 26B `PK_0x5f` ZIP 局部头（整体熵 `4.12 b/B`）。',
+        '2. **据此提出可检验假设（`H-001`..`H-003`）**：判断 PDF 为空壳（**`H-001`**, 92%），优先怀疑 `PK_0x5f` 藏有加密载荷（**`H-002`**, 84%，预设用 `unzip -t carrier.bin` 检验完整性），并沿此推演下游密钥假设 **\`H-003\`**（`dependsOn: H-002`, 76%）。',
+        '3. **单视角盲区告警（`[single-view]`）**：宿主仲裁器指出 `H-002` 虽置信度 ≥ 80%，但目前仅有静态依据、未经运行态实测，要求进入 `DYN` 阶段按预设实验检验真伪。',
       ].join('\n')
     } else if (kind === 're_verify') {
       if (!s.re) {
@@ -3075,13 +3082,13 @@ export class DemoBackend implements AppAPI {
         `VER [7/9] passed — awaiting isolated /audit (${s.auditor})`,
       )
       reply = [
-        '### 阶段二：沙箱拦截 · 确定性反证级联 · 双视角验证',
+        '### 阶段二：沙箱拦截 · 实测证伪与级联纠偏 · 转向新线索完成双视角验证',
         '',
-        `- **安全沙箱拦截 (\`Gate 1\`)**：\`${s.executor}\` 尝试外联 \`curl\` 被能力沙箱自动阻断（\`capability "network" denied\`，已记入 SHA256 审计链）`,
-        `- **反证折半与依赖级联 (\`Arbitrator\`)**：动态校验 \`${dynErrEv.id}\` 暴露 \`PK_0x5f\` 缺失中央目录 → **\`H-002\`** 置信度折半淘汰 (\`rejected\`)，下游子假设 **\`H-003\`** 自动级联降级为 **\`reevaluate\`**`,
-        `- **双视角确立新假设 (\`H-004\`)**：解码伴生文件获 **\`flag{demo_reverse_lab_flag}\`**（静态 \`${decEvId}\` + 动态重放 \`${verEvId}\` 2/2 通过）`,
+        `1. **收束排查边界（\`Gate 1\`）**：\`${s.executor}\` 试探外部提示地址时被能力沙箱拦截（\`capability "network" denied\`，已留存 SHA256 审计记录），排查随即专注在本地工作区样本内。`,
+        `2. **按预期检验 \`H-002\` 并证伪转向（\`Arbitrator\`）**：执行预设实验 \`unzip -t carrier.bin\`，动态记录 \`${dynErrEv.id}\` 报错缺失 EOCD 中央目录，与“完整加密 ZIP 载荷”的预期直接矛盾 → **\`H-002\`** 置信度折半淘汰 (\`rejected\`)，建立在其前提之上的 **\`H-003\`** 自动级联降级为 **\`reevaluate\`**。`,
+        `3. **转向伴生文件并完成双视角证明（\`H-004\`）**：既然 \`carrier.bin\` 中的 PDF（空壳）与 ZIP（截断诱饵）均已排除，分析转向读取同目录伴生文件 \`artifact.txt\`（\`${readEvId}\`），经 Base64 解码（\`${decEvId}\`）还原出 **\`flag{demo_reverse_lab_flag}\`**，再由 \`verify_artifact\`（\`${verEvId}\`, 2/2 passed）重放复现，正式确立双视角支撑的新假设 **\`H-004\`**（96%）。`,
         '',
-        `> 下一步：运行 **\`/audit\`** 唤醒独立第三席位 **\`${s.auditor}\` (\`${modelForProvider(s.auditor)}\`)** 在零工具隔离沙箱中完成终审并解锁 \`WRI [9/9]\`。`,
+        `> 下一步：运行 **\`/audit\`** 唤醒独立第三席位 **\`${s.auditor}\` (\`${modelForProvider(s.auditor)}\`)** 在零历史对话隔离环境中复核整条推理链并解锁 \`WRI [9/9]\`。`,
       ].join('\n')
     } else if (kind === 're_writeup') {
       const preSnap = this.buildTick(s)

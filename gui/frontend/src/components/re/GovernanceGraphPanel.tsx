@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { EvidenceRecord, FindingDTO, Hypothesis, TickDTO } from '../../lib/types'
 import { PanelBox } from '../crt'
 import {
+  buildHypothesisArcs,
   buildReplayFrames,
   synthesizeProcessSummary,
   type ReplayFrame,
@@ -542,10 +543,22 @@ export function GovernanceGraphPanel({
                   <span style={{ color: 'var(--muted)' }}>席位: {activeFrame.actor}</span>
                   <span style={{ marginLeft: 'auto', color: 'var(--ok)' }}>{activeFrame.stateDelta}</span>
                 </div>
-                <div style={{ color: 'var(--text)', fontSize: 11, lineHeight: 1.45 }}>
+                {activeFrame.transitionFromPrev && (
+                  <div style={{ color: 'var(--muted)', fontSize: 10.5, lineHeight: 1.45 }}>
+                    <span style={{ color: 'var(--violet)', fontWeight: 600 }}>↳ 承接上步：</span>
+                    {activeFrame.transitionFromPrev}
+                  </div>
+                )}
+                <div style={{ color: 'var(--text)', fontSize: 11, lineHeight: 1.5 }}>
                   <span style={{ color: 'var(--accent)', fontWeight: 600 }}>💭 思考与决策回放：</span>
                   {activeFrame.thought}
                 </div>
+                {activeFrame.takeaway && (
+                  <div style={{ color: 'var(--ok)', fontSize: 10.5, lineHeight: 1.42 }}>
+                    <span style={{ fontWeight: 600 }}>→ 本步结论：</span>
+                    {activeFrame.takeaway}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1275,6 +1288,13 @@ function ProvenanceDagView({
     () => (activeHyp ? buildProvenanceChain(activeHyp, evidence, findings) : null),
     [activeHyp, evidence, findings],
   )
+  const activeArc = useMemo(() => {
+    if (!activeHyp) return null
+    return (
+      buildHypothesisArcs(evidence, hypotheses, findings, auditorName).find((a) => a.id === activeHyp.id) ??
+      null
+    )
+  }, [activeHyp, evidence, hypotheses, findings, auditorName])
   const activeHypFindings = useMemo(
     () => (activeHyp ? findings.filter((f) => f.hypothesisId === activeHyp.id) : []),
     [activeHyp, findings],
@@ -1677,6 +1697,26 @@ function ProvenanceDagView({
               </div>
             )}
             {activeHyp.note && <div style={{ color: 'var(--warn)', marginTop: 3 }}>原因/备注: {activeHyp.note}</div>}
+            {activeArc && (
+              <div
+                className="re-causal-strip"
+                data-tone={activeArc.tone === 'err' ? 'err' : activeArc.tone === 'ok' ? 'ok' : activeArc.tone === 'warn' ? 'warn' : undefined}
+                style={{ marginTop: 5 }}
+              >
+                <div className="re-causal-row">
+                  <span className="re-causal-k">提出依据</span>
+                  <span>{activeArc.triggerClues}</span>
+                </div>
+                <div className="re-causal-row">
+                  <span className="re-causal-k">检验结果</span>
+                  <span>{activeArc.testAndObservation}</span>
+                </div>
+                <div className="re-causal-row">
+                  <span className="re-causal-k">推导定论</span>
+                  <span>{activeArc.deductionVerdict}</span>
+                </div>
+              </div>
+            )}
             {activeHypFindings.length > 0 && (
               <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ color: 'var(--violet)', fontSize: 10, fontWeight: 700 }}>

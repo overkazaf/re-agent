@@ -14,6 +14,7 @@ import {
   type WriteupTemplateId,
 } from './cognitiveSynthesis'
 import { buildForensicJsonBundle } from './forensics'
+import { ProofNarrativePanel } from './ProofNarrativePanel'
 import './re-pro.css'
 
 const mdPreviewComponents = {
@@ -260,6 +261,9 @@ export function WriteupStudioPanel({
           </Markdown>
         </div>
       </div>
+
+      {/* 2.5 Full Deductive Proof Narrative (Hypothesis -> Experiment -> Contradiction/Pivot -> Proof) */}
+      <ProofNarrativePanel tick={tick} />
 
       {/* 3. Writeup Document Studio */}
       <div style={cardBoxStyle}>
