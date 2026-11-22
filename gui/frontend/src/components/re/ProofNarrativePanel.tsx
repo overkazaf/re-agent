@@ -56,9 +56,22 @@ export function ProofNarrativePanel({
             ?
           </span>
           {!story.isEmpty && (
-            <span className="re-narrative-meta re-mono-num">
-              {story.chapters.length} 步递进 · {story.hypothesisArcs.length} 条假设
-            </span>
+            <>
+              <span className="re-narrative-meta re-mono-num">
+                {story.chapters.length} 步递进 · {story.hypothesisArcs.length} 条假设
+              </span>
+              <span
+                className="re-audit-pill re-mono-num"
+                data-verdict={story.auditVerdict}
+                data-hint={`§8.6 独立对抗审计三态裁定：${story.auditVerdict} · 验证级别：${story.verificationTier}`}
+              >
+                {story.auditVerdict === 'accepted'
+                  ? 'ACCEPTED'
+                  : story.auditVerdict === 'rejected'
+                    ? 'REJECTED'
+                    : 'NEEDS MORE EVIDENCE'}
+              </span>
+            </>
           )}
         </div>
 
@@ -165,6 +178,28 @@ function ChapterBlock({
           </span>
           <span className="re-step-phase">{chapter.phaseLabel}</span>
           <span className="re-step-role">{chapter.roleTag}</span>
+          {chapter.verificationTier && (
+            <span
+              className="re-mini-tag re-mono-num"
+              data-tone={chapter.verificationTier === 'verified' ? 'ok' : chapter.verificationTier === 'candidate' ? 'warn' : 'muted'}
+              data-hint={
+                chapter.verificationTier === 'verified'
+                  ? '§8.5 VERIFIED：通过多用例重放与边界/反例校验，可晋升为已验证产物'
+                  : '§8.5 CANDIDATE：单样本命中或部分失败，尚不可宣称已完整还原'
+              }
+            >
+              {chapter.verificationTier.toUpperCase()}
+            </span>
+          )}
+          {chapter.auditVerdict && (
+            <span
+              className="re-audit-pill re-mono-num"
+              data-verdict={chapter.auditVerdict}
+              data-hint={`§8.6 隔离对抗审计裁定：${chapter.auditVerdict}`}
+            >
+              {chapter.auditVerdict}
+            </span>
+          )}
           {chapter.hypothesisIds.length > 0 && (
             <span className="re-step-hyps re-mono-num">
               {chapter.hypothesisIds.join(' · ')}
@@ -280,6 +315,26 @@ function HypothesisArcCard({
         style={{ textDecoration: arc.status === 'rejected' ? 'line-through' : 'none', opacity: arc.status === 'rejected' ? 0.75 : 1 }}
       >
         {arc.claim}
+      </div>
+
+      <div
+        className="re-arc-meta-strip"
+        data-hint="§8.3 结构化假设字段：明确适用范围、可证伪条件与下一步检验动作"
+      >
+        {arc.scope && (
+          <span>
+            <b>范围：</b>
+            {arc.scope}
+          </span>
+        )}
+        <span>
+          <b>可证伪条件：</b>
+          {arc.falsifiers[0]}
+        </span>
+        <span>
+          <b>下一步检验：</b>
+          {arc.nextTest}
+        </span>
       </div>
 
       {arc.contrast && <ContrastBox contrast={arc.contrast} />}

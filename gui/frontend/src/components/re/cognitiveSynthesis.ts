@@ -11,6 +11,15 @@ import type {
   Hypothesis,
   TickDTO,
 } from '../../lib/types'
+import {
+  buildInvestigationState,
+  extractHypothesisFalsifiers,
+  extractHypothesisNextTest,
+  type AuditVerdict,
+  type CalibratedHypothesis,
+  type InvestigationState,
+  type VerificationTier,
+} from './investigationState'
 
 export type GraphNodeKey =
   | 'planner'
@@ -108,6 +117,10 @@ export interface NarrativeChapter {
   evidenceRefs: EvidenceMention[]
   hypothesisIds: string[]
   contrasts: ContrastCallout[]
+  /** Explicit §8.5 verification tier tag (`candidate` vs `verified`) on verify chapters. */
+  verificationTier?: VerificationTier
+  /** Explicit §8.6 3-state audit verdict on audit chapters. */
+  auditVerdict?: AuditVerdict
 }
 
 export interface HypothesisArc {
@@ -119,6 +132,12 @@ export interface HypothesisArc {
   confidencePct: number
   dependsOn: string[]
   dependents: string[]
+  /** Optional §8.3 scope of the hypothesis. */
+  scope?: string
+  /** Explicit §8.3 falsification criteria. */
+  falsifiers: string[]
+  /** Explicit §8.3 next test to confirm or refute. */
+  nextTest: string
   /** ① 起因线索：为什么最初这样猜 */
   triggerClues: string
   /** ② 假设主张与验证标准：主张什么、若成立应观察到什么 */
@@ -143,6 +162,8 @@ export interface ProofStory {
   leadSummary: string
   chapters: NarrativeChapter[]
   hypothesisArcs: HypothesisArc[]
+  verificationTier: VerificationTier
+  auditVerdict: AuditVerdict
   fullPlainText: string
 }
 
@@ -555,6 +576,10 @@ export function buildHypothesisArcs(
             ? `依据 ${formatEvRefList(staticSup)} 提出 → 经 ${formatEvRefList(verSup.length > 0 ? verSup : dynSup)} 动态实证 → ${audEvs.length > 0 ? '审计定案' : '双视角确立'}（${pct}%）`
             : `依据 ${formatEvRefList(staticSup) || '初始勘察'} 提出 → ${audEvs.length > 0 ? '静态结构明确且已复核确认' : '待动态实验验证'}（${pct}%）`
 
+    const calH = h as CalibratedHypothesis
+    const falsifiers = extractHypothesisFalsifiers(calH)
+    const nextTest = extractHypothesisNextTest(calH)
+
     return {
       id: h.id,
       claim: h.claim,
@@ -564,6 +589,9 @@ export function buildHypothesisArcs(
       confidencePct: pct,
       dependsOn: deps,
       dependents,
+      scope: calH.scope,
+      falsifiers,
+      nextTest,
       triggerClues,
       claimAndCriterion,
       testAndObservation,
@@ -602,9 +630,15 @@ export function synthesizeProofStory(tick: TickDTO | null): ProofStory {
       leadSummary: '尚未开始取证分析。启动任务后，此处将按「初步勘察 → 提出假设 → 实验检验 → 证伪转向 → 双视角证明 → 独立复核」的完整因果顺序实时记录每一步推理。',
       chapters: [],
       hypothesisArcs: [],
+      verificationTier: 'unverified',
+      auditVerdict: 'needs_more_evidence',
       fullPlainText: '尚无逆向推理记录。',
     }
   }
+
+  const dossier = buildInvestigationState(tick)
+  const verificationTier = dossier.states.verification.status
+  const auditVerdict = dossier.states.audit.verdict
 
   const arcs = buildHypothesisArcs(evidence, hypotheses, findings, auditor)
   const arcById = new Map(arcs.map((a) => [a.id, a]))
@@ -979,6 +1013,7 @@ export function synthesizeProofStory(tick: TickDTO | null): ProofStory {
       ),
       hypothesisIds: targetHyps.map((h) => h.id),
       contrasts: [],
+      verificationTier,
     })
   }
 
@@ -1030,6 +1065,7 @@ export function synthesizeProofStory(tick: TickDTO | null): ProofStory {
       evidenceRefs: [...audEvs, ...(writeupEv ? [writeupEv] : [])].map(toEvidenceMention),
       hypothesisIds: confirmedHyps.map((h) => h.id),
       contrasts: [],
+      auditVerdict,
     })
   }
 
@@ -1099,6 +1135,8 @@ export function synthesizeProofStory(tick: TickDTO | null): ProofStory {
     leadSummary,
     chapters,
     hypothesisArcs: arcs,
+    verificationTier,
+    auditVerdict,
     fullPlainText: plainLines.join('\n').trim(),
   }
 }
@@ -1878,6 +1916,41 @@ function renderProofStoryMarkdownSection(story: ProofStory): string[] {
   return lines
 }
 
+function renderReAgentCalibrationSections(dossier: InvestigationState): string[] {
+  const { metrics, handover, knownUnknowns, coverageBounds, nextTests, completionScore, states } = dossier
+  return [
+    '## 五维可信度指标 (§7.5)',
+    '',
+    '| 指标 | 当前值 | 说明 |',
+    '| :--- | :--- | :--- |',
+    `| **Evidence coverage（证据覆盖率）** | \`${metrics.evidenceCoverage.display}\` | ${metrics.evidenceCoverage.backedCount}/${metrics.evidenceCoverage.totalConclusions} 条有效结论回溯至 Evidence Ledger |`,
+    `| **Replay pass rate（回放通过率）** | \`${metrics.replayPassRate.display}\` | 验证级别：\`${states.verification.status.toUpperCase()}\`${states.verification.singleSampleHitWarning ? '（⚠ 单样本命中，不可宣称完整还原）' : ''} |`,
+    `| **Wrong-hypothesis lifetime（错假寿命）** | \`${metrics.wrongHypLifetime.display}\` | 错误假设从提出到被反证淘汰/回滚的取证步数 |`,
+    `| **Overreach count（越权尝试次数）** | \`${metrics.overreachCount.display}\` | 范围外文件/网络/设备访问尝试计数 |`,
+    `| **Cost per accepted finding（单结论成本）** | \`${metrics.costPerAcceptedFinding.display}\` | 总成本 \`$${metrics.costPerAcceptedFinding.totalCostUsd.toFixed(4)}\` / ${metrics.costPerAcceptedFinding.acceptedFindings} 条定案结论 |`,
+    '',
+    '## 已知未知、覆盖边界与下一步测试 (§8.7)',
+    '',
+    `- **完成门禁达标度**：\`${completionScore.passed}/${completionScore.total}\` · 对抗审计三态裁定：\`${states.audit.verdict}\`（${states.audit.passedChecksCount}/5 项检查通过）`,
+    '- **已知未知（Known Unknowns）**：',
+    ...knownUnknowns.map((item) => `  - ${item}`),
+    '- **覆盖边界（Coverage Bounds）**：',
+    ...coverageBounds.map((item) => `  - ${item}`),
+    '- **下一步测试（Next Tests）**：',
+    ...nextTests.map((item) => `  - ${item}`),
+    '',
+    '## 交接三问（运行溯源 / 可复现性 / 失败归因）',
+    '',
+    `- **${handover.whichRun.question}** ${handover.whichRun.answer}（锚点：\`${handover.whichRun.refs}\`）`,
+    `- **${handover.reproducibleAcrossModels.question}** [\`${handover.reproducibleAcrossModels.status}\`] ${handover.reproducibleAcrossModels.answer}`,
+    `- **${handover.errorAttribution.question}** [\`${handover.errorAttribution.category}\`] ${handover.errorAttribution.answer}`,
+    `  - **模型 (Model)**：${handover.errorAttribution.breakdown.model}`,
+    `  - **工具 (Tool)**：${handover.errorAttribution.breakdown.tool}`,
+    `  - **环境 (Environment)**：${handover.errorAttribution.breakdown.environment}`,
+    `  - **数据 (Data)**：${handover.errorAttribution.breakdown.data}`,
+  ]
+}
+
 /** Generates a rigorous, citation-anchored Markdown Writeup from the live session ledger. */
 export function generateWriteupMarkdown(
   tick: TickDTO | null,
@@ -1903,6 +1976,8 @@ export function generateWriteupMarkdown(
   const audEvs = evidence.filter((e) => e.kind === 'audit_finding')
   const summary = synthesizeProcessSummary(tick)
   const story = synthesizeProofStory(tick)
+  const dossier = buildInvestigationState(tick, workspace)
+  const calibrationSections = renderReAgentCalibrationSections(dossier)
   const recoveredFlag = extractFlagFromEvidence(evidence)
 
   if (template === 'ctf-writeup') {
@@ -1943,7 +2018,8 @@ export function generateWriteupMarkdown(
         : `# 1. 样本结构初筛与签名雕刻\n/scan ${target}\n# 2. Base64 载荷解码与重放验证\n/decode base64 ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9\n# 3. 独立席位隔离对抗审计\n/audit`,
       '```',
       '',
-      ...(recoveredFlag ? ['## 6. Flag', '', '```text', recoveredFlag, '```'] : []),
+      ...(recoveredFlag ? ['## 6. Flag', '', '```text', recoveredFlag, '```', ''] : []),
+      ...calibrationSections,
     ].join('\n')
   }
 
@@ -1972,14 +2048,16 @@ export function generateWriteupMarkdown(
       ...(verEvs.length > 0
         ? verEvs.map(
             (v) =>
-              `- **\`[${v.id}]\`**：通过率 \`${v.verification?.passed ?? 1}/${v.verification?.total ?? 1}\` — ${v.summary || v.excerpt}`,
+              `- **\`[${v.id}]\`**：通过率 \`${v.verification?.passed ?? 1}/${v.verification?.total ?? 1}\`（\`${dossier.states.verification.status}\`）— ${v.summary || v.excerpt}`,
           )
         : ['- 尚未记录 `verification_result` 重放向量']),
       '',
       '## 5. 对抗审计签章 (`/audit`)',
       ...(audEvs.length > 0
-        ? audEvs.map((a) => `- **\`[${a.id}]\` (${a.source})**：\n\`\`\`text\n${a.excerpt}\n\`\`\``)
+        ? audEvs.map((a) => `- **\`[${a.id}]\` (${a.source} · \`${dossier.states.audit.verdict}\`)**：\n\`\`\`text\n${a.excerpt}\n\`\`\``)
         : [`- 待运行 \`/audit\` 由独立席位 \`${auditor}\` 签发审计凭证`]),
+      '',
+      ...calibrationSections,
     ].join('\n')
   }
 
@@ -2001,8 +2079,8 @@ export function generateWriteupMarkdown(
     '',
     '| 治理 / 分诊维度 | 运行时取证记录 |',
     '| :--- | :--- |',
-    `| **目标样本与指纹** | \`${target}\`${goal?.targetSha256 ? ` · \`sha256:${goal.targetSha256.slice(0, 16)}…\`` : ''} (${re?.sampleType || 'binary'}) |`,
-    `| **任务契约 (\`/goal\`)** | ${goal ? `${goal.primary}（验收项 \`${goal.criteria.filter((c) => c.pass).length}/${goal.criteria.length}\` 通过）` : '默认交互分析模式'} |`,
+    `| **Target State（样本对象）** | \`${dossier.states.target.file}\`${dossier.states.target.sha256 ? ` · \`sha256:${dossier.states.target.sha256.slice(0, 16)}…\`` : ''} (${dossier.states.target.format} · ${dossier.states.target.arch}) |`,
+    `| **Objective State（任务目的）** | ${goal ? `${goal.primary}（验收项 \`${goal.criteria.filter((c) => c.pass).length}/${goal.criteria.length}\` 通过）` : '默认交互分析模式'} |`,
     `| **三模型职责席位** | Planner: \`${planner}\` · Executor: \`${executor}\` · Isolated Auditor: \`${auditor}\` |`,
     `| **能力沙箱 (\`/cap\`)** | 状态: \`${sandbox?.active ? 'ACTIVE (deny-by-default)' : 'STANDARD'}\` · 放行本地动作 \`${sandbox?.grantedCount ?? tick?.flow.toolsOk ?? 0}\` 次 · 阻断越权动作 \`${sandbox?.deniedCount ?? 0}\` 次 |`,
     ...(sandbox?.recentActions
@@ -2039,17 +2117,17 @@ export function generateWriteupMarkdown(
     ...(verEvs.length > 0
       ? verEvs.map(
           (v) =>
-            `- **重放校验 \`[${v.id}]\`**：\`verify_artifact\` 通过率 **${v.verification?.passed ?? 2}/${v.verification?.total ?? 2}** —— ${v.summary || v.excerpt}`,
+            `- **重放校验 \`[${v.id}]\`（\`${dossier.states.verification.status.toUpperCase()}\`）**：\`verify_artifact\` 通过率 **${v.verification?.passed ?? 2}/${v.verification?.total ?? 2}** —— ${v.summary || v.excerpt}`,
         )
       : ['- **重放校验**：待执行 `verify_artifact`']),
     ...(audEvs.length > 0
       ? audEvs.map(
           (a) =>
-            `- **隔离对抗审计 \`[${a.id}]\`（席位：\`${auditor}\`）**：零历史上下文、零工具权限独立复核通过：\n\`\`\`text\n${a.excerpt}\n\`\`\``,
+            `- **隔离对抗审计 \`[${a.id}]\`（席位：\`${auditor}\` · 裁定：\`${dossier.states.audit.verdict}\`）**：零历史上下文、零工具权限独立复核（5 项清单通过 ${dossier.states.audit.passedChecksCount}/5）：\n\`\`\`text\n${a.excerpt}\n\`\`\``,
         )
       : [`- **隔离对抗审计**：待运行 \`/audit\`（独立席位 \`${auditor}\`）`]),
     '',
-    '## 六、 可复现验证命令与未决边界（环节 ⑥ Reproducibility & Gaps）',
+    '## 六、 可复现验证命令（环节 ⑥ Reproducibility）',
     '',
     '```bash',
     target.includes('chall.js')
@@ -2057,8 +2135,7 @@ export function generateWriteupMarkdown(
       : `0xaf --workspace ${workspace}\n/workflow reverse firmware\n/scan ${target}\n/decode base64 ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9\n/audit`,
     '```',
     '',
-    '- **已确认事实边界**：所有带 `[ev_NNN]` 编号的偏移、解码值与重放退出码均已在工作区内实测复现。',
-    '- **已知排他项 / 待确认项**：受能力沙箱 `network=deny` 约束，样本内出现的外部域名仅做静态记录、未发起真实联网探测；如需进一步联调可由操作员显式执行 `/cap network on` 后单独验证。',
+    ...calibrationSections,
     ...(recoveredFlag ? ['', `**最终提取凭证 / Flag**：\`${recoveredFlag}\``] : []),
   ].join('\n')
 }

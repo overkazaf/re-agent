@@ -335,12 +335,26 @@ describe('synthesizeProofStory & buildHypothesisArcs', () => {
     expect(mdStd).toContain('逐条假设的因果证明链路')
     expect(mdStd).toContain('反证对照 `[H-002]`')
     expect(mdStd).toContain('承接逻辑')
+    expect(mdStd).toContain('五维可信度指标 (§7.5)')
+    expect(mdStd).toContain('已知未知、覆盖边界与下一步测试 (§8.7)')
+    expect(mdStd).toContain('交接三问（运行溯源 / 可复现性 / 失败归因）')
+    expect(mdStd).toContain('Target State（样本对象）')
+    expect(mdStd).toContain('Objective State（任务目的）')
 
     const mdCtf = generateWriteupMarkdown(tick, 'ctf-writeup', '/demo/reverse-lab')
     expect(mdCtf).toContain('推理与证明全过程（从假设提出到证据闭环）')
     expect(mdCtf).toContain('flag{demo_reverse_lab_flag}')
+    expect(mdCtf).toContain('五维可信度指标 (§7.5)')
+    expect(mdCtf).toContain('交接三问（运行溯源 / 可复现性 / 失败归因）')
 
     const mdAlgo = generateWriteupMarkdown(tick, 'algo-report', '/demo/reverse-lab')
     expect(mdAlgo).toContain('推理与证明全过程（从假设提出到证据闭环）')
+    expect(mdAlgo).toContain('已知未知、覆盖边界与下一步测试 (§8.7)')
+
+    // Calibrated proof story carries explicit verificationTier, 3-state auditVerdict & per-hypothesis falsifiers/nextTest
+    expect(story.verificationTier).toBe('verified')
+    expect(story.auditVerdict).toBe('accepted')
+    expect(arcH2.falsifiers.length).toBeGreaterThan(0)
+    expect(arcH4.nextTest).toBeTruthy()
   })
 })

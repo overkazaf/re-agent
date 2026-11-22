@@ -15,6 +15,8 @@ import {
   type WriteupTemplateId,
 } from './cognitiveSynthesis'
 import { buildForensicJsonBundle } from './forensics'
+import { buildInvestigationState } from './investigationState'
+import { InvestigationDossierPanel } from './InvestigationDossierPanel'
 import { ProofNarrativePanel } from './ProofNarrativePanel'
 import './re-pro.css'
 
@@ -103,6 +105,7 @@ export function WriteupStudioPanel({
   onRunAgentWriteup?: () => void
 }) {
   const [template, setTemplate] = useState<WriteupTemplateId>('article-standard')
+  const [studioMode, setStudioMode] = useState<'dossier' | 'narrative' | 'report'>('report')
   const [viewMode, setViewMode] = useState<'split' | 'preview' | 'edit'>('preview')
   const [dirty, setDirty] = useState(false)
   const [draft, setDraft] = useState('')
@@ -112,6 +115,7 @@ export function WriteupStudioPanel({
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
   const summary = useMemo(() => synthesizeProcessSummary(tick), [tick])
+  const dossier = useMemo(() => buildInvestigationState(tick, workspace), [tick, workspace])
   const autoMarkdown = useMemo(
     () => generateWriteupMarkdown(tick, template, workspace),
     [tick, template, workspace],
@@ -354,11 +358,84 @@ export function WriteupStudioPanel({
         )}
       </div>
 
-      {/* 2.5 Full Deductive Proof Narrative (Hypothesis -> Experiment -> Contradiction/Pivot -> Proof) */}
-      <ProofNarrativePanel tick={tick} />
+      {/* 2.5 Compact Studio Mode Switcher (档案 / 叙事 / 报告) + Inline 5-Defense & Audit Verdict Telemetry */}
+      <div className="re-studio-mode-bar">
+        <div className="re-studio-mode-tabs" role="tablist" aria-label="工坊视图切换">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={studioMode === 'dossier'}
+            className="re-studio-mode-btn"
+            data-active={studioMode === 'dossier' ? '1' : undefined}
+            onClick={() => setStudioMode('dossier')}
+            data-hint="查看 7-State Investigation State 规范任务档案、五道防线、§7.5 指标与 §8.7 完成门禁"
+          >
+            ◈ 档案 (7-State)
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={studioMode === 'narrative'}
+            className="re-studio-mode-btn"
+            data-active={studioMode === 'narrative' ? '1' : undefined}
+            onClick={() => setStudioMode('narrative')}
+            data-hint="按时间叙事或逐条假设查看完整因果推演链、可证伪条件与预期/实测对照"
+          >
+            ◈ 叙事 (Proof)
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={studioMode === 'report'}
+            className="re-studio-mode-btn"
+            data-active={studioMode === 'report' ? '1' : undefined}
+            onClick={() => setStudioMode('report')}
+            data-hint="预览、编辑并导出证据锚定 Markdown Writeup 与 JSON 取证包"
+          >
+            ✎ 报告 (Writeup)
+          </button>
+        </div>
 
-      {/* 3. Writeup Document Studio */}
-      <div style={cardBoxStyle}>
+        {/* Always-visible 1-line Dossier telemetry pill strip — click to jump straight into 7-State Dossier */}
+        <div
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', cursor: 'pointer' }}
+          onClick={() => setStudioMode('dossier')}
+          data-hint="点击进入 7-State Investigation State 完整任务档案视图"
+        >
+          <span className="re-audit-pill re-mono-num" data-verdict={dossier.states.audit.verdict}>
+            {dossier.states.audit.verdict === 'accepted'
+              ? 'ACCEPTED'
+              : dossier.states.audit.verdict === 'rejected'
+                ? 'REJECTED'
+                : 'NEEDS MORE EVIDENCE'}
+          </span>
+          <span
+            className="re-dossier-gate-badge re-mono-num"
+            data-pass={dossier.completionScore.passed === dossier.completionScore.total ? '1' : undefined}
+          >
+            {dossier.completionScore.passed}/{dossier.completionScore.total} 达标
+          </span>
+          <div className="re-defense-strip">
+            {dossier.defenses.map((d) => {
+              const tone = d.status === 'pass' ? 'ok' : d.status === 'warn' ? 'warn' : d.status === 'blocked' ? 'err' : 'accent'
+              return (
+                <span key={d.id} className="re-defense-chip re-mono-num" data-tone={tone} data-hint={d.hint}>
+                  <span className="re-defense-dot" data-tone={tone} aria-hidden="true" />
+                  <span>{d.code}</span>
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Active Mode Body (zero stacked vertical clutter) */}
+      {studioMode === 'dossier' ? (
+        <InvestigationDossierPanel tick={tick} workspace={workspace} />
+      ) : studioMode === 'narrative' ? (
+        <ProofNarrativePanel tick={tick} />
+      ) : (
+        <div style={cardBoxStyle}>
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ color: 'var(--ok)', fontSize: 11, fontWeight: 700 }}>✎ Writeup 工坊</span>
@@ -544,7 +621,8 @@ export function WriteupStudioPanel({
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
