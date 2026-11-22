@@ -175,6 +175,9 @@ export interface RESampleType {
 
 // ---------- evidence ledger & hypothesis stack ----------
 
+// Canonical hypothesis lifecycle states. In the re-agent model (§6 Defense ③),
+// "weakened" is represented by contradicting evidence + halved confidence, and
+// "frozen" / rollback cascades map to "reevaluate".
 export type HypothesisStatus = 'active' | 'revised' | 'rejected' | 'reevaluate'
 
 export interface HypothesisExperiment {
@@ -191,9 +194,12 @@ export interface HypothesisExperiment {
 export interface Hypothesis {
   id: string
   claim: string
+  scope?: string
   confidence: number
   supporting?: string[]
   contradicting?: string[]
+  falsifiers?: string[]
+  nextTest?: string
   dependsOn?: string[]
   derived?: string[]
   status: HypothesisStatus
@@ -208,6 +214,19 @@ export interface VerificationStats {
   passed: number
   total: number
   id?: string
+  status?: 'candidate' | 'verified'
+  boundaryPassed?: number
+  differentialCases?: number
+  uncoveredPaths?: string[]
+}
+
+export type AuditVerdict = 'accepted' | 'rejected' | 'needs_more_evidence'
+
+export interface AuditCheckDTO {
+  id: string
+  label: string
+  pass: boolean
+  detail?: string
 }
 
 export interface EvidenceRecord {
@@ -240,6 +259,12 @@ export interface GoalSummaryDTO {
   intent?: string
   targetFile?: string
   targetSha256?: string
+  targetArch?: string
+  targetFormat?: string
+  targetVersion?: string
+  targetScope?: string
+  deliverables?: string[]
+  stopConditions?: string[]
   accepted: boolean
   constraints?: Record<string, string>
   criteria: GoalCriterionDTO[]
@@ -253,6 +278,7 @@ export interface SandboxActionDTO {
   sha256: string
   decision: 'granted' | 'denied' | 'unmanaged'
   origin?: string
+  hypothesisId?: string
 }
 
 export interface SandboxDTO {
@@ -281,6 +307,8 @@ export interface LedgerDTO {
   goal?: GoalSummaryDTO | null
   sandbox?: SandboxDTO | null
   findings?: FindingDTO[]
+  auditVerdict?: AuditVerdict
+  auditChecks?: AuditCheckDTO[]
 }
 
 export interface TickDTO {
@@ -297,6 +325,9 @@ export interface HypothesisMutationDTO {
   action: 'create' | 'revise' | 'reject' | 'support' | 'challenge' | 'meta' | 'add_experiment'
   id?: string
   claim?: string
+  scope?: string
+  falsifiers?: string[]
+  nextTest?: string
   confidence?: number
   evidenceIds?: string[]
   dependsOn?: string[]

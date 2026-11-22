@@ -282,3 +282,75 @@ func TestExperimentsAndUpdateMetaPreserveProvenance(t *testing.T) {
 		t.Fatalf("UpdateMeta did not backlink parent Derived: %+v", refreshedRoot.Derived)
 	}
 }
+
+func TestUpdateDetailsScopeFalsifiersNextTest(t *testing.T) {
+	tr := New()
+	h, err := tr.Create("sub_1048A0 builds the final request signature", 0.42, []string{"ev_001"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := "libshield.so::sub_1048A0"
+	nextTest := "trace callers and compare pre/post-sign buffers"
+	falsifiers := []string{
+		"function only formats display text without reaching network layer",
+		"  ",
+		"function only formats display text without reaching network layer",
+		"modifying HMAC input does not alter request header",
+	}
+
+	updated, err := tr.UpdateDetails(h.ID, &scope, falsifiers, &nextTest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Scope != scope || updated.NextTest != nextTest {
+		t.Fatalf("scope/nextTest not stored: %+v", updated)
+	}
+	if len(updated.Falsifiers) != 2 {
+		t.Fatalf("falsifiers not cleaned/deduped: %+v", updated.Falsifiers)
+	}
+	// Mutating returned slice must not alias internal tracker state.
+	updated.Falsifiers[0] = "mutated"
+	reloaded, ok := tr.Get(h.ID)
+	if !ok || reloaded.Falsifiers[0] == "mutated" {
+		t.Fatalf("UpdateDetails aliased Falsifiers slice: %+v", reloaded.Falsifiers)
+	}
+
+	rendered := Render(reloaded)
+	if !strings.Contains(rendered, "[scope:libshield.so::sub_1048A0]") || !strings.Contains(rendered, "next:trace callers") {
+		t.Fatalf("Render omitted scope/nextTest: %s", rendered)
+	}
+	if _, err := tr.UpdateDetails("H-099", &scope, nil, nil); err == nil {
+		t.Fatal("expected error for unknown hypothesis id")
+	}
+}
+
+func TestWeakenAndFreezeLifecycle(t *testing.T) {
+	tr := New()
+	root, _ := tr.Create("sub_1048A0 computes HMAC-SHA256", 0.70, []string{"ev_001"}, nil)
+	child, _ := tr.Create("sub_1048A0 uses static salt from .rodata", 0.60, nil, []string{root.ID})
+
+	weakened, err := tr.Weaken(root.ID, "ev_004", "Frida trace did not capture signing input")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if weakened.Status != types.HypWeakened || weakened.Confidence != 0.35 {
+		t.Fatalf("expected weakened at 0.35, got %+v", weakened)
+	}
+	// Duplicate evidence id is idempotent.
+	same, err := tr.Weaken(root.ID, "ev_004", "duplicate")
+	if err != nil || same.Confidence != 0.35 {
+		t.Fatalf("duplicate Weaken should be idempotent: %+v %v", same, err)
+	}
+
+	frozen, err := tr.Freeze(root.ID, "conflicting runtime traces; awaiting differential test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if frozen.Status != types.HypFrozen {
+		t.Fatalf("expected frozen status, got %s", frozen.Status)
+	}
+	childNow, _ := tr.Get(child.ID)
+	if childNow.Status != types.HypReevaluate {
+		t.Fatalf("freeze must cascade reevaluate to dependents, got %+v", childNow)
+	}
+}

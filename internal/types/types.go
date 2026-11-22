@@ -266,6 +266,13 @@ type PlanUpdateMeta struct {
 // HypothesisStatus tracks where a claim stands in the analysis. `reevaluate`
 // is set by the tracker, never declared: when a hypothesis a claim depends on
 // is revised or falls, its dependents are cascade-marked for re-examination.
+//
+// Lifecycle alignment with re-agent (§6 Defense ③ & §8.4):
+//   - active: live hypothesis under active testing
+//   - weakened: explicitly weakened after a non-confirming/contradicting test (confidence halved)
+//   - frozen / reevaluate: frozen pending conflict resolution or parent rollback cascade
+//   - revised: replaced with a refined claim (cascades reevaluate to dependents)
+//   - rejected: refuted and retired (cascades reevaluate to dependents)
 type HypothesisStatus string
 
 const (
@@ -273,6 +280,8 @@ const (
 	HypRevised    HypothesisStatus = "revised"
 	HypRejected   HypothesisStatus = "rejected"
 	HypReevaluate HypothesisStatus = "reevaluate"
+	HypWeakened   HypothesisStatus = "weakened"
+	HypFrozen     HypothesisStatus = "frozen"
 )
 
 // HypothesisExperiment is one falsifiable test attached to a hypothesis. The
@@ -296,9 +305,15 @@ type Hypothesis struct {
 	ID         string  `json:"id"` // H-001
 	Claim      string  `json:"claim"`
 	Confidence float64 `json:"confidence"` // 0..1
+	// Scope bounds where this claim applies (e.g. module/function/offset range).
+	Scope string `json:"scope,omitempty"`
 	// Supporting/Contradicting hold evidence record ids (ev_NNN).
 	Supporting    []string `json:"supporting,omitempty"`
 	Contradicting []string `json:"contradicting,omitempty"`
+	// Falsifiers lists concrete observations or counterexamples that would refute this claim.
+	Falsifiers []string `json:"falsifiers,omitempty"`
+	// NextTest names the next concrete experiment or trace needed to test this claim.
+	NextTest string `json:"nextTest,omitempty"`
 	// DependsOn lists parent hypothesis ids; Derived is the backlink the
 	// cascade walks.
 	DependsOn []string         `json:"dependsOn,omitempty"`
@@ -352,6 +367,13 @@ type EvidenceRecord struct {
 	CreatedAt    int64              `json:"createdAt"`
 }
 
+// Verification status constants separating unverified candidate outputs from
+// fully verified deliverables (§6 Defense ④ & §8.5).
+const (
+	VerificationCandidate = "candidate"
+	VerificationVerified  = "verified"
+)
+
 // VerificationStats is the checkable summary of one build/replay/diff run.
 type VerificationStats struct {
 	Build  bool `json:"build"`
@@ -359,6 +381,39 @@ type VerificationStats struct {
 	Total  int  `json:"total"`
 	// ID is the evidence id of the run, filled when the record is filed.
 	ID string `json:"id,omitempty"`
+	// Status distinguishes unverified candidates ("candidate") from verified
+	// deliverables ("verified"). A single-sample hit stays candidate.
+	Status string `json:"status,omitempty"`
+	// BoundaryPassed counts boundary, edge, or failure test cases that passed.
+	BoundaryPassed int `json:"boundaryPassed,omitempty"`
+	// DifferentialCases counts differential comparison cases against the target.
+	DifferentialCases int `json:"differentialCases,omitempty"`
+	// UncoveredPaths records branches, inputs, or states not yet covered by replay.
+	UncoveredPaths []string `json:"uncoveredPaths,omitempty"`
+}
+
+// AuditVerdict is the 3-state outcome of an Adversarial Auditor pass (§6 Defense ⑤ & §8.6).
+type AuditVerdict string
+
+const (
+	AuditAccepted          AuditVerdict = "accepted"
+	AuditRejected          AuditVerdict = "rejected"
+	AuditNeedsMoreEvidence AuditVerdict = "needs_more_evidence"
+)
+
+// AuditCheck is one item of the canonical 5-check Adversarial Auditor checklist (§8.6).
+type AuditCheck struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	Pass   bool   `json:"pass"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// AuditEvaluation bundles the deterministic 5-check Adversarial Auditor verdict.
+type AuditEvaluation struct {
+	Verdict AuditVerdict `json:"verdict"`
+	Checks  []AuditCheck `json:"checks"`
+	Summary string       `json:"summary,omitempty"`
 }
 
 // Finding is one arbitration outcome: how the evidence ledger and the

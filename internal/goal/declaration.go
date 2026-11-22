@@ -84,13 +84,15 @@ func formatNumber(value float64) string {
 
 // Target is the Target State: which sample, which version, proven by hash.
 // It is filled by the host (never the model) so a declaration cannot claim a
-// file it did not hash.
+// file it did not hash. Kept strictly separate from Objective (§8.1) so the
+// same sample can back different goals without task drift.
 type Target struct {
-	File   string `json:"file"`
-	SHA256 string `json:"sha256,omitempty"`
-	Format string `json:"format,omitempty"`
-	Arch   string `json:"arch,omitempty"`
-	Scope  string `json:"scope,omitempty"`
+	File    string `json:"file"`
+	SHA256  string `json:"sha256,omitempty"`
+	Format  string `json:"format,omitempty"`
+	Arch    string `json:"arch,omitempty"`
+	Version string `json:"version,omitempty"`
+	Scope   string `json:"scope,omitempty"`
 }
 
 // Objective is the Objective State: what this run must prove and produce,
@@ -98,11 +100,12 @@ type Target struct {
 // without the agent quietly trading "reproduce behavior" for "find a
 // key-looking constant".
 type Objective struct {
-	Primary      string            `json:"primary"`
-	Intent       string            `json:"intent,omitempty"`
-	Deliverables []string          `json:"deliverables,omitempty"`
-	Constraints  map[string]string `json:"constraints,omitempty"`
-	Acceptance   []Criterion       `json:"acceptance"`
+	Primary        string            `json:"primary"`
+	Intent         string            `json:"intent,omitempty"`
+	Deliverables   []string          `json:"deliverables,omitempty"`
+	Constraints    map[string]string `json:"constraints,omitempty"`
+	StopConditions []string          `json:"stopConditions,omitempty"`
+	Acceptance     []Criterion       `json:"acceptance"`
 }
 
 // Declaration is the whole task contract. Accepted flips only by operator
@@ -115,16 +118,67 @@ type Declaration struct {
 	CreatedAt int64     `json:"createdAt,omitempty"`
 }
 
+// BuildDeclaration assembles a Declaration with strict Target State vs
+// Objective State separation (§8.1): hostTarget supplies authoritative binary
+// metadata (file, sha256, arch, format, version), while draft supplies scope
+// and Objective intent/deliverables/constraints/stop conditions/acceptance.
+func BuildDeclaration(rawGoal string, draft Draft, hostTarget Target) *Declaration {
+	target := hostTarget
+	if target.File == "" {
+		target.File = draft.TargetFile
+	}
+	if target.Version == "" {
+		target.Version = strings.TrimSpace(draft.TargetVersion)
+	}
+	if target.Scope == "" {
+		target.Scope = strings.TrimSpace(draft.TargetScope)
+	}
+	var deliverables []string
+	if len(draft.Deliverables) > 0 {
+		deliverables = append([]string(nil), draft.Deliverables...)
+	}
+	var stopConditions []string
+	if len(draft.StopConditions) > 0 {
+		stopConditions = append([]string(nil), draft.StopConditions...)
+	}
+	var constraints map[string]string
+	if len(draft.Constraints) > 0 {
+		constraints = make(map[string]string, len(draft.Constraints))
+		for k, v := range draft.Constraints {
+			constraints[k] = v
+		}
+	}
+	var acceptance []Criterion
+	if len(draft.Acceptance) > 0 {
+		acceptance = append([]Criterion(nil), draft.Acceptance...)
+	}
+	return &Declaration{
+		RawGoal: strings.TrimSpace(rawGoal),
+		Target:  target,
+		Objective: Objective{
+			Primary:        draft.Primary,
+			Intent:         strings.TrimSpace(draft.Intent),
+			Deliverables:   deliverables,
+			Constraints:    constraints,
+			StopConditions: stopConditions,
+			Acceptance:     acceptance,
+		},
+		CreatedAt: types.NowMs(),
+	}
+}
+
 // Draft is the JSON contract the model answers a /goal request with. It
 // carries no hash: the host resolves and hashes target_file itself.
 type Draft struct {
-	TargetFile   string            `json:"target_file"`
-	TargetScope  string            `json:"target_scope,omitempty"`
-	Primary      string            `json:"primary"`
-	Intent       string            `json:"intent,omitempty"`
-	Deliverables []string          `json:"deliverables,omitempty"`
-	Constraints  map[string]string `json:"constraints,omitempty"`
-	Acceptance   []Criterion       `json:"acceptance"`
+	TargetFile     string            `json:"target_file"`
+	TargetVersion  string            `json:"target_version,omitempty"`
+	TargetScope    string            `json:"target_scope,omitempty"`
+	Primary        string            `json:"primary"`
+	Intent         string            `json:"intent,omitempty"`
+	Deliverables   []string          `json:"deliverables,omitempty"`
+	Constraints    map[string]string `json:"constraints,omitempty"`
+	StopConditions []string          `json:"stop_conditions,omitempty"`
+	Acceptance     []Criterion       `json:"acceptance"`
 }
 
 // ParseDraft pulls the first fenced ```json block (or, failing that, the

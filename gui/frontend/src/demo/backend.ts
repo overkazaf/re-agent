@@ -6,6 +6,8 @@ import type { AppAPI } from '../lib/api'
 import type {
   ApprovalDecision,
   ApprovalDTO,
+  AuditCheckDTO,
+  AuditVerdict,
   BinaryTerrainDTO,
   CommandResultDTO,
   EvidenceRecord,
@@ -316,6 +318,12 @@ function makeSavedSessions(): SavedDemoSession[] {
         {
           id: 'H-001',
           claim: 'chall.js 使用单字节 XOR（key=0x2a）编码目标令牌，解码结果 0xaf{warmup_deck} 可通过校验',
+          scope: 'chall.js::checkToken (17-byte XOR payload)',
+          falsifiers: [
+            '篡改任意字符后仍输出 accepted',
+            '校验结果依赖外部环境变量而非静态 encoded 数组',
+          ],
+          nextTest: "执行 node chall.js '0xaf{warmup_deck}' 与非法输入做正反双例重放",
           confidence: 0.98,
           supporting: ['ev_001', 'ev_002', 'ev_003'],
           status: 'active',
@@ -334,6 +342,7 @@ function makeSavedSessions(): SavedDemoSession[] {
           excerpt: 'const key = 0x2a;\nconst encoded = [26, 82, 75, 76, 81, 93, 75, 88, 71, 95, 90, 117, 78, 79, 73, 65, 87];',
           artifact: 'chall.js',
           sha256: '9e4a7c2b1f08d6e35c14a8b7d201f93e41c7b8a2f6e5d4c3b2a10987654321ab',
+          untrustedInput: true,
           bytes: 436,
           createdAt: now - 3600_000,
         },
@@ -354,7 +363,16 @@ function makeSavedSessions(): SavedDemoSession[] {
           view: 'dynamic',
           summary: "node chall.js '0xaf{warmup_deck}' -> accepted; negative -> rejected",
           excerpt: 'case 1 (positive): exit=0 stdout="accepted"\ncase 2 (negative): exit=1 stdout="rejected"',
-          verification: { build: false, passed: 2, total: 2, id: 'ev_003' },
+          verification: {
+            build: false,
+            passed: 2,
+            total: 2,
+            id: 'ev_003',
+            status: 'verified',
+            boundaryPassed: 1,
+            differentialCases: 2,
+            uncoveredPaths: [],
+          },
           supports: ['H-001'],
           bytes: 94,
           createdAt: now - 3540_000,
@@ -522,6 +540,8 @@ interface DemoSession {
   goal: GoalSummaryDTO | null
   sandbox: SandboxDTO
   findings: FindingDTO[]
+  auditVerdict?: AuditVerdict
+  auditChecks?: AuditCheckDTO[]
   caps: string[]
   closed: boolean
 }
@@ -741,6 +761,8 @@ export class DemoBackend implements AppAPI {
         goal: s.goal
           ? {
               ...s.goal,
+              deliverables: s.goal.deliverables ? [...s.goal.deliverables] : undefined,
+              stopConditions: s.goal.stopConditions ? [...s.goal.stopConditions] : undefined,
               constraints: s.goal.constraints ? { ...s.goal.constraints } : undefined,
               criteria: s.goal.criteria.map((c) => ({ ...c })),
             }
@@ -751,8 +773,112 @@ export class DemoBackend implements AppAPI {
           recentActions: s.sandbox.recentActions.map((a) => ({ ...a })),
         },
         findings: s.findings.map((f) => ({ ...f })),
+        auditVerdict: s.auditVerdict,
+        auditChecks: s.auditChecks ? s.auditChecks.map((c) => ({ ...c })) : undefined,
       },
     }
+  }
+
+  private evaluateDemoAudit(s: DemoSession): { verdict: AuditVerdict; checks: AuditCheckDTO[] } {
+    const byId = new Map(s.evidence.map((e) => [e.id, e]))
+    const activeHyps = s.hypotheses.filter((h) => h.status === 'active' || h.status === 'revised')
+    const unresolvedHyps = s.hypotheses.filter((h) => h.status === 'reevaluate')
+
+    // 1. Direct evidence
+    const unsupported = activeHyps.filter(
+      (h) => !h.supporting || h.supporting.filter((id) => {
+        const rec = byId.get(id)
+        return Boolean(rec && !rec.isError)
+      }).length === 0,
+    )
+    const check1: AuditCheckDTO = {
+      id: 'direct_evidence',
+      label: '结论有直接账本证据支撑',
+      pass: activeHyps.length > 0 && unsupported.length === 0,
+      detail:
+        activeHyps.length === 0
+          ? '尚未建立活跃假设'
+          : unsupported.length > 0
+            ? `缺少直接证据: ${unsupported.map((h) => h.id).join(', ')}`
+            : `${activeHyps.length} 条活跃结论均锚定有效账本记录`,
+    }
+
+    // 2. Failure & boundary coverage (rejects single-sample hits as needs_more_evidence)
+    const verRuns = s.evidence.filter((e) => e.kind === 'verification_result' && e.verification)
+    const bestPass = verRuns
+      .filter((e) => (e.verification?.total ?? 0) > 0 && e.verification?.passed === e.verification?.total)
+      .sort((a, b) => (b.verification?.total ?? 0) - (a.verification?.total ?? 0))[0]
+    const bestStats = bestPass?.verification
+    const verOk = Boolean(
+      bestStats &&
+        bestStats.total >= 2 &&
+        bestStats.status !== 'candidate' &&
+        ((bestStats.boundaryPassed ?? 0) > 0 || (bestStats.differentialCases ?? 0) >= 2),
+    )
+    const check2: AuditCheckDTO = {
+      id: 'failure_edge_coverage',
+      label: '证据覆盖边界与失败输入（非单样本命中）',
+      pass: verOk,
+      detail: !bestStats
+        ? '尚无通过的 verify_artifact 重放记录'
+        : bestStats.total < 2 || bestStats.status === 'candidate'
+          ? `仅单样本命中 (${bestStats.passed}/${bestStats.total}, candidate)，需补充边界/失败用例`
+          : `${bestStats.passed}/${bestStats.total} 重放通过 (verified · boundary=${bestStats.boundaryPassed ?? 0}, diff=${bestStats.differentialCases ?? bestStats.total})`,
+    }
+
+    // 3. Simpler alternative & cascade check
+    const check3: AuditCheckDTO = {
+      id: 'simpler_alternative',
+      label: '已排查更简单替代解释与单视角偏差',
+      pass: activeHyps.length > 0 && unresolvedHyps.length === 0,
+      detail:
+        unresolvedHyps.length > 0
+          ? `仍有未结案级联假设: ${unresolvedHyps.map((h) => h.id).join(', ')}`
+          : '诱饵与级联分支已清理，活跃结论具双视角与反例边界',
+    }
+
+    // 4. Scope overreach (Gate 1 blocked attempts mean 0 unauthorized accesses succeeded)
+    const check4: AuditCheckDTO = {
+      id: 'scope_overreach',
+      label: '无任务范围外文件/网络/设备/凭据越权访问',
+      pass: true,
+      detail:
+        s.sandbox.deniedCount > 0
+          ? `0 次越权成功（Capability Sandbox 已拦截 ${s.sandbox.deniedCount} 次越界探测）`
+          : '0 次任务范围外越权访问',
+    }
+
+    // 5. Artifact-process lineage & untrusted-input guard
+    const untrustedOnly = activeHyps.filter(
+      (h) =>
+        (h.supporting?.length ?? 0) > 0 &&
+        (h.supporting ?? []).every((id) => Boolean(byId.get(id)?.untrustedInput)),
+    )
+    const check5: AuditCheckDTO = {
+      id: 'artifact_lineage',
+      label: '交付产物与记录步骤血缘一致（且非仅依赖不可信原始文本）',
+      pass: verRuns.length > 0 && untrustedOnly.length === 0,
+      detail:
+        untrustedOnly.length > 0
+          ? `结论仅依赖未核验不可信样本输出: ${untrustedOnly.map((h) => h.id).join(', ')}`
+          : verRuns.length === 0
+            ? '尚无带血缘溯源的验证产物'
+            : `${verRuns.length} 条验证产物已绑定不可篡改账本血缘`,
+    }
+
+    const checks = [check1, check2, check3, check4, check5]
+    const allPass = checks.every((c) => c.pass)
+    return {
+      verdict: allPass ? 'accepted' : 'needs_more_evidence',
+      checks,
+    }
+  }
+
+  private refreshAuditState(s: DemoSession): void {
+    if (s.hypotheses.length === 0 && s.evidence.length === 0) return
+    const evalRes = this.evaluateDemoAudit(s)
+    s.auditVerdict = evalRes.verdict
+    s.auditChecks = evalRes.checks
   }
 
   private recordSandboxAction(
@@ -762,6 +888,7 @@ export class DemoBackend implements AppAPI {
     decision: 'granted' | 'denied',
     capability = '',
     origin = '',
+    hypothesisId?: string,
   ): void {
     if (decision === 'granted') s.sandbox.grantedCount += 1
     else s.sandbox.deniedCount += 1
@@ -773,6 +900,7 @@ export class DemoBackend implements AppAPI {
       sha256: shortSha16(`${tool}:${subject}`),
       decision,
       origin,
+      hypothesisId: hypothesisId || undefined,
     })
     if (s.sandbox.recentActions.length > 16) {
       s.sandbox.recentActions = s.sandbox.recentActions.slice(-16)
@@ -782,9 +910,30 @@ export class DemoBackend implements AppAPI {
   private armGoalContract(s: DemoSession, targetFile: string, primary: string): void {
     s.goalText = primary
     s.sandbox.active = true
+    const isCarrier = targetFile.includes('carrier')
+    const isChall = targetFile.includes('chall')
     s.goal = {
       primary,
+      intent: isCarrier
+        ? '在本地沙箱内验证 carrier.bin 与伴生文件的真实载荷，排除 PDF/ZIP 诱饵并通过双例重放与独立审计'
+        : isChall
+          ? '还原 chall.js 校验算法并通过正反输入重放验证'
+          : '完成静态与动态交叉取证、产物重放验证与独立对抗审计',
       targetFile,
+      targetSha256: `${shortSha16(targetFile)}${shortSha16(s.info.workspace)}`,
+      targetArch: isCarrier ? 'raw-blob/little-endian' : isChall ? 'js-v8/noarch' : 'generic',
+      targetFormat: isCarrier ? 'Firmware blob (PDF+ZIP polyglot)' : isChall ? 'Node.js script' : 'binary',
+      targetVersion: isCarrier ? 'lab-rev2' : 'demo-v1',
+      targetScope: isCarrier
+        ? '仅限本地工作区 carrier.bin 与伴生 artifact.txt；禁止外网探测与宿主越权'
+        : '仅限当前工作区样本文件',
+      deliverables: isCarrier
+        ? ['verified_flag_payload', 'reproducible_decode_harness', 'evidence_cited_writeup']
+        : ['candidate_algorithm', 'verification_replay_log', 'solve_note'],
+      stopConditions: [
+        '动态重放连续失败 3 次即暂停并请求人工复核',
+        '若目标依赖不可获得的远程密钥则降级为未验证假设',
+      ],
       accepted: true,
       constraints: {
         network: s.sandbox.granted.includes('network') ? 'allow' : 'deny',
@@ -836,6 +985,9 @@ export class DemoBackend implements AppAPI {
     spec: {
       id?: string
       claim: string
+      scope?: string
+      falsifiers?: string[]
+      nextTest?: string
       confidence: number
       status?: Hypothesis['status']
       supporting?: string[]
@@ -850,6 +1002,9 @@ export class DemoBackend implements AppAPI {
       const existing = s.hypotheses.find((h) => h.id === spec.id)
       if (existing) {
         existing.claim = spec.claim
+        if (spec.scope !== undefined) existing.scope = spec.scope
+        if (spec.falsifiers !== undefined) existing.falsifiers = [...spec.falsifiers]
+        if (spec.nextTest !== undefined) existing.nextTest = spec.nextTest
         existing.confidence = spec.confidence
         if (spec.status) existing.status = spec.status
         if (spec.supporting) {
@@ -874,6 +1029,9 @@ export class DemoBackend implements AppAPI {
     const hyp: Hypothesis = {
       id: spec.id ?? `H-${String(s.hypSeq).padStart(3, '0')}`,
       claim: spec.claim,
+      scope: spec.scope,
+      falsifiers: spec.falsifiers ? [...spec.falsifiers] : undefined,
+      nextTest: spec.nextTest,
       confidence: spec.confidence,
       status: spec.status ?? 'active',
       supporting: spec.supporting,
@@ -1375,6 +1533,9 @@ export class DemoBackend implements AppAPI {
       }
       const created = this.upsertHypothesis(s, {
         claim,
+        scope: req.scope?.trim() || undefined,
+        falsifiers: req.falsifiers?.map((f) => f.trim()).filter(Boolean),
+        nextTest: req.nextTest?.trim() || req.expCommand?.trim() || undefined,
         confidence: Math.max(0.05, Math.min(0.99, req.confidence ?? 0.75)),
         supporting: evIds.length > 0 ? evIds : undefined,
         dependsOn: deps.length > 0 ? deps : undefined,
@@ -1419,6 +1580,9 @@ export class DemoBackend implements AppAPI {
 
     if (req.action === 'revise') {
       if (req.claim?.trim()) hyp.claim = req.claim.trim()
+      if (req.scope !== undefined) hyp.scope = req.scope.trim() || undefined
+      if (req.falsifiers !== undefined) hyp.falsifiers = req.falsifiers.map((f) => f.trim()).filter(Boolean)
+      if (req.nextTest !== undefined) hyp.nextTest = req.nextTest.trim() || undefined
       if (req.confidence !== undefined) hyp.confidence = Math.max(0.05, Math.min(0.99, req.confidence))
       if (req.dependsOn) hyp.dependsOn = deps
       if (req.note !== undefined) hyp.note = req.note.trim()
@@ -1454,6 +1618,9 @@ export class DemoBackend implements AppAPI {
       if (req.note?.trim()) hyp.note = req.note.trim()
       hyp.updatedAt = Date.now()
     } else if (req.action === 'meta') {
+      if (req.scope !== undefined) hyp.scope = req.scope.trim() || undefined
+      if (req.falsifiers !== undefined) hyp.falsifiers = req.falsifiers.map((f) => f.trim()).filter(Boolean)
+      if (req.nextTest !== undefined) hyp.nextTest = req.nextTest.trim() || undefined
       if (req.confidence !== undefined) hyp.confidence = Math.max(0.05, Math.min(0.99, req.confidence))
       if (req.dependsOn) hyp.dependsOn = deps
       if (req.note !== undefined) hyp.note = req.note.trim()
@@ -1493,11 +1660,11 @@ export class DemoBackend implements AppAPI {
 
     const evalRes = this.evaluateSandboxCommand(s, exp.command)
     if (evalRes.deniedCap) {
-      this.recordSandboxAction(s, 'run_command', exp.command, 'denied', evalRes.deniedCap, 'task-sandbox')
+      this.recordSandboxAction(s, 'run_command', exp.command, 'denied', evalRes.deniedCap, 'task-sandbox', hyp.id)
       s.toolsFailed += 1
     } else {
       if (s.sandbox.active) {
-        this.recordSandboxAction(s, 'run_command', exp.command, 'granted', '', 'workspace-local')
+        this.recordSandboxAction(s, 'run_command', exp.command, 'granted', '', 'workspace-local', hyp.id)
       }
       if (evalRes.ok) s.toolsOk += 1
       else s.toolsFailed += 1
@@ -1591,8 +1758,9 @@ export class DemoBackend implements AppAPI {
     }
     const total = req.cases.length
     const allPass = passed === total
+    const isVerified = allPass && total >= 2
     if (s.sandbox.active) {
-      this.recordSandboxAction(s, 'verify_artifact', req.artifact, 'granted', '', 'workspace-local')
+      this.recordSandboxAction(s, 'verify_artifact', req.artifact, 'granted', '', 'workspace-local', req.hypothesisId)
     }
     if (allPass) s.toolsOk += 1
     else s.toolsFailed += 1
@@ -1605,13 +1773,22 @@ export class DemoBackend implements AppAPI {
       isError: !allPass,
       artifact: req.artifact.trim(),
       sha256: sha,
-      verification: { build: true, passed, total },
+      verification: {
+        build: true,
+        passed,
+        total,
+        status: isVerified ? 'verified' : 'candidate',
+        boundaryPassed: isVerified ? Math.max(1, total - 1) : 0,
+        differentialCases: total,
+        uncoveredPaths: isVerified ? [] : ['缺少失败/边界样本覆盖（单样本命中仍处于 candidate）'],
+      },
       summary: `verify_artifact(${req.artifact}) → ${passed}/${total} passed`,
       excerpt: lines.join('\n'),
       supports: allPass && req.hypothesisId ? [req.hypothesisId] : undefined,
       contradicts: !allPass && req.hypothesisId ? [req.hypothesisId] : undefined,
     })
     if (ev.verification) ev.verification.id = ev.id
+    this.refreshAuditState(s)
 
     if (req.hypothesisId) {
       const hyp = s.hypotheses.find((h) => h.id === req.hypothesisId)
@@ -2029,6 +2206,7 @@ export class DemoBackend implements AppAPI {
               : `Auditor ${auditor} (${auditorModel}) verified ${hypCount} hypotheses in isolated context.`,
           supports: supportedIds,
         })
+        this.refreshAuditState(s)
         if (s.re) {
           s.re.hypotheses = s.hypotheses.filter((h) => h.status !== 'rejected').length
           s.re.evidence = s.evidence.length
@@ -2315,6 +2493,7 @@ export class DemoBackend implements AppAPI {
     argsText: string,
     preview: string,
     durationMs: number,
+    hypothesisId?: string,
   ): Promise<boolean> {
     s.stage = 'tool'
     s.phaseText = name
@@ -2352,19 +2531,42 @@ export class DemoBackend implements AppAPI {
     s.activeTool = ''
     s.toolStartedAt = 0
     if (s.sandbox.active && !name.startsWith('hypothesis_')) {
-      this.recordSandboxAction(s, name, argsText, 'granted', '', 'workspace-local')
+      this.recordSandboxAction(s, name, argsText, 'granted', '', 'workspace-local', hypothesisId)
     }
     if (name !== 'hypothesis_create' && name !== 'hypothesis_update') {
       const isVerify = name === 'verify_artifact'
       const isWrite = name === 'write_file'
+      const isRawSampleObs = [
+        'read_file',
+        'ctf_triage',
+        'carve_artifacts',
+        'find_bytes',
+        'entropy_scan',
+        'binary_inspect',
+        'anti_analysis',
+        'apk_inspect',
+        'extract_symbols',
+      ].includes(name)
       this.addEvidence(s, {
         source: name,
         kind: isVerify ? 'verification_result' : isWrite ? 'artifact' : 'tool_observation',
         view: isVerify ? 'dynamic' : 'static',
         summary: `${name}(${argsText}) → ${preview}`,
         excerpt: `args: ${argsText}\noutput: ${preview}`,
-        artifact: isWrite ? argsText : undefined,
-        verification: isVerify ? { build: false, passed: 2, total: 2 } : undefined,
+        artifact: isWrite ? argsText : isVerify ? argsText : undefined,
+        sha256: isVerify || isWrite ? shortSha16(`${name}:${argsText}:${preview}`) : undefined,
+        untrustedInput: isRawSampleObs ? true : undefined,
+        verification: isVerify
+          ? {
+              build: true,
+              passed: 2,
+              total: 2,
+              status: 'verified',
+              boundaryPassed: 1,
+              differentialCases: 2,
+              uncoveredPaths: ['超大载荷 (>1MB) 边界未测'],
+            }
+          : undefined,
       })
     }
     this.emitLoop(s.info.id, [
@@ -2384,6 +2586,7 @@ export class DemoBackend implements AppAPI {
       sandboxDeniedCap?: string
       evidenceKind?: EvidenceRecord['kind']
       contradicts?: string[]
+      hypothesisId?: string
     },
   ): Promise<EvidenceRecord | null> {
     const execProvider = s.executor
@@ -2423,9 +2626,9 @@ export class DemoBackend implements AppAPI {
     s.toolStartedAt = 0
 
     if (opts.sandboxDeniedCap) {
-      this.recordSandboxAction(s, opts.name, opts.argsText, 'denied', opts.sandboxDeniedCap, 'task-sandbox')
+      this.recordSandboxAction(s, opts.name, opts.argsText, 'denied', opts.sandboxDeniedCap, 'task-sandbox', opts.hypothesisId)
     } else if (s.sandbox.active) {
-      this.recordSandboxAction(s, opts.name, opts.argsText, 'granted', '', 'workspace-local')
+      this.recordSandboxAction(s, opts.name, opts.argsText, 'granted', '', 'workspace-local', opts.hypothesisId)
     }
 
     const ev = this.addEvidence(s, {
@@ -2604,10 +2807,17 @@ export class DemoBackend implements AppAPI {
       this.upsertHypothesis(s, {
         id: 'H-001',
         claim: 'chall.js 使用单字节 XOR（key=0x2a）编码预期令牌，解码值 0xaf{warmup_deck} 待动态验证',
+        scope: 'chall.js::checkToken (单字节 XOR 0x2a 校验)',
+        falsifiers: [
+          '传入篡改令牌后依然输出 accepted',
+          '运行时校验依赖外部环境变量而非静态 encoded 数组',
+        ],
+        nextTest: "运行 node chall.js '0xaf{warmup_deck}' 及错误令牌做正反双例重放",
         confidence: 0.82,
         supporting: s.evidence.slice(-2).map((e) => e.id),
         status: 'active',
       })
+      this.refreshAuditState(s)
       this.pushPlan(
         s,
         [
@@ -2699,23 +2909,39 @@ export class DemoBackend implements AppAPI {
         s.toolsOk += 1
         s.activeTool = ''
         s.toolStartedAt = 0
+        this.recordSandboxAction(s, 'run_command', "node chall.js '0xaf{warmup_deck}'", 'granted', '', 'operator-approval', 'H-001')
         const verEv = this.addEvidence(s, {
           source: 'run_command',
           kind: 'verification_result',
           view: 'dynamic',
+          artifact: 'chall.js',
+          sha256: shortSha16("chall.js:0xaf{warmup_deck}:accepted"),
           summary: "node chall.js '0xaf{warmup_deck}' → accepted (exit 0)",
           excerpt: "$ node chall.js '0xaf{warmup_deck}'\naccepted\nexit_code=0",
-          verification: { build: false, passed: 1, total: 1 },
+          verification: {
+            build: false,
+            passed: 1,
+            total: 1,
+            status: 'candidate',
+            boundaryPassed: 0,
+            differentialCases: 1,
+            uncoveredPaths: ['负例/异常令牌拒绝路径未测（单样本命中）'],
+          },
           supports: ['H-001'],
         })
+        if (verEv.verification) verEv.verification.id = verEv.id
         this.upsertHypothesis(s, {
           id: 'H-001',
           claim: 'chall.js 单字节 XOR(0x2a) 令牌 0xaf{warmup_deck} 已通过本地运行校验',
+          scope: 'chall.js::checkToken (单字节 XOR 0x2a 校验)',
+          falsifiers: ['非法/空令牌输入被误判为 accepted'],
+          nextTest: '补充负例与边界输入重放以从 candidate 晋升为 verified',
           confidence: 0.98,
           supporting: [verEv.id],
           status: 'active',
           note: `Confirmed dynamically (${verEv.id}) · approval=${decision}`,
         })
+        this.refreshAuditState(s)
         this.emitLoop(s.info.id, [
           makeLoopEvent({ type: 'tool_end', name: 'run_command', ok: true, ms: cmdRun.ms, preview: 'stdout: accepted (exit 0)' }),
         ])
@@ -2834,6 +3060,9 @@ export class DemoBackend implements AppAPI {
       this.upsertHypothesis(s, {
         id: 'H-001',
         claim: '偏移 0x21 的 %PDF-1.7 是仅含单 Catalog 对象的极简空壳，无隐藏流载荷',
+        scope: 'carrier.bin @ 0x21..0x5b (%PDF-1.7 区段)',
+        falsifiers: ['PDF 对象树存在隐藏 /FlateDecode 流或增量更新段'],
+        nextTest: '核对 %%EOF 边界与全部 PDF 对象字典确认无隐藏载荷',
         confidence: 0.92,
         supporting: ['ev_001', 'ev_002'],
         status: 'active',
@@ -2841,6 +3070,12 @@ export class DemoBackend implements AppAPI {
       this.upsertHypothesis(s, {
         id: 'H-002',
         claim: '偏移 0x5f 的 PK_0x5f ZIP 局部头内嵌了压缩加密的真实 Flag 数据流',
+        scope: 'carrier.bin @ 0x5f..0x78 (PK_0x5f 局部头)',
+        falsifiers: [
+          'unzip -t 报错缺失 End-of-Central-Directory (EOCD)',
+          '局部头之后不存在有效 Deflate 压缩流',
+        ],
+        nextTest: '执行 unzip -t carrier.bin 验证 PK_0x5f 压缩流完整性',
         confidence: 0.84,
         supporting: ['ev_002', 'ev_003'],
         status: 'active',
@@ -2857,12 +3092,16 @@ export class DemoBackend implements AppAPI {
       this.upsertHypothesis(s, {
         id: 'H-003',
         claim: '用偏移 0x00 明文前缀派生密钥即可解密 H-002 中的 PK_0x5f 载荷流',
+        scope: 'carrier.bin @ 0x00..0x20 前缀 → PK_0x5f 派生链',
+        falsifiers: ['上游父假设 H-002 被证伪（PK_0x5f 仅为截断诱饵）'],
+        nextTest: '待 H-002 解压验证通过后测试前缀派生密钥',
         confidence: 0.76,
         supporting: ['ev_003', 'ev_004'],
         dependsOn: ['H-002'],
         status: 'active',
         note: '依赖上游父假设 H-002 成立 (dependsOn: H-002)：仅当 PK_0x5f 为有效压缩流时，前缀派生密钥的推论才成立',
       })
+      this.refreshAuditState(s)
       if (!(await this.runTool(s, 'hypothesis_create', 'H-001, H-002, H-003 (dependsOn: H-002)', 'registered 3 hypotheses backed by ev_001..ev_004', 260))) {
         return this.finishAborted(s)
       }
@@ -2933,6 +3172,7 @@ export class DemoBackend implements AppAPI {
           errorMsg: 'capability "network" denied by task sandbox (grant via /cap network on)',
           durationMs: 240,
           sandboxDeniedCap: 'network',
+          hypothesisId: 'H-002',
         })
         if (!netEv) return this.finishAborted(s)
         this.emitNotice(
@@ -2941,7 +3181,7 @@ export class DemoBackend implements AppAPI {
           `[Gate 1 · Sandbox] blocked run_command(curl): capability "network" denied (${netEv.id})`,
         )
       } else {
-        if (!(await this.runTool(s, 'run_command', 'curl -sI https://ctf-hint.example.invalid/carrier', 'network=on override · offline lab host unreachable', 220))) {
+        if (!(await this.runTool(s, 'run_command', 'curl -sI https://ctf-hint.example.invalid/carrier', 'network=on override · offline lab host unreachable', 220, 'H-002'))) {
           return this.finishAborted(s)
         }
       }
@@ -2954,6 +3194,7 @@ export class DemoBackend implements AppAPI {
         durationMs: 260,
         evidenceKind: 'runtime_trace',
         contradicts: ['H-002'],
+        hypothesisId: 'H-002',
       })
       if (!dynErrEv) return this.finishAborted(s)
 
@@ -3029,11 +3270,14 @@ export class DemoBackend implements AppAPI {
       }
       const decEvId = s.evidence[s.evidence.length - 1]?.id ?? 'ev_008'
 
-      if (!(await this.runTool(s, 'verify_artifact', 'base64 round-trip & format check', '2/2 assertions passed → flag{demo_reverse_lab_flag}', 280))) {
+      if (!(await this.runTool(s, 'verify_artifact', 'base64 round-trip & format check', '2/2 assertions passed → flag{demo_reverse_lab_flag}', 280, 'H-004'))) {
         return this.finishAborted(s)
       }
       const verEv = s.evidence[s.evidence.length - 1]
-      if (verEv) verEv.supports = ['H-004']
+      if (verEv) {
+        verEv.supports = ['H-004']
+        if (verEv.verification) verEv.verification.id = verEv.id
+      }
       const verEvId = verEv?.id ?? 'ev_009'
 
       s.stage = 'think'
@@ -3041,6 +3285,12 @@ export class DemoBackend implements AppAPI {
       this.upsertHypothesis(s, {
         id: 'H-004',
         claim: 'carrier.bin 中 PK_0x5f 为诱饵头，真实 Flag 位于伴生文件 artifact.txt Base64 载荷 flag{demo_reverse_lab_flag}',
+        scope: 'reverse-lab/artifact.txt (伴生 Base64 载荷)',
+        falsifiers: [
+          'Base64 往返编码重放与原始串不一致',
+          '畸形 Base64/边界输入未被正确拒绝',
+        ],
+        nextTest: '交由隔离对抗审计席 (/audit) 核查 5 项清单与产物血缘',
         confidence: 0.96,
         supporting: [readEvId, decEvId, verEvId],
         status: 'active',
@@ -3058,6 +3308,7 @@ export class DemoBackend implements AppAPI {
         ],
         note: `兼具静态解码 (${decEvId}) 与动态重放 (${verEvId}, 2/2 passed) 双视角交叉验证支撑`,
       })
+      this.refreshAuditState(s)
       if (!(await this.runTool(s, 'hypothesis_update', 'reject H-002 · cascade H-003 · create H-004', `H-004 active (96%) backed by ${decEvId}+${verEvId}`, 220))) {
         return this.finishAborted(s)
       }

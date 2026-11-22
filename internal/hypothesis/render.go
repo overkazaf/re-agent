@@ -14,8 +14,13 @@ func Render(hyp types.Hypothesis) string {
 		types.HypRejected:   " [rejected]",
 		types.HypRevised:    " [revised]",
 		types.HypReevaluate: " [needs re-examination]",
+		types.HypWeakened:   " [weakened]",
+		types.HypFrozen:     " [frozen]",
 	}
 	line := fmt.Sprintf("%s (%.2f)%s %s", hyp.ID, hyp.Confidence, flags[hyp.Status], hyp.Claim)
+	if hyp.Scope != "" {
+		line += fmt.Sprintf(" [scope:%s]", hyp.Scope)
+	}
 	if len(hyp.Supporting) > 0 {
 		line += fmt.Sprintf(" +support:%s", strings.Join(hyp.Supporting, ","))
 	}
@@ -24,6 +29,9 @@ func Render(hyp types.Hypothesis) string {
 	}
 	if len(hyp.DependsOn) > 0 {
 		line += fmt.Sprintf(" derives-from:%s", strings.Join(hyp.DependsOn, ","))
+	}
+	if hyp.NextTest != "" {
+		line += fmt.Sprintf(" next:%s", hyp.NextTest)
 	}
 	if hyp.Note != "" {
 		line += " — " + hyp.Note
@@ -56,9 +64,11 @@ func prioritize(hypotheses []types.Hypothesis) []types.Hypothesis {
 	out := append([]types.Hypothesis{}, hypotheses...)
 	weight := map[types.HypothesisStatus]int{
 		types.HypReevaluate: 0,
-		types.HypActive:     1,
-		types.HypRevised:    2,
-		types.HypRejected:   3,
+		types.HypFrozen:     1,
+		types.HypWeakened:   2,
+		types.HypActive:     3,
+		types.HypRevised:    4,
+		types.HypRejected:   5,
 	}
 	for i := 1; i < len(out); i++ {
 		for j := i; j > 0 && weight[out[j].Status] < weight[out[j-1].Status]; j-- {

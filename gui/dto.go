@@ -211,26 +211,35 @@ type GoalCriterionDTO struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-// GoalSummaryDTO exposes the active /goal task declaration and gate verdicts.
+// GoalSummaryDTO exposes the active /goal task declaration and gate verdicts,
+// preserving strict Target State vs Objective State separation (§8.1).
 type GoalSummaryDTO struct {
-	Primary      string             `json:"primary"`
-	Intent       string             `json:"intent,omitempty"`
-	TargetFile   string             `json:"targetFile,omitempty"`
-	TargetSHA256 string             `json:"targetSha256,omitempty"`
-	Accepted     bool               `json:"accepted"`
-	Constraints  map[string]string  `json:"constraints,omitempty"`
-	Criteria     []GoalCriterionDTO `json:"criteria"`
+	Primary        string             `json:"primary"`
+	Intent         string             `json:"intent,omitempty"`
+	TargetFile     string             `json:"targetFile,omitempty"`
+	TargetSHA256   string             `json:"targetSha256,omitempty"`
+	TargetArch     string             `json:"targetArch,omitempty"`
+	TargetFormat   string             `json:"targetFormat,omitempty"`
+	TargetVersion  string             `json:"targetVersion,omitempty"`
+	TargetScope    string             `json:"targetScope,omitempty"`
+	Deliverables   []string           `json:"deliverables,omitempty"`
+	StopConditions []string           `json:"stopConditions,omitempty"`
+	Accepted       bool               `json:"accepted"`
+	Constraints    map[string]string  `json:"constraints,omitempty"`
+	Criteria       []GoalCriterionDTO `json:"criteria"`
 }
 
-// SandboxActionDTO mirrors security.ActionRecord for the governance graph.
+// SandboxActionDTO mirrors security.ActionRecord for the governance graph,
+// optionally binding dynamic actions to the hypothesis they test (§8.4).
 type SandboxActionDTO struct {
-	At         int64  `json:"at"`
-	Tool       string `json:"tool"`
-	Capability string `json:"capability,omitempty"`
-	Subject    string `json:"subject"`
-	SHA256     string `json:"sha256"`
-	Decision   string `json:"decision"` // granted | denied | unmanaged
-	Origin     string `json:"origin,omitempty"`
+	At           int64  `json:"at"`
+	Tool         string `json:"tool"`
+	Capability   string `json:"capability,omitempty"`
+	Subject      string `json:"subject"`
+	SHA256       string `json:"sha256"`
+	Decision     string `json:"decision"` // granted | denied | unmanaged
+	Origin       string `json:"origin,omitempty"`
+	HypothesisID string `json:"hypothesisId,omitempty"`
 }
 
 // SandboxDTO snapshots the task-scoped capability sandbox and its action audit log.
@@ -244,8 +253,8 @@ type SandboxDTO struct {
 }
 
 // LedgerDTO carries the live evidence ledger, hypothesis stack, and governance
-// state (goal contract, capability sandbox, arbitrator findings) for the GUI.
-// Slices are always non-nil ([] rather than null on the wire).
+// state (goal contract, capability sandbox, arbitrator findings, 5-check audit)
+// for the GUI. Slices are always non-nil ([] rather than null on the wire).
 type LedgerDTO struct {
 	Hypotheses      []types.Hypothesis     `json:"hypotheses"`
 	Evidence        []types.EvidenceRecord `json:"evidence"`
@@ -254,6 +263,8 @@ type LedgerDTO struct {
 	Goal            *GoalSummaryDTO        `json:"goal,omitempty"`
 	Sandbox         *SandboxDTO            `json:"sandbox,omitempty"`
 	Findings        []types.Finding        `json:"findings"`
+	AuditVerdict    types.AuditVerdict     `json:"auditVerdict,omitempty"`
+	AuditChecks     []types.AuditCheck     `json:"auditChecks,omitempty"`
 }
 
 // NewLedgerDTO copies the latest hypotheses and evidence records onto the wire
@@ -292,6 +303,9 @@ type HypothesisMutationDTO struct {
 	Action      string   `json:"action"`
 	ID          string   `json:"id,omitempty"`
 	Claim       string   `json:"claim,omitempty"`
+	Scope       string   `json:"scope,omitempty"`
+	Falsifiers  []string `json:"falsifiers,omitempty"`
+	NextTest    string   `json:"nextTest,omitempty"`
 	Confidence  *float64 `json:"confidence,omitempty"`
 	EvidenceIDs []string `json:"evidenceIds,omitempty"`
 	DependsOn   []string `json:"dependsOn,omitempty"`

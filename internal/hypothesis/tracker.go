@@ -79,6 +79,9 @@ func copyHypothesis(src *types.Hypothesis) types.Hypothesis {
 	if len(src.Contradicting) > 0 {
 		out.Contradicting = append([]string(nil), src.Contradicting...)
 	}
+	if len(src.Falsifiers) > 0 {
+		out.Falsifiers = append([]string(nil), src.Falsifiers...)
+	}
 	if len(src.DependsOn) > 0 {
 		out.DependsOn = append([]string(nil), src.DependsOn...)
 	}
@@ -242,6 +245,87 @@ func (t *Tracker) UpdateMeta(id string, confidence *float64, dependsOn []string,
 	return copyHypothesis(hyp), nil
 }
 
+// UpdateDetails updates the structured re-agent Hypothesis State fields (§8.3):
+// Scope (applicable module/function/offset range), Falsifiers (concrete
+// counterexamples that would refute the claim), and NextTest (next experiment
+// or trace). Nil pointer / nil slice arguments leave that field unchanged.
+func (t *Tracker) UpdateDetails(id string, scope *string, falsifiers []string, nextTest *string) (types.Hypothesis, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	hyp, err := t.locked(id)
+	if err != nil {
+		return types.Hypothesis{}, err
+	}
+	if scope != nil {
+		hyp.Scope = cleanField(*scope, 200)
+	}
+	if falsifiers != nil {
+		cleaned := make([]string, 0, len(falsifiers))
+		for _, item := range falsifiers {
+			c := cleanField(item, 200)
+			if c != "" && !contains(cleaned, c) {
+				cleaned = append(cleaned, c)
+			}
+		}
+		hyp.Falsifiers = cleaned
+	}
+	if nextTest != nil {
+		hyp.NextTest = cleanField(*nextTest, 240)
+	}
+	hyp.UpdatedAt = types.NowMs()
+	return copyHypothesis(hyp), nil
+}
+
+// Weaken downgrades a hypothesis after a non-confirming or contradicting
+// dynamic run (§8.4: "H-017 weakened", never disguised as "script succeeded").
+// Confidence is halved; if it falls below dropBelow, status moves to reevaluate
+// and dependents cascade.
+func (t *Tracker) Weaken(id, evidenceID, note string) (types.Hypothesis, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	hyp, err := t.locked(id)
+	if err != nil {
+		return types.Hypothesis{}, err
+	}
+	evID := strings.TrimSpace(evidenceID)
+	if evID != "" {
+		if contains(hyp.Contradicting, evID) {
+			return copyHypothesis(hyp), nil
+		}
+		hyp.Contradicting = append(hyp.Contradicting, evID)
+	}
+	hyp.Confidence = clamp(hyp.Confidence * 0.5)
+	if trimmed := strings.TrimSpace(util.Truncate(note, 200)); trimmed != "" {
+		hyp.Note = trimmed
+	}
+	hyp.UpdatedAt = types.NowMs()
+	if hyp.Confidence < dropBelow {
+		hyp.Status = types.HypReevaluate
+		t.cascadeLocked(hyp.ID)
+	} else {
+		hyp.Status = types.HypWeakened
+	}
+	return copyHypothesis(hyp), nil
+}
+
+// Freeze halts downstream reliance on a hypothesis pending conflict resolution
+// or operator intervention (§6 Defense ③), cascading reevaluate to dependents.
+func (t *Tracker) Freeze(id, note string) (types.Hypothesis, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	hyp, err := t.locked(id)
+	if err != nil {
+		return types.Hypothesis{}, err
+	}
+	hyp.Status = types.HypFrozen
+	if trimmed := strings.TrimSpace(util.Truncate(note, 200)); trimmed != "" {
+		hyp.Note = trimmed
+	}
+	hyp.UpdatedAt = types.NowMs()
+	t.cascadeLocked(hyp.ID)
+	return copyHypothesis(hyp), nil
+}
+
 // AddExperiment appends a planned falsification experiment to a hypothesis.
 // EvidenceID starts empty and can only be populated by RecordExperimentResult
 // after real host execution.
@@ -362,10 +446,14 @@ func (t *Tracker) backlink(hyp *types.Hypothesis) {
 // --- helpers -------------------------------------------------------------------
 
 func cleanClaim(claim string) string {
-	flat := stripANSI(claim)
+	return cleanField(claim, maxClaimChars)
+}
+
+func cleanField(value string, maxLen int) string {
+	flat := stripANSI(value)
 	flat = controlRE.ReplaceAllString(flat, " ")
 	flat = strings.TrimSpace(collapseSpaces(flat))
-	return util.Truncate(flat, maxClaimChars)
+	return util.Truncate(flat, maxLen)
 }
 
 func clamp(value float64) float64 {

@@ -31,6 +31,7 @@ import (
 	"github.com/overkazaf/re-agent/internal/tools"
 	"github.com/overkazaf/re-agent/internal/types"
 	"github.com/overkazaf/re-agent/internal/ui"
+	"github.com/overkazaf/re-agent/internal/verify"
 	"github.com/overkazaf/re-agent/internal/workflow"
 )
 
@@ -1126,16 +1127,31 @@ func ledgerOf(s *session) *LedgerDTO {
 		for k, v := range decl.Objective.Constraints {
 			constraints[k] = v
 		}
+		var deliverables []string
+		if len(decl.Objective.Deliverables) > 0 {
+			deliverables = append([]string(nil), decl.Objective.Deliverables...)
+		}
+		var stopConditions []string
+		if len(decl.Objective.StopConditions) > 0 {
+			stopConditions = append([]string(nil), decl.Objective.StopConditions...)
+		}
 		dto.Goal = &GoalSummaryDTO{
-			Primary:      decl.Objective.Primary,
-			Intent:       decl.Objective.Intent,
-			TargetFile:   decl.Target.File,
-			TargetSHA256: decl.Target.SHA256,
-			Accepted:     decl.Accepted,
-			Constraints:  constraints,
-			Criteria:     criteria,
+			Primary:        decl.Objective.Primary,
+			Intent:         decl.Objective.Intent,
+			TargetFile:     decl.Target.File,
+			TargetSHA256:   decl.Target.SHA256,
+			TargetArch:     decl.Target.Arch,
+			TargetFormat:   decl.Target.Format,
+			TargetVersion:  decl.Target.Version,
+			TargetScope:    decl.Target.Scope,
+			Deliverables:   deliverables,
+			StopConditions: stopConditions,
+			Accepted:       decl.Accepted,
+			Constraints:    constraints,
+			Criteria:       criteria,
 		}
 	}
+	blockedAttempts := 0
 	if s.state != nil && s.state.Sandbox != nil {
 		sb := s.state.Sandbox
 		grantsMap := sb.Granted()
@@ -1153,6 +1169,7 @@ func ledgerOf(s *session) *LedgerDTO {
 				grantedCnt++
 			}
 		}
+		blockedAttempts = deniedCnt
 		tail := allActions
 		if len(tail) > 10 {
 			tail = tail[len(tail)-10:]
@@ -1160,13 +1177,14 @@ func ledgerOf(s *session) *LedgerDTO {
 		recent := make([]SandboxActionDTO, 0, len(tail))
 		for _, act := range tail {
 			recent = append(recent, SandboxActionDTO{
-				At:         act.At,
-				Tool:       act.Tool,
-				Capability: string(act.Capability),
-				Subject:    act.Subject,
-				SHA256:     act.SHA256,
-				Decision:   string(act.Decision),
-				Origin:     act.Origin,
+				At:           act.At,
+				Tool:         act.Tool,
+				Capability:   string(act.Capability),
+				Subject:      act.Subject,
+				SHA256:       act.SHA256,
+				Decision:     string(act.Decision),
+				Origin:       act.Origin,
+				HypothesisID: matchActionHypothesisID(act.Subject, dto.Hypotheses),
 			})
 		}
 		dto.Sandbox = &SandboxDTO{
@@ -1178,7 +1196,35 @@ func ledgerOf(s *session) *LedgerDTO {
 			RecentActions: recent,
 		}
 	}
+	if len(dto.Hypotheses) > 0 || len(dto.Evidence) > 0 {
+		eval := verify.EvaluateAdversarialAudit(verify.AuditInput{
+			Hypotheses:      dto.Hypotheses,
+			Evidence:        dto.Evidence,
+			OverreachCount:  0,
+			BlockedAttempts: blockedAttempts,
+			Findings:        dto.Findings,
+		})
+		dto.AuditVerdict = eval.Verdict
+		dto.AuditChecks = eval.Checks
+	}
 	return dto
+}
+
+// matchActionHypothesisID binds a recorded sandbox action back to the
+// hypothesis whose experiment command matches subject (§8.4).
+func matchActionHypothesisID(subject string, hypotheses []types.Hypothesis) string {
+	trimmed := strings.TrimSpace(subject)
+	if trimmed == "" {
+		return ""
+	}
+	for _, hyp := range hypotheses {
+		for _, exp := range hyp.Experiments {
+			if strings.TrimSpace(exp.Command) == trimmed {
+				return hyp.ID
+			}
+		}
+	}
+	return ""
 }
 
 // pickAuditorName mirrors core.AgentLoop.auditProviderName seat selection for display.

@@ -1,6 +1,7 @@
 package goal
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -157,5 +158,81 @@ func TestDescribeRendersCriteria(t *testing.T) {
 		if got := criterion.Describe(); got != want {
 			t.Fatalf("Describe() = %q, want %q", got, want)
 		}
+	}
+}
+
+func TestTargetObjectiveSeparationAndStopConditions(t *testing.T) {
+	raw := `{
+  "target_file": "libshield.so",
+  "target_version": "4.2.1-arm64",
+  "target_scope": "request signing routine only; exclude UI/analytics",
+  "primary": "recover_request_signing_behavior",
+  "intent": "python harness reproduces the device signature byte-for-byte",
+  "deliverables": ["candidate_algorithm", "reproducible_python_harness", "device_replay_report"],
+  "constraints": {"network": "deny-by-default", "filesystem": "sample-workspace-only", "device": "approved-test-device"},
+  "stop_conditions": [
+    "replay fails 3 consecutive times on device",
+    "target depends on unrecoverable server-side secret"
+  ],
+  "acceptance": [
+    {"kind": "build_pass"},
+    {"kind": "replay_pass", "op": ">=", "value": 0.95},
+    {"kind": "differential_cases", "op": ">=", "value": 2}
+  ]
+}`
+	draft, err := ParseDraft(raw)
+	if err != nil {
+		t.Fatalf("ParseDraft failed: %v", err)
+	}
+	if draft.TargetVersion != "4.2.1-arm64" {
+		t.Fatalf("target_version lost: %+v", draft)
+	}
+	if len(draft.StopConditions) != 2 {
+		t.Fatalf("stop_conditions lost: %+v", draft.StopConditions)
+	}
+
+	hostTarget := Target{
+		File:   "libshield.so",
+		SHA256: "e3b0c44298fc1c149afbf4c8996fb924",
+		Format: "ELF",
+		Arch:   "arm64-v8a",
+	}
+	decl1 := BuildDeclaration("/goal recover signing", draft, hostTarget)
+	if decl1.Target.File != "libshield.so" || decl1.Target.SHA256 != hostTarget.SHA256 ||
+		decl1.Target.Arch != "arm64-v8a" || decl1.Target.Format != "ELF" ||
+		decl1.Target.Version != "4.2.1-arm64" || decl1.Target.Scope != draft.TargetScope {
+		t.Fatalf("target state incomplete: %+v", decl1.Target)
+	}
+	if decl1.Objective.Primary != "recover_request_signing_behavior" ||
+		len(decl1.Objective.Deliverables) != 3 ||
+		len(decl1.Objective.StopConditions) != 2 ||
+		len(decl1.Objective.Acceptance) != 3 {
+		t.Fatalf("objective state incomplete: %+v", decl1.Objective)
+	}
+
+	// Same Target State can back a different Objective State without drift or aliasing.
+	draft2 := draft
+	draft2.Primary = "verify_replay_risk"
+	draft2.Deliverables = []string{"replay_risk_report"}
+	draft2.StopConditions = []string{"server rejects stale timestamp"}
+	decl2 := BuildDeclaration("/goal check replay risk", draft2, hostTarget)
+	if decl2.Target != decl1.Target {
+		t.Fatalf("same sample should preserve identical Target State: %+v vs %+v", decl2.Target, decl1.Target)
+	}
+	if decl2.Objective.Primary == decl1.Objective.Primary {
+		t.Fatalf("objectives should be strictly independent: %+v", decl2.Objective)
+	}
+
+	// JSON round-trip keeps Target and Objective in separate top-level keys.
+	data, err := json.Marshal(decl1)
+	if err != nil {
+		t.Fatalf("marshal declaration: %v", err)
+	}
+	var roundTrip Declaration
+	if err := json.Unmarshal(data, &roundTrip); err != nil {
+		t.Fatalf("unmarshal declaration: %v", err)
+	}
+	if roundTrip.Target.Version != "4.2.1-arm64" || len(roundTrip.Objective.StopConditions) != 2 {
+		t.Fatalf("round-trip lost separated fields: %+v", roundTrip)
 	}
 }

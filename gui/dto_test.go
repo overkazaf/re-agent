@@ -266,3 +266,89 @@ func TestLedgerDTOMapping(t *testing.T) {
 		t.Fatalf("ledger DTO aliased source hypotheses slice")
 	}
 }
+
+func TestCalibratedDTOAdditiveWireContract(t *testing.T) {
+	// Empty additive fields must omit cleanly for 100% backwards compatibility.
+	legacy := NewLedgerDTO(nil, nil, "")
+	legacyJSON, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatalf("marshal legacy ledger: %v", err)
+	}
+	if strings.Contains(string(legacyJSON), "auditVerdict") || strings.Contains(string(legacyJSON), "auditChecks") {
+		t.Fatalf("empty audit fields should be omitted: %s", legacyJSON)
+	}
+
+	// Populated calibrated DTO fields serialize with exact camelCase tags.
+	hyps := []types.Hypothesis{{
+		ID:         "H-001",
+		Claim:      "sub_1048A0 builds request signature",
+		Scope:      "libshield.so::sub_1048A0",
+		Falsifiers: []string{"no network layer caller"},
+		NextTest:   "trace callers with Frida",
+		Confidence: 0.92,
+		Supporting: []string{"ev_001"},
+		Status:     types.HypActive,
+	}}
+	evs := []types.EvidenceRecord{{
+		ID: "ev_001", Source: "verify_artifact", Kind: "verification_result", View: "dynamic",
+		Excerpt: "3/3 passed",
+		Verification: &types.VerificationStats{
+			Build: true, Passed: 3, Total: 3, ID: "ev_001",
+			Status: types.VerificationVerified, BoundaryPassed: 2, DifferentialCases: 3,
+			UncoveredPaths: []string{"timeout branch"},
+		},
+	}}
+	dto := NewLedgerDTO(hyps, evs, "/tmp/ledger.jsonl")
+	dto.Goal = &GoalSummaryDTO{
+		Primary:        "recover_request_signing_behavior",
+		TargetFile:     "libshield.so",
+		TargetSHA256:   "abc123",
+		TargetArch:     "arm64-v8a",
+		TargetFormat:   "ELF",
+		TargetVersion:  "4.2.1",
+		TargetScope:    "request signing only",
+		Deliverables:   []string{"reproducible_python_harness"},
+		StopConditions: []string{"3 consecutive replay failures"},
+		Accepted:       true,
+		Criteria:       []GoalCriterionDTO{{Label: "build_pass", Pass: true}},
+	}
+	dto.Sandbox = &SandboxDTO{
+		Active: true, Granted: []string{}, GrantedCount: 1,
+		RecentActions: []SandboxActionDTO{{
+			At: 1000, Tool: "run_command", Subject: "python3 harness.py",
+			SHA256: "deadbeef", Decision: "granted", HypothesisID: "H-001",
+		}},
+	}
+	dto.AuditVerdict = types.AuditAccepted
+	dto.AuditChecks = []types.AuditCheck{{
+		ID: "direct_evidence", Label: "direct evidence", Pass: true, Detail: "ok",
+	}}
+
+	raw, err := json.Marshal(dto)
+	if err != nil {
+		t.Fatalf("marshal calibrated ledger: %v", err)
+	}
+	body := string(raw)
+	for _, want := range []string{
+		`"scope":"libshield.so::sub_1048A0"`,
+		`"falsifiers":["no network layer caller"]`,
+		`"nextTest":"trace callers with Frida"`,
+		`"status":"verified"`,
+		`"boundaryPassed":2`,
+		`"differentialCases":3`,
+		`"uncoveredPaths":["timeout branch"]`,
+		`"targetArch":"arm64-v8a"`,
+		`"targetFormat":"ELF"`,
+		`"targetVersion":"4.2.1"`,
+		`"targetScope":"request signing only"`,
+		`"deliverables":["reproducible_python_harness"]`,
+		`"stopConditions":["3 consecutive replay failures"]`,
+		`"hypothesisId":"H-001"`,
+		`"auditVerdict":"accepted"`,
+		`"auditChecks":[{"id":"direct_evidence"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("calibrated ledger JSON missing %s:\n%s", want, body)
+		}
+	}
+}
