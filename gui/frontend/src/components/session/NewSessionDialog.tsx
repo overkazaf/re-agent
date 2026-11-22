@@ -1,6 +1,5 @@
-// [+ new] dialog — StartOptions form with grouped sections, live path
-// validation, recent workspaces, and role/workflow micro-copy. Pre-fills from
-// the last successful workspace (localStorage) or backend $HOME — never '.'.
+// NewSessionDialog — clean StartOptions form with quiet labels and contextual
+// `data-hint` tooltips instead of multi-line helper prose.
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { actions, hasBackend } from '../../store/sessions'
 import { api } from '../../lib/api'
@@ -88,7 +87,7 @@ async function defaultWorkspace(): Promise<string> {
     const last = localStorage.getItem(LAST_WORKSPACE_KEY)
     if (last) return last
   } catch {
-    // storage unavailable — fall through to the backend default
+    // storage unavailable
   }
   if (!hasBackend()) return ''
   try {
@@ -133,8 +132,6 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
     if (!validation.valid || busy) return
     setBusy(true)
     setError(null)
-    // blank input still means $HOME (the manager would otherwise see '.' from
-    // a cwd=/ launch and treat the filesystem root as the workspace)
     let dir = workspace.trim()
     if (!dir && hasBackend()) {
       try {
@@ -155,19 +152,23 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog title="new session" width={500} onClose={onClose}>
-      <form onSubmit={(e) => void submit(e)} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Section 1: Workspace */}
-        <div className="usa-section">
-          <div className="usa-section-head">
-            <span>1. Target Workspace</span>
-            <span style={{ color: hasBackend() ? 'var(--ok)' : 'var(--warn)', fontSize: 9.5 }}>
-              {hasBackend() ? '● backend ready' : '○ browser preview'}
+    <Dialog title="new session" width={480} onClose={onClose}>
+      <form onSubmit={(e) => void submit(e)} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+        {/* Workspace */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={labelStyle}>workspace</span>
+              <span
+                className="usa-hint-dot"
+                data-hint="留空自动使用 $HOME 目录（不会落到系统根目录 /），建议填写绝对路径或点击浏览"
+              >
+                ?
+              </span>
+              <span style={{ marginLeft: 'auto', color: hasBackend() ? 'var(--ok)' : 'var(--warn)', fontSize: 9.5 }}>
+                {hasBackend() ? '● ready' : '○ preview'}
+              </span>
             </span>
-          </div>
-
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={labelStyle}>workspace</span>
             <div style={{ display: 'flex', gap: 6 }}>
               <input
                 style={{
@@ -183,27 +184,17 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
                 placeholder={hasBackend() ? '默认使用 $HOME（输入绝对路径或选择目录）' : '（浏览器 dev：无后端）'}
                 autoFocus
               />
-              <Btn type="button" onClick={browse} disabled={!hasBackend()} title="选择目录">
+              <Btn type="button" onClick={browse} disabled={!hasBackend()} data-hint="选择本地工作区目录">
                 browse…
               </Btn>
             </div>
           </label>
 
-          <div
-            style={{
-              fontSize: 10.5,
-              color:
-                !validation.valid
-                  ? 'var(--err)'
-                  : validation.level === 'warn'
-                    ? 'var(--warn)'
-                    : validation.level === 'ok'
-                      ? 'var(--ok)'
-                      : 'var(--faint)',
-            }}
-          >
-            {validation.message}
-          </div>
+          {(!validation.valid || validation.level === 'warn') && (
+            <div style={{ fontSize: 10.5, color: !validation.valid ? 'var(--err)' : 'var(--warn)' }}>
+              {validation.message}
+            </div>
+          )}
 
           {recent.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -217,7 +208,7 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
                     className="usa-pill"
                     data-active={workspace.trim() === dir ? 'true' : undefined}
                     onClick={() => setWorkspace(dir)}
-                    title={dir}
+                    data-hint={dir}
                   >
                     {base}
                   </button>
@@ -227,70 +218,61 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* Section 2: Agent Profile */}
-        <div className="usa-section">
-          <div className="usa-section-head">
-            <span>2. Agent Profile &amp; Workflow</span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* Role & Workflow */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={labelStyle}>role</span>
-              <ProSelect
-                value={role}
-                options={ROLE_OPTIONS}
-                onChange={setRole}
-                fullWidth
-                searchable={false}
-                popoverMinWidth={240}
-                ariaLabel="Session role"
-              />
-              <span style={{ fontSize: 10, color: 'var(--faint)', lineHeight: 1.4 }}>
-                {ROLE_DESC[role] ?? ''}
+              <span className="usa-hint-dot" data-hint={ROLE_DESC[role] ?? '选择默认模型角色'}>
+                ?
               </span>
-            </label>
+            </span>
+            <ProSelect
+              value={role}
+              options={ROLE_OPTIONS}
+              onChange={setRole}
+              fullWidth
+              searchable={false}
+              popoverMinWidth={240}
+              ariaLabel="Session role"
+            />
+          </label>
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={labelStyle}>workflow</span>
-              <ProSelect
-                value={workflow}
-                options={WORKFLOW_OPTIONS}
-                onChange={setWorkflow}
-                fullWidth
-                align="right"
-                popoverMinWidth={268}
-                searchPlaceholder="Filter workflows…"
-                ariaLabel="Session workflow"
-              />
-              <span style={{ fontSize: 10, color: 'var(--faint)', lineHeight: 1.4 }}>
-                {WORKFLOW_DESC[workflow] ?? ''}
+              <span className="usa-hint-dot" data-hint={WORKFLOW_DESC[workflow] ?? '选择分析工作流'}>
+                ?
               </span>
-            </label>
-          </div>
+            </span>
+            <ProSelect
+              value={workflow}
+              options={WORKFLOW_OPTIONS}
+              onChange={setWorkflow}
+              fullWidth
+              align="right"
+              popoverMinWidth={268}
+              searchPlaceholder="Filter workflows…"
+              ariaLabel="Session workflow"
+            />
+          </label>
         </div>
 
-        {/* Section 3: Runtime Mode */}
+        {/* Mock runtime toggle */}
         <label
-          className="usa-section"
           style={{
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-            gap: 8,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
             cursor: 'pointer',
-            padding: '7px 10px',
+            fontSize: 12,
+            color: 'var(--muted)',
           }}
         >
-          <input
-            type="checkbox"
-            checked={mock}
-            onChange={(e) => setMock(e.target.checked)}
-            style={{ marginTop: 2 }}
-          />
-          <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 12, color: 'var(--text)' }}>演示模式（无 API key）</span>
-            <span style={{ fontSize: 10, color: 'var(--faint)' }}>
-              使用本地模拟 Provider 响应，不消耗真实 API 额度
-            </span>
+          <input type="checkbox" checked={mock} onChange={(e) => setMock(e.target.checked)} />
+          <span>演示模式（无 API key）</span>
+          <span className="usa-hint-dot" data-hint="使用本地模拟 Provider 响应，不消耗真实 API 额度">
+            ?
           </span>
         </label>
 
@@ -298,18 +280,19 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
           <div
             style={{
               color: 'var(--err)',
-              fontSize: 12,
+              fontSize: 11.5,
               whiteSpace: 'pre-wrap',
               padding: '6px 8px',
               border: '1px solid var(--err)',
-              background: 'color-mix(in srgb, var(--err) 10%, var(--bg))',
+              borderRadius: 'var(--radius-xs, 2px)',
+              background: 'var(--err-soft, color-mix(in srgb, var(--err) 10%, var(--bg)))',
             }}
           >
             ✗ {error}
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingTop: 2 }}>
           <span style={{ color: 'var(--faint)', fontSize: 10 }}>
             <kbd className="usa-kbd">Enter</kbd> 启动 · <kbd className="usa-kbd">Esc</kbd> 取消
           </span>
@@ -323,7 +306,7 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
               disabled={busy || !validation.valid}
               style={{
                 borderColor: 'var(--accent)',
-                background: 'color-mix(in srgb, var(--accent) 16%, transparent)',
+                background: 'var(--accent-soft, color-mix(in srgb, var(--accent) 16%, transparent))',
                 fontWeight: 600,
               }}
             >

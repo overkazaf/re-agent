@@ -1,23 +1,24 @@
-// 引导式向导（Track C）共享外壳 + 表单原语。
-// 卡片语言沿用 session/Dialog.tsx 的 CRT 审美（fixed 居中 / var(--bg-panel) /
-// accent-dim 边框辉光 / pushEsc），升级：
-//  - 标题栏带 ①-⑤ 连接式步骤进度条（假设 → 实验 → 验证 → 审计 → 归档）
-//  - 可选 `why` 微文案条，解释本步在取证闭环中的意义
-//  - WizBtn 明确区分主操作 CTA（tone=accent 高亮填充）与次操作（ghost outline）
-//  - 审批门优先：目标 runtime 有 pendingApproval 时整卡降为背景并让出 Esc 栈顶。
+// WizardCard — shared guided-forensics modal shell + clean form primitives.
+// Tucks the step rationale (`why`) into a header `?` contextual hint pill
+// (`data-hint`) so each wizard stays spacious and focused.
 import { Fragment, useEffect, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import { pushEsc } from '../../lib/escStack'
 import { useSessionStore } from '../../store/sessions'
 import '../session/usability.css'
 
-const STEPS = ['假设', '实验', '验证', '审计', '归档'] as const
-const STEP_GLYPHS = ['①', '②', '③', '④', '⑤'] as const
+const STEPS = [
+  { label: '假设', glyph: '①', hint: '建立可证伪假设与预期输出' },
+  { label: '实验', glyph: '②', hint: '由宿主实跑探针并铸造不可篡改证据 ev_NNN' },
+  { label: '验证', glyph: '③', hint: 'verify_artifact 确定性重放并签发 SHA256 凭证' },
+  { label: '审计', glyph: '④', hint: '引用实测证据完成审查签章或独立对抗审计' },
+  { label: '归档', glyph: '⑤', hint: '闭环沉淀并聚焦全局视图' },
+] as const
 
 export function WizardCard({
   title,
   step,
   why,
-  width = 600,
+  width = 580,
   sessionId,
   onClose,
   children,
@@ -25,7 +26,7 @@ export function WizardCard({
   title: string
   /** 当前步骤 1..5（hypothesis/revise=1 experiment=2 verification=3 review=4） */
   step: number
-  /** 简明“为什么这一步重要”提示微文案 */
+  /** 简明“为什么这一步重要”提示微文案（收纳在标题栏 ? 悬浮提示中） */
   why?: string
   width?: number
   /** 审批门检测的目标 session（缺省回落到 active session） */
@@ -50,7 +51,7 @@ export function WizardCard({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(2, 5, 8, 0.72)',
+        background: 'rgba(2, 5, 8, 0.7)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -70,10 +71,11 @@ export function WizardCard({
           maxHeight: '88vh',
           display: 'flex',
           flexDirection: 'column',
-          border: '1px solid var(--accent-dim)',
+          border: '1px solid var(--border-accent, var(--accent-dim))',
+          borderRadius: 'var(--radius-sm, 3px)',
           background: 'var(--surface-3, color-mix(in srgb, var(--bg) 90%, var(--bg-panel) 10%))',
           backdropFilter: 'blur(8px)',
-          boxShadow: '0 0 26px var(--accent-dim)',
+          boxShadow: 'var(--shadow-popover, 0 14px 40px rgba(0, 0, 0, 0.56))',
         }}
       >
         <header
@@ -81,14 +83,25 @@ export function WizardCard({
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            padding: '7px 10px',
-            borderBottom: '1px solid var(--rule)',
+            padding: '7px 11px',
+            borderBottom: '1px solid var(--border-subtle, var(--rule))',
             color: 'var(--accent)',
             fontSize: 11,
-            letterSpacing: '0.1em',
+            letterSpacing: '0.08em',
           }}
         >
           <span style={{ whiteSpace: 'nowrap', fontWeight: 700 }}>╭─ {title} ─╮</span>
+
+          {why && (
+            <span
+              className="usa-hint-dot"
+              tabIndex={0}
+              data-hint={`STEP ${clampedStep}/${STEPS.length}：${why}`}
+              data-hint-side="bottom"
+            >
+              ?
+            </span>
+          )}
 
           <div
             style={{
@@ -97,35 +110,38 @@ export function WizardCard({
               marginLeft: 'auto',
               alignItems: 'center',
               minWidth: 0,
-              flexWrap: 'wrap',
             }}
             aria-label={`Step ${clampedStep} of ${STEPS.length}`}
           >
-            {STEPS.map((label, i) => {
+            {STEPS.map((st, i) => {
               const n = i + 1
               const isCur = n === clampedStep
               const isDone = n < clampedStep
               return (
-                <Fragment key={label}>
+                <Fragment key={st.label}>
                   <span
                     style={{
                       fontSize: 10,
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.03em',
                       whiteSpace: 'nowrap',
-                      padding: isCur ? '1px 6px' : '1px 2px',
+                      padding: isCur ? '1px 6px' : '1px 3px',
                       border: isCur ? '1px solid var(--accent)' : '1px solid transparent',
-                      background: isCur ? 'color-mix(in srgb, var(--accent) 14%, transparent)' : 'transparent',
+                      borderRadius: 'var(--radius-xs, 2px)',
+                      background: isCur ? 'var(--accent-soft, color-mix(in srgb, var(--accent) 14%, transparent))' : 'transparent',
                       color: isCur ? 'var(--accent)' : isDone ? 'var(--ok)' : 'var(--faint)',
-                      textShadow: isCur ? '0 0 8px var(--accent-dim)' : undefined,
                       fontWeight: isCur ? 700 : 400,
+                      cursor: 'help',
                     }}
+                    data-hint={`${st.glyph} ${st.label} — ${st.hint}`}
+                    data-hint-side="bottom"
                   >
-                    {isDone ? '✓' : STEP_GLYPHS[i]} {label}
+                    {isDone ? '✓' : st.glyph}
+                    {isCur ? ` ${st.label}` : ''}
                   </span>
                   {i < STEPS.length - 1 && (
                     <span
                       style={{
-                        color: isDone ? 'var(--ok)' : 'var(--rule)',
+                        color: isDone ? 'var(--ok)' : 'var(--border-subtle, var(--rule))',
                         fontSize: 9,
                         userSelect: 'none',
                       }}
@@ -150,14 +166,17 @@ export function WizardCard({
               fontSize: 12,
               padding: '0 2px',
             }}
-            title="close (esc)"
+            aria-label="关闭向导"
+            data-hint="关闭向导"
+            data-hint-kbd="Esc"
+            data-hint-side="bottom"
           >
             ✕
           </button>
         </header>
 
         {/* Crisp 2px step progress rail */}
-        <div style={{ height: 2, background: 'color-mix(in srgb, var(--rule) 55%, transparent)' }}>
+        <div style={{ height: 2, background: 'color-mix(in srgb, var(--rule) 45%, transparent)' }}>
           <div
             style={{
               height: '100%',
@@ -168,15 +187,7 @@ export function WizardCard({
           />
         </div>
 
-        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', minHeight: 0 }}>
-          {why && (
-            <div className="usa-wiz-why">
-              <span style={{ color: 'var(--accent)', fontWeight: 600, marginRight: 6 }}>
-                STEP {clampedStep}/{STEPS.length} · 为什么这一步重要
-              </span>
-              <span>{why}</span>
-            </div>
-          )}
+        <div style={{ padding: 13, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', minHeight: 0 }}>
           {children}
         </div>
       </div>
@@ -184,20 +195,21 @@ export function WizardCard({
   )
 }
 
-// ---------- 各向导步骤共用的表单原语（形态对齐 Dialog.tsx / Workbench） ----------
+// ---------- shared form primitives ----------
 
 export const wizLabelStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 3,
+  gap: 4,
   fontSize: 10.5,
   color: 'var(--muted)',
 }
 
 export const wizFieldStyle: CSSProperties = {
   width: '100%',
-  background: 'color-mix(in srgb, var(--bg) 55%, transparent)',
-  border: '1px solid var(--rule)',
+  background: 'var(--surface-1, color-mix(in srgb, var(--bg) 55%, transparent))',
+  border: '1px solid var(--border-subtle, var(--rule))',
+  borderRadius: 'var(--radius-xs, 2px)',
   color: 'var(--text)',
   font: 'inherit',
   fontSize: 12,
@@ -218,8 +230,8 @@ export const wizFooterStyle: CSSProperties = {
   gap: 8,
   flexWrap: 'wrap',
   alignItems: 'center',
-  paddingTop: 4,
-  borderTop: '1px solid color-mix(in srgb, var(--rule) 65%, transparent)',
+  paddingTop: 6,
+  borderTop: '1px solid var(--border-subtle, var(--rule))',
 }
 
 type WizTone = 'accent' | 'ok' | 'warn' | 'err' | 'violet' | 'muted'
@@ -230,14 +242,14 @@ export function WizBtn({ tone = 'muted', ...rest }: { tone?: WizTone } & ButtonH
     <button
       {...rest}
       style={{
-        background: isPrimary ? `color-mix(in srgb, var(--${tone}) 18%, transparent)` : 'transparent',
-        border: `1px solid ${isPrimary ? `var(--${tone})` : 'var(--rule)'}`,
+        background: isPrimary ? `color-mix(in srgb, var(--${tone}) 16%, transparent)` : 'transparent',
+        border: `1px solid ${isPrimary ? `var(--${tone})` : 'var(--border-subtle, var(--rule))'}`,
+        borderRadius: 'var(--radius-xs, 2px)',
         color: isPrimary ? `var(--${tone})` : 'var(--muted)',
         fontWeight: isPrimary ? 600 : 400,
-        boxShadow: isPrimary ? `0 0 10px color-mix(in srgb, var(--${tone}) 22%, transparent)` : undefined,
         font: 'inherit',
         fontSize: 12,
-        padding: isPrimary ? '5px 14px' : '5px 11px',
+        padding: isPrimary ? '5px 13px' : '5px 10px',
         cursor: rest.disabled ? 'default' : 'pointer',
         opacity: rest.disabled ? 0.42 : 1,
         display: 'inline-flex',
@@ -258,8 +270,9 @@ export function WizBanner({ tone, text }: { tone: 'ok' | 'err' | 'info'; text: s
         fontSize: 11.5,
         lineHeight: 1.45,
         border: `1px solid var(--${c})`,
+        borderRadius: 'var(--radius-xs, 2px)',
         color: `var(--${c})`,
-        background: `color-mix(in srgb, var(--${c}) 10%, var(--bg))`,
+        background: `color-mix(in srgb, var(--${c}) 10%, var(--surface-1, var(--bg)))`,
       }}
     >
       {tone === 'err' ? '✗ ' : tone === 'ok' ? '✓ ' : '◈ '}
@@ -268,20 +281,24 @@ export function WizBanner({ tone, text }: { tone: 'ok' | 'err' | 'info'; text: s
   )
 }
 
-/** 多选 chip（证据挂靠 / 裁定选择等） */
+/** Multi-select chip (evidence citation / verdict) */
 export function chipToneStyle(active: boolean, tone: 'ok' | 'err' | 'warn' | 'violet' | 'accent'): CSSProperties {
   return {
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
-    background: active ? `color-mix(in srgb, var(--${tone}) 16%, transparent)` : 'rgba(5, 8, 12, 0.6)',
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle, var(--rule))'}`,
+    borderRadius: 'var(--radius-xs, 2px)',
+    background: active ? `color-mix(in srgb, var(--${tone}) 14%, transparent)` : 'var(--surface-1, transparent)',
     color: active ? `var(--${tone})` : 'var(--muted)',
     fontSize: 10.5,
     padding: '2px 7px',
     cursor: 'pointer',
     font: 'inherit',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
   }
 }
 
-/** 单选卡片（实验类型 / 审查模式） */
+/** Selectable option card (experiment type / review mode) */
 export function wizSelectCardStyle(active: boolean, tone: 'accent' | 'violet'): CSSProperties {
   return {
     display: 'flex',
@@ -289,16 +306,16 @@ export function wizSelectCardStyle(active: boolean, tone: 'accent' | 'violet'): 
     gap: 3,
     alignItems: 'flex-start',
     textAlign: 'left',
-    border: `1px solid ${active ? `var(--${tone})` : 'var(--rule)'}`,
-    background: active ? `color-mix(in srgb, var(--${tone}) 14%, transparent)` : 'rgba(5, 8, 12, 0.45)',
-    boxShadow: active ? `0 0 10px color-mix(in srgb, var(--${tone}) 20%, transparent)` : undefined,
+    border: `1px solid ${active ? `var(--${tone})` : 'var(--border-subtle, var(--rule))'}`,
+    borderRadius: 'var(--radius-xs, 2px)',
+    background: active ? `color-mix(in srgb, var(--${tone}) 12%, transparent)` : 'var(--surface-1, transparent)',
     padding: '7px 9px',
     cursor: 'pointer',
     font: 'inherit',
   }
 }
 
-/** 列表内多选切换 helper */
+/** Toggle string id in list */
 export function toggleIn(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
 }

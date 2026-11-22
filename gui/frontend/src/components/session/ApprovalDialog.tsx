@@ -1,7 +1,6 @@
-// WS4 tool approval card: crystal-clear human-in-the-loop risk framing,
-// parsed target/cwd/signal highlights, copyable command preview, and four-way
-// decision with `deny` focused by default and Esc/N = deny, Y = allow so a
-// fat-finger Enter stays safe while deliberate analysts decide fast.
+// ApprovalDialog — crisp human-in-the-loop tool approval card with safe `deny`
+// default focus, risk pill (`data-hint`), collapsible risk details, copyable
+// command preview, and keyboard shortcuts (Esc/N=deny, Y/⌘↵=allow, C=copy).
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { pushEsc } from '../../lib/escStack'
 import type { ApprovalDTO, ApprovalDecision } from '../../lib/types'
@@ -26,6 +25,7 @@ export function ApprovalDialog({
 }) {
   const [busy, setBusy] = useState<ApprovalDecision | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const denyRef = useRef<HTMLButtonElement>(null)
   const { copiedKey, copy } = useCopyFeedback()
 
@@ -60,7 +60,6 @@ export function ApprovalDialog({
   }, [])
 
   // Keyboard accelerators: Y / Ctrl+Enter = allow, N = deny, C = copy preview.
-  // Plain Enter intentionally activates whichever button has focus (starts on `deny`).
   useEffect(() => {
     if (inline) return
     function onKeyDown(e: KeyboardEvent) {
@@ -91,6 +90,19 @@ export function ApprovalDialog({
   }, [inline, previewText])
 
   const copied = copiedKey === 'approval-args'
+  const concerns = approval.concerns ?? []
+  const extraSummary = approval.summary && approval.summary !== approval.argsPreview ? approval.summary : ''
+  const flagCount = concerns.length + forensics.signals.length
+  const hasDetails =
+    flagCount > 0 || Boolean(extraSummary) || forensics.targets.length > 0 || Boolean(forensics.workingDir)
+
+  const riskTooltip = `${forensics.meta.levelLabel} · ${forensics.meta.category} — ${forensics.meta.guidance}`
+  const detailsHint =
+    concerns.length > 0
+      ? concerns.join('；')
+      : forensics.signals.length > 0
+        ? forensics.signals.join(' · ')
+        : extraSummary || forensics.meta.guidance
 
   const card = (
     <div
@@ -98,92 +110,119 @@ export function ApprovalDialog({
       aria-modal={!inline}
       aria-label={`Tool approval for ${approval.toolName}`}
       style={{
-        border: `1px solid color-mix(in srgb, var(--${tone}) 55%, var(--rule))`,
-        borderLeft: `4px solid var(--${tone})`,
+        border: `1px solid color-mix(in srgb, var(--${tone}) 50%, var(--rule))`,
+        borderLeft: `3px solid var(--${tone})`,
+        borderRadius: 'var(--radius-sm, 3px)',
         background: 'var(--surface-3, color-mix(in srgb, var(--bg) 90%, var(--bg-panel) 10%))',
         backdropFilter: 'blur(8px)',
-        boxShadow: inline
-          ? 'none'
-          : `0 0 28px rgba(0, 0, 0, 0.72), 0 0 18px color-mix(in srgb, var(--${tone}) 22%, transparent)`,
+        boxShadow: inline ? 'none' : 'var(--shadow-popover, 0 14px 40px rgba(0, 0, 0, 0.56))',
         display: 'flex',
         flexDirection: 'column',
-        gap: 9,
+        gap: 10,
         padding: 14,
         ...style,
       }}
     >
-      {/* Top risk framing header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {/* Header: title + request id + risk pill */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <span style={{ color: 'var(--faint)', fontSize: 10, letterSpacing: '0.12em' }}>╭─ TOOL APPROVAL ─╮</span>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ color: 'var(--faint)', fontSize: 10 }}>#{approval.requestID}</span>
           <span
             style={{
               color: `var(--${tone})`,
-              border: `1px solid var(--${tone})`,
-              background: `color-mix(in srgb, var(--${tone}) 14%, transparent)`,
-              padding: '1px 8px',
+              border: `1px solid color-mix(in srgb, var(--${tone}) 65%, var(--rule))`,
+              borderRadius: 'var(--radius-xs, 2px)',
+              background: `color-mix(in srgb, var(--${tone}) 12%, transparent)`,
+              padding: '1px 7px',
               fontSize: 10,
               fontWeight: 700,
-              letterSpacing: '0.1em',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
+              cursor: 'help',
             }}
+            data-hint={riskTooltip}
           >
             {approval.risk}
           </span>
+          <span
+            className="usa-hint-dot"
+            tabIndex={0}
+            data-hint="默认聚焦 deny 防误触；按 Esc/N 拒绝，Y/⌘↵ 放行，C 复制命令"
+          >
+            ?
+          </span>
         </div>
       </div>
 
-      {/* Tool identity + risk impact summary */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-          padding: '7px 9px',
-          border: '1px solid var(--rule)',
-          background: `color-mix(in srgb, var(--${tone}) 7%, var(--bg))`,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>
-            <GlowText tone="accent">⚙ {approval.toolName}</GlowText>
-          </span>
-          <span style={{ color: `var(--${tone})`, fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em' }}>
-            {forensics.meta.levelLabel} · {forensics.meta.category}
-          </span>
-        </div>
-        <div style={{ color: 'var(--muted)', fontSize: 11 }}>{forensics.meta.guidance}</div>
-        {approval.summary && approval.summary !== approval.argsPreview && (
-          <div style={{ color: 'var(--text)', fontSize: 11.5, marginTop: 2 }}>{approval.summary}</div>
+      {/* Tool identity + compact disclosure trigger */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>
+          <GlowText tone="accent">⚙ {approval.toolName}</GlowText>
+        </span>
+        {forensics.workingDir && (
+          <code
+            style={{
+              color: 'var(--muted)',
+              background: 'var(--surface-2, color-mix(in srgb, var(--bg) 60%, transparent))',
+              border: '1px solid var(--border-subtle, var(--rule))',
+              borderRadius: 'var(--radius-xs, 2px)',
+              padding: '0 5px',
+              fontSize: 10.5,
+            }}
+            data-hint="命令执行的工作目录"
+          >
+            {forensics.workingDir}
+          </code>
+        )}
+        <span style={{ flex: 1 }} />
+        {hasDetails && (
+          <button
+            type="button"
+            className="usa-disclosure-btn"
+            onClick={() => setDetailsOpen((v) => !v)}
+            aria-expanded={detailsOpen}
+            data-hint={detailsHint}
+            style={{
+              borderColor: flagCount > 0 ? 'color-mix(in srgb, var(--warn) 55%, var(--rule))' : undefined,
+              color: flagCount > 0 ? 'var(--warn)' : 'var(--muted)',
+            }}
+          >
+            <span>{flagCount > 0 ? `风险说明 (${flagCount})` : '风险说明'}</span>
+            <span>{detailsOpen ? '▴' : '▾'}</span>
+          </button>
         )}
       </div>
 
-      {/* Parsed forensic metadata: working dir, targets, signals */}
-      {(forensics.workingDir || forensics.targets.length > 0 || forensics.signals.length > 0) && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 11 }}>
-          {forensics.workingDir && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--faint)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                cwd
-              </span>
-              <code style={{ color: 'var(--accent)', background: 'rgba(5, 8, 12, 0.5)', padding: '1px 6px', border: '1px solid var(--rule)' }}>
-                {forensics.workingDir}
-              </code>
-            </div>
-          )}
+      {/* Collapsible heuristic & policy details (collapsed by default) */}
+      {detailsOpen && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5,
+            padding: '7px 9px',
+            border: '1px solid var(--border-subtle, var(--rule))',
+            borderRadius: 'var(--radius-xs, 2px)',
+            background: 'var(--surface-1, color-mix(in srgb, var(--bg) 60%, var(--bg-panel) 40%))',
+            fontSize: 11,
+          }}
+        >
+          <div style={{ color: 'var(--muted)' }}>
+            <strong style={{ color: `var(--${tone})` }}>{forensics.meta.levelLabel}</strong> · {forensics.meta.guidance}
+          </div>
+          {extraSummary && <div style={{ color: 'var(--text)' }}>{extraSummary}</div>}
           {forensics.targets.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--faint)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                targets
-              </span>
+              <span style={{ color: 'var(--faint)', fontSize: 10 }}>TARGETS</span>
               {forensics.targets.map((t) => (
                 <code
                   key={t}
                   style={{
                     color: 'var(--text)',
-                    background: 'rgba(5, 8, 12, 0.5)',
-                    border: '1px solid var(--rule)',
+                    background: 'var(--surface-2, transparent)',
+                    border: '1px solid var(--border-subtle, var(--rule))',
+                    borderRadius: 'var(--radius-xs, 2px)',
                     padding: '0 5px',
                     fontSize: 10.5,
                   }}
@@ -200,8 +239,9 @@ export function ApprovalDialog({
                   key={sig}
                   style={{
                     color: 'var(--warn)',
-                    border: '1px solid color-mix(in srgb, var(--warn) 55%, var(--rule))',
-                    background: 'color-mix(in srgb, var(--warn) 10%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--warn) 50%, var(--rule))',
+                    borderRadius: 'var(--radius-xs, 2px)',
+                    background: 'var(--warn-soft, color-mix(in srgb, var(--warn) 10%, transparent))',
                     padding: '1px 6px',
                     fontSize: 10,
                   }}
@@ -211,42 +251,28 @@ export function ApprovalDialog({
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Explicit policy concerns from backend */}
-      {approval.concerns && approval.concerns.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-            padding: '6px 9px',
-            border: '1px solid color-mix(in srgb, var(--warn) 65%, var(--rule))',
-            background: 'color-mix(in srgb, var(--warn) 10%, var(--bg))',
-            fontSize: 11,
-            color: 'var(--warn)',
-          }}
-        >
-          {approval.concerns.map((c, idx) => (
-            <div key={idx}>⚠ {c}</div>
+          {concerns.map((c, idx) => (
+            <div key={idx} style={{ color: 'var(--warn)' }}>
+              ⚠ {c}
+            </div>
           ))}
         </div>
       )}
 
-      {/* Copyable command / arguments preview */}
+      {/* Clean copyable command block */}
       <div className="usa-code-block" style={{ margin: 0 }}>
         <div className="usa-code-head">
-          <span>Command / Arguments Preview</span>
+          <span>Command</span>
           {previewText && (
             <button
               type="button"
               className="usa-copy-btn"
               data-copied={copied ? 'true' : undefined}
               onClick={() => copy('approval-args', previewText)}
-              title="Copy preview (C)"
+              data-hint="复制命令内容"
+              data-hint-kbd="C"
             >
-              {copied ? '✓ Copied' : '⎘ Copy'}
+              {copied ? '✓ 已复制' : '⎘ 复制'}
             </button>
           )}
         </div>
@@ -269,8 +295,8 @@ export function ApprovalDialog({
 
       {error && <div style={{ color: 'var(--err)', fontSize: 12, whiteSpace: 'pre-wrap' }}>✗ {error}</div>}
 
-      {/* Decision buttons — exact text preserved for E2E & safety contracts */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* Compact decision bar — exact button text preserved for E2E & safety contracts */}
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => decide('deny')}
@@ -278,7 +304,8 @@ export function ApprovalDialog({
           disabled={busy !== null}
           className="usa-approval-btn"
           data-variant="deny"
-          title="Deny this request (Esc / N / Enter)"
+          data-hint="拒绝本次执行（默认安全焦点）"
+          data-hint-kbd="N / Esc"
         >
           {busy === 'deny' ? '…' : 'deny'}
         </button>
@@ -288,7 +315,7 @@ export function ApprovalDialog({
           disabled={busy !== null}
           className="usa-approval-btn"
           data-variant="deny-always"
-          title="Always deny this tool for the current session"
+          data-hint="本会话内始终拒绝该工具"
         >
           {busy === 'deny-always' ? '…' : 'deny-always'}
         </button>
@@ -298,7 +325,8 @@ export function ApprovalDialog({
           disabled={busy !== null}
           className="usa-approval-btn"
           data-variant="allow"
-          title="Allow this request once (Y / Ctrl+Enter)"
+          data-hint="仅本次放行执行"
+          data-hint-kbd="Y"
         >
           {busy === 'allow' ? '…' : 'allow'}
         </button>
@@ -308,33 +336,23 @@ export function ApprovalDialog({
           disabled={busy !== null}
           className="usa-approval-btn"
           data-variant="allow-always"
-          title="Trust this tool for the rest of the session"
+          data-hint="本会话内信任并自动放行该工具"
         >
           {busy === 'allow-always' ? '…' : 'allow-always'}
         </button>
       </div>
 
-      {/* Keyboard shortcut legend */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          flexWrap: 'wrap',
-          color: 'var(--faint)',
-          fontSize: 10,
-        }}
-      >
+      {/* Quiet shortcut legend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--faint)', fontSize: 10 }}>
         <span>
-          <kbd className="usa-kbd">Esc</kbd> / <kbd className="usa-kbd">N</kbd> deny
+          <kbd className="usa-kbd">N</kbd> / <kbd className="usa-kbd">Esc</kbd> deny
         </span>
         <span>
-          <kbd className="usa-kbd">Y</kbd> / <kbd className="usa-kbd">⌘↵</kbd> allow
+          <kbd className="usa-kbd">Y</kbd> allow
         </span>
         <span>
           <kbd className="usa-kbd">C</kbd> copy
         </span>
-        <span style={{ marginLeft: 'auto' }}>默认聚焦 deny 防误触</span>
       </div>
     </div>
   )
@@ -344,20 +362,19 @@ export function ApprovalDialog({
   return (
     <div
       onClick={(e) => {
-        // backdrop click does NOT decide — approvals should be explicit
         void e
       }}
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(2, 5, 8, 0.74)',
+        background: 'rgba(2, 5, 8, 0.72)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 50,
       }}
     >
-      <div style={{ width: 520, maxWidth: '94vw' }}>{card}</div>
+      <div style={{ width: 500, maxWidth: '94vw' }}>{card}</div>
     </div>
   )
 }

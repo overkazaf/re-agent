@@ -1,8 +1,5 @@
-// 向导第③步（stage: verification）——verify_artifact 确定性重放验证。
-// artifact 预填 ctx.artifact（第②步 passed 实验的产物回填），build 命令可选，
-// cases 列表（name/command/expected，可增删行）。提交 api.RunVerification：
-// 成功展示 VerificationStats 绿红条（passed/total + build ✓/✗ + sha256），
-// 并推进第④步（review）+ 聚焦 AUD；绿红条停留 1.5s 供确认，也可手动点进。
+// VerificationWizard — step ③ (verification): concise verify_artifact replay
+// form with contextual `data-hint` guidance and live pass/fail stats bar.
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { api } from '../../lib/api'
 import type { VerificationCaseDTO } from '../../lib/types'
@@ -30,20 +27,18 @@ export function VerificationWizard() {
   } | null>(null)
   const timerRef = useRef<number | null>(null)
 
-  // 第②步推进过来时预填产物路径（ctx.artifact 变化即新开一次验证）
   const prefillArtifact = ctx?.artifact
   useEffect(() => {
     setArtifact(prefillArtifact ?? '')
   }, [prefillArtifact])
 
-  // 卸载时清掉待触发的自动推进
   useEffect(() => {
     return () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     }
   }, [])
 
-  const hypLabel = useMemo(() => ctx?.hypId ?? '（不关联假设）', [ctx?.hypId])
+  const hypLabel = useMemo(() => ctx?.hypId ?? '未关联', [ctx?.hypId])
   const validCaseCount = useMemo(() => cases.filter((c) => c.command.trim()).length, [cases])
 
   function goReview() {
@@ -64,7 +59,7 @@ export function VerificationWizard() {
     if (!ctx) return
     const valid = cases.filter((c) => c.command.trim())
     if (!artifact.trim() || valid.length === 0) {
-      setBanner({ tone: 'err', text: '请指定工作区目标产物路径与至少一条实跑重放用例' })
+      setBanner({ tone: 'err', text: '请填写目标产物路径与至少一条重放用例' })
       return
     }
     setBusy(true)
@@ -76,7 +71,7 @@ export function VerificationWizard() {
         cases: valid,
         hypothesisId: ctx.hypId,
       })
-      void actions.getState(ctx.sessionId) // 刷新 ledger，供第④步读取 findings/证据
+      void actions.getState(ctx.sessionId)
       const s = ev.verification
       setStats({
         evId: ev.id,
@@ -105,16 +100,14 @@ export function VerificationWizard() {
       sessionId={ctx.sessionId}
       onClose={sceneActions.closeWizard}
     >
-      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        调用内置 <code style={{ color: 'var(--accent)' }}>verify_artifact</code> 执行确定性重放 · 关联假设{' '}
-        <strong style={{ color: 'var(--text)' }}>{hypLabel}</strong>
-      </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <label style={wizLabelStyle}>
-          <span style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>工作区产物文件（Artifact）</span>
-            <span style={{ color: artifact.trim() ? 'var(--ok)' : 'var(--faint)', fontSize: 10 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span>目标产物</span>
+            <span className="usa-hint-dot" data-hint="工作区内的目标产物文件，用于计算真实 SHA256">
+              ?
+            </span>
+            <span style={{ marginLeft: 'auto', color: artifact.trim() ? 'var(--ok)' : 'var(--faint)', fontSize: 10 }}>
               {artifact.trim() ? '✓' : '必填'}
             </span>
           </span>
@@ -123,40 +116,49 @@ export function VerificationWizard() {
             style={wizFieldStyle}
             value={artifact}
             onChange={(e) => setArtifact(e.target.value)}
-            placeholder="例如：chall.js 或 solver.py"
+            placeholder="例：chall.js / solver.py"
           />
         </label>
         <label style={wizLabelStyle}>
-          可选前置编译命令（Build）
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <span>前置编译</span>
+            <span className="usa-hint-dot" data-hint="可选：重放前先执行的构建命令，留空则直接重放">
+              ?
+            </span>
+          </span>
           <input
             aria-label="verify build command"
             style={wizFieldStyle}
             value={buildCmd}
             onChange={(e) => setBuildCmd(e.target.value)}
-            placeholder="留空则直接重放（例如 gcc solve.c -o solve）"
+            placeholder="可选（如 gcc solve.c -o solve）"
           />
         </label>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>
-            重放测试向量（Replay Cases · {validCaseCount}/{cases.length} 有效）
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>
+            <span>
+              重放用例 ({validCaseCount}/{cases.length})
+            </span>
+            <span style={{ color: 'var(--faint)', fontWeight: 400, fontSize: 10 }}>· {hypLabel}</span>
           </span>
           <button
             type="button"
             disabled={busy}
             onClick={() => setCases((cs) => [...cs, { name: `case-${cs.length + 1}`, command: '', expected: '' }])}
             style={addRowBtnStyle}
+            data-hint="新增一条确定性重放测试向量"
           >
-            + 添加用例行
+            + 用例
           </button>
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '130px 1fr 180px 28px',
+            gridTemplateColumns: '110px 1fr 160px 26px',
             gap: 6,
             fontSize: 9.5,
             color: 'var(--faint)',
@@ -165,33 +167,33 @@ export function VerificationWizard() {
             padding: '0 2px',
           }}
         >
-          <span>Case Name</span>
+          <span>Case</span>
           <span>Command</span>
-          <span>Expected stdout</span>
+          <span>Expected</span>
           <span />
         </div>
 
         {cases.map((c, idx) => (
-          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 180px 28px', gap: 6, alignItems: 'center' }}>
+          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 160px 26px', gap: 6, alignItems: 'center' }}>
             <input
               style={wizFieldStyle}
               value={c.name}
               onChange={(e) => updateCase(idx, { name: e.target.value })}
-              placeholder="case 名称"
+              placeholder="case-1"
               aria-label={`case ${idx + 1} name`}
             />
             <input
               style={wizFieldStyle}
               value={c.command}
               onChange={(e) => updateCase(idx, { command: e.target.value })}
-              placeholder="实跑命令，如 node chall.js '0xaf{warmup_deck}'"
+              placeholder="node chall.js '0xaf{warmup_deck}'"
               aria-label={`case ${idx + 1} command`}
             />
             <input
               style={wizFieldStyle}
               value={c.expected}
               onChange={(e) => updateCase(idx, { expected: e.target.value })}
-              placeholder="预期 stdout"
+              placeholder="accepted"
               aria-label={`case ${idx + 1} expected`}
             />
             <button
@@ -199,7 +201,8 @@ export function VerificationWizard() {
               disabled={busy || cases.length === 1}
               onClick={() => setCases((cs) => cs.filter((_, i) => i !== idx))}
               style={addRowBtnStyle}
-              title="移除该行"
+              aria-label="移除该行"
+              data-hint="移除此条用例"
             >
               ✕
             </button>
@@ -213,19 +216,17 @@ export function VerificationWizard() {
         <div style={statsBoxStyle}>
           <div style={{ display: 'flex', gap: 10, fontSize: 11, flexWrap: 'wrap', alignItems: 'baseline' }}>
             <b style={{ color: stats.passed === stats.total ? 'var(--ok)' : 'var(--warn)' }}>
-              重放通过 {stats.passed}/{stats.total}
+              通过 {stats.passed}/{stats.total}
             </b>
             <span style={{ color: stats.build ? 'var(--ok)' : 'var(--err)' }}>{stats.build ? 'build ✓' : 'build ✗'}</span>
             <span style={{ color: 'var(--faint)' }}>
               {stats.evId}
-              {stats.sha256 ? ` · sha256:${stats.sha256.slice(0, 12)}…` : ''}
+              {stats.sha256 ? ` · ${stats.sha256.slice(0, 12)}…` : ''}
             </span>
-            <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 10 }}>
-              1.5s 后自动进入审计，或直接点击继续
-            </span>
+            <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 10 }}>即将进入审计…</span>
           </div>
-          <div style={{ height: 8, display: 'flex', border: '1px solid var(--rule)' }}>
-            <div style={{ flex: stats.passed, background: 'var(--ok)', boxShadow: '0 0 8px var(--ok)' }} />
+          <div style={{ height: 6, display: 'flex', border: '1px solid var(--border-subtle, var(--rule))' }}>
+            <div style={{ flex: stats.passed, background: 'var(--ok)' }} />
             <div style={{ flex: stats.total - stats.passed, background: 'var(--err)' }} />
           </div>
         </div>
@@ -253,8 +254,9 @@ export function VerificationWizard() {
 }
 
 const addRowBtnStyle: CSSProperties = {
-  border: '1px solid var(--accent-dim)',
-  background: 'rgba(34, 211, 238, 0.08)',
+  border: '1px solid var(--border-accent, var(--accent-dim))',
+  borderRadius: 'var(--radius-xs, 2px)',
+  background: 'var(--accent-soft, color-mix(in srgb, var(--accent) 8%, transparent))',
   color: 'var(--accent)',
   fontSize: 10,
   padding: '1px 7px',
@@ -263,10 +265,11 @@ const addRowBtnStyle: CSSProperties = {
 }
 
 const statsBoxStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
+  border: '1px solid var(--border-subtle, var(--rule))',
+  borderRadius: 'var(--radius-xs, 2px)',
   padding: '7px 9px',
   display: 'flex',
   flexDirection: 'column',
   gap: 5,
-  background: 'rgba(5, 10, 16, 0.7)',
+  background: 'var(--surface-1, transparent)',
 }

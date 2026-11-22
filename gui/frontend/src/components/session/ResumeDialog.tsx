@@ -1,6 +1,5 @@
-// [resume] dialog — api.listSessions() + live search, sort toggle, keyboard
-// navigation (↑/↓/Enter), relative timestamps, inferred session type badges,
-// and clear loading/empty/error states.
+// ResumeDialog — clean saved-session picker with instant search, sort pills,
+// keyboard navigation (↑/↓/Enter), and contextual `data-hint` tooltips.
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import type { SessionSummaryDTO } from '../../lib/types'
@@ -69,7 +68,7 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog title="resume session" width={580} onClose={onClose}>
+    <Dialog title="resume session" width={540} onClose={onClose}>
       {/* Search + sort toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div
@@ -78,9 +77,10 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            border: '1px solid var(--rule)',
+            border: '1px solid var(--border-subtle, var(--rule))',
+            borderRadius: 'var(--radius-xs, 2px)',
             padding: '0 8px',
-            background: 'color-mix(in srgb, var(--bg) 65%, transparent)',
+            background: 'var(--surface-1, color-mix(in srgb, var(--bg) 65%, transparent))',
           }}
         >
           <span style={{ color: 'var(--faint)', fontSize: 11 }}>⌕</span>
@@ -106,14 +106,16 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
                 setQuery('')
               }
             }}
-            placeholder="search id / hash / workspace / first prompt…"
+            placeholder="搜索 hash / 工作区 / 首条指令…"
             autoFocus
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
-              title="Clear search"
+              aria-label="清空搜索"
+              data-hint="清空搜索词"
+              data-hint-kbd="Esc"
               style={{ color: 'var(--faint)', fontSize: 11, cursor: 'pointer' }}
             >
               ✕
@@ -126,44 +128,31 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
           className="usa-pill"
           data-active={sortBy === 'recent' ? 'true' : undefined}
           onClick={() => setSortBy('recent')}
-          title="Sort by last updated"
+          data-hint="按最近更新时间排序"
         >
-          Newest
+          最新
         </button>
         <button
           type="button"
           className="usa-pill"
           data-active={sortBy === 'messages' ? 'true' : undefined}
           onClick={() => setSortBy('messages')}
-          title="Sort by message count"
+          data-hint="按消息轮次数量排序"
         >
-          Most active
+          最活跃
         </button>
+        {rows !== null && (
+          <span
+            style={{ color: 'var(--faint)', fontSize: 10, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+            data-hint="↑↓ 选择会话 · Enter 立即恢复"
+          >
+            {filtered.length}/{rows.length}
+          </span>
+        )}
       </div>
 
-      {/* Summary bar */}
-      {rows !== null && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 10.5,
-            color: 'var(--faint)',
-          }}
-        >
-          <span>
-            Showing {filtered.length} of {rows.length} saved session{rows.length === 1 ? '' : 's'}
-          </span>
-          <span>
-            <kbd className="usa-kbd">↑</kbd>/<kbd className="usa-kbd">↓</kbd> select ·{' '}
-            <kbd className="usa-kbd">Enter</kbd> resume
-          </span>
-        </div>
-      )}
-
       {/* Session list */}
-      <div style={{ maxHeight: 330, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ maxHeight: 330, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
         {error && (
           <div
             style={{
@@ -172,7 +161,8 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
               whiteSpace: 'pre-wrap',
               padding: '6px 8px',
               border: '1px solid var(--err)',
-              background: 'color-mix(in srgb, var(--err) 10%, var(--bg))',
+              borderRadius: 'var(--radius-xs, 2px)',
+              background: 'var(--err-soft, color-mix(in srgb, var(--err) 10%, var(--bg)))',
             }}
           >
             ✗ {error}
@@ -180,26 +170,26 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
         )}
 
         {!error && rows === null && (
-          <div style={{ color: 'var(--faint)', fontSize: 12, padding: '8px 2px' }}>⠋ loading saved sessions…</div>
+          <div style={{ color: 'var(--faint)', fontSize: 12, padding: '8px 2px' }}>⠋ 加载历史会话…</div>
         )}
 
         {rows !== null && rows.length === 0 && (
           <div className="usa-empty-state" style={{ margin: 0 }}>
-            <div style={{ color: 'var(--muted)', fontSize: 12 }}>
-              ○ no saved sessions — start one with [+ new]
-            </div>
-            <div style={{ color: 'var(--faint)', fontSize: 11 }}>
-              会话历史会在发送首条 prompt 后自动归档，便于随时恢复转录与 RE 账本状态。
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 12 }}>
+              <span>○ 暂无历史会话</span>
+              <span className="usa-hint-dot" data-hint="发送首条 prompt 后会自动归档会话转录与 RE 账本状态">
+                ?
+              </span>
             </div>
           </div>
         )}
 
         {rows !== null && rows.length > 0 && filtered.length === 0 && (
           <div className="usa-empty-state" style={{ margin: 0 }}>
-            <div style={{ color: 'var(--muted)', fontSize: 12 }}>○ no match for “{query}”</div>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>○ 无匹配会话（“{query}”）</span>
               <button type="button" className="usa-pill" data-active="true" onClick={() => setQuery('')}>
-                ↻ Clear search
+                ↻ 清空
               </button>
             </div>
           </div>
@@ -219,27 +209,35 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
               className="usa-resume-row"
               data-selected={selected ? 'true' : undefined}
               style={{ opacity: busyId === null || busyId === r.id ? 1 : 0.4 }}
+              data-hint={`${r.workspace} · ${fmtExactTime(r.updatedAt)}`}
             >
-              <span style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+              <span style={{ display: 'flex', gap: 7, alignItems: 'center', minWidth: 0 }}>
+                <span style={{ color: 'var(--accent)', fontWeight: 600, flexShrink: 0 }}>
                   {busyId === r.id ? '⠋' : '▸'} {r.hash || r.id}
                 </span>
                 <span
                   style={{
                     fontSize: 9.5,
                     padding: '0 5px',
-                    border: `1px solid color-mix(in srgb, var(--${badge.tone}) 55%, var(--rule))`,
+                    border: `1px solid color-mix(in srgb, var(--${badge.tone}) 50%, var(--rule))`,
+                    borderRadius: 'var(--radius-xs, 2px)',
                     color: `var(--${badge.tone})`,
-                    letterSpacing: '0.06em',
+                    letterSpacing: '0.05em',
+                    flexShrink: 0,
                   }}
                 >
                   {badge.label}
                 </span>
-                <span style={{ color: 'var(--text)', fontWeight: 500 }} title={r.workspace}>
+                <span
+                  style={{
+                    color: 'var(--text)',
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {wsName}
-                </span>
-                <span style={{ color: 'var(--faint)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {r.workspace !== wsName ? r.workspace : ''}
                 </span>
                 <span
                   style={{
@@ -248,10 +246,10 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
                     fontSize: 10,
                     fontVariantNumeric: 'tabular-nums',
                     whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}
-                  title={fmtExactTime(r.updatedAt)}
                 >
-                  {r.messages} msgs · {formatRelativeTime(r.updatedAt)}
+                  {r.messages} · {formatRelativeTime(r.updatedAt)}
                 </span>
               </span>
               {r.firstPrompt && (
@@ -264,7 +262,7 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  “{r.firstPrompt}”
+                  {r.firstPrompt}
                 </span>
               )}
             </button>
@@ -272,7 +270,10 @@ export function ResumeDialog({ onClose }: { onClose: () => void }) {
         })}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+          <kbd className="usa-kbd">↑↓</kbd> 选择 · <kbd className="usa-kbd">Enter</kbd> 恢复
+        </span>
         <Btn type="button" onClick={onClose}>
           close
         </Btn>

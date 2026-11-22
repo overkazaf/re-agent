@@ -1,7 +1,5 @@
-// 向导第②步（stage: experiment）——为假设配置并实跑可证伪实验。
-// 实验类型三卡（static_probe / sandbox_trace / artifact_replay）选中即预填
-// 命令模板，命令与预期输出均可编辑。沙箱可写/只读路径 chip 点击即可复制，
-// 命令引用 scope 外路径时即时红字警告。
+// ExperimentWizard — step ② (experiment): compact sandbox scope strip, clean
+// 3-card experiment presets (templates tucked in `data-hint`), and live scope guard.
 import { useMemo, useState, type CSSProperties } from 'react'
 import { api } from '../../lib/api'
 import type { EvidenceRecord } from '../../lib/types'
@@ -18,7 +16,7 @@ const EXP_KINDS: { key: ExpKindKey; glyph: string; label: string; desc: string; 
     key: 'static_probe',
     glyph: '◈',
     label: '静态探针',
-    desc: '只读静态特征：字符串 / 头部 / 指纹',
+    desc: '字符串 / 头部 / 指纹',
     tpl: 'strings -a {artifact} | head -50',
     expected: '',
   },
@@ -26,7 +24,7 @@ const EXP_KINDS: { key: ExpKindKey; glyph: string; label: string; desc: string; 
     key: 'sandbox_trace',
     glyph: '◉',
     label: '沙箱追踪',
-    desc: '受控反汇编 / 动态执行切片',
+    desc: '受控反汇编 / 动态切片',
     tpl: 'objdump -d {artifact} --start-address=0x401000',
     expected: '',
   },
@@ -34,13 +32,12 @@ const EXP_KINDS: { key: ExpKindKey; glyph: string; label: string; desc: string; 
     key: 'artifact_replay',
     glyph: '◎',
     label: '产物重放',
-    desc: 'verify_artifact 确定性重放',
+    desc: '确定性重放验证',
     tpl: 'verify_artifact {artifact}',
     expected: 'accepted',
   },
 ]
 
-/** 命令中引用到的路径形 token（/ ~ ./ ../ 开头） */
 function referencedPaths(command: string): string[] {
   const tokens = command.split(/[\s'"|;&<>(){}]+/).filter((t) => /^(\.{1,2}\/|~\/|\/)/.test(t) && t.length > 1)
   return Array.from(new Set(tokens))
@@ -50,7 +47,6 @@ function isUnderScope(path: string, roots: readonly string[]): boolean {
   return roots.some((r) => Boolean(r) && (path === r || path.startsWith(r.endsWith('/') ? r : r + '/')))
 }
 
-/** 实验结果状态：从刷新后的 Hypothesis.experiments 按 evidenceId 比对 */
 async function resolveExpStatus(sessionId: string, hypId: string, ev: EvidenceRecord): Promise<'passed' | 'falsified' | 'error'> {
   if (ev.isError) return 'error'
   const res = await actions.getState(sessionId)
@@ -118,11 +114,11 @@ export function ExperimentWizard() {
   async function run() {
     if (!ctx) return
     if (!ctx.hypId) {
-      setBanner({ tone: 'err', text: '缺少关联假设（hypId）——请回到第①步先建立假设' })
+      setBanner({ tone: 'err', text: '缺少关联假设，请回到第①步先建立假设' })
       return
     }
     if (!command.trim()) {
-      setBanner({ tone: 'err', text: '请填写实验命令（由宿主真实执行并盖章为不可篡改 ev_NNN）' })
+      setBanner({ tone: 'err', text: '请填写实验命令' })
       return
     }
     setBusy(true)
@@ -165,77 +161,102 @@ export function ExperimentWizard() {
       {hyp && (
         <div style={hypBarStyle}>
           <b style={{ color: 'var(--accent)', flexShrink: 0 }}>{hyp.id}</b>
-          <span style={{ color: 'var(--text)' }}>{hyp.claim}</span>
+          <span style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} data-hint={hyp.claim}>
+            {hyp.claim}
+          </span>
         </div>
       )}
 
-      {/* 沙箱引导面板：可写绿 chip / 只读灰 chip / 网络状态 */}
+      {/* Compact sandbox status & scope chips */}
       <div style={scopePanelStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ color: sandboxActive ? 'var(--ok)' : 'var(--faint)', fontWeight: 700, fontSize: 11 }}>
-            {sandboxActive ? '● 沙箱 · 已激活' : '○ 沙箱 · 未激活'}
-          </span>
-          {sandbox?.device && <span style={{ color: 'var(--muted)', fontSize: 10.5 }}>{sandbox.device}</span>}
-          {sandbox && (
-            <span style={{ color: 'var(--faint)', fontSize: 10.5 }}>
-              授权 {sandbox.grantedCount} · 拒绝 {sandbox.deniedCount}
-            </span>
-          )}
-          <span style={{ color: 'var(--muted)', fontSize: 10.5, marginLeft: 'auto' }}>
-            网络：{network ?? '未声明'}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-          {granted.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => copy(`scope-${g}`, g)}
-              title="点击复制沙箱内可写路径"
-              style={greenChipStyle}
-            >
-              {copiedKey === `scope-${g}` ? '✓ 已复制' : g}
-            </button>
-          ))}
-          {readonlyRoots.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => copy(`ro-${p}`, p)}
-              title="只读目标（可引用不可写，点击复制）"
-              style={grayChipStyle}
-            >
-              {copiedKey === `ro-${p}` ? '✓ 已复制' : `${p}（只读）`}
-            </button>
-          ))}
-          {!sandboxActive && (
-            <span style={{ color: 'var(--faint)', fontSize: 10 }}>命令将在未受控环境执行</span>
-          )}
-        </div>
+        <span
+          style={{ color: sandboxActive ? 'var(--ok)' : 'var(--faint)', fontWeight: 600, fontSize: 10.5, whiteSpace: 'nowrap' }}
+          data-hint={
+            sandboxActive
+              ? `能力沙箱已启用${sandbox?.device ? ` (${sandbox.device})` : ''} · 授权 ${sandbox?.grantedCount ?? 0} · 拒绝 ${sandbox?.deniedCount ?? 0}`
+              : '沙箱未激活：命令将在当前宿主环境执行'
+          }
+        >
+          {sandboxActive ? '● 沙箱' : '○ 无沙箱'}
+        </span>
+
+        {granted.map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => copy(`scope-${g}`, g)}
+            data-hint="点击复制沙箱内可写路径"
+            style={greenChipStyle}
+          >
+            {copiedKey === `scope-${g}` ? '✓ 已复制' : g}
+          </button>
+        ))}
+
+        {readonlyRoots.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => copy(`ro-${p}`, p)}
+            data-hint="只读目标路径（点击复制）"
+            style={grayChipStyle}
+          >
+            {copiedKey === `ro-${p}` ? '✓ 已复制' : `${p} (RO)`}
+          </button>
+        ))}
+
+        <span
+          style={{ color: 'var(--faint)', fontSize: 10, marginLeft: 'auto', whiteSpace: 'nowrap' }}
+          data-hint="来自 /goal 契约的网络访问策略"
+        >
+          net:{network ?? '—'}
+        </span>
       </div>
 
-      {/* 实验类型三卡 */}
+      {/* 3 clean experiment preset cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
         {EXP_KINDS.map((k) => {
           const on = kind === k.key
           return (
-            <button key={k.key} type="button" disabled={busy} onClick={() => pickKind(k)} style={wizSelectCardStyle(on, 'accent')}>
-              <span style={{ color: on ? 'var(--accent)' : 'var(--muted)', fontSize: 13 }}>{k.glyph}</span>
-              <span style={{ color: on ? 'var(--accent)' : 'var(--text)', fontWeight: 700, fontSize: 11.5 }}>{k.label}</span>
-              <span style={{ color: 'var(--faint)', fontSize: 10, lineHeight: 1.4 }}>{k.desc}</span>
-              <code style={{ color: 'var(--muted)', fontSize: 9.5, wordBreak: 'break-all' }}>{k.tpl}</code>
+            <button
+              key={k.key}
+              type="button"
+              disabled={busy}
+              onClick={() => pickKind(k)}
+              style={wizSelectCardStyle(on, 'accent')}
+              data-hint={`点击填入模板：${k.tpl}`}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ color: on ? 'var(--accent)' : 'var(--muted)', fontSize: 12 }}>{k.glyph}</span>
+                <span style={{ color: on ? 'var(--accent)' : 'var(--text)', fontWeight: 600, fontSize: 11.5 }}>{k.label}</span>
+              </span>
+              <span style={{ color: 'var(--faint)', fontSize: 10 }}>{k.desc}</span>
             </button>
           )
         })}
       </div>
 
       <label style={wizLabelStyle}>
-        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>
-            实跑命令（{artifact ? <>目标产物 <code style={{ color: 'var(--ok)' }}>{artifact}</code></> : '未指定目标产物'}）
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>实跑命令</span>
+          {artifact && (
+            <code
+              style={{
+                color: 'var(--ok)',
+                fontSize: 10,
+                padding: '0 4px',
+                border: '1px solid var(--border-subtle, var(--rule))',
+                borderRadius: 'var(--radius-xs, 2px)',
+              }}
+              data-hint="当前目标产物"
+            >
+              {artifact}
+            </code>
+          )}
+          <span className="usa-hint-dot" data-hint="由宿主实际执行并将输出铸造为不可篡改证据 ev_NNN">
+            ?
           </span>
-          <span style={{ color: command.trim() ? 'var(--ok)' : 'var(--faint)', fontSize: 10 }}>
-            {command.trim() ? '✓ 就绪' : '必填'}
+          <span style={{ marginLeft: 'auto', color: command.trim() ? 'var(--ok)' : 'var(--faint)', fontSize: 10 }}>
+            {command.trim() ? '✓' : '必填'}
           </span>
         </span>
         <input
@@ -246,9 +267,10 @@ export function ExperimentWizard() {
           }}
           value={command}
           onChange={(e) => setCommand(e.target.value)}
-          placeholder="例如：strings -a carrier.bin | head -50"
+          placeholder="例：strings -a carrier.bin | head -50"
         />
       </label>
+
       {outOfScope.length > 0 && (
         <div
           style={{
@@ -256,21 +278,27 @@ export function ExperimentWizard() {
             fontSize: 10.5,
             padding: '5px 8px',
             border: '1px solid var(--err)',
-            background: 'color-mix(in srgb, var(--err) 10%, var(--bg))',
+            borderRadius: 'var(--radius-xs, 2px)',
+            background: 'var(--err-soft, color-mix(in srgb, var(--err) 10%, var(--bg)))',
           }}
         >
-          ⚠ 该路径不在沙箱 scope 内：{outOfScope.join('、')} —— 实验将被沙箱拒绝或产生未受控读写
+          ⚠ 超出沙箱路径：{outOfScope.join('、')}
         </div>
       )}
 
       <label style={wizLabelStyle}>
-        预期输出关键字（命中则支撑；不符则反证折半）
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span>预期输出</span>
+          <span className="usa-hint-dot" data-hint="命中关键字则支撑假设；不符则自动反证折半并回到假设修正">
+            ?
+          </span>
+        </span>
         <input
           aria-label="experiment expected"
           style={wizFieldStyle}
           value={expected}
           onChange={(e) => setExpected(e.target.value)}
-          placeholder="例如：carrier-prefix / accepted / MZPK"
+          placeholder="例：accepted / MZPK"
         />
       </label>
 
@@ -297,25 +325,30 @@ export function ExperimentWizard() {
 const hypBarStyle: CSSProperties = {
   display: 'flex',
   gap: 8,
-  alignItems: 'baseline',
-  border: '1px solid var(--rule)',
-  background: 'rgba(5, 8, 12, 0.5)',
+  alignItems: 'center',
+  border: '1px solid var(--border-subtle, var(--rule))',
+  borderRadius: 'var(--radius-xs, 2px)',
+  background: 'var(--surface-1, transparent)',
   padding: '5px 8px',
   fontSize: 11,
+  minWidth: 0,
 }
 
 const scopePanelStyle: CSSProperties = {
-  border: '1px solid color-mix(in srgb, var(--ok) 35%, var(--rule))',
-  background: 'rgba(6, 16, 12, 0.55)',
-  padding: '6px 9px',
+  border: '1px solid var(--border-subtle, var(--rule))',
+  borderRadius: 'var(--radius-xs, 2px)',
+  background: 'var(--surface-1, transparent)',
+  padding: '5px 8px',
   display: 'flex',
-  flexDirection: 'column',
-  gap: 5,
+  alignItems: 'center',
+  gap: 6,
+  flexWrap: 'wrap',
 }
 
 const greenChipStyle: CSSProperties = {
-  border: '1px solid var(--ok)',
-  background: 'color-mix(in srgb, var(--ok) 14%, transparent)',
+  border: '1px solid color-mix(in srgb, var(--ok) 65%, var(--rule))',
+  borderRadius: 'var(--radius-xs, 2px)',
+  background: 'var(--ok-soft, color-mix(in srgb, var(--ok) 12%, transparent))',
   color: 'var(--ok)',
   fontSize: 10,
   padding: '1px 6px',
@@ -323,8 +356,9 @@ const greenChipStyle: CSSProperties = {
 }
 
 const grayChipStyle: CSSProperties = {
-  border: '1px solid var(--rule)',
-  background: 'rgba(5, 8, 12, 0.6)',
+  border: '1px solid var(--border-subtle, var(--rule))',
+  borderRadius: 'var(--radius-xs, 2px)',
+  background: 'var(--surface-2, transparent)',
   color: 'var(--muted)',
   fontSize: 10,
   padding: '1px 6px',

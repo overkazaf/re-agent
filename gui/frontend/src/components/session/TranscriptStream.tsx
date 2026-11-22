@@ -1,8 +1,5 @@
-// WS4 transcript: renders the session loopBuffer as forensic trace lines
-// (↻ wire / ◈ plan / ⚙ tool / ✓✗ result / ▸ turn / ✦ reply) with relative
-// t+Xs stamps; replies render as markdown with copyable code/command blocks.
-// Includes forensic filter pills, in-transcript search, collapsible verbose
-// tool outputs, one-click copy feedback, and non-hijacking jump-to-bottom.
+// TranscriptStream — minimalist forensic trace log with compact filter pills,
+// expandable search toggle, collapsible tool rows, and contextual `data-hint` tips.
 import {
   isValidElement,
   useEffect,
@@ -27,12 +24,18 @@ import './usability.css'
 
 const AUTO_SCROLL_PX = 80
 
-const FILTER_TABS: readonly { key: TranscriptFilter; label: string; tone?: 'err' }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'assistant', label: 'Assistant' },
-  { key: 'tools', label: 'Tools' },
-  { key: 'system', label: 'System' },
-  { key: 'errors', label: 'Errors', tone: 'err' },
+const FILTER_TABS: readonly { key: TranscriptFilter; label: string; hint: string; tone?: 'err' }[] = [
+  { key: 'all', label: '全部', hint: '显示所有转录事件（含系统与连线轨迹）' },
+  { key: 'assistant', label: '回复', hint: '仅显示你的提问与 Agent 回复' },
+  { key: 'tools', label: '工具', hint: '仅显示工具调用与执行结果' },
+  { key: 'errors', label: '错误', hint: '仅显示失败的工具调用或错误信息', tone: 'err' },
+]
+
+const QUICK_CMDS: readonly { cmd: string; hint: string }[] = [
+  { cmd: '/workflow reverse', hint: '启动 9 阶段逆向主线（分诊 → 取证 → 假设账本 → 审计 → Writeup）' },
+  { cmd: '/scan <bin>', hint: '快速静态指纹分析（文件头、段熵、缓解措施）' },
+  { cmd: '/decode base64 …', hint: '纯本地解码（不消耗 LLM 额度）' },
+  { cmd: '/help', hint: '查看全部内置斜杠命令' },
 ]
 
 function fmtTok(n: number): string {
@@ -47,7 +50,7 @@ function stamp(ts: number | undefined, origin: number | null): string {
   return `t+${((ts - base) / 1000).toFixed(1)}s`
 }
 
-function trunc(s: string, max = 110): string {
+function trunc(s: string, max = 100): string {
   const flat = s.replace(/\s+/g, ' ').trim()
   return flat.length > max ? `${flat.slice(0, max)}…` : flat
 }
@@ -69,9 +72,7 @@ function extractText(node: ReactNode): string {
   return ''
 }
 
-// Stable React keys across the ring buffer: once LOOP_LIMIT drops rows from
-// the head, index-based keys would reassign every row; event object identity
-// survives the slice, so hand out a monotonic seq per object instead.
+// Stable React keys across the ring buffer: event object identity survives slicing.
 const keyOf = (() => {
   const seen = new WeakMap<object, number>()
   let next = 1
@@ -103,15 +104,15 @@ function CopyableCodeBlock({
   return (
     <div className="usa-code-block">
       <div className="usa-code-head">
-        <span>{lang || 'code / hex'}</span>
+        <span>{lang || 'code'}</span>
         <button
           type="button"
           className="usa-copy-btn"
           data-copied={copied ? 'true' : undefined}
           onClick={() => onCopy(copyKey, raw)}
-          title="Copy block"
+          data-hint="复制代码块内容"
         >
-          {copied ? '✓ Copied' : '⎘ Copy'}
+          {copied ? '✓ 已复制' : '⎘ 复制'}
         </button>
       </div>
       <pre className="usa-code-pre">
@@ -167,8 +168,9 @@ function buildMdComponents(
       ) : (
         <code
           style={{
-            background: 'var(--bg-panel)',
-            border: '1px solid color-mix(in srgb, var(--rule) 65%, transparent)',
+            background: 'var(--surface-2, var(--bg-panel))',
+            border: '1px solid var(--border-subtle, var(--rule))',
+            borderRadius: 'var(--radius-xs, 2px)',
             padding: '0 4px',
             fontSize: 12,
           }}
@@ -233,9 +235,9 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                 className="usa-copy-btn"
                 data-copied={copied ? 'true' : undefined}
                 onClick={() => onCopy(ck, ev.text)}
-                title="Copy prompt"
+                data-hint="复制该条指令"
               >
-                {copied ? '✓ Copied' : '⎘ Copy'}
+                {copied ? '✓' : '⎘'}
               </button>
             </span>
           )}
@@ -283,9 +285,7 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
 
     case 'tool_start': {
       const rawSummary = ev.preview || ev.text || summarizeArgs(ev.args)
-      const fullPayload = ev.args
-        ? JSON.stringify(ev.args, null, 2)
-        : rawSummary
+      const fullPayload = ev.args ? JSON.stringify(ev.args, null, 2) : rawSummary
       const verbose = isVerboseToolPayload(rawSummary, ev.args)
       const ck = `tool-s-${rowKey}`
       const copied = copiedKey === ck
@@ -305,7 +305,7 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                   minWidth: 0,
                 }}
               >
-                {trunc(rawSummary, 90)}
+                {trunc(rawSummary, 88)}
               </span>
               {verbose && (
                 <button
@@ -313,8 +313,9 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                   className="usa-tool-toggle"
                   onClick={() => onToggleExpand(rowKey)}
                   aria-expanded={expanded}
+                  data-hint={expanded ? '收起参数详情' : '展开完整调用参数'}
                 >
-                  {expanded ? '▾ hide' : '▸ args'}
+                  {expanded ? '▾' : '▸'}
                 </button>
               )}
               {fullPayload && (
@@ -324,9 +325,9 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                     className="usa-copy-btn"
                     data-copied={copied ? 'true' : undefined}
                     onClick={() => onCopy(ck, fullPayload)}
-                    title="Copy tool arguments"
+                    data-hint="复制调用参数"
                   >
-                    {copied ? '✓ Copied' : '⎘'}
+                    {copied ? '✓' : '⎘'}
                   </button>
                 </span>
               )}
@@ -360,7 +361,7 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                   minWidth: 0,
                 }}
               >
-                {trunc(fullText, 90)}
+                {trunc(fullText, 88)}
                 {ev.ms > 0 ? ` · ${ev.ms}ms` : ''}
               </span>
               {verbose && (
@@ -369,8 +370,9 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                   className="usa-tool-toggle"
                   onClick={() => onToggleExpand(rowKey)}
                   aria-expanded={expanded}
+                  data-hint={expanded ? '收起输出详情' : '展开完整工具输出'}
                 >
-                  {expanded ? '▾ hide' : '▸ output'}
+                  {expanded ? '▾' : '▸'}
                 </button>
               )}
               {fullText && (
@@ -380,9 +382,9 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                     className="usa-copy-btn"
                     data-copied={copied ? 'true' : undefined}
                     onClick={() => onCopy(ck, fullText)}
-                    title="Copy tool output"
+                    data-hint="复制工具输出"
                   >
-                    {copied ? '✓ Copied' : '⎘'}
+                    {copied ? '✓' : '⎘'}
                   </button>
                 </span>
               )}
@@ -432,9 +434,7 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
               <span style={{ color: 'var(--ok)', fontWeight: 600 }}>
-                ✦ reply{ev.textChars > 0 ? ` · ${fmtTok(ev.textChars)} chars` : ''}
-                {/* core's TokenUsage tags are omitempty: a zero usage crosses the
-                    wire as {} and costUsd is undefined here */}
+                ✦ reply{ev.textChars > 0 ? ` · ${fmtTok(ev.textChars)}` : ''}
                 {ev.usage ? ` · $${(ev.usage.costUsd ?? 0).toFixed(4)}` : ''}
               </span>
               <span className="usa-row-actions" data-visible={copied ? 'true' : undefined} style={{ marginLeft: 'auto' }}>
@@ -443,9 +443,9 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                   className="usa-copy-btn"
                   data-copied={copied ? 'true' : undefined}
                   onClick={() => onCopy(ck, ev.text)}
-                  title="Copy full reply markdown"
+                  data-hint="复制完整 Markdown 回复"
                 >
-                  {copied ? '✓ Copied' : '⎘ Copy reply'}
+                  {copied ? '✓ 已复制' : '⎘ 复制'}
                 </button>
               </span>
             </div>
@@ -454,7 +454,7 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
                 color: 'var(--text)',
                 fontSize: 13,
                 lineHeight: 1.5,
-                borderLeft: '2px solid var(--rule)',
+                borderLeft: '2px solid var(--border-subtle, var(--rule))',
                 paddingLeft: 10,
                 whiteSpace: 'normal',
               }}
@@ -481,6 +481,7 @@ export function TranscriptStream({
   style?: CSSProperties
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const pinnedRef = useRef(true)
   const prevTailRef = useRef<LoopEvent | undefined>(undefined)
 
@@ -488,19 +489,19 @@ export function TranscriptStream({
   const [unseenCount, setUnseenCount] = useState(0)
   const [filter, setFilter] = useState<TranscriptFilter>('all')
   const [query, setQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<number>>(() => new Set())
 
   const { copiedKey, copy } = useCopyFeedback()
 
   const count = runtime.loopBuffer.length
-  // ring buffer: length stops growing at LOOP_LIMIT, so also key the effect on
-  // the tail event's identity — a fresh tail means new content to scroll to
   const tailEvent = count > 0 ? runtime.loopBuffer[count - 1] : undefined
 
   // Reset per-session view state when switching active sessions
   useEffect(() => {
     setFilter('all')
     setQuery('')
+    setSearchOpen(false)
     setExpandedKeys(new Set())
     setUnseenCount(0)
     pinnedRef.current = true
@@ -509,12 +510,17 @@ export function TranscriptStream({
   }, [runtime.info.id])
 
   useEffect(() => {
+    if (searchOpen) {
+      searchInputRef.current?.focus()
+    }
+  }, [searchOpen])
+
+  useEffect(() => {
     const el = scrollRef.current
     if (el && pinnedRef.current) {
       el.scrollTop = el.scrollHeight
       setUnseenCount(0)
     } else if (tailEvent && prevTailRef.current && tailEvent !== prevTailRef.current) {
-      // User is scrolled up reviewing history — never hijack scroll; badge new arrivals
       setUnseenCount((n) => n + 1)
     }
     prevTailRef.current = tailEvent
@@ -546,10 +552,11 @@ export function TranscriptStream({
   }
 
   const isFiltered = filter !== 'all' || query.trim().length > 0
+  const showSearchBox = searchOpen || query.length > 0
 
   return (
     <div className="usa-transcript-root" style={style}>
-      {/* Compact forensic filter & search toolbar */}
+      {/* Minimalist filter pills + expandable search toggle */}
       {count > 0 && (
         <div className="usa-transcript-toolbar" role="toolbar" aria-label="Transcript filters">
           <div className="usa-transcript-pills">
@@ -566,43 +573,73 @@ export function TranscriptStream({
                   data-has-count={tab.tone === 'err' && c > 0 ? 'true' : undefined}
                   onClick={() => setFilter(tab.key)}
                   aria-pressed={active}
+                  data-hint={tab.hint}
+                  data-hint-side="bottom"
                 >
                   <span>{tab.label}</span>
-                  <span className="usa-pill-count">{c}</span>
+                  {c > 0 && <span className="usa-pill-count">{c}</span>}
                 </button>
               )
             })}
           </div>
 
-          <div className="usa-transcript-search">
-            <span style={{ color: 'var(--faint)', fontSize: 10 }}>⌕</span>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && query) {
-                  e.stopPropagation()
-                  setQuery('')
-                }
-              }}
-              placeholder="Search hex / tool / reply…"
-              aria-label="Search transcript"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                title="Clear search"
-                style={{ color: 'var(--faint)', fontSize: 10, padding: '0 2px', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
+          {showSearchBox ? (
+            <div className="usa-transcript-search">
+              <span style={{ color: 'var(--faint)', fontSize: 10 }}>⌕</span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onBlur={() => {
+                  if (!query.trim()) setSearchOpen(false)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.stopPropagation()
+                    setQuery('')
+                    setSearchOpen(false)
+                  }
+                }}
+                placeholder="筛选关键字…"
+                aria-label="Search transcript"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setQuery('')
+                    setSearchOpen(false)
+                  }}
+                  aria-label="清空搜索"
+                  data-hint="清空并收起搜索"
+                  data-hint-kbd="Esc"
+                  style={{ color: 'var(--faint)', fontSize: 10, padding: '0 2px', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="usa-search-trigger"
+              onClick={() => setSearchOpen(true)}
+              aria-label="搜索转录流"
+              data-hint="搜索转录记录（地址 / 工具 / 回复）"
+              data-hint-side="bottom"
+            >
+              ⌕
+            </button>
+          )}
 
           {isFiltered && (
-            <span style={{ color: 'var(--faint)', fontSize: 10, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+            <span
+              style={{ color: 'var(--faint)', fontSize: 10, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+              data-hint="当前匹配条数 / 总记录数"
+              data-hint-side="bottom"
+            >
               {visibleIndices.length}/{count}
             </span>
           )}
@@ -625,30 +662,33 @@ export function TranscriptStream({
       >
         {count === 0 && (
           <div className="usa-empty-state">
-            <div style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>
-              ⌁ transcript empty — send a prompt to start the loop
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: 11, lineHeight: 1.55 }}>
-              当前工作区 <code style={{ color: 'var(--text)' }}>{runtime.info.workspace}</code>
-              {runtime.info.workflow ? ` · workflow=${runtime.info.workflow}` : ''}。输入分析目标开始取证，或使用直调斜杠命令：
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>
+                ⌁ 就绪 · 发送指令开始取证
+              </span>
+              <span
+                style={{ color: 'var(--faint)', fontSize: 11 }}
+                data-hint={`当前工作区：${runtime.info.workspace}${runtime.info.workflow ? ` · workflow=${runtime.info.workflow}` : ''}`}
+              >
+                {runtime.info.workspace.split('/').filter(Boolean).pop() || runtime.info.workspace}
+              </span>
             </div>
             <div className="usa-empty-chips">
-              <span className="usa-empty-chip">/workflow reverse · 启动 9 阶段逆向主线</span>
-              <span className="usa-empty-chip">/scan &lt;bin&gt; · 快速静态指纹</span>
-              <span className="usa-empty-chip">/decode base64 … · 纯本地解码</span>
-              <span className="usa-empty-chip">/help · 查看全部命令</span>
+              {QUICK_CMDS.map((item) => (
+                <span key={item.cmd} className="usa-empty-chip" data-hint={item.hint}>
+                  {item.cmd}
+                </span>
+              ))}
             </div>
           </div>
         )}
 
         {count > 0 && visibleIndices.length === 0 && (
           <div className="usa-empty-state">
-            <div style={{ color: 'var(--muted)', fontSize: 12 }}>
-              ○ No matching transcript events for filter{' '}
-              <b style={{ color: 'var(--accent)' }}>{filter}</b>
-              {query.trim() ? ` matching “${query.trim()}”` : ''}.
-            </div>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+                ○ 无匹配记录{query.trim() ? `（“${query.trim()}”）` : ''}
+              </span>
               <button
                 type="button"
                 className="usa-pill"
@@ -656,9 +696,10 @@ export function TranscriptStream({
                 onClick={() => {
                   setFilter('all')
                   setQuery('')
+                  setSearchOpen(false)
                 }}
               >
-                ↻ Reset filters
+                ↻ 重置筛选
               </button>
             </div>
           </div>
@@ -685,12 +726,10 @@ export function TranscriptStream({
               type="button"
               className="usa-jump-btn"
               onClick={jumpToBottom}
-              title="Resume live auto-scroll"
+              data-hint="回到底部并恢复实时跟随"
             >
               <span>↓</span>
-              <span>
-                {unseenCount > 0 ? `${unseenCount} new · Jump to latest` : 'Jump to latest'}
-              </span>
+              <span>{unseenCount > 0 ? `${unseenCount} 条新消息` : '回到底部'}</span>
             </button>
           </div>
         )}

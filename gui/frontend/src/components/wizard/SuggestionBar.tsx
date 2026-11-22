@@ -1,18 +1,35 @@
-// HUD 建议条 — 消费 scene store 的 suggestion，一键进入对应向导步骤。
-// 常驻细条（摆放在 TopBar 下沿 / banner 槽）；action.kind === 'none'
-// 或已 dismissed 时不渲染。带清晰阶段标签（HYP/EXP/VER/AUD）与高对比度
-// 主 CTA（「去处理 →」），✕ 调 dismissSuggestion。
+// SuggestionBar — quiet, breathable single-line forensic next-step strip.
+// Consumes scene store's suggestion and opens the matching wizard stage in one click.
 import type { CSSProperties } from 'react'
 import type { ZoneKey } from '../../three/contract'
 import { sceneActions, useSceneStore } from '../../store/scene'
 import { useSessionStore } from '../../store/sessions'
 import '../session/usability.css'
 
-const ZONE_META: Record<'HYP' | 'EXP' | 'VER' | 'AUD', { label: string; tone: 'accent' | 'warn' | 'ok' | 'violet' }> = {
-  HYP: { label: '① HYP', tone: 'accent' },
-  EXP: { label: '② EXP', tone: 'warn' },
-  VER: { label: '③ VER', tone: 'ok' },
-  AUD: { label: '④ AUD', tone: 'violet' },
+const ZONE_META: Record<
+  'HYP' | 'EXP' | 'VER' | 'AUD',
+  { label: string; tone: 'accent' | 'warn' | 'ok' | 'violet'; why: string }
+> = {
+  HYP: {
+    label: '① HYP',
+    tone: 'accent',
+    why: '建立可证伪假设与预期输出，作为后续取证与反证折半的基准。',
+  },
+  EXP: {
+    label: '② EXP',
+    tone: 'warn',
+    why: '由宿主实跑可证伪实验并铸造不可篡改证据 ev_NNN。',
+  },
+  VER: {
+    label: '③ VER',
+    tone: 'ok',
+    why: '运行 verify_artifact 确定性重放并计算 SHA256，解锁审计门禁。',
+  },
+  AUD: {
+    label: '④ AUD',
+    tone: 'violet',
+    why: '引用实测证据完成审查签章或独立对抗审计，形成零幻觉闭环。',
+  },
 }
 
 export function SuggestionBar() {
@@ -21,7 +38,7 @@ export function SuggestionBar() {
 
   if (suggestion.action.kind === 'none' || suggestionDismissed || !activeId) return null
 
-  const sessionId = activeId // 闭包内使用非空收窄后的引用
+  const sessionId = activeId
   const a = suggestion.action
   const targetZone: 'HYP' | 'EXP' | 'VER' | 'AUD' =
     a.kind === 'new-hypothesis'
@@ -52,29 +69,21 @@ export function SuggestionBar() {
         style={{
           fontSize: 10,
           fontWeight: 700,
-          letterSpacing: '0.08em',
+          letterSpacing: '0.07em',
           padding: '1px 6px',
-          border: `1px solid var(--${meta.tone})`,
+          border: `1px solid color-mix(in srgb, var(--${meta.tone}) 55%, var(--rule))`,
+          borderRadius: 'var(--radius-xs, 2px)',
           color: `var(--${meta.tone})`,
-          background: `color-mix(in srgb, var(--${meta.tone}) 14%, transparent)`,
+          background: `color-mix(in srgb, var(--${meta.tone}) 10%, transparent)`,
           whiteSpace: 'nowrap',
           flexShrink: 0,
         }}
+        data-hint={meta.why}
+        data-hint-side="bottom"
       >
         {meta.label}
       </span>
-      <span
-        style={{
-          color: 'var(--faint)',
-          fontSize: 10,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}
-      >
-        next
-      </span>
+
       <span
         style={{
           color: 'var(--text)',
@@ -85,18 +94,37 @@ export function SuggestionBar() {
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
         }}
-        title={suggestion.text}
+        data-hint={suggestion.text}
+        data-hint-side="bottom"
       >
         {suggestion.text}
       </span>
-      <button type="button" onClick={go} className="usa-suggestion-cta">
+
+      <span
+        className="usa-hint-dot"
+        tabIndex={0}
+        data-hint={`推荐原因：${meta.why}`}
+        data-hint-side="bottom"
+      >
+        ?
+      </span>
+
+      <button
+        type="button"
+        onClick={go}
+        className="usa-suggestion-cta"
+        data-hint="打开对应阶段的取证向导"
+        data-hint-side="bottom"
+      >
         去处理 →
       </button>
+
       <button
         type="button"
         onClick={sceneActions.dismissSuggestion}
         style={xBtnStyle}
-        title="本次会话忽略此建议"
+        data-hint="本次会话忽略此建议"
+        data-hint-side="bottom"
         aria-label="Dismiss suggestion"
       >
         ✕
@@ -113,4 +141,5 @@ const xBtnStyle: CSSProperties = {
   font: 'inherit',
   fontSize: 11,
   padding: '0 3px',
+  flexShrink: 0,
 }
