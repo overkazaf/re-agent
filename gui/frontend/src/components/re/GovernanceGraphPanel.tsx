@@ -67,7 +67,7 @@ type ExtendedVerificationStats = VerificationStats & {
 
 type DeliveryOutcome = 'accepted' | 'candidate' | 'needs_more_evidence' | 'rejected'
 
-type ExtendedLedger = LedgerDTO & {
+type ExtendedLedger = Omit<LedgerDTO, 'auditVerdict'> & {
   auditVerdict?: DeliveryOutcome | string
 }
 
