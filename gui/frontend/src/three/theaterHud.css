@@ -135,6 +135,38 @@
   white-space: nowrap;
 }
 
+.thud-counts--btn {
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  padding: 1px 6px;
+  margin: -1px -2px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.thud-counts--btn:hover,
+.thud-counts--open {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  color: var(--accent);
+}
+
+.thud-counts-caret {
+  font-size: 9px;
+  color: var(--faint);
+  margin-left: 1px;
+}
+
+.thud-counts--open .thud-counts-caret {
+  color: var(--accent);
+}
+
 .thud-counts-key {
   color: var(--faint);
   font-weight: 600;
@@ -324,15 +356,16 @@
   white-space: nowrap;
 }
 
-/* --- Bottom-Right Tactical Inspector Drawer --------------------------------- */
+/* --- Right-Side Rich 3D Forensic Node Inspector Drawer ---------------------- */
 
 .thud-inspector {
   position: absolute;
   right: 14px;
   bottom: 12px;
-  z-index: 6;
-  width: 316px;
+  z-index: 7;
+  width: 382px;
   max-width: calc(100% - 28px);
+  max-height: calc(100% - 72px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -558,6 +591,669 @@
   background: color-mix(in srgb, var(--surface-2) 85%, transparent);
 }
 
+/* --- Rich Forensic Inspector Internals -------------------------------------- */
+
+.thud-insp-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+
+.thud-insp-desc {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.thud-insp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.thud-insp-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.thud-insp-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.thud-insp-claim {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+.thud-insp-text {
+  font-size: 10.5px;
+  line-height: 1.48;
+  color: var(--text);
+  word-break: break-word;
+  user-select: text;
+}
+
+.thud-insp-text--muted {
+  color: var(--muted);
+}
+
+.thud-insp-list {
+  margin: 0;
+  padding-left: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.thud-insp-callout {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text);
+  padding: 5px 8px;
+  border-radius: var(--radius-xs);
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-2));
+  word-break: break-word;
+  user-select: text;
+}
+
+.thud-insp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.thud-insp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 2px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+
+.thud-insp-card--ok {
+  border-left-color: var(--ok);
+}
+
+.thud-insp-card--err {
+  border-left-color: var(--err);
+}
+
+.thud-insp-card--warn {
+  border-left-color: var(--warn);
+}
+
+.thud-insp-card--accent {
+  border-left-color: var(--accent);
+}
+
+.thud-insp-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.thud-insp-card-id {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.thud-insp-card-title {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.thud-insp-cmd {
+  display: block;
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--accent);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+
+.thud-insp-mini-out {
+  margin: 0;
+  padding: 4px 6px;
+  max-height: 92px;
+  overflow: auto;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-1) 84%, transparent);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.42;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+.thud-insp-codeblock {
+  margin: 0;
+  padding: 7px 8px;
+  max-height: 185px;
+  overflow: auto;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
+  border: 1px solid var(--border-default);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre;
+  tab-size: 2;
+  user-select: text;
+  scrollbar-width: thin;
+}
+
+.thud-insp-codeblock--wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.thud-insp-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  border: 1px solid var(--border-subtle);
+}
+
+.thud-insp-kv-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 10px;
+}
+
+.thud-insp-kv-key {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  min-width: 54px;
+  flex-shrink: 0;
+}
+
+.thud-insp-kv-val {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  user-select: text;
+}
+
+.thud-mini-copy {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-3) 80%, transparent);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-mini-copy:hover {
+  color: var(--accent);
+  border-color: var(--border-accent);
+  background: var(--accent-soft);
+}
+
+.thud-insp-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* --- Interactive Provenance Link Chips -------------------------------------- */
+
+.thud-link-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.thud-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-link-chip:hover {
+  transform: translateY(-1px);
+}
+
+.thud-link-chip--ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 46%, transparent);
+  background: var(--ok-soft);
+}
+
+.thud-link-chip--ok:hover {
+  border-color: var(--ok);
+}
+
+.thud-link-chip--err {
+  color: var(--err);
+  border-color: color-mix(in srgb, var(--err) 46%, transparent);
+  background: var(--err-soft);
+}
+
+.thud-link-chip--err:hover {
+  border-color: var(--err);
+}
+
+.thud-link-chip--violet {
+  color: var(--violet);
+  border-color: color-mix(in srgb, var(--violet) 46%, transparent);
+  background: var(--violet-soft);
+}
+
+.thud-link-chip--violet:hover {
+  border-color: var(--violet);
+}
+
+.thud-link-chip--warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 46%, transparent);
+  background: var(--warn-soft);
+}
+
+.thud-link-chip--warn:hover {
+  border-color: var(--warn);
+}
+
+.thud-link-chip--accent {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+  background: var(--accent-soft);
+}
+
+.thud-link-chip--accent:hover {
+  border-color: var(--accent);
+}
+
+.thud-zone-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 74%, transparent);
+  color: var(--text);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-zone-item:hover {
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+}
+
+.thud-zone-item-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.thud-zone-item-sub {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+/* --- Left-Side Collapsible 3D Node Explorer Drawer -------------------------- */
+
+.thud-explorer {
+  position: absolute;
+  top: 48px;
+  left: 14px;
+  z-index: 7;
+  width: 262px;
+  max-width: calc(100% - 28px);
+  max-height: calc(100% - 92px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+  border-left: 2px solid var(--accent);
+  animation: thud-slide-in 150ms var(--ease-out);
+}
+
+.thud-exp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.thud-exp-counts {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.thud-exp-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.thud-exp-search {
+  width: 100%;
+  height: 24px;
+  padding: 0 22px 0 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  outline: none;
+}
+
+.thud-exp-search:focus {
+  border-color: var(--accent);
+}
+
+.thud-exp-search-clear {
+  position: absolute;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.thud-exp-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+
+.thud-exp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.thud-exp-sec-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+
+.thud-exp-sec-count {
+  color: var(--muted);
+}
+
+.thud-exp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.thud-exp-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-exp-row:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.thud-exp-row--selected {
+  background: var(--accent-soft);
+  border-color: var(--border-accent);
+}
+
+.thud-exp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.thud-exp-id {
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.thud-exp-text {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.thud-exp-meta {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.thud-exp-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  padding: 0 4px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.thud-exp-empty {
+  font-size: 10px;
+  color: var(--faint);
+  padding: 4px 6px;
+}
+
+.thud-exp-zone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.thud-exp-zone {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  cursor: pointer;
+  min-width: 0;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.thud-exp-zone:hover {
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+}
+
+.thud-exp-zone--selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.thud-exp-zone--active {
+  border-color: color-mix(in srgb, var(--ok) 58%, transparent);
+}
+
+.thud-exp-zone-code {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.thud-exp-zone-label {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Directly Clickable 3D Scene Pills (ZoneMarker & DagLayer) -------------- */
+
+.thud-3d-pill {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--font-mono);
+  color: inherit;
+  user-select: none;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.thud-3d-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-3));
+}
+
+.thud-3d-pill:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.thud-3d-pill--focused {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.56),
+    0 0 0 1px var(--accent);
+}
+
+.thud-3d-subcard {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  font-size: 9.5px;
+  color: var(--muted);
+  line-height: 1.32;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --- Cyber-Forensic 3D HoloPanel Cards -------------------------------------- */
 
 .tholo-card {
@@ -729,6 +1425,28 @@
 
 :root[data-theme='paper'] .tholo-card--interactive:hover {
   background: color-mix(in srgb, var(--violet) 9%, #ffffff);
+}
+
+:root[data-theme='paper'] .thud-insp-card,
+:root[data-theme='paper'] .thud-insp-kv,
+:root[data-theme='paper'] .thud-zone-item,
+:root[data-theme='paper'] .thud-exp-row,
+:root[data-theme='paper'] .thud-exp-zone {
+  background: rgba(248, 249, 252, 0.92);
+  border-color: var(--border-default);
+}
+
+:root[data-theme='paper'] .thud-insp-codeblock,
+:root[data-theme='paper'] .thud-insp-cmd,
+:root[data-theme='paper'] .thud-insp-mini-out,
+:root[data-theme='paper'] .thud-exp-search {
+  background: #f5f6f9;
+  border-color: var(--border-default);
+  color: var(--text);
+}
+
+:root[data-theme='paper'] .thud-3d-pill:hover {
+  background: color-mix(in srgb, var(--accent) 10%, #ffffff);
 }
 
 /* --- Narrow Viewport Compact Layout ----------------------------------------- */

@@ -750,6 +750,7 @@ export function DagLayer({ session, materials, showLabels = true }: DagLayerProp
             contradicted={contradictedIds.has(e.id)}
             relationTag={evRelationTag.get(e.id) ?? null}
             materials={materials}
+            showLabels={showLabels}
             hovered={isHovered}
             focused={isFocused}
             highlighted={isHighlighted}
@@ -997,14 +998,14 @@ function HypPrism({
       <mesh
         geometry={HIT_GEO}
         material={INVISIBLE_HIT_MAT}
-        scale={size + 1}
+        scale={size + 1.3}
         onClick={focusNode}
         onDoubleClick={openExperimentWizard}
         onPointerOver={onOver}
         onPointerOut={onOut}
       />
 
-      {/* Minimal idle ID chip or rich monospace hover/focus telemetry card */}
+      {/* Directly clickable H-NNN pill + non-interfering hover/focus telemetry preview */}
       {(showIdleChip || showExpanded) && (
         <Html
           position={[labelOutX, size + 1.05 + (index % 2) * 1.4, labelOutZ]}
@@ -1012,70 +1013,67 @@ function HypPrism({
           zIndexRange={showExpanded ? [60, 0] : [40, 0]}
           style={{ pointerEvents: 'none' }}
         >
-          {showExpanded ? (
-            <div
-              className="theater-hyp-pill"
+          <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
+            <button
+              type="button"
+              data-theater-interactive="true"
+              data-node-pill={hyp.id}
+              className={`theater-hyp-pill thud-3d-pill${focused ? ' thud-3d-pill--focused' : ''}`}
+              aria-label={`查看假设 ${hyp.id} 详情（双击配置实验）`}
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 2,
-                padding: '4px 8px',
-                borderColor: toneVar,
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                borderTopColor: showExpanded || highlighted ? toneVar : undefined,
+                borderRightColor: showExpanded || highlighted ? toneVar : undefined,
+                borderBottomColor: showExpanded || highlighted ? toneVar : undefined,
                 borderLeftColor: toneVar,
-                borderLeftWidth: 3,
-                maxWidth: 270,
-                whiteSpace: 'normal',
+                borderLeftWidth: showExpanded ? 3 : 2.5,
+                fontSize: rejected && !showExpanded ? 9 : 10,
+                padding: rejected && !showExpanded ? '1px 5px' : '2px 7px',
+                opacity: dimmed && !showExpanded ? 0.24 : rejected && !showExpanded ? 0.62 : 0.98,
               }}
-            >
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontSize: 10 }}>
-                <span style={{ color: toneVar, fontWeight: 700 }}>{hyp.id}</span>
-                <span style={{ color: 'var(--faint)' }}>//</span>
-                <span style={{ color: toneVar, letterSpacing: '0.08em', fontWeight: 600 }}>
-                  {hyp.status.toUpperCase()}
-                </span>
-                <span style={{ color: 'var(--faint)' }}>//</span>
-                <span style={{ color: 'var(--text)', fontWeight: 700 }}>{confPct}%</span>
-                {hyp.experiments.length > 0 && (
-                  <span style={{ color: 'var(--muted)', fontSize: 9 }}>
-                    [{hyp.experiments.length} EXP]
-                  </span>
-                )}
-              </div>
-              {hyp.claim && (
-                <div
-                  style={{
-                    fontSize: 9.5,
-                    color: 'var(--muted)',
-                    lineHeight: 1.3,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: 252,
-                  }}
-                >
-                  {truncateTelemetry(hyp.claim, 48)}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div
-              className="theater-hyp-pill"
-              style={{
-                borderTopColor: highlighted ? toneVar : undefined,
-                borderRightColor: highlighted ? toneVar : undefined,
-                borderBottomColor: highlighted ? toneVar : undefined,
-                borderLeftColor: toneVar,
-                fontSize: rejected ? 9 : 10,
-                padding: rejected ? '1px 5px' : '2px 7px',
-                opacity: dimmed ? 0.24 : rejected ? 0.56 : 0.96,
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                sceneActions.setFocus({ kind: 'node', nodeId: hyp.id })
               }}
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                sceneActions.openWizard({ sessionId, stage: 'experiment', hypId: hyp.id })
+              }}
+              onMouseEnter={() => onHoverChange(true)}
+              onMouseLeave={() => onHoverChange(false)}
             >
               <span style={{ color: toneVar, fontWeight: 700 }}>{hyp.id}</span>
               <span style={{ color: 'var(--faint)' }}>·</span>
-              <span style={{ color: 'var(--text)' }}>{confPct}%</span>
-            </div>
-          )}
+              <span style={{ color: 'var(--text)', fontWeight: showExpanded ? 700 : 500 }}>{confPct}%</span>
+              {showExpanded && (
+                <>
+                  <span style={{ color: 'var(--faint)' }}>//</span>
+                  <span style={{ color: toneVar, letterSpacing: '0.06em', fontWeight: 600 }}>
+                    {hyp.status.toUpperCase()}
+                  </span>
+                  {hyp.experiments.length > 0 && (
+                    <span style={{ color: 'var(--muted)', fontSize: 9 }}>
+                      [{hyp.experiments.length} EXP]
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
+            {showExpanded && hyp.claim && (
+              <div
+                className="theater-hyp-pill thud-3d-subcard"
+                style={{
+                  pointerEvents: 'none',
+                  borderLeftColor: toneVar,
+                  borderLeftWidth: 2.5,
+                }}
+              >
+                {truncateTelemetry(hyp.claim, 56)}
+              </div>
+            )}
+          </div>
         </Html>
       )}
     </group>
@@ -1109,6 +1107,7 @@ function EvPoly({
   contradicted,
   relationTag,
   materials,
+  showLabels,
   hovered,
   focused,
   highlighted,
@@ -1119,6 +1118,7 @@ function EvPoly({
   contradicted: boolean
   relationTag: string | null
   materials: TheaterMaterials
+  showLabels: boolean
   hovered: boolean
   focused: boolean
   highlighted: boolean
@@ -1261,56 +1261,73 @@ function EvPoly({
         material={mats.anchor}
       />
 
-      {/* Expanded hit sphere for reliable selection */}
+      {/* Expanded hit sphere for effortless 3D picking */}
       <mesh
         geometry={HIT_GEO}
         material={INVISIBLE_HIT_MAT}
-        scale={1.6}
+        scale={2.1}
         onClick={focusNode}
         onPointerOver={onOver}
         onPointerOut={onOut}
       />
 
-      {/* Crisp monospace geek hover/focus telemetry readout */}
-      {showTelemetry && (
-        <Html position={[0, 1.65, 0]} center zIndexRange={[60, 0]} style={{ pointerEvents: 'none' }}>
-          <div
-            className="theater-hyp-pill"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 2,
-              padding: '4px 8px',
-              borderColor: badgeColorVar,
-              borderLeftColor: badgeColorVar,
-              borderLeftWidth: 3,
-              maxWidth: 260,
-              whiteSpace: 'normal',
-            }}
-          >
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontSize: 10 }}>
+      {/* Directly clickable ev_NNN mini-chip (idle when showLabels) + non-interfering hover/focus readout */}
+      {(showLabels || showTelemetry) && (
+        <Html
+          position={[0, showTelemetry ? 1.55 : 1.32, 0]}
+          center
+          zIndexRange={showTelemetry ? [60, 0] : [36, 0]}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
+            <button
+              type="button"
+              data-theater-interactive="true"
+              data-node-pill={ev.id}
+              className={`theater-hyp-pill thud-3d-pill thud-3d-pill--ev${focused ? ' thud-3d-pill--focused' : ''}`}
+              aria-label={`查看证据 ${ev.id} 详情`}
+              style={{
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                borderTopColor: showTelemetry || highlighted ? badgeColorVar : undefined,
+                borderRightColor: showTelemetry || highlighted ? badgeColorVar : undefined,
+                borderBottomColor: showTelemetry || highlighted ? badgeColorVar : undefined,
+                borderLeftColor: badgeColorVar,
+                borderLeftWidth: showTelemetry ? 3 : 2,
+                fontSize: showTelemetry ? 10 : 9,
+                padding: showTelemetry ? '2px 7px' : '1px 5px',
+                opacity: dimmed && !showTelemetry ? 0.2 : showTelemetry || highlighted ? 0.98 : 0.88,
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                sceneActions.setFocus({ kind: 'node', nodeId: ev.id })
+              }}
+              onMouseEnter={() => onHoverChange(true)}
+              onMouseLeave={() => onHoverChange(false)}
+            >
               <span style={{ color: badgeColorVar, fontWeight: 700 }}>{ev.id}</span>
-              <span style={{ color: 'var(--faint)' }}>//</span>
-              <span style={{ color: 'var(--text)', fontWeight: 600 }}>{evidenceKindTag(ev.kind)}</span>
-              <span style={{ color: 'var(--faint)' }}>//</span>
-              <span style={{ color: badgeColorVar, fontWeight: 700, letterSpacing: '0.06em' }}>
-                {statusTag}
-              </span>
-            </div>
-            {ev.summary && (
+              {showTelemetry && (
+                <>
+                  <span style={{ color: 'var(--faint)' }}>//</span>
+                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>{evidenceKindTag(ev.kind)}</span>
+                  <span style={{ color: 'var(--faint)' }}>//</span>
+                  <span style={{ color: badgeColorVar, fontWeight: 700, letterSpacing: '0.06em' }}>
+                    {statusTag}
+                  </span>
+                </>
+              )}
+            </button>
+            {showTelemetry && ev.summary && (
               <div
+                className="theater-hyp-pill thud-3d-subcard"
                 style={{
-                  fontSize: 9.5,
-                  color: 'var(--muted)',
-                  lineHeight: 1.3,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: 244,
+                  pointerEvents: 'none',
+                  borderLeftColor: badgeColorVar,
+                  borderLeftWidth: 2.5,
                 }}
               >
-                {truncateTelemetry(ev.summary, 46)}
+                {truncateTelemetry(ev.summary, 52)}
               </div>
             )}
           </div>

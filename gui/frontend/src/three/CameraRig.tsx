@@ -6,7 +6,7 @@ import { useFrame } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import type CameraControlsImpl from 'camera-controls'
 import * as THREE from 'three'
-import { zoneOf } from './contract'
+import { zoneOf, type SceneState } from './contract'
 import { nodePositionIndex } from './DagLayer'
 import { sceneActions, useSceneStore, type CameraPresetKey } from '../store/scene'
 import { useThrottledScene } from './useThrottledScene'
@@ -118,6 +118,7 @@ export type TheaterKeyAction =
   | { kind: 'preset'; preset: CameraPresetKey }
   | { kind: 'reset' }
   | { kind: 'toggle-orbit' }
+  | { kind: 'toggle-explorer' }
   | { kind: 'clear-focus' }
   | null
 
@@ -178,6 +179,9 @@ export function resolveTheaterShortcut(
     case 'r':
     case 'R':
       return { kind: 'reset' }
+    case 'i':
+    case 'I':
+      return e.repeat ? null : { kind: 'toggle-explorer' }
     case ' ':
       return e.repeat ? null : { kind: 'toggle-orbit' }
     case 'Escape':
@@ -186,6 +190,24 @@ export function resolveTheaterShortcut(
       if (e.code === 'Space') return e.repeat ? null : { kind: 'toggle-orbit' }
       return null
   }
+}
+
+function resolveNodeWorldPos(scene: SceneState, nodeId: string): [number, number, number] | null {
+  const indexed = nodePositionIndex.get(nodeId)
+  if (indexed) return indexed
+  for (const s of scene.sessions) {
+    const [ox, oy, oz] = s.offset
+    const hyp = s.hyps.find((h) => h.id === nodeId)
+    if (hyp) {
+      const y = hyp.position[1] + (hyp.status === 'rejected' ? -2 : 0)
+      return [hyp.position[0] + ox, y + oy, hyp.position[2] + oz]
+    }
+    const ev = s.evs.find((e) => e.id === nodeId)
+    if (ev) {
+      return [ev.position[0] + ox, ev.position[1] + oy, ev.position[2] + oz]
+    }
+  }
+  return null
 }
 
 export interface CameraRigProps {
@@ -242,7 +264,7 @@ export function CameraRig({ telemetryRef }: CameraRigProps) {
     }
     if (focus.kind === 'node') {
       if (appliedFocusNonce.current === focusNonce && pendingNode.current === null) return
-      const p = nodePositionIndex.get(focus.nodeId)
+      const p = resolveNodeWorldPos(scene, focus.nodeId)
       if (!p) {
         // 节点尚未渲染（截断/还没挂载）：挂起，等下一次节流快照重试。
         pendingNode.current = focus.nodeId
@@ -250,7 +272,8 @@ export function CameraRig({ telemetryRef }: CameraRigProps) {
       }
       pendingNode.current = null
       appliedFocusNonce.current = focusNonce
-      fly(new THREE.Vector3(p[0], p[1], p[2]), 11)
+      if (autoOrbitRef.current) sceneActions.setAutoOrbit(false)
+      fly(new THREE.Vector3(p[0], p[1], p[2]), 16)
       return
     }
     pendingNode.current = null
@@ -259,8 +282,9 @@ export function CameraRig({ telemetryRef }: CameraRigProps) {
     if (focus.kind === 'global') {
       void c.setLookAt(...HOME_POS, ...HOME_TARGET, true)
     } else if (focus.kind === 'zone') {
+      if (autoOrbitRef.current) sceneActions.setAutoOrbit(false)
       const spec = zoneOf(focus.zone)
-      fly(new THREE.Vector3(...spec.center), spec.radius * 3.2)
+      fly(new THREE.Vector3(spec.center[0], spec.center[1] + spec.radius * 0.32, spec.center[2]), spec.radius * 3.0)
     } else {
       const s = scene.sessions.find((x) => x.sessionId === focus.sessionId)
       if (!s) return

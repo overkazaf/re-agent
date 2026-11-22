@@ -21,6 +21,8 @@ export interface ZoneMarkerProps {
   materials: TheaterMaterials
   /** Current workflow phase zone: illuminated ring + holographic scan-ring */
   active?: boolean
+  /** Currently inspected/focused zone */
+  focused?: boolean
   /** Empty state: TRI breathing entry beacon */
   breathing?: boolean
 }
@@ -122,7 +124,13 @@ function buildPadGeometries(r: number): PadBundle {
   }
 }
 
-export function ZoneMarker({ zone, materials, active = false, breathing = false }: ZoneMarkerProps) {
+export function ZoneMarker({
+  zone,
+  materials,
+  active = false,
+  focused = false,
+  breathing = false,
+}: ZoneMarkerProps) {
   const [hovered, setHovered] = useState(false)
   const hoveredRef = useRef(false)
   const gimbalOuterRef = useRef<THREE.LineSegments>(null)
@@ -366,17 +374,38 @@ export function ZoneMarker({ zone, materials, active = false, breathing = false 
         active={active || breathing}
       />
 
-      {/* Ultra-clean geeky station HTML pill */}
-      <Html position={labelPos(zone.key, r)} center zIndexRange={[40, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          className={`theater-chip${active || hovered ? ' theater-chip--active' : ''}`}
-          style={{ opacity: active || hovered ? 1 : 0.88 }}
+      {/* Directly clickable geeky station HTML pill (wrapper stays pass-through) */}
+      <Html position={labelPos(zone.key, r)} center zIndexRange={focused || hovered ? [55, 0] : [40, 0]} style={{ pointerEvents: 'none' }}>
+        <button
+          type="button"
+          data-theater-interactive="true"
+          data-zone-pill={zone.key}
+          className={`theater-chip thud-3d-pill${active || hovered || focused ? ' theater-chip--active' : ''}${focused ? ' thud-3d-pill--focused' : ''}`}
+          style={{
+            pointerEvents: 'auto',
+            cursor: 'pointer',
+            opacity: active || hovered || focused ? 1 : 0.9,
+          }}
+          aria-label={`查看 ${zone.key} ${zone.label} 详情`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            sceneActions.setFocus({ kind: 'zone', zone: zone.key })
+          }}
+          onMouseEnter={() => {
+            hoveredRef.current = true
+            setHovered(true)
+          }}
+          onMouseLeave={() => {
+            hoveredRef.current = false
+            setHovered(false)
+          }}
         >
           <span className="theater-zone-code">
             {STATION_INDEX[zone.key]}·{zone.key}
           </span>
           <span className="theater-zone-name">{zone.label}</span>
-        </div>
+        </button>
       </Html>
     </group>
   )
