@@ -100,15 +100,133 @@ var mono = palette{
 	rule:      tone{[3]int{68, 68, 68}, 238, 90},
 }
 
-var themes = map[string]palette{"deck": deck, "amber": amber, "matrix": matrix, "mono": mono}
+// obsidian pairs deep graphite with electric violet and sky highlights.
+var obsidian = palette{
+	accent:    tone{[3]int{180, 128, 255}, 141, 35},
+	accentDim: tone{[3]int{112, 68, 186}, 98, 35},
+	violet:    tone{[3]int{56, 189, 248}, 39, 36},
+	violetDim: tone{[3]int{26, 108, 156}, 24, 36},
+	ok:        tone{[3]int{74, 222, 128}, 114, 32},
+	warn:      tone{[3]int{250, 204, 21}, 220, 33},
+	err:       tone{[3]int{251, 113, 133}, 204, 31},
+	text:      tone{[3]int{238, 236, 248}, 255, 37},
+	muted:     tone{[3]int{168, 162, 196}, 146, 37},
+	faint:     tone{[3]int{130, 124, 162}, 103, 90},
+	rule:      tone{[3]int{54, 48, 82}, 238, 90},
+}
 
-var ThemeNames = []string{"deck", "amber", "matrix", "mono"}
+// nord is a calm arctic slate + frost cyan palette for long forensic sessions.
+var nord = palette{
+	accent:    tone{[3]int{136, 192, 208}, 110, 36},
+	accentDim: tone{[3]int{84, 128, 148}, 67, 36},
+	violet:    tone{[3]int{180, 142, 173}, 139, 35},
+	violetDim: tone{[3]int{118, 88, 114}, 96, 35},
+	ok:        tone{[3]int{163, 190, 140}, 150, 32},
+	warn:      tone{[3]int{235, 203, 139}, 222, 33},
+	err:       tone{[3]int{224, 118, 128}, 174, 31},
+	text:      tone{[3]int{236, 239, 244}, 255, 37},
+	muted:     tone{[3]int{176, 188, 208}, 146, 37},
+	faint:     tone{[3]int{138, 152, 176}, 103, 90},
+	rule:      tone{[3]int{67, 76, 94}, 239, 90},
+}
+
+// dracula uses plum charcoal with orchid, mint, and coral accents.
+var dracula = palette{
+	accent:    tone{[3]int{189, 147, 249}, 141, 35},
+	accentDim: tone{[3]int{116, 84, 174}, 98, 35},
+	violet:    tone{[3]int{255, 121, 198}, 212, 35},
+	violetDim: tone{[3]int{160, 68, 124}, 132, 35},
+	ok:        tone{[3]int{80, 250, 123}, 84, 32},
+	warn:      tone{[3]int{255, 184, 108}, 215, 33},
+	err:       tone{[3]int{255, 108, 108}, 203, 31},
+	text:      tone{[3]int{244, 244, 240}, 255, 37},
+	muted:     tone{[3]int{178, 182, 212}, 146, 37},
+	faint:     tone{[3]int{136, 142, 178}, 103, 90},
+	rule:      tone{[3]int{68, 71, 96}, 239, 90},
+}
+
+// solarized is a precision teal-slate dark theme with cyan and gold accents.
+var solarized = palette{
+	accent:    tone{[3]int{56, 189, 178}, 43, 36},
+	accentDim: tone{[3]int{28, 114, 108}, 30, 36},
+	violet:    tone{[3]int{134, 144, 224}, 104, 35},
+	violetDim: tone{[3]int{74, 82, 148}, 61, 35},
+	ok:        tone{[3]int{148, 188, 52}, 149, 32},
+	warn:      tone{[3]int{218, 165, 32}, 178, 33},
+	err:       tone{[3]int{238, 100, 96}, 203, 31},
+	text:      tone{[3]int{220, 228, 224}, 254, 37},
+	muted:     tone{[3]int{154, 174, 176}, 109, 37},
+	faint:     tone{[3]int{122, 148, 152}, 66, 90},
+	rule:      tone{[3]int{24, 78, 92}, 23, 90},
+}
+
+// crimson is Red Team Ops: carbon black with tactical crimson and amber.
+var crimson = palette{
+	accent:    tone{[3]int{251, 86, 112}, 204, 31},
+	accentDim: tone{[3]int{156, 40, 62}, 125, 31},
+	violet:    tone{[3]int{245, 158, 11}, 214, 33},
+	violetDim: tone{[3]int{146, 90, 14}, 136, 33},
+	ok:        tone{[3]int{74, 222, 128}, 114, 32},
+	warn:      tone{[3]int{251, 191, 36}, 220, 33},
+	err:       tone{[3]int{255, 102, 102}, 203, 31},
+	text:      tone{[3]int{244, 232, 235}, 255, 37},
+	muted:     tone{[3]int{190, 162, 169}, 181, 37},
+	faint:     tone{[3]int{148, 120, 128}, 138, 90},
+	rule:      tone{[3]int{72, 42, 52}, 238, 90},
+}
+
+// paper is Forensic Paper: daylight lab light theme with deep ink & cobalt accents.
+var paper = palette{
+	accent:    tone{[3]int{29, 78, 216}, 26, 34},
+	accentDim: tone{[3]int{100, 136, 210}, 68, 34},
+	violet:    tone{[3]int{109, 40, 217}, 56, 35},
+	violetDim: tone{[3]int{148, 116, 210}, 98, 35},
+	ok:        tone{[3]int{5, 122, 85}, 29, 32},
+	warn:      tone{[3]int{180, 83, 9}, 130, 33},
+	err:       tone{[3]int{190, 18, 60}, 161, 31},
+	text:      tone{[3]int{17, 24, 39}, 234, 30},
+	muted:     tone{[3]int{55, 65, 81}, 238, 30},
+	faint:     tone{[3]int{92, 108, 130}, 244, 90},
+	rule:      tone{[3]int{176, 188, 205}, 250, 90},
+}
+
+var themes = map[string]palette{
+	"deck":      deck,
+	"amber":     amber,
+	"matrix":    matrix,
+	"mono":      mono,
+	"obsidian":  obsidian,
+	"nord":      nord,
+	"dracula":   dracula,
+	"solarized": solarized,
+	"crimson":   crimson,
+	"paper":     paper,
+}
+
+var ThemeNames = []string{
+	"deck",
+	"amber",
+	"matrix",
+	"mono",
+	"obsidian",
+	"nord",
+	"dracula",
+	"solarized",
+	"crimson",
+	"paper",
+}
 
 var ThemeBlurbs = map[string]string{
-	"deck":   "cyan + violet cyberdeck (default)",
-	"amber":  "amber CRT phosphor",
-	"matrix": "green phosphor terminal",
-	"mono":   "hueless, contrast-only",
+	"deck":      "cyan + violet cyberdeck (default)",
+	"amber":     "warm amber P3 CRT phosphor",
+	"matrix":    "emerald P1 green phosphor terminal",
+	"mono":      "high-contrast Swiss monochrome",
+	"obsidian":  "deep graphite + electric violet IDE",
+	"nord":      "arctic slate + frost cyan (long RE)",
+	"dracula":   "plum charcoal + orchid, mint & coral",
+	"solarized": "precision teal-slate + cyan & gold",
+	"crimson":   "carbon black + tactical crimson Ops",
+	"paper":     "daylight lab light paper (zero glare)",
 }
 
 var (

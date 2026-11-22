@@ -19,7 +19,7 @@ import {
   IX_EVENT_OPEN_RE_PICKER,
   modGlyph,
 } from './components/shell/shortcuts'
-import { BootSplash, PanelBox, type BootProbe } from './components/crt'
+import { BootSplash, PanelBox, ProSelect, type BootProbe, type ProSelectOption } from './components/crt'
 import { DemoCoachBar, DemoLauncherDialog } from './components/demo'
 import { Dashboard } from './components/panels'
 import {
@@ -45,7 +45,7 @@ import {
 import { ShellView } from './components/terminal/ShellView'
 import { ForensicTheater, type HoloHudData } from './three'
 import { useTheaterFallback, type TheaterFallbackReason } from './three/useTheaterFallback'
-import { THEME_NAMES, ThemeProvider, useTheme, type ThemeName } from './theme/ThemeContext'
+import { getThemeMeta, THEME_NAMES, ThemeProvider, useTheme, type ThemeName } from './theme/ThemeContext'
 import {
   actions,
   hasBackend,
@@ -120,8 +120,8 @@ function useBootProbes(): BootProbe[] {
 }
 
 export default function App() {
-  // The backend's theme list (= ui.ThemeNames) is authoritative once reachable;
-  // until then the local constant mirrors it exactly.
+  // Merge backend GetThemes() with the curated frontend THEME_NAMES so older
+  // backends or mock E2E shims never truncate the 10-theme library to 4.
   const [themes, setThemes] = useState<readonly ThemeName[]>(THEME_NAMES)
   useEffect(() => {
     if (!hasRealBackend()) return
@@ -129,7 +129,10 @@ export default function App() {
       .getThemes()
       .then((names) => {
         const valid = names.filter((n): n is ThemeName => (THEME_NAMES as readonly string[]).includes(n))
-        if (valid.length > 0) setThemes(valid)
+        if (valid.length > 0) {
+          const merged = [...valid, ...THEME_NAMES.filter((n) => !valid.includes(n))]
+          setThemes(merged)
+        }
       })
       .catch(() => {})
   }, [])
@@ -259,9 +262,27 @@ function CommandCenter() {
     if (themes.length === 0) return
     const idx = themes.indexOf(theme)
     const next = themes[(idx + 1) % themes.length]
+    const meta = getThemeMeta(next)
     setTheme(next)
-    pushSessionToast('info', `theme → ${next}`)
+    pushSessionToast('info', `theme → ${meta.label} (${next})`)
   }, [themes, theme, setTheme])
+
+  const themeOptions = useMemo<ProSelectOption<ThemeName>[]>(
+    () =>
+      themes.map((id) => {
+        const meta = getThemeMeta(id)
+        return {
+          value: id,
+          label: meta.label,
+          group: meta.group,
+          description: meta.description,
+          swatches: meta.swatches,
+          badge: meta.mode === 'light' ? 'LIGHT' : id === 'deck' ? 'DEFAULT' : undefined,
+          keywords: `${id} ${meta.label} ${meta.group} ${meta.mode} ${meta.description}`,
+        }
+      }),
+    [themes],
+  )
 
   const awaitingSessions = useMemo(
     () => [...sessions.values()].filter((rt) => rt.lifecycle === 'awaiting_approval' || rt.pendingApproval != null),
@@ -540,30 +561,26 @@ function CommandCenter() {
       {
         id: 'theme-cycle',
         group: 'Workspace Panes',
-        label: '循环切换 CRT 荧光管主题',
-        desc: `当前: ${theme} · 可选 ${themes.join(' / ')}`,
+        label: '循环切换界面主题 (Cycle Theme)',
+        desc: `当前: ${getThemeMeta(theme).label} (${theme}) · 共 ${themes.length} 套专业主题`,
         icon: '◐',
-        keywords: 'cycle theme color palette crt phosphor',
+        keywords: 'cycle theme color palette crt phosphor light dark paper',
         shortcut: ['Mod', 'Shift', 'T'],
         run: cycleTheme,
       },
-      ...themes.map((t) => ({
-        id: `theme-set-${t}`,
-        group: 'Themes',
-        label: `主题: ${t}`,
-        desc:
-          t === 'deck'
-            ? 'Cyan + Violet cyberdeck phosphor'
-            : t === 'amber'
-              ? 'Warm amber CRT phosphor'
-              : t === 'matrix'
-                ? 'Green phosphor terminal'
-                : 'Monochrome high-contrast CRT',
-        icon: '◔',
-        keywords: `theme ${t} palette color`,
-        badge: t === theme ? 'ACTIVE' : undefined,
-        run: () => setTheme(t),
-      })),
+      ...themes.map((t) => {
+        const meta = getThemeMeta(t)
+        return {
+          id: `theme-set-${t}`,
+          group: 'Themes',
+          label: `主题: ${meta.label} (${t})`,
+          desc: `${meta.group} · ${meta.description}`,
+          icon: meta.mode === 'light' ? '☀' : '◔',
+          keywords: `theme ${t} ${meta.label} ${meta.group} ${meta.mode} palette color`,
+          badge: t === theme ? 'ACTIVE' : meta.mode === 'light' ? 'LIGHT' : undefined,
+          run: () => setTheme(t),
+        }
+      }),
     )
 
     // Sessions & RE Workflows
@@ -958,20 +975,21 @@ function CommandCenter() {
                 ▷ 演示环境
               </button>
             )}
-            <label style={{ color: 'var(--faint)', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: 'var(--faint)', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
               theme
-              <select
+              <ProSelect<ThemeName>
                 value={theme}
-                onChange={(e) => setTheme(e.target.value as ThemeName)}
-                title={`切换 CRT 荧光管主题 (${mod}⇧T 循环切换)`}
-                style={selectStyle}
-              >
-                {themes.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+                options={themeOptions}
+                onChange={setTheme}
+                size="sm"
+                align="right"
+                showTriggerBadge={false}
+                popoverMinWidth={296}
+                searchPlaceholder="Search 10 themes (e.g. paper, nord, violet)…"
+                ariaLabel="Theme"
+                title={`切换界面主题 (${mod}⇧T 循环切换)`}
+                testId="theme-select"
+              />
             </label>
           </div>
         }
@@ -1214,125 +1232,125 @@ const railStyle: CSSProperties = {
   minHeight: 0,
 }
 
-const selectStyle: CSSProperties = {
-  background: 'var(--bg-panel)',
-  color: 'var(--accent)',
-  border: '1px solid var(--rule)',
-  font: 'inherit',
-  fontSize: 11,
-  padding: '1px 4px',
-  cursor: 'pointer',
-}
-
 const demoBtnStyle: CSSProperties = {
-  background: 'rgba(34, 211, 238, 0.06)',
+  background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
   color: 'var(--accent)',
   border: '1px solid var(--accent-dim)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const demoBtnActiveStyle: CSSProperties = {
-  background: 'rgba(139, 92, 246, 0.1)',
+  background: 'color-mix(in srgb, var(--violet) 11%, transparent)',
   color: 'var(--violet)',
   border: '1px solid var(--violet-dim)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const graphBtnStyle: CSSProperties = {
-  background: 'rgba(139, 92, 246, 0.08)',
+  background: 'color-mix(in srgb, var(--violet) 8%, transparent)',
   color: 'var(--violet)',
   border: '1px solid var(--violet-dim)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const theaterBtnStyle: CSSProperties = {
-  background: 'rgba(34, 211, 238, 0.08)',
+  background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
   color: 'var(--accent)',
   border: '1px solid var(--accent-dim)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const theaterBtnActiveStyle: CSSProperties = {
-  background: 'rgba(34, 211, 238, 0.16)',
+  background: 'color-mix(in srgb, var(--accent) 16%, transparent)',
   color: 'var(--accent)',
   border: '1px solid var(--accent)',
-  boxShadow: '0 0 12px var(--accent-dim)',
+  boxShadow: '0 0 calc(12px * var(--glow-strength)) var(--accent-dim)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const graphBtnActiveStyle: CSSProperties = {
-  background: 'rgba(34, 211, 238, 0.14)',
+  background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
   color: 'var(--accent)',
   border: '1px solid var(--accent)',
-  boxShadow: '0 0 10px var(--accent-dim)',
+  boxShadow: '0 0 calc(10px * var(--glow-strength)) var(--accent-dim)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const terrainBtnStyle: CSSProperties = {
-  background: 'rgba(245, 158, 11, 0.08)',
+  background: 'color-mix(in srgb, var(--warn) 9%, transparent)',
   color: 'var(--warn)',
-  border: '1px solid rgba(245, 158, 11, 0.45)',
+  border: '1px solid color-mix(in srgb, var(--warn) 45%, var(--rule))',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const terrainBtnActiveStyle: CSSProperties = {
-  background: 'rgba(245, 158, 11, 0.18)',
+  background: 'color-mix(in srgb, var(--warn) 18%, transparent)',
   color: 'var(--warn)',
   border: '1px solid var(--warn)',
-  boxShadow: '0 0 10px rgba(245, 158, 11, 0.35)',
+  boxShadow: '0 0 calc(10px * var(--glow-strength)) color-mix(in srgb, var(--warn) 35%, transparent)',
   font: 'inherit',
   fontSize: 11,
-  padding: '1px 8px',
+  padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const shellBtnStyle: CSSProperties = {
-  background: 'rgba(167, 139, 250, 0.08)',
+  background: 'color-mix(in srgb, var(--violet) 9%, transparent)',
   color: 'var(--violet)',
   border: '1px solid var(--violet-dim)',
   font: 'inherit',
   fontSize: 11,
   padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const shellBtnActiveStyle: CSSProperties = {
-  background: 'rgba(167, 139, 250, 0.18)',
+  background: 'color-mix(in srgb, var(--violet) 18%, transparent)',
   color: 'var(--violet)',
   border: '1px solid var(--violet)',
-  boxShadow: '0 0 10px var(--violet-dim)',
+  boxShadow: '0 0 calc(10px * var(--glow-strength)) var(--violet-dim)',
   font: 'inherit',
   fontSize: 11,
   padding: '1px 7px',
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
 
 const emptyDemoCtaStyle: CSSProperties = {
-  background: 'rgba(34, 211, 238, 0.08)',
+  background: 'color-mix(in srgb, var(--accent) 9%, transparent)',
   color: 'var(--accent)',
   border: '1px solid var(--accent)',
-  boxShadow: '0 0 12px var(--accent-dim)',
+  boxShadow: '0 0 calc(12px * var(--glow-strength)) var(--accent-dim)',
   font: 'inherit',
   fontSize: 12,
   padding: '5px 14px',

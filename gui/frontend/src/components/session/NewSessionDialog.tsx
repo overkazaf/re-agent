@@ -6,6 +6,7 @@ import { actions, hasBackend } from '../../store/sessions'
 import { api } from '../../lib/api'
 import type { StartOptions } from '../../lib/types'
 import { Btn, Dialog, fieldStyle, labelStyle } from './Dialog'
+import { ProSelect, type ProSelectOption } from '../crt'
 import { validateWorkspacePath } from './usabilityHelpers'
 import './usability.css'
 
@@ -30,6 +31,33 @@ const WORKFLOW_DESC: Record<string, string> = {
   engineering: '常规代码工程开发与排障流程',
   caveman: '极简精炼输出，降低 token 消耗',
 }
+
+const ROLE_OPTIONS: readonly ProSelectOption[] = ROLES.map((r) => ({
+  value: r,
+  label: r,
+  description: ROLE_DESC[r],
+  badge: r === 'auto' ? 'SMART' : undefined,
+}))
+
+const WORKFLOW_GROUPS: Record<string, string> = {
+  auto: 'General',
+  off: 'General',
+  reverse: 'Forensics & CTF',
+  ctf: 'Forensics & CTF',
+  writeup: 'Forensics & CTF',
+  specialist: 'Specialist Modes',
+  research: 'Specialist Modes',
+  engineering: 'Specialist Modes',
+  caveman: 'Specialist Modes',
+}
+
+const WORKFLOW_OPTIONS: readonly ProSelectOption[] = WORKFLOWS.map((w) => ({
+  value: w,
+  label: w,
+  group: WORKFLOW_GROUPS[w],
+  description: WORKFLOW_DESC[w],
+  badge: w === 'reverse' ? '9-PHASE' : w === 'auto' ? 'AUTO' : undefined,
+}))
 
 const LAST_WORKSPACE_KEY = 're-gui:lastWorkspace'
 const RECENT_WORKSPACES_KEY = 're-gui:recentWorkspaces'
@@ -208,13 +236,15 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={labelStyle}>role</span>
-              <select style={fieldStyle} value={role} onChange={(e) => setRole(e.target.value)}>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+              <ProSelect
+                value={role}
+                options={ROLE_OPTIONS}
+                onChange={setRole}
+                fullWidth
+                searchable={false}
+                popoverMinWidth={240}
+                ariaLabel="Session role"
+              />
               <span style={{ fontSize: 10, color: 'var(--faint)', lineHeight: 1.4 }}>
                 {ROLE_DESC[role] ?? ''}
               </span>
@@ -222,13 +252,16 @@ export function NewSessionDialog({ onClose }: { onClose: () => void }) {
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={labelStyle}>workflow</span>
-              <select style={fieldStyle} value={workflow} onChange={(e) => setWorkflow(e.target.value)}>
-                {WORKFLOWS.map((w) => (
-                  <option key={w} value={w}>
-                    {w}
-                  </option>
-                ))}
-              </select>
+              <ProSelect
+                value={workflow}
+                options={WORKFLOW_OPTIONS}
+                onChange={setWorkflow}
+                fullWidth
+                align="right"
+                popoverMinWidth={268}
+                searchPlaceholder="Filter workflows…"
+                ariaLabel="Session workflow"
+              />
               <span style={{ fontSize: 10, color: 'var(--faint)', lineHeight: 1.4 }}>
                 {WORKFLOW_DESC[workflow] ?? ''}
               </span>

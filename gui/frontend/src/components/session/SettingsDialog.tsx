@@ -7,6 +7,7 @@ import { hasBackend } from '../../store/sessions'
 import { api } from '../../lib/api'
 import type { SettingsDTO, SettingsPatch } from '../../lib/types'
 import { Btn, Dialog, fieldStyle, labelStyle } from './Dialog'
+import { ProSelect, type ProSelectOption } from '../crt'
 import { validateMaxTurns } from './usabilityHelpers'
 import './usability.css'
 
@@ -14,20 +15,43 @@ import './usability.css'
 const AUTO = ''
 const TURN_PRESETS = [20, 30, 60, 100] as const
 
+function buildRouteOptions(settings: SettingsDTO): ProSelectOption[] {
+  const byName = new Map(settings.providers.map((p) => [p.name, p]))
+  return [
+    {
+      value: AUTO,
+      label: 'auto',
+      description: '跟随系统默认角色路由策略',
+      badge: 'AUTO',
+    },
+    ...settings.providerNames.map((name) => {
+      const info = byName.get(name)
+      return {
+        value: name,
+        label: name,
+        description: info?.model || undefined,
+        badge: info?.type || undefined,
+      }
+    }),
+  ]
+}
+
 function routeSelect(
   value: string,
-  names: string[],
+  options: readonly ProSelectOption[],
   onChange: (v: string) => void,
+  ariaLabel: string,
 ): React.ReactNode {
   return (
-    <select style={fieldStyle} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value={AUTO}>auto</option>
-      {names.map((n) => (
-        <option key={n} value={n}>
-          {n}
-        </option>
-      ))}
-    </select>
+    <ProSelect
+      value={value}
+      options={options}
+      onChange={onChange}
+      fullWidth
+      popoverMinWidth={248}
+      searchPlaceholder="Filter providers…"
+      ariaLabel={ariaLabel}
+    />
   )
 }
 
@@ -70,6 +94,7 @@ export function SettingsDialog({
   }, [sessionId])
 
   const maxTurnsError = useMemo(() => (settings ? validateMaxTurns(maxTurns) : null), [settings, maxTurns])
+  const routeOptions = useMemo(() => (settings ? buildRouteOptions(settings) : []), [settings])
 
   const changedCount = useMemo(() => {
     if (!settings) return 0
@@ -206,12 +231,12 @@ export function SettingsDialog({
                       ? 'var(--warn)'
                       : 'color-mix(in srgb, var(--accent) 42%, var(--rule))'
                   }`,
-                  background: 'rgba(6, 14, 24, 0.5)',
+                  background: 'color-mix(in srgb, var(--accent) 5%, var(--surface-2))',
                 }}
               >
                 <span style={{ ...labelStyle, color: 'var(--accent)' }}>planner · 强推理规划 (/planner)</span>
                 <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: codex sol / gemini 4 carbon</span>
-                {routeSelect(planner, settings.providerNames, markEdited(setPlanner))}
+                {routeSelect(planner, routeOptions, markEdited(setPlanner), 'planner provider')}
               </label>
 
               <label
@@ -225,12 +250,12 @@ export function SettingsDialog({
                       ? 'var(--warn)'
                       : 'color-mix(in srgb, var(--ok) 42%, var(--rule))'
                   }`,
-                  background: 'rgba(6, 18, 14, 0.45)',
+                  background: 'color-mix(in srgb, var(--ok) 5%, var(--surface-2))',
                 }}
               >
                 <span style={{ ...labelStyle, color: 'var(--ok)' }}>executor · 高速工具取证 (/executor)</span>
                 <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: ds / gemini 4 neon / glm-5.3-flash</span>
-                {routeSelect(executor, settings.providerNames, markEdited(setExecutor))}
+                {routeSelect(executor, routeOptions, markEdited(setExecutor), 'executor provider')}
               </label>
 
               <label
@@ -244,12 +269,12 @@ export function SettingsDialog({
                       ? 'var(--warn)'
                       : 'color-mix(in srgb, var(--warn) 42%, var(--rule))'
                   }`,
-                  background: 'rgba(20, 14, 6, 0.45)',
+                  background: 'color-mix(in srgb, var(--warn) 5%, var(--surface-2))',
                 }}
               >
                 <span style={{ ...labelStyle, color: 'var(--warn)' }}>researcher · 知识库与调研 (/researcher)</span>
                 <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: gemini 4 carbon / ds / glm-5.3</span>
-                {routeSelect(researcher, settings.providerNames, markEdited(setResearcher))}
+                {routeSelect(researcher, routeOptions, markEdited(setResearcher), 'researcher provider')}
               </label>
 
               <label
@@ -263,12 +288,12 @@ export function SettingsDialog({
                       ? 'var(--warn)'
                       : 'color-mix(in srgb, var(--violet) 48%, var(--rule))'
                   }`,
-                  background: 'rgba(16, 10, 26, 0.5)',
+                  background: 'color-mix(in srgb, var(--violet) 5%, var(--surface-2))',
                 }}
               >
                 <span style={{ ...labelStyle, color: 'var(--violet)' }}>auditor · 独立对抗审计 (/auditor)</span>
                 <span style={{ fontSize: 10, color: 'var(--faint)' }}>候选: codex sol / gemini 4 carbon / glm-5.3</span>
-                {routeSelect(auditor, settings.providerNames, markEdited(setAuditor))}
+                {routeSelect(auditor, routeOptions, markEdited(setAuditor), 'auditor provider')}
               </label>
             </div>
           </div>

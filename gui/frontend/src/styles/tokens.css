@@ -4,11 +4,12 @@
    Preserves all 11 legacy palette tokens + chrome variables (--accent,
    --accent-dim, --violet, --violet-dim, --ok, --warn, --err, --text, --muted,
    --faint, --rule, --bg, --bg-panel, --glow-strength, --scanline-opacity)
-   while introducing a 4-step surface ladder, crisp architectural borders,
-   WCAG AA+ text contrast across all 4 themes, and spacing/radius/elevation
-   scales.
+   across 10 curated pro themes (CRT Phosphor, Forensic IDE, Daylight Lab),
+   with a 4-step surface ladder, crisp architectural borders, WCAG AA+ text
+   contrast, and spacing/radius/elevation scales.
 
-   Theme switching sets data-theme on <html> (see theme/ThemeContext.tsx).
+   Theme switching sets data-theme and data-theme-mode on <html>
+   (see theme/ThemeContext.tsx).
    Optional calm-atmosphere override sets data-crt="calm" | "refined" | "vivid".
    ========================================================================== */
 
@@ -99,6 +100,10 @@
   --shadow-popover: 0 14px 40px rgba(0, 0, 0, 0.56);
 }
 
+/* ============================================================================
+   GROUP 1: CRT PHOSPHOR
+   ========================================================================== */
+
 /* deck — obsidian slate + cyan/violet forensic instrument */
 :root[data-theme='deck'] {
   --accent: rgb(34, 211, 238);
@@ -123,7 +128,7 @@
   --scanline-opacity: 0.16;
 }
 
-/* amber — warm obsidian + amber phosphor CRT (high legibility AA+) */
+/* amber — warm obsidian + amber P3 phosphor CRT (high legibility AA+) */
 :root[data-theme='amber'] {
   --accent: rgb(255, 176, 0);
   --accent-dim: rgb(172, 116, 12);
@@ -147,7 +152,7 @@
   --scanline-opacity: 0.18;
 }
 
-/* matrix — deep emerald obsidian + crisp mint phosphor (high legibility AA+) */
+/* matrix — deep emerald obsidian + crisp P1 mint phosphor (high legibility AA+) */
 :root[data-theme='matrix'] {
   --accent: rgb(0, 255, 156);
   --accent-dim: rgb(16, 168, 108);
@@ -195,6 +200,134 @@
   --scanline-opacity: 0.1;
 }
 
+/* ============================================================================
+   GROUP 2: FORENSIC IDE
+   ========================================================================== */
+
+/* obsidian — deep graphite + electric violet & sky (Binary Ninja Pro feel) */
+:root[data-theme='obsidian'] {
+  --accent: rgb(180, 128, 255);
+  --accent-dim: rgb(112, 68, 186);
+  --violet: rgb(56, 189, 248);
+  --violet-dim: rgb(26, 108, 156);
+  --ok: rgb(74, 222, 128);
+  --warn: rgb(250, 204, 21);
+  --amber: rgb(250, 204, 21);
+  --err: rgb(251, 113, 133);
+  --text: rgb(238, 236, 248);
+  --muted: rgb(168, 162, 196);
+  --faint: rgb(130, 124, 162);
+  --rule: rgb(54, 48, 82);
+  --bg: #0b0a12;
+  --bg-panel: rgba(17, 15, 28, 0.92);
+  --surface-0: #0b0a12;
+  --surface-1: rgba(17, 15, 28, 0.92);
+  --surface-2: rgba(25, 22, 41, 0.95);
+  --surface-3: rgba(33, 29, 54, 0.98);
+  --glow-strength: 0.46;
+  --scanline-opacity: 0.08;
+}
+
+/* nord — arctic slate + frost cyan for calm long-session reverse engineering */
+:root[data-theme='nord'] {
+  --accent: rgb(136, 192, 208);
+  --accent-dim: rgb(84, 128, 148);
+  --violet: rgb(180, 142, 173);
+  --violet-dim: rgb(118, 88, 114);
+  --ok: rgb(163, 190, 140);
+  --warn: rgb(235, 203, 139);
+  --amber: rgb(235, 203, 139);
+  --err: rgb(224, 118, 128);
+  --text: rgb(236, 239, 244);
+  --muted: rgb(176, 188, 208);
+  --faint: rgb(138, 152, 176);
+  --rule: rgb(67, 76, 94);
+  --bg: #1a1f28;
+  --bg-panel: rgba(32, 38, 49, 0.94);
+  --surface-0: #1a1f28;
+  --surface-1: rgba(32, 38, 49, 0.94);
+  --surface-2: rgba(43, 50, 64, 0.96);
+  --surface-3: rgba(53, 62, 79, 0.98);
+  --glow-strength: 0.3;
+  --scanline-opacity: 0.06;
+}
+
+/* dracula — plum charcoal + orchid, mint & coral forensic contrast */
+:root[data-theme='dracula'] {
+  --accent: rgb(189, 147, 249);
+  --accent-dim: rgb(116, 84, 174);
+  --violet: rgb(255, 121, 198);
+  --violet-dim: rgb(160, 68, 124);
+  --ok: rgb(80, 250, 123);
+  --warn: rgb(255, 184, 108);
+  --amber: rgb(255, 184, 108);
+  --err: rgb(255, 108, 108);
+  --text: rgb(244, 244, 240);
+  --muted: rgb(178, 182, 212);
+  --faint: rgb(136, 142, 178);
+  --rule: rgb(68, 71, 96);
+  --bg: #181622;
+  --bg-panel: rgba(30, 29, 43, 0.94);
+  --surface-0: #181622;
+  --surface-1: rgba(30, 29, 43, 0.94);
+  --surface-2: rgba(41, 40, 58, 0.96);
+  --surface-3: rgba(52, 51, 72, 0.98);
+  --glow-strength: 0.44;
+  --scanline-opacity: 0.08;
+}
+
+/* solarized — precision teal-slate + solar cyan & gold */
+:root[data-theme='solarized'] {
+  --accent: rgb(56, 189, 178);
+  --accent-dim: rgb(28, 114, 108);
+  --violet: rgb(134, 144, 224);
+  --violet-dim: rgb(74, 82, 148);
+  --ok: rgb(148, 188, 52);
+  --warn: rgb(218, 165, 32);
+  --amber: rgb(218, 165, 32);
+  --err: rgb(238, 100, 96);
+  --text: rgb(220, 228, 224);
+  --muted: rgb(154, 174, 176);
+  --faint: rgb(122, 148, 152);
+  --rule: rgb(24, 78, 92);
+  --bg: #001f27;
+  --bg-panel: rgba(4, 41, 51, 0.94);
+  --surface-0: #001f27;
+  --surface-1: rgba(4, 41, 51, 0.94);
+  --surface-2: rgba(9, 54, 66, 0.96);
+  --surface-3: rgba(15, 67, 81, 0.98);
+  --glow-strength: 0.28;
+  --scanline-opacity: 0.06;
+}
+
+/* crimson — Red Team Ops: carbon black + tactical crimson & amber */
+:root[data-theme='crimson'] {
+  --accent: rgb(251, 86, 112);
+  --accent-dim: rgb(156, 40, 62);
+  --violet: rgb(245, 158, 11);
+  --violet-dim: rgb(146, 90, 14);
+  --ok: rgb(74, 222, 128);
+  --warn: rgb(251, 191, 36);
+  --amber: rgb(251, 191, 36);
+  --err: rgb(255, 102, 102);
+  --text: rgb(244, 232, 235);
+  --muted: rgb(190, 162, 169);
+  --faint: rgb(148, 120, 128);
+  --rule: rgb(72, 42, 52);
+  --bg: #0a0709;
+  --bg-panel: rgba(20, 12, 16, 0.93);
+  --surface-0: #0a0709;
+  --surface-1: rgba(20, 12, 16, 0.93);
+  --surface-2: rgba(31, 18, 24, 0.96);
+  --surface-3: rgba(42, 25, 33, 0.98);
+  --glow-strength: 0.56;
+  --scanline-opacity: 0.12;
+}
+
+/* ============================================================================
+   CRT ATMOSPHERE MODES (applies to dark themes)
+   ========================================================================== */
+
 /* Optional calm atmosphere mode (for zero-scanline / ultra-clean forensic reading) */
 :root[data-crt='calm'] {
   --glow-strength: 0.25;
@@ -205,4 +338,55 @@
 :root[data-crt='vivid'] {
   --glow-strength: 1;
   --scanline-opacity: 0.34;
+}
+
+/* ============================================================================
+   GROUP 3: DAYLIGHT LAB (LIGHT MODE — zero-glare scientific/forensic paper)
+   Placed after data-crt overrides so paper always stays crisp and glare-free.
+   ========================================================================== */
+
+:root[data-theme='paper'],
+:root[data-theme='paper'][data-crt] {
+  --accent: rgb(29, 78, 216);
+  --accent-dim: rgb(147, 178, 238);
+  --violet: rgb(109, 40, 217);
+  --violet-dim: rgb(196, 181, 253);
+  --ok: rgb(5, 122, 85);
+  --warn: rgb(180, 83, 9);
+  --amber: rgb(180, 83, 9);
+  --err: rgb(190, 18, 60);
+
+  /* High-contrast ink ramp (WCAG AA+ on #ffffff and #f6f7f9) */
+  --text: rgb(17, 24, 39);
+  --muted: rgb(55, 65, 81);
+  --faint: rgb(92, 108, 130);
+  --rule: rgb(209, 217, 228);
+
+  /* Clean warm alabaster canvas -> pure white cards -> cool slate trays -> crisp popover */
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --surface-0: #f6f7f9;
+  --surface-1: #ffffff;
+  --surface-2: #eef1f6;
+  --surface-3: #ffffff;
+
+  /* Zero CRT phosphor bloom or scanlines in Daylight Lab */
+  --glow-strength: 0;
+  --scanline-opacity: 0;
+
+  /* Light-tuned borders, semantic tints, and crisp architectural shadows */
+  --border-subtle: color-mix(in srgb, var(--rule) 72%, transparent);
+  --border-default: var(--rule);
+  --border-strong: rgb(176, 188, 205);
+  --border-accent: color-mix(in srgb, var(--accent) 44%, var(--rule));
+
+  --accent-soft: color-mix(in srgb, var(--accent) 9%, transparent);
+  --violet-soft: color-mix(in srgb, var(--violet) 9%, transparent);
+  --ok-soft: color-mix(in srgb, var(--ok) 10%, transparent);
+  --warn-soft: color-mix(in srgb, var(--warn) 10%, transparent);
+  --err-soft: color-mix(in srgb, var(--err) 10%, transparent);
+
+  --shadow-panel: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-elevated: 0 6px 20px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-popover: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.07);
 }

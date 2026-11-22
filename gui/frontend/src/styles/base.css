@@ -3,7 +3,8 @@
 
    Reset, calibrated terminal monospace typography with tabular-nums,
    architectural scrollbar, precision focus rings, subtle ambient backdrop,
-   and crisp theme crossfades. Loads after tokens.css and crt.css (main.tsx).
+   daylight light-mode adaptation, and crisp theme crossfades.
+   Loads after tokens.css and crt.css (main.tsx).
    ========================================================================== */
 
 /* --- reset ------------------------------------------------------------------ */
@@ -30,6 +31,11 @@ html {
   transition: background-color var(--dur-slow) var(--ease-out);
 }
 
+html[data-theme='paper'],
+html[data-theme-mode='light'] {
+  color-scheme: light;
+}
+
 body {
   /* Terminal stack: JetBrains Mono ships locally via @fontsource */
   font-family: var(--font-mono);
@@ -54,6 +60,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow: hidden;
+}
+
+:root[data-theme='paper'] body {
+  background:
+    radial-gradient(
+      100% 60% at 50% -12%,
+      color-mix(in srgb, var(--accent) 4%, transparent) 0%,
+      transparent 56%
+    ),
+    var(--bg);
 }
 
 h1, h2, h3, h4, p, pre, figure, blockquote {
@@ -87,7 +103,7 @@ textarea::placeholder {
 }
 
 select option {
-  background: var(--surface-0);
+  background: var(--surface-1);
   color: var(--text);
 }
 
@@ -129,6 +145,11 @@ input, textarea, button, select {
   text-shadow: none;
 }
 
+:root[data-theme='paper'] ::selection {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+}
+
 /* --- architectural scrollbar ------------------------------------------------
    Quiet slate thumb at rest, crisp accent illumination on hover/drag. */
 
@@ -164,6 +185,14 @@ input, textarea, button, select {
   background: transparent;
 }
 
+:root[data-theme='paper'] ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.34);
+}
+
+:root[data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+
 /* --- precision focus ring --------------------------------------------------- */
 
 :focus-visible {
@@ -194,6 +223,92 @@ input, textarea, button, select {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popover);
+}
+
+/* --- Daylight Lab (paper) contrast guardrails -------------------------------
+   Neutralizes dark hardcoded rgba(...) surfaces in shared component stylesheets
+   so sidebar cards, dialogs, command palette, code blocks, and SVG stages stay
+   crisp and legible in light mode. */
+
+:root[data-theme='paper'] .ix-sidebar-item {
+  background: var(--surface-1);
+  border-color: var(--border-default);
+}
+
+:root[data-theme='paper'] .ix-sidebar-item:hover {
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--rule));
+}
+
+:root[data-theme='paper'] .ix-sidebar-item--active {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  border-color: var(--accent);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+:root[data-theme='paper'] .ix-sidebar-item--approval {
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--warn) 68%, var(--rule));
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--warn) 14%, transparent);
+}
+
+:root[data-theme='paper'] .ix-palette-backdrop,
+:root[data-theme='paper'] .ix-dialog-backdrop {
+  background: rgba(15, 23, 42, 0.32) !important;
+}
+
+:root[data-theme='paper'] .ix-dialog-panel {
+  background: var(--surface-1) !important;
+  box-shadow: var(--shadow-popover) !important;
+}
+
+:root[data-theme='paper'] .ix-top-group {
+  background: var(--surface-2);
+  border-color: var(--border-default);
+}
+
+:root[data-theme='paper'] .ix-top-crumb,
+:root[data-theme='paper'] .ix-sidebar-search-wrap,
+:root[data-theme='paper'] .ix-shortcuts-section {
+  background: var(--surface-2);
+}
+
+:root[data-theme='paper'] .usa-code-block,
+:root[data-theme='paper'] .usa-tool-detail {
+  background: #f8fafc;
+  border-color: var(--border-default);
+}
+
+:root[data-theme='paper'] .usa-code-head {
+  background: #edf1f7;
+  color: var(--muted);
+}
+
+:root[data-theme='paper'] .usa-jump-btn {
+  background: var(--surface-1);
+  box-shadow: var(--shadow-elevated);
+}
+
+:root[data-theme='paper'] svg rect[data-bg='1'],
+:root[data-theme='paper'] svg rect[fill*='4, 10, 18'] {
+  fill: #f1f5f9 !important;
+}
+
+:root[data-theme='paper'] svg rect[fill*='15,23,42'],
+:root[data-theme='paper'] svg rect[fill*='15, 23, 42'] {
+  fill: #e8edf5 !important;
+}
+
+:root[data-theme='paper'] [style*='rgba(5, 8, 12'],
+:root[data-theme='paper'] [style*='rgba(2, 6, 23'],
+:root[data-theme='paper'] [style*='rgba(15, 23, 42'],
+:root[data-theme='paper'] [style*='rgba(8, 22, 34'],
+:root[data-theme='paper'] [style*='rgba(6, 14, 24'] {
+  background: var(--surface-2) !important;
+}
+
+:root[data-theme='paper'] [style*='rgba(5, 10, 16'] {
+  background: var(--surface-1) !important;
 }
 
 /* --- shared placeholder block (scaffold compatibility) ---------------------- */
