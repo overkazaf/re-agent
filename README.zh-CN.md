@@ -1,170 +1,257 @@
+<div align="center">
+
+![Stars](https://img.shields.io/github/stars/overkazaf/re-agent?style=flat-square&color=58a6ff)
+![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Tools](https://img.shields.io/badge/Built--in_Tools-34-10b981?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-19_Go_Pkgs_%7C_129_Frontend_Unit-a78bfa?style=flat-square)
+![Last Commit](https://img.shields.io/github/last-commit/overkazaf/re-agent?style=flat-square&color=58a6ff)
+![License](https://img.shields.io/github/license/overkazaf/re-agent?style=flat-square&color=58a6ff)
+
+</div>
+
 # 0xAF-Re
 
-面向**授权逆向 / CTF** 的终端 Agent。一个静态 Go 二进制，内置 **planner + executor** 双模型座位、
-本地 RE 工具、工作模式、任务队列、会话恢复，以及每一轮的实时可视化。
+**可验证的逆向工程 Agent 与 3D 取证工作台。**
 
-**Language:** [English](README.md) | 中文
+> **核心主张：模型很会猜，但逆向不相信故事。**
 
-**链接:** [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) · [架构文档](docs/ARCHITECTURE.zh-CN.md) · [架构图](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg) · [设计分析（博客）](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)
+单一静态 Go 二进制，同时驱动 **终端指挥台（CLI / TUI）**、**原生桌面工作台（Wails v2）** 与 **零配置浏览器 3D 取证工作台**。面向授权逆向分析、二进制取证与 CTF 实战，将工具执行、证据账本、假设证伪、回放验证与独立对抗审计沉淀为确定性的宿主状态机。
+
+**语言：** [English](README.md) | 简体中文
+
+**入口与文档：** [▶ 在线 3D 交互演示](https://overkazaf.github.io/re-agent/gui-demo/) · [项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html) · [工作流架构规范](docs/WORKFLOW_STANDARD.md) · [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) · [架构深挖](docs/ARCHITECTURE.zh-CN.md) · [架构图索引](docs/diagrams/index.zh-CN.html) · [对比图](docs/diagrams/07-vs-oh-my-pi.svg) · [设计分析（博客）](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)
 
 <p align="center">
-  <img src="docs/shots/dashboard.png" alt="0xAF-Re 实时仪表盘：FLOW / TOOLS / PLAN / THINK / TELE" width="900">
+  <img src="docs/shots/gui-3d-overview.png" alt="0xAF-Re 3D Forensic Theater 极客取证指挥台" width="880">
   <br/>
-  <img src="docs/casts/dashboard.gif" alt="0xAF-Re 实时仪表盘（动画）" width="600">
+  <sub><strong>3D Forensic Theater 取证指挥台</strong> — 7 大工作流全息工位、双轨相位光纤总线与实时因果证明 DAG（<a href="https://overkazaf.github.io/re-agent/gui-demo/">零配置在线体验 ↗</a>）</sub>
+</p>
+
+<p align="center">
+  <img src="docs/shots/dashboard.png" alt="0xAF-Re 终端实时仪表盘：FLOW / TOOLS / PLAN / THINK / TELE" width="880">
+  <br/>
+  <img src="docs/casts/dashboard.gif" alt="0xAF-Re 终端实时仪表盘动画" width="560">
 </p>
 
 ## 目录
 
-- [动机](#动机)
-- [功能特性](#功能特性)
-- [演示](#演示)
-- [架构设计](#架构设计)
-- [安装](#安装)
-- [快速开始](#快速开始)
+- [为什么需要 0xAF-Re](#为什么需要-0xaf-re)
+- [标准 `re-agent` 架构与五道防线](#标准-re-agent-架构与五道防线)
+- [3D Forensic Theater 极客取证指挥台](#3d-forensic-theater-极客取证指挥台)
+- [商业级工作台交互与核心视图](#商业级工作台交互与核心视图)
+- [终端指挥台与功能特性](#终端指挥台与功能特性)
+- [安装与快速开始](#安装与快速开始)
 - [基础 Demos](#基础-demos)
 - [实战案例：完整解一道题](#实战案例完整解一道题)
-- [桌面 GUI](#桌面-gui)
-- [Workflow 模式](#workflow-模式)
-- [上下文压缩](#上下文压缩context-compaction)
-- [远程模式](#远程模式)
-- [Provider 与模型](#provider-与模型)
-- [内置工具（34 个）](#内置工具34-个)
-- [Skills 与知识库](#skills-与知识库)
-- [安全策略](#安全策略)
-- [排错](#排错)
-- [常用命令](#常用命令)
-- [未来设想](#未来设想)
-- [更多文档](#更多文档)
+- [Workflow 模式与交互式逆向](#workflow-模式与交互式逆向)
+- [上下文压缩（Context Compaction）](#上下文压缩context-compaction)
+- [远程 SSH 模式](#远程-ssh-模式)
+- [四席位模型路由与 Provider 配置](#四席位模型路由与-provider-配置)
+- [内置工具（34 个）与 Skills（30 项）](#内置工具34-个与-skills30-项)
+- [安全策略与工程质量验证](#安全策略与工程质量验证)
+- [常用命令速查与排错](#常用命令速查与排错)
+- [未来路线与更多文档](#未来路线与更多文档)
 
-## 动机
+## 为什么需要 0xAF-Re
 
-逆向本身就是一条流水线：`file`、`strings`、`entropy`、r2、JADX、Frida、临时脚本、随手笔记。
-慢的从来不是某个单独工具，而是**把整条线串起来**——两个小时后还要重新推导你已经知道的东西。
-0xAF-Re 就是为了守住这条线：planner 模型负责规划路线，executor 模型负责驱动工具，
-每一步事实都落在可恢复、可 diff、可交接的 JSONL 转录里。
+逆向工程天然是一条长链路流水线：`file`、`strings`、香农熵、ELF/PE/Mach-O 头部、radare2、JADX、Frida、临时脚本与实验笔记。真正消耗时间的往往不是单个工具，而是两件事：
 
-三条原则：
+1. **过程断线**：分析两小时后，上下文被压缩或切换，不得不重新推导已经确认过的偏移与结论。
+2. **叙事固着（Commits to a story）**：通用 LLM 一旦对某个函数或密钥下出看似流畅的判断，后续几十轮往往只找顺眼的线索去圆这个故事，甚至在未实际跑通验证脚本、或仅靠单样本偶然命中的情况下就宣称“算法已还原”。
 
-1. **本地优先、证据优先。** 读取被限制在工作区内；写入、网络、敏感路径默认关闭，直到你明确放开。
-   事实先来自真实工具（`/scan`、radare2、JADX、Frida…），再来自模型。
-2. **双座位，而不是单对话。** 强推理模型规划，便宜模型收集证据；`/planner`、`/executor`、`/model`
-   可随时换路由。
-3. **看得见、可干预。** 计划行、工具调用、推理、token、耗时全部实时渲染；`/think expand`、
-   `/tasks collapse`、`/queue edit`、`/model` 在回合运行中即刻生效。
+0xAF-Re 把逆向 Agent 当作受控的**行动系统**来设计，而非无状态的聊天框：
 
-## 功能特性
-
-| 领域 | 你得到什么 |
-| --- | --- |
-| **实时仪表盘** | 单框视图：FLOW（动画数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；终端太矮时逐层收缩，保住当前步骤。 |
-| **双模型路由** | planner / executor / researcher 三个座位，可固定、可按角色，运行中可切换。 |
-| **工作模式** | `off` / `auto` / `specialist` / `caveman`，以及专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`。`reverse` 模式**交互式**：样本类型选择器、9 个带证据闸门的结构化阶段、hacker 风格 HUD，以及落在证据账本上的假设/证据追踪。 |
-| **证据闭环** | 每个完成的工具结果都写入 append-only 的 `evidence-ledger.jsonl`；`verify_artifact` 把构建/回放/差分运行记成 `verification_result`；假设每次状态变化都留版本记录；reverse 各阶段在进入 writeup 前用证据、验证和审计记录做闸门。 |
-| **任务声明** | `/goal <目标>` 把一句话需求变成带范围的契约——目标文件哈希与格式由宿主钉死，验收标准（build_pass、replay_pass、differential_cases…）在 writeup 前对照证据账本逐条检查。 |
-| **能力沙箱** | 声明生效时同时拉起任务级沙箱：网络与设备访问默认拒绝，授权来自契约的 constraints，随任务过期。`/cap` 运行中单项授权/收回，并查看动作日志——每条被闸门过过的命令及其决策与来源。底层审批策略照常兜底。 |
-| **元认知层** | 证据账本（`ev_NNN`）+ 假设栈（`H-NNN`）：每个工具结果自动入库并被引用；矛盾证据会把判断置信度减半，并级联到派生判断——全部由宿主代码强制。（见 [0xAF-Re 与 REA 的架构差异](#0xaf-re-与-rea-的架构差异)） |
-| **会话恢复** | append-only JSONL 转录；`--resume <hash|id>` / `--continue` / `/sessions`；崩溃自动修复悬挂工具调用；`/new` 开新会话。 |
-| **上下文压缩** | 每次请求机械裁剪 + `/compact`；可选 `snapcompact` 把被丢弃历史渲染成 PNG 帧，视觉模型直接读回。 |
-| **参考上下文** | `--context "know:…"` 从知识库注入、`--context "file:…"` 从工作区文件注入，原始备注直接透传。 |
-| **知识与技能** | `/know` 检索+综合本地知识索引；内置 RE 技能；MCP server 并入同一工具注册表。 |
-| **运行中审批** | 分级策略（read/write/exec）+ 安全模式命中即询问；one-shot 在 TTY 下也会弹 **y/a/d/n**，不用重启换模式。 |
-| **远程模式** | 后台 SSH 连接已保存的机器；本地规划、同窗口远程执行。（见 [远程模式](#远程模式)） |
-| **发布** | `go install @vX.Y.Z`，且每个 tag 自动在 GitHub Releases 附上 darwin/linux 预编译二进制。 |
-
-## 演示
-
-全部来自真实二进制的终端输出：
-
-| 演示 | 说明 |
-| --- | --- |
-| <img src="docs/shots/dashboard.png" width="420"> | 回合运行中的实时仪表盘（FLOW / TOOLS / PLAN / THINK / TELE）。 |
-| <img src="docs/casts/dashboard.gif" width="280"> | 同一视图，动画版。 |
-| <img src="docs/shots/sessions.png" width="420"> | `/sessions`——`--resume` 的 hash 别名。 |
-| <img src="docs/shots/help.png" width="420"> | 命令面板。 |
-
-动画录制（SVG，内联渲染）：[quickstart](docs/casts/quickstart.svg) · [deck](docs/casts/deck.svg) · [scan](docs/casts/scan.svg)。
-
-更多静态截图：[boot](docs/shots/boot.svg) · [reply](docs/shots/reply.svg) · [approval](docs/shots/approval.svg) · [auth](docs/shots/auth.svg) · [tools](docs/shots/tools.svg) · [providers](docs/shots/providers.svg) · [palette](docs/shots/palette.svg) · [shell](docs/shots/shell.svg) · [verify](docs/shots/verify.svg)。
-
-快速体验：
-
-```bash
-0xaf --smoke                                  # 离线自检
-0xaf -p "triage ./ctf/chall" --workspace ./ctf
-0xaf --workflow reverse -p "静态+动态分析，最后给 PoC"
-0xaf --context "know:android packer" -p "识别加壳方式"
-```
-
-## 架构设计
-
-核心是一个很小的 agent loop：用户输入进入 Go 宿主，
-宿主按 role/provider/model 路由每一轮，workflow 模式负责收窄上下文，本地证据工具把事实回灌到下一轮。
-
-[打开可导出的架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)，或进入
-[完整架构图索引](docs/diagrams/index.zh-CN.html)。
-
-| 层 | 设计意图 |
-| --- | --- |
-| 终端交互层 | 把任务队列、斜杠命令、shell escape 和 live HUD 放在同一个工作区策略下。 |
-| Agent loop | 路由 planner/executor/researcher，压缩上下文，流式输出事件，并持久化 JSONL session。 |
-| 证据线 | 每个完成的工具结果追加写入 session 旁的 `evidence-ledger.jsonl`（`ev_NNN`）；`verify_artifact` 把构建、回放和差分结果写成 `verification_result`；`hypothesis_create`/`hypothesis_update`/`hypothesis_list` 维护统一的宿主侧假设栈（`H-NNN`）。reverse 阶段闸门读取这份账本与假设栈，验证和审计是进入 writeup 前的硬条件，不是报告里的形容词。 |
-| 元认知层 | 把证据（`ev_NNN`）和判断（`H-NNN`）作为转录之外的宿主状态：每个工具结果自动打标入库，账本摘要与假设栈注入 system prompt，降级与级联由确定性代码执行。规则化的证据仲裁器在每次工具结果后交叉核对账本与假设栈；`/audit` 把假设栈交给第二个模型做上下文隔离的对抗审计。 |
-| Workflow 模式 | 有 specialist route 就直接用；没有时把 RE 任务拆成有边界的本地证据 executor packet。 |
-| 策略闸门 | 默认只读工作区；写盘、联网、敏感路径和高风险命令都需要显式批准。 |
-| 证据层 | 优先用 `/scan`、radare2、JADX、Frida、angr、Burp/mitmproxy、skills 和知识库拿本地事实，再让模型总结。 |
-
-## 开发者亮点
-
-如果你在做 agent，0xAF-Re 是一个足够小、但关键部件齐全的 RE 场景参考实现：
-单个 Go 二进制里包含 provider 路由、工具治理、实时遥测、prompt/skill 覆盖、
-任务队列和审计日志。它不像 demo 那样只展示聊天，而是把 agent 真正落地时麻烦的部分也摊开。
-完整设计见 [docs/ARCHITECTURE.zh-CN.md](docs/ARCHITECTURE.zh-CN.md)。
-
-- **安装像单文件工具:** 单个静态二进制内置 prompts 与 skills，核心链路不需要 Node 或 Python 运行时。
-- **模型座位可组合:** planner、executor、researcher 可以接不同 provider、不同模型和不同 prompt。
-- **证据优先 workflow:** 有 GPT Cyber / Claude Code CVP / Grok 类订阅就直走 specialist；
-  普通模型走 caveman，只拿只读本地证据包。
-- **元认知即宿主状态:** 证据账本和假设栈活在转录之外，矛盾不会被上下文压缩吞掉，`--resume` 时原样重放；
-  降级和级联是确定性 Go 代码，不靠 prompt 自觉。
-- **过程可调试:** HUD、trace、token/耗时遥测、任务状态和 JSONL session 让每一轮都能复盘。
-- **扩展面够直接:** 内置 RE 工具、MCP tools、skills、知识库导入、本地覆盖和运行中任务队列。
+- **本地优先、证据优先**：读取默认限制在工作区内；写入、联网、敏感路径与设备访问默认拒绝。事实首先来自真实工具输出，再由模型归纳。
+- **四席位职责分离**：`planner` 规划路线、`executor` 驱动工具、`researcher` 查背景资料、`auditor` 在零历史隔离上下文中独立挑刺，运行中可随时热切换。
+- **元认知即宿主状态**：证据账本（`ev_NNN`）与假设栈（`H-NNN`）由 Go 宿主维护在会话转录之外，不随上下文压缩丢失，矛盾置信度折半与级联回滚全部由确定性代码强制执行。
+- **双前端同核心**：同一套 Go 核心、会话目录与安全策略引擎，同时输出零依赖终端 TUI、Wails v2 原生桌面端，以及可在浏览器直接打开的静态交互演示版（[在线体验](https://overkazaf.github.io/re-agent/gui-demo/)）。
 
 ### 0xAF-Re 与 REA 的架构差异
 
-[REA](https://github.com/morluto/rea) 是这个项目借鉴的重要先行者——工具观测的证据账本、
-provider 隔离不做静默降级、静态与运行时视图配对，都来自它。0xAF-Re 是另一种形态
-（自包含 agent 而非 MCP 工具服务器），现在又往前走了一步：把证据和假设变成**一等宿主状态**。
-完整设计思路见[博客分析](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)。
+[REA](https://github.com/morluto/rea) 是本项目借鉴的重要先行者——工具观测的证据账本、Provider 隔离不静默降级、静态与运行时视图配对等思路都源于此。0xAF-Re 选择了自包含 Agent 形态，并将证据、假设、验证与对抗审计统一为**一等宿主状态**（详见[博客设计分析](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)）：
 
-| 维度 | REA（MCP 工具服务器） | 0xAF-Re（终端 agent） |
+| 维度 | REA（MCP 工具服务器） | 0xAF-Re（可验证逆向 Agent 与 3D 工作台） |
 | --- | --- | --- |
-| 形态 | 把 Ghidra/IDA/LLDB 风格的工具暴露给任何支持 MCP 的 agent 宿主。 | 一个 Go 二进制同时拥有循环、席位、策略闸门和工具。 |
-| 证据 | 带 integrity policy 的证据账本；结果记录在案、持续可用。 | 同一思路，但接进了循环：每个工具结果自动打上 `ev_NNN`、截成 400 字符摘录、带 id 回注上下文，并作为会话事件持久化——引用在压缩和 `--resume` 之后仍然成立。 |
-| 假设管理 | 隐式；推理叙事活在模型上下文里。 | 显式的 `hypothesis_create/update/list` 工具背后是宿主侧栈：`challenge` 使置信度减半，低于 0.25 标记需重查，reject/revise 级联到派生判断。 |
-| 上下文压力 | 证据在服务器侧累积，但叙事仍由客户端 agent 扛着。 | 账本摘要和假设栈每轮注入，原始历史继续机械裁剪——状态不是压缩的牺牲品。 |
-| 审计 / 验证 | 未内置。 | 已内置：`/audit` 让第二个模型在上下文隔离、无工具的运行里复核假设栈；确定性仲裁器在每次工具结果后交叉核对静态与动态判断；reverse 阶段闸门要求先有 `verification_result` 和 `audit_finding` 才能进入 writeup。 |
+| **形态** | 向任意支持 MCP 的宿主暴露 Ghidra/IDA/LLDB 风格工具。 | 单一 Go 静态二进制拥有循环、四席位路由、能力沙箱、34 个内置工具与 3D/2D GUI。 |
+| **证据账本** | 带 integrity policy 的工具结果账本。 | 深度接入 Agent Loop：工具结果自动打标 `ev_NNN`、记 SHA-256 与视角（`static`/`dynamic`）、标记 `UNTRUSTED DATA` 防样本投毒，并持久化至 `evidence-ledger.jsonl`。 |
+| **假设管理** | 隐式存在于客户端模型上下文。 | 显式 `hypothesis_create`/`update`/`list` 维护宿主假设栈（`scope`/`falsifiers`/`next_test`）；反证确定性折半置信度，冲突沿依赖链级联回滚。 |
+| **验证与审计** | 未内置独立验收与审计闸门。 | 内置 `verify_artifact`（区分 `candidate` 与 `verified`，拦截单样本命中）与隔离上下文 `/audit`（5 项核查 + 三态裁决），硬闸门控制 `writeup` 交付。 |
 
-一句话：REA 给外部 agent 一套**诚实的工具**；0xAF-Re 在诚实工具之外，还让 agent 自己的
-**判断可检视、可降级、可恢复**——那些通常活在（也死在）上下文窗口里的分析脉络。
+## 标准 `re-agent` 架构与五道防线
 
-## 项目动机
+完整工程契约见 [docs/WORKFLOW_STANDARD.md](docs/WORKFLOW_STANDARD.md)，图形化总览见 [可导出架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) 与 [架构图索引](docs/diagrams/index.zh-CN.html)。
 
-0xAF-Re 源于作者日常授权 RE/CTF 工作里的痛点：CC 类 CLI 风控升级后，普通模型面对逆向语义也更容易过度谨慎，本地样本分析经常被打断。这个项目不做隐写、暗语或绕策略，而是把工作限定在授权、本地、可审计范围内，再通过角色拆分和多模型组合改善体验。
+### 五道防线
 
-- **模型组合:** planner 负责路线，executor 负责工具，researcher 负责背景资料；三个角色可以接不同模型。
-- **专用订阅加成:** 如果有 GPT Cyber、Claude Code CVP、Grok 或类似更适配安全研究/逆向的 route，`workflow auto` 会更顺。
-- **普通 provider 也能跑:** caveman 模式把任务收窄成本地证据包，让谨慎的 executor 只收集文件事实。
-- **后续计划:** 加入本地模型和可复现评测样例，用样例结果衡量不同 provider/workflow 的效果并迭代。
+| 防线 | 对应逆向 Agent 薄弱点 | 宿主核心不变量 |
+| --- | --- | --- |
+| **① 能力沙箱（Capability Sandbox）** | 权限是一整块，容易误读工作区外 `SOLUTION.txt`、宿主机凭据或未授权外联。 | 任务级最小权限授权（`network` / `device` 默认拒绝，随任务结束失效）；每次动作写入 `Action State`（工具、能力、命令 SHA-256、裁决、来源与绑定 `hypothesisId`）。 |
+| **② 证据账本（Evidence Ledger）** | 工具观察、模型猜测与样本字符串混在同一上下文，易被样本符号/注释投毒。 | Append-only 不可变 `evidence-ledger.jsonl`（`ev_NNN`）；原始样本输出强制打标 `UNTRUSTED DATA`（`untrustedInput: true`），只作被引用数据，严禁当作指令执行。 |
+| **③ 假设管理器（Hypothesis Manager）** | 假设只是对话里的一句话，错误推断带着 Agent 空转几十轮。 | 结构化字段约束 `claim` / `scope` / `falsifiers` / `next_test` / `dependsOn`；反证强制折半置信度，冲突触发 `weakened` / `frozen` / `reevaluate` 并沿派生链级联回滚。 |
+| **④ 执行验证器（Execution Verifier）** | 脚本硬编码答案或单样本偶然命中就宣称“算法已还原”。 | 严格区分 `candidate` 与 `verified`；要求编译构建、固定输入回放、边界/异常/失败样本与差分对比，记录 `boundaryPassed`、`differentialCases` 与 `uncoveredPaths`；**`total < 2` 单样本命中禁止标为 `verified`**。 |
+| **⑤ 对抗性审计器（Adversarial Auditor）** | 主 Agent 既当选手又当裁判，用流畅报告掩盖证据缺口。 | `/audit` 启动零对话历史、零工具权限的隔离上下文（优先自动切换第三模型席位），逐项核查 5 条规则，签发三态裁决：`accepted` \| `rejected` \| `needs_more_evidence`。 |
 
-## 安装
+### 七类 `Investigation State` 任务档案
+
+`Investigation State` 是跨轮次、跨模型、跨工具续跑的唯一事实档案，模型只读取摘要与索引，原始记录与裁决由宿主持久化：
+
+| 状态域 | 回答的核心问题 | 关键字段与约束 |
+| --- | --- | --- |
+| **① Target State** | 针对哪个样本的哪个版本？ | `file`、`sha256`、`arch`、`format`、`version`、`scope` —— 由宿主计算并锁定，**与 Objective State 严格分离**，防止分析途中偷换目标。 |
+| **② Objective State** | 这次要证明什么、何时停止？ | `primary`、`intent`、`deliverables`、`constraints`、`stopConditions`、`acceptance` —— 模型起草，操作员 `/goal accept` 后生效。 |
+| **③ Evidence State** | 工具真实观察到了什么？ | `ev_NNN`、`source`、`kind`、`view`（`static`/`dynamic`）、`artifact`、`sha256`、`untrustedInput`、`excerpt` —— 只增不改。 |
+| **④ Hypothesis State** | 当前有哪些竞争解释与反例？ | `H-NNN`、`claim`、`scope`、`confidence`、`supporting`、`contradicting`、`falsifiers`、`nextTest`、`dependsOn`、`status`、`experiments`。 |
+| **⑤ Action State** | 执行了哪些受控动作？ | `tool`、`capability`、`subject`、`sha256`、`decision`（`granted`/`denied`/`unmanaged`）、`origin`、绑定 `hypothesisId`。 |
+| **⑥ Verification State** | 重建产物是否与原行为等价？ | `build`、`passed`/`total`、`status`（`candidate` \| `verified`）、`boundaryPassed`、`differentialCases`、`uncoveredPaths`。 |
+| **⑦ Audit State** | 独立读者是否发现缺口或越权？ | `verdict`（`accepted` \| `rejected` \| `needs_more_evidence`）、5 项核查明细（`direct_evidence` / `failure_edge_coverage` / `simpler_alternative` / `scope_overreach` / `artifact_lineage`）、`auditorProvider`。 |
+
+### 运行态四角色轮换与控制闭环
+
+运行态控制面在四个角色间按需轮换：**`Tool Router` ⇄ `Evidence Ledger` ⇄ `Execution Verifier` ⇄ `Adversarial Auditor`**，落地为 9 阶段 RE Workflow（`TRI → STA → DYN → EVI → IFC → HYP → VER → AUD → WRI`）：
+
+```mermaid
+flowchart LR
+    G["① /goal 任务契约\nTarget ≠ Objective"] --> S["② Tool Router + 静态取证\nTRI · STA · EVI"]
+    S --> H["③ 假设建模\nIFC · HYP\n(scope / falsifiers / next_test)"]
+    H --> D["④ 沙箱受控动态执行\nDYN + Capability Sandbox"]
+    D -->|反证/冲突| RB["Evidence Ledger 仲裁\n置信度折半 + 级联回滚"]
+    RB --> H
+    D --> V["⑤ Execution Verifier\nVER: candidate → verified"]
+    V -->|单样本/缺边界| H
+    V --> A["⑥ Adversarial Auditor\nAUD: 零历史 5 项核查"]
+    A -->|needs_more_evidence| H
+    A -->|rejected| RB
+    A -->|accepted| W["⑦ 证据锚定交付\nWRI: Writeup + 已知未知"]
+```
+
+### 五维可信与成本指标 · 7 项完成门禁 · 交接三问
+
+为把“报告语气顺滑”与“结论工程可信”彻底拆开，系统持续观测五项指标并在交付前执行 7 项完成门禁：
+
+- **五维可信与成本指标**：
+  1. **证据覆盖率（`evidence_coverage`）**：活跃结论中可追溯至有效 `ev_NNN` 原始观察的比例。
+  2. **回放通过率（`replay_pass_rate`）**：固定输入、边界输入与失败样本下的重建产物通过比例（`passed / total`）。
+  3. **错误假设寿命（`wrong_hypothesis_lifetime`）**：错误假设从提出到被削弱、淘汰或级联回滚所消耗的轮次与步数。
+  4. **越权动作数（`overreach_count`）**：任务范围外文件/网络/设备/凭据尝试次数（区分沙箱拦截数与越权成功数）。
+  5. **单条通过审计结论成本（`cost_per_accepted_finding`）**：每条通过审计验收结论分摊的模型 token 与工具调用成本。
+- **7 项完成门禁（全部达标方可交付 `WRI [9/9]`）**：
+  ① Target 与 Objective 分离锁定 · ② 关键结论全部入账 `ev_NNN` · ③ 主要假设完成检验且无悬空 `reevaluate` · ④ 重建产物通过多维验证达到 `verified` · ⑤ 高风险动态动作全部留痕 `ActionRecord` · ⑥ 对抗审计 5 项核查全过且裁决为 `accepted` · ⑦ 报告明示已知未知（Known Unknowns）、未覆盖路径（`uncoveredPaths`）与下一步测试（`nextTest`）。
+- **交接三问（Handover Readiness）**：
+  1. **来自哪一次运行？**（精确锚定 Session ID、`evidence-ledger.jsonl` 路径、`ev_NNN` 与产物 SHA-256）
+  2. **换模型或换工具能否复现？**（独立可运行的 replay/differential 命令与固定输入向量）
+  3. **失败或偏差归因于哪一层？**（显式区分 **`model`（推理）/ `tool`（工具）/ `env`（环境）/ `data`（样本与投毒）**）
+
+## 3D Forensic Theater 极客取证指挥台
+
+桌面 GUI 与 Web 演示版默认启动 **3D Forensic Theater**（Three.js + React Three Fiber），随时可一键切换经典 2D 工作台（TopBar `▣ 经典视图` ↔ `◈ 3D 剧场`，状态持久化至本地存储）。
+
+| 模块 | 实现细节 |
+| --- | --- |
+| **战术雷达舞台与 7 大全息工位** | 自定义 GLSL 抗锯齿雷达扫描底盘（360° 刻度罗盘、方位校准弧与环境粒子场）；7 大工位（`TRI 三角洲 → SCR 勘查屏 → HYP 假设塔 → EXP 实验平台 → VER 验证台 → AUD 审计拱门 → DEL 交付坞`）配备多部件 Fresnel + `EdgesGeometry` 全息硬件雕塑，其中 `SCR` 渲染程序化反汇编玻璃板。 |
+| **双轨光纤相位总线** | 沿 9 阶段主干铺设双轨平行光纤数据总线与连接柱，已完成段流式传输发光光子数据包至当前活跃前沿；任务归档完成后切换为稳态金/琥珀定格。 |
+| **3D 贝塞尔因果证明光弧** | `H-NNN` 棱镜随置信度动态缩放与沉降，`ev_NNN` 多面体按证据类别呈现不同几何体并绕假设塔螺旋分布；支持/矛盾连线采用凌空二次贝塞尔光弧 + 零 GC 对象池定向流动光子信号包，点击或悬停即高亮整条上下游因果证明链。 |
+| **3D 节点取证检视器 & 节点索引抽屉（`I`）** | 工位（`TRI..DEL`）、假设（`H-NNN`）、证据（`ev_NNN`）3D 标签直接点选；右侧检视器展示完整声明、`scope`、`falsifiers`、`nextTest`、实验记录、可滚动与一键复制的证据原始 `excerpt` 及 `SHA256`，并支持点击关联节点直接飞镜跳转。按 `I` 展开可折叠节点索引抽屉。 |
+| **镜头驾驶与自适应画质** | 支持 `1`（俯瞰）/ `2`（低角战术）/ `3`（假设塔特写）/ `4`（顶视雷达）四套视角预设、`Space` 电影感自动环绕（拖拽立即暂停）、`R` 复位全局，左上零重渲染 AZ/EL/D 镜头遥测；支持 `网格 / 浮窗 / 标签` 独立图层开关；内置**自适应高清（`1.5x` DPR）/ 节能（`1x` DPR 降粒子）渲染**与后台标签 0% GPU 暂停（低帧时自动切入节能档，**永不误踢出 3D**），并支持系统级真全屏（`Esc` 按 LIFO 栈逐层关闭抽屉/聚焦/全屏）。 |
+
+| <img src="docs/shots/gui-3d-overview.png" width="440" alt="3D 取证剧场全景"> | <img src="docs/shots/gui-3d-wizard.png" width="440" alt="引导式实验配置与沙箱 scope"> |
+| :---: | :---: |
+| **3D 作战室全景** — 7 大全息工位、双轨光纤相位总线与假设塔因果光弧 | **引导式假设与实验向导** — 沙箱 scope 约束提示、实验模板与预填命令 |
+| <img src="docs/shots/gui-3d-amber.png" width="440" alt="Amber P3 主题下的 3D 剧场"> | **十套主题实时联动** — 全套 WCAG AA+ 配色直接驱动 3D 材质、光弧与底盘（含浅色 `paper` 实验室标定） |
+
+## 商业级工作台交互与核心视图
+
+桌面端基于 **Wails v2**（Go 后端 + 系统 WebView），并与浏览器演示沙盒共享同一套 React + TypeScript 前端。
 
 ```bash
+make gui            # 构建原生桌面应用 -> gui/build/bin/0xAF-Re GUI.app
+make gui-dev        # 热更新开发模式
+make gui-demo       # 本地启动零配置浏览器交互演示（无需 Wails / API Key）
+make gui-demo-build # 构建静态演示包 -> docs/gui-demo/（适配 GitHub Pages 子路径）
+```
+
+### 核心工作台能力
+
+- **10 套 WCAG AA+ 专业主题 + 三档 CRT 氛围（`refined` / `calm` / `vivid`）**：
+  - **CRT Phosphor**：`deck`（Cyberdeck 青黑默认）、`amber`（Amber P3 暖琥珀）、`matrix`（Matrix P1 翡翠绿）、`mono`（Noir Mono 瑞士高对比银灰）
+  - **Forensic IDE**：`obsidian`（黑曜紫）、`nord`（极地霜青）、`dracula`（德古拉梅紫）、`solarized`（Solarized Dark 深青金）、`crimson`（红队战术猩红）
+  - **Daylight Lab**：`paper`（Forensic Paper 无眩光浅色日间实验室）
+- **现代交互基础件**：全站自研 **`ProSelect`**（带色块预览、分组与即时搜索）、全局 Portal **`HintOverlay`** 悬浮提示（防遮挡裁切）、**`⌘K` 命令面板**、**`?` 快捷键速查**、任意分栏拖拽调宽/折叠与一键复位，以及斜杠命令三通道即时回显（**Transcript + Toast + NoticeLog**）。
+- **Binary Forensic Radar（二进制取证地形与动静对齐）**：
+  - 纯 Go 实时解析 ELF / PE / Mach-O 区段、RWX 与构造函数标记、香农熵曲线（`7.2 b/B` 加壳/加密阈值）、内嵌载荷 carve 命中、反分析热点与二进制 patch diff。
+  - 顶部安全缓解态势栏直观呈现 **`PIE / NX / RELRO / CANARY / RWX` 与峰值熵**，精确计算并一键复制 **VA / File Offset / RVA**，支持直接联动 `/hex`、`/anti`、Agent 提示词与假设实验向导。
+  - **动静证据对齐（Static vs Dynamic Cross-Check）**双轨视图：自动标出单视角盲区与仲裁器冲突，提供一键补实验/修订入口。
+- **完整因果证明叙事 & Writeup 工坊**：
+  - **推理与证明脉络（`ProofNarrativePanel`）**：支持「6 章连贯时间线叙事」与「逐假设 5 拍证明弧线」双模式，显式标注 **原预期 vs 实测结果** 对照块，点击任意 `[ev_NNN]` 就地展开原始实测摘录。
+  - **Writeup 工坊（`WriteupStudioPanel`）**：内置 3 套 Markdown 模板（`0xAF 证据闭环标准报告` / `CTF 解题标准 Writeup` / `算法与接口工程还原报告`），支持全引用预览、`.md` 导出、一键触发 Agent 写盘，以及 **`0xaf-re/forensic-bundle/v1`** 完整 JSON 取证包导出。
+- **版本化本地缓存 & 配置 LLM 主动问候**：
+  - 启动即刻从版本化本地缓存恢复工作区布局、主题偏好与最近调查摘要。
+  - 结合时段与历史调查进度（15 分钟 TTL 缓存 + 乐观本地首屏），后台调用用户已配置的 LLM（`GreetWithModel`）生成针对当前上下文的主动问候，并附上 **2–3 条一键可执行建议**（续接会话、直跑命令或打开逆向样本选择器）。
+- **零配置交互式演示沙盒**：桌面端点击 `▷ 演示环境` 或直接访问 [在线 3D 演示](https://overkazaf.github.io/re-agent/gui-demo/)，无需 API Key 与磁盘写入即可体验 5 个完整逆向场景（入门解谜+审批门、9 阶段 RE 工作流、多会话排队与中断、斜杠直调与主题恢复、内置 PTY 终端）。
+
+### 工作台六大功能分区
+
+| 分区位置 | 面板 / 模块 | 核心职责与常用操作 |
+| --- | --- | --- |
+| **① 顶部控制栏** | `TopBar` + 视图/布局开关 | 一键切换 `◈ 3D 剧场` / `▣ 五维仪表` / `◈ 机制图谱` / `▤ 二进制地形`、进入 `▷ 演示环境`、折叠任意分栏、通过 `ProSelect` 切换 10 套主题与 CRT 氛围 |
+| **② 左侧导航栏** | `SESSIONS` · `SHELLS` | 新建/并发管理多会话、恢复历史会话（`resume`）、打开四席位路由配置（`⚙`）、开启内置交互式 PTY 终端（`+ sh`） |
+| **③ 中央主舞台（多模切换）** | 3D 剧场 / 五维实时仪表 / 机制图谱 & Investigation Dossier / 二进制取证雷达 / Writeup 工坊 | 3D 节点取证与因果光弧；90ms 实时观测流；7 类 `Investigation State` 档案与 5 维可信指标；二进制地形图与动静对齐；6 章证明叙事与取证包导出 |
+| **④ 右侧取证与门禁栏** | `RE WORKFLOW` + `LEDGER 🔒` | 追踪 9 阶段硬闸门进度；检视带 `UNTRUSTED DATA` 隔离标记的 `ev_NNN` 证据与 `H-NNN` 假设栈；唤起 **科学逆向假设实验与验证台** |
+| **⑤ 中部实时转录流** | `TRANSCRIPT` | 按时间轴（`t+Xs`）流式呈现 wire 帧、斜杠命令回显、工具参数耗时、推理摘要与 Markdown 回复 |
+| **⑥ 底部指令台与审批门** | `PromptInput` + `ApprovalDialog` | 多行输入、`/` 斜杠补全、回合中自动排队与 `■ stop` 中断；写盘/执行/外联操作触发风险分级审批弹窗（默认聚焦 `deny`） |
+
+### 工作台实景视图
+
+| 视图 | 说明 |
+| :--- | :--- |
+| <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI 功能分区与不可变证据账本"> | **语义色阶分区与不可变证据账本**：`FLOW` / `TOOLS` / `PLAN` / `THINK` / `TELE` 五维仪表、`RE WORKFLOW [9/9]` 与 `LEDGER 🔒`（`ev_NNN` / `H-NNN`）。 |
+| <img src="docs/shots/gui-governance-graph.png" width="440" alt="多角色协同架构图与认知回放"> | **四席位协同图谱与思考过程回放**：Planner / Executor / Auditor 泳道拓扑、能力沙箱门禁、无级缩放全屏与逐帧认知回放。 |
+| <img src="docs/shots/gui-provenance-dag.png" width="440" alt="实时因果证据图谱 DAG"> | **实时因果证据图谱（DAG）**：动态渲染 `ev_NNN ↔ H-NNN` 支持/反证连线、反证置信度折半淘汰（`H-002 [REJECTED]`）与审计交付闸门。 |
+| <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="科学逆向假设实验与验证台"> | **假设实验与验证审查台**：新增/修订可证伪假设、挂载受控实跑实验——严格执行“假设可演进，证据仅由宿主实跑盖章入账”。 |
+| <img src="docs/shots/gui-writeup-studio.png" width="440" alt="六阶段对齐与 Writeup 工坊"> | **六阶段对齐与 Writeup 工坊**：结构化结论矩阵、3 套 Markdown 模板实时预览与全溯源取证包导出。 |
+| <img src="docs/shots/gui-role-config.png" width="440" alt="四席位模型路由可视化配置"> | **四席位模型路由配置（`amber` 主题）**：在 `⚙ CONFIG` 面板为 `planner` / `executor` / `researcher` / `auditor` 独立绑定 Provider 并持久化。 |
+
+> **GUI 使用提示**：在 GUI 中发送裸 `/workflow reverse` 会弹出原生的样本类型与起始 prompt 选择对话框；带参数的 `/workflow reverse <sample-type>` 在 CLI 与 GUI 中均直接启动。依赖终端 stdin 的交互命令在 GUI 中会返回明确提示而不会卡死。
+
+## 终端指挥台与功能特性
+
+不需要图形界面时，单一 `0xaf` 二进制在任意 SSH 终端或 tmux 窗格中提供完整能力：
+
+| 领域 | 能力说明 |
+| --- | --- |
+| **实时仪表盘** | 单框五面板：FLOW（数据流条）、TOOLS（工具卡）、PLAN（任务清单+进度）、THINK（推理尾）、TELE（吞吐/token/时钟）；终端窗口变矮时逐层收缩，保住当前执行步。 |
+| **四席位模型路由** | `planner` / `executor` / `researcher` / `auditor` 四个席位，可固定或按角色路由，运行中通过 `/planner`、`/executor`、`/auditor`、`/model` 热切换。 |
+| **9 种 Workflow 模式** | `off` / `auto` / `specialist` / `caveman` + 专用 `research` / `writeup` / `ctf` / `reverse` / `engineering`。其中 `reverse` 提供样本选择器、9 阶段硬闸门与 RE HUD。 |
+| **任务契约与能力沙箱** | `/goal <目标>` 锁定 Target 文件哈希与验收标准；`/goal accept` 同时拉起任务级最小权限沙箱，`/cap` 运行中单项授权/收回并审计全部动作日志。 |
+| **会话持久化与崩溃修复** | Append-only JSONL 转录；`--resume <hash\|id>` / `--continue` / `/sessions` 秒级续跑；启动自动修复异常中断遗留的悬挂工具调用。 |
+| **上下文压缩** | 每次请求机械裁剪 + `/compact` 压缩简报；可选 `snapcompact` 将丢弃历史本地确定性渲染为 PNG 帧供视觉模型回读。 |
+| **知识库、技能与 MCP** | 内嵌 30 项逆向 Skills、`/know` 本地笔记检索引擎、`--context "know:…"` / `--context "file:…"` 注入；外部 MCP Server 并入同一工具注册表。 |
+| **运行中分级审批** | read / write / exec 分级策略 + 风险命中提示；one-shot 模式下在 TTY 也会交互询问 **y/a/d/n**，无需中断重启。 |
+| **后台 SSH 远程模式** | 持久保活 SSH 连接已保存主机，本地规划、同窗口远端执行，主机凭据采用本机绑定的 AES-256-GCM 加密存储。 |
+
+### 终端实录演示
+
+| 演示 | 说明 |
+| --- | --- |
+| <img src="docs/shots/dashboard.png" width="420" alt="终端实时仪表盘"> | 回合运行中的实时仪表盘（FLOW / TOOLS / PLAN / THINK / TELE）。 |
+| <img src="docs/casts/dashboard.gif" width="280" alt="终端实时仪表盘动画"> | 同一视图动态录屏。 |
+| <img src="docs/shots/sessions.png" width="420" alt="/sessions 会话列表"> | `/sessions` — `--resume` 短 hash 别名与会话状态。 |
+| <img src="docs/shots/help.png" width="420" alt="/help 命令面板"> | 终端命令面板。 |
+
+SVG 动画录屏：[quickstart](docs/casts/quickstart.svg) · [deck](docs/casts/deck.svg) · [scan](docs/casts/scan.svg)。  
+更多静态截图：[boot](docs/shots/boot.svg) · [reply](docs/shots/reply.svg) · [approval](docs/shots/approval.svg) · [auth](docs/shots/auth.svg) · [tools](docs/shots/tools.svg) · [providers](docs/shots/providers.svg) · [palette](docs/shots/palette.svg) · [shell](docs/shots/shell.svg) · [verify](docs/shots/verify.svg)。
+
+## 安装与快速开始
+
+### 安装 CLI
+
+```bash
+# 推荐：固定 tag 安装（需 Go 1.21+）
 go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
 0xaf --version
 0xaf --welcome
 ```
 
-从源码构建：
+从 `main` 源码构建（`go.mod` 声明 **Go 1.26+**）：
 
 ```bash
 git clone https://github.com/overkazaf/re-agent
@@ -173,15 +260,7 @@ make build
 ./bin/0xaf --version
 ```
 
-推荐固定安装 `@v0.1.20`。`@main` 可能受 Go module proxy 缓存影响，`@latest` 会解析到最新 tag。
-
-**安装 `@v0.1.20` 需要 Go 1.21 或更新版本**（该 tag 声明 `go 1.21`）；**从 main 源码构建需要
-Go 1.26+**（main 的 `go.mod` 已声明 `go 1.26.0`）。macOS 上过老的 Go 编译出的二进制会因缺少
-`LC_UUID` 被系统 dyld 拒绝；遇到 `dyld: missing LC_UUID` 时升级 Go，或直接用 GitHub Releases
-的预编译二进制。
-
-每个 release tag 都会由 `.github/workflows/release.yml` 附加预编译二进制
-（darwin/linux × amd64/arm64），不需要本机 Go 工具链：
+无本机 Go 工具链时，可直接下载 GitHub Releases 附带的 darwin/linux（amd64/arm64）预编译二进制：
 
 ```bash
 # 示例：下载 darwin-arm64 版 v0.1.20
@@ -190,14 +269,18 @@ chmod +x 0xaf
 ./0xaf --version
 ```
 
-## 快速开始
+> 推荐固定安装 `@v0.1.20`（`@main` 可能受 Go module proxy 缓存延迟影响）。macOS 上若旧版 Go 编出报 `dyld: missing LC_UUID`，请升级 Go 或直接使用 Releases 预编译包。
+
+### 快速启动
 
 ```bash
-0xaf --smoke                    # 离线自检，不需要 API key
-0xaf --workspace ./demos/reverse-lab
+0xaf --smoke                                  # 离线自检，无需 API Key
+0xaf --workspace ./demos/reverse-lab          # 进入内置逆向实验工作区
+0xaf --workflow reverse -p "静态+动态分析，最后给 PoC"
+0xaf --context "know:android packer" -p "识别加壳方式"
 ```
 
-进入 REPL 后：
+进入 REPL 后可直接运行零模型本地工具：
 
 ```text
 /scan artifact.txt
@@ -206,16 +289,16 @@ chmod +x 0xaf
 /help
 ```
 
-实时仪表盘每 90ms 重绘一次，会让终端滚动缓冲里堆满帧；觉得吵时可以：
+控制终端仪表盘刷新频率（减少滚动缓冲帧数）：
 
 ```bash
 0xaf --refresh calm            # 500ms 动画，滚动缓冲更安静
-0xaf --refresh off             # 只在状态变化时重绘
-0xaf --flow off                # 完全不要仪表盘（trace 仍在）
-# REPL 里等价命令：/refresh calm | /refresh off | /flow off
+0xaf --refresh off             # 仅在状态变化时重绘
+0xaf --flow off                # 关闭仪表盘（保留 trace 输出）
+# REPL 内等价命令：/refresh calm | /refresh off | /flow off
 ```
 
-默认路由会优先复用本地 CLI 登录。检查当前可用状态：
+检查本地 CLI 登录与 Provider 可用状态：
 
 ```bash
 0xaf auth status
@@ -223,44 +306,38 @@ codex login status
 claude auth status --text
 ```
 
-在 REPL 里用 `/auth` 查看同样状态。要跑原始 CLI 命令时加 `!`，例如
-`!codex login status`。
+REPL 内使用 `/auth` 查看同样状态，原生 shell 命令加 `!` 前缀即可执行（如 `!codex login status`）。
 
 ## 基础 Demos
 
-先用内置 demo 工作区熟悉流程，再把路径换成自己的样本。
+先用仓库自带的 `demos/` 工作区熟悉链路，再替换成自己的授权样本。`/scan`、`/inspect`、`/anti`、`/diff`、`/decode`、`/entropy`、`/mitigations`、`/carve`、`/apk` 全部为纯 Go 本地直出，零 token 消耗：
 
-| 目标 | 从这里开始 |
+| 目标 | 起点命令 |
 | --- | --- |
-| 打开引导演示 | `0xaf --welcome` |
-| 离线检查线路 | `0xaf --smoke` |
-| 进入 demo 工作区 | `0xaf --workspace ./demos/reverse-lab` |
-| 识别未知文件 | `/scan ./chall` |
-| 深度解析 ELF/PE/Mach-O 头部与构造函数 | `/inspect ./chall` |
-| 检测加壳、反调试与反 Frida 特征 | `/anti ./chall` |
-| 二进制字节差分与指令 patch 识别 | `/diff ./orig ./patched` |
-| 查看二进制保护 | `/mitigations ./chall` |
-| 找加壳、压缩或加密区段 | `/entropy ./chall` |
-| 从 blob 里挖内嵌文件 | `/carve ./blob` |
-| 解 token 或 flag-like 字符串 | `/decode auto ZmxhZ3s...` |
-| 检查 APK（清单解析 + native 库 + 壳特征） | `/apk ./app.apk` |
-| 检查本地逆向工具 | `/retool inventory` |
-| 准备移动/API 抓包 | `/retool mitmproxy template api.example.test` |
-| 让 planner 给 solve 思路 | `0xaf --role planner -p "粗筛 ./chall 并给下一步"` |
-| 跑隔离本地证据模式 | `0xaf --workflow caveman -p "粗筛 ./app.apk"` |
-
-最快路径不需要模型：`/scan`、`/inspect`、`/anti`、`/diff`、`/decode`、`/entropy`、
-`/mitigations`、`/carve`、`/apk` 都是本地工具直出。
+| 打开交互引导 | `0xaf --welcome` |
+| 离线自检核心链路 | `0xaf --smoke` |
+| 进入逆向实验工作区 | `0xaf --workspace ./demos/reverse-lab` |
+| 粗筛未知文件 | `/scan ./chall` |
+| 深度解析 ELF/PE/Mach-O 头部、构造函数与导入导出 | `/inspect ./chall` |
+| 检测加壳、反调试、反 Frida 与内联系统调用 | `/anti ./chall` |
+| 二进制字节差分与 x86/ARM64 指令 patch 归类 | `/diff ./orig ./patched` |
+| 检查安全缓解措施（PIE/NX/RELRO/Canary） | `/mitigations ./chall` |
+| 扫描高熵加壳/加密区段 | `/entropy ./chall` |
+| 从固件/blob 中提取内嵌载荷 | `/carve ./blob` |
+| 自动尝试常见编码解码 | `/decode auto ZmxhZ3s...` |
+| 解析 APK（二进制 Manifest + DEX/SO + 壳指纹） | `/apk ./app.apk` |
+| 盘点本机逆向外部工具链 | `/retool inventory` |
+| 生成移动/API 抓包模板 | `/retool mitmproxy template api.example.test` |
+| 让 Planner 规划分析路线 | `0xaf --role planner -p "粗筛 ./chall 并给下一步"` |
+| 运行隔离本地证据模式（`caveman`） | `0xaf --workflow caveman -p "粗筛 ./app.apk"` |
 
 ## 实战案例：完整解一道题
 
-下面全部来自一次针对 `demos/welcome` 的真实运行，这个工作区随仓库一起发布。
-plan 文本、命令、耗时和答案都是从 session 记录里抄出来的——你用同样两行就能复现。
+以下内容来自对仓库自带 `demos/welcome` 工作区的真实运行转录，plan、命令、耗时与验证结果均原样摘录。
 
-### 案例 A —— 完全不用模型
+### 案例 A —— 零模型本地直解
 
-`demos/welcome/chall.js` 会把你的输入和它启动时构造的 token 做比较。
-在请任何人思考之前，先看文件：
+`demos/welcome/chall.js` 在启动时构造目标 token 并校验用户输入。先直接看文件：
 
 ```bash
 0xaf --workspace ./demos/welcome
@@ -278,13 +355,11 @@ plan 文本、命令、耗时和答案都是从 session 记录里抄出来的—
 # accepted
 ```
 
-整道题就解完了，token 成本为零。同样的套路直接搬到真实样本上：
-`/scan` 定性、`/hex <file> 0x20` 读你关心的那段头部、`/carve` 抠出内嵌载荷、
-想要反汇编器而不是答案时就 `/r2 <file>`。
+同样的直出链路适用于真实样本：`/scan` 定性、`/inspect` 看段表与构造函数、`/hex <file> 0x20` 查头部、`/carve` 抠载荷、`/r2 <file>` 切入交互反汇编。
 
-### 案例 B —— 让 agent 自己跑完
+### 案例 B —— Agent 自主规划、验证并交付证据
 
-同一个工作区，一句话，这次可以看着它规划：
+同一工作区，只给一句话目标：
 
 ```bash
 0xaf --workspace ./demos/welcome
@@ -295,7 +370,7 @@ Recover the expected token from chall.js, verify it by actually running the
 checker, and explain how the check works.
 ```
 
-**planner 先给出路线。** 任何工具跑起来之前，`codex` 写下四步，HUD 随着完成情况逐条更新：
+**1) Planner 先输出四步计划**，HUD 实时跟踪推进：
 
 ```text
 PLAN 0/4 · via codex
@@ -305,7 +380,7 @@ PLAN 0/4 · via codex
   4  Explain the check in concise solve notes
 ```
 
-**executor 逐步执行。** 每条命令都是针对工作区的真实工具调用，受策略约束、按顺序留痕：
+**2) Executor 在工作区策略约束下按序执行工具并留痕**：
 
 ```text
 rg --files                              盘点工作区
@@ -317,10 +392,9 @@ node chall.js '0xaf{warmup_deck}'       accepted · exit=0
 node chall.js 'wrong'                   rejected · exit=1
 ```
 
-注意最后两行。它没有停在"token 解出来是 X"——**正例和反例各跑了一次**，
-结论落在观察到的行为上，不靠"我源码读对了"这个假设。
+注意最后两行：它没有停留在“静态读源码算出 token”，而是对**正例与反例各做了一次真实执行验证**，让结论落在可观察的运行结果上。
 
-**答案连同证据一起给出：**
+**3) 带证据与遥测交付结论**：
 
 ```text
 Recovered token:   0xaf{warmup_deck}
@@ -334,301 +408,116 @@ accepted and exits 0, otherwise rejected and exit 1.
 ╰─ via codex · role auto · turns 1 · took 1m34s · in 162k out 2.2k think 895 cache 122k
 ```
 
-### 跑的过程中你能做什么
+### 回合中的实时控制与宿主治理
 
-这一轮不是一个只能干等的黑盒。运行期间随时可以：
-
-| 你想要 | 中途直接输入 |
+| 需求 | 运行中 / 提示符输入 |
 | --- | --- |
-| 看模型的完整推理，而不是三行尾巴 | `/think expand` |
-| 把推理收起来腾出屏幕 | `/think collapse` |
-| 展开全部 plan 步骤，含未开始的 | `/tasks expand` |
-| 不打断当前轮，先把下一个问题排上 | `/queue add <text>` |
-| 修改还没执行的排队任务 | `/queue edit <id> <text>` |
-| 换掉这个会话后续使用的模型 | `/model executor <name>` |
+| 展开或折叠模型流式推理 | `/think expand` · `/think collapse` |
+| 展开全部未开始的计划步骤 | `/tasks expand` · `/tasks collapse` |
+| 不打断当前轮，排队下一条任务 | `/queue add <text>` · `/queue edit <id> <text>` |
+| 热切换后续回合使用的模型 | `/model executor <name>` · `/model planner <name>` |
+| 把目标签成带验收闸门的任务契约 | `/goal <目标>` 起草 · `/goal accept` 生效 · `/goal show` |
+| 查看或调整任务级网络/设备能力沙箱 | `/cap` · `/cap network on\|off` · `/cap device on <id>\|off` |
+| 启动独立隔离模型对抗复核假设栈 | `/audit` |
 
-回合间隙在普通提示符下还可以随时用宿主控制命令约束与复核任务：
+> 结束后执行 `/session` 可获取 JSONL 转录与同目录 `evidence-ledger.jsonl` 路径。案例 B 需要真实的 Planner/Executor Provider，`--smoke` 与 `mock` 仅用于离线链路检查。
 
-| 你想要 | 在提示符输入 |
-| --- | --- |
-| 把一句话目标变成可检查的任务契约 | `/goal <目标>` 起草，`/goal accept` 生效 |
-| 对照证据账本看验收标准过没过 | `/goal show` |
-| 看任务的能力范围与动作日志 | `/cap` |
-| 给当前任务开/关网络或设备权限 | `/cap network on\|off` · `/cap device on <id>\|off` |
-| 让第二个模型对抗复核当前假设栈 | `/audit` |
+## Workflow 模式与交互式逆向
 
-跑完之后 `/session` 会打印 JSONL 路径。plan 快照、工具调用、结果和 token 计数
-全都按顺序在里面——这才是让一次运行**可审计**而不只是"看着挺唬人"的原因。
+Workflow 需显式开启，默认 `off` 保持 prompt 原样透传：
 
-> **关于复现：** 案例 B 需要真实的 planner 和 executor。`--smoke` 和 `mock`
-> provider 只用于离线验证线路，mock 不会规划也不调工具，跑不出上面这一轮。
-
-## 桌面 GUI
-
-基于 Wails v2 的 CRT 风格桌面端（Go 后端 + 系统 WebView）。同一套 core、同一个
-sessions 目录、同一套策略引擎——GUI 是 agent 的第二张脸，不是分叉。
-
-```bash
-make gui            # 构建产物 -> gui/build/bin/0xAF-Re GUI.app
-make gui-dev        # 热更新开发模式
-make gui-demo       # 浏览器零配置交互式演示环境（无需 Wails / API Key）
-make gui-demo-build # 构建静态演示包 -> docs/gui-demo/（可用于 GitHub Pages）
-```
-
-核心桌面能力：
-
-| 界面 | 能力 |
-| --- | --- |
-| 交互式演示沙盒 | 桌面端右上角点击 `▷ 演示环境`（或直接 `make gui-demo` 在浏览器打开），零配置体验 5 个常见逆向 Case（入门解谜+审批门分叉、9 阶段 RE Workflow、多会话+排队+中断、斜杠直调命令+主题+恢复、内置 PTY 终端），支持分步指引、「一键填入/自动演示」与自由实操，退出即恢复真实会话 |
-| 多 session 并发 | 同时跑多个 agent session，侧栏实时跟踪每个会话的状态（idle / running / awaiting approval），支持回合内一键 `Interrupt` 中断 |
-| 实时仪表盘 + 9 阶段 RE HUD | 与 TUI 相同的 90ms flow / tools / plan / think / telemetry 五面板，叠加 9 阶段逆向进度条（`TRI → … → WRI` 与实时 `H:N` / `E:N` 计数） |
-| 34 工具与沙箱完全对齐 | 与 CLI 共享全部 34 个内置工具（含 `binary_inspect`、`anti_analysis`、`binary_diff`、`verify_artifact`、`remote_exec`）、`evidence-ledger.jsonl`、`/goal` 任务契约、`/cap` 能力沙箱与 `/audit` |
-| 审批门 | 写 / 执行 / 网络类工具调用弹出带命中风险项列表的审批对话框；allow / allow-always / deny / deny-always 回写会话策略 |
-| Prompt 队列 | turn 进行中提交的 prompt 自动排队、按序注入 |
-| 主题 | deck / amber / matrix / mono——全套扫描线 + 辉光，尊重 prefers-reduced-motion |
-| Resume | 会话选择器列出并完整恢复历史消息、plan 任务进度、假设栈、证据账本及已生效的 `/goal` 沙箱权限 |
-
-### 3D 取证剧场（默认视图）
-
-GUI 现在默认进入**全 3D 取证作战室**（three.js + react-three-fiber），经典 2D 布局一键
-可回（TopBar `▣ 经典视图` / `◈ 3D 剧场`，选择持久化在 `localStorage`）。
-
-- **9 阶段空间骨架**：七个区域——`TRI 三角洲 → SCR 勘查屏 → HYP 假设塔 → EXP 实验平台
-  → VER 验证台 → AUD 审计拱门 → DEL 交付坞`——由发光相位脊串联。已完成段实心、
-  当前阶段脉冲、未到段虚化；`writeup` 完成后整条金化定格。
-- **证据 DAG 实时生长**：`H-NNN` 棱镜随置信度缩放（被拒假设沉降半透明），`ev_NNN`
-  多面体绕假设塔螺旋上升；支持边绿色光束、矛盾边红色抖动。右上全息面板承载
-  transcript 尾部 / token 遥测 / 队列深度。点击区域或节点即运镜，点空白（含拖拽
-  防误触）回全局视角。
-- **引导式假设主线**（解决"功能点太散"）：TopBar 下方建议条常驻提示下一步
-  （`H-001 没有执行过的实验 → 去配置实验`）。向导按 ① 可证伪假设 + 挂靠证据 → ②
-  实验配置（**沙箱 scope 引导**：可写路径、网络状态、越界警告）→ ③ `verify_artifact`
-  重放验证 → ④ 审计签章 推进，失败自动回流到预填的「修正假设」步。每步可跳过；
-  审批门与中断优先级高于向导。
-- **自动降级**：无 WebGL、`prefers-reduced-motion`、持续 <30fps 时自动切回经典视图
-  并 toast 提示（30s 冷却；`?noFallback=1` 供无头/e2e 关闭哨兵）。
-
-| <img src="docs/shots/gui-3d-overview.png" width="440" alt="3D 取证剧场全景"> | <img src="docs/shots/gui-3d-wizard.png" width="440" alt="引导式实验配置与沙箱 scope"> |
-| :---: | :---: |
-| **作战室全景**——相位脊、七区字形、假设塔周围实时生长的证据 DAG | **引导式实验配置**——实验类型卡、沙箱 scope 芯片、预填命令 |
-| <img src="docs/shots/gui-3d-amber.png" width="440" alt="amber 主题下的 3D 剧场"> | **主题联动**——四套 CRT 配色直接驱动 3D 线框/自发光材质 |
-
-### GUI 六大功能分区导览（按视觉色系区分重点区域）
-
-桌面 GUI 与 Web 演示沙盒采用**语义化色阶分层**，让重点取证区、核心协同图谱与辅助遥测一目了然，且所有区域均支持**拖拽调宽/调高、独立折叠与 `↺` 一键复位**：
-
-| 分区位置 | 面板 / 模块名称 | 视觉主色（`deck` 主题） | 核心职责与常用操作 |
-| :--- | :--- | :--- | :--- |
-| **① 顶部全局控制栏** | `TopBar` + 布局开关 | 电光青 / 战术紫徽标 | 切换 `▣ 五维仪表` ↔ `◈ 机制图谱`、进入 `▷ 演示环境`（`◈ 场景库`）、一键折叠 `◧ 侧栏 / ⬒ 仪表 / ⬓ 转录 / ◨ 右栏`、切换 CRT 主题（`deck` / `amber` / `matrix` / `mono`） |
-| **② 左侧会话与终端导航区** | `SESSIONS` · `SHELLS` | 低调冷灰框（退后背景层） | 新建会话（`+ new`）、恢复历史会话（`resume`）、打开当前会话四角色路由配置（`⚙`）、开启内置交互式 PTY 终端（`+ sh`） |
-| **③ 中央焦点主舞台（双模切换）** | **模式 A**：五维实时仪表盘<br>**模式 B**：`◈ 协同图谱 & Writeup 工坊` | **焦点高亮层**：<br>FLOW 青 · TOOLS 绿 · PLAN 琥珀 · THINK 紫（TELE 辅助灰） | **五维仪表**：90ms 实时观测请求流、工具树、计划步骤与推理流；<br>**机制图谱**：支持滚轮/按钮缩放与 `⛶ 全屏放大`、`▶ 回放思考过程`（逐帧回放账本与假设演化）、查看**四维结构化逆向结论矩阵**，并在 `✎ Writeup 工坊` 生成/导出全引用锚定的分析报告 |
-| **④ 右侧重点取证与门禁区** | `RE WORKFLOW`（9 阶段门禁）<br>`LEDGER`（只读证据与假设账本） | **紫色** `RE WORKFLOW` +<br>**翡翠绿焦点框** `LEDGER 🔒` | **RE WORKFLOW**：追踪 `TRI → … → WRI [9/9]` 硬闸门进度；<br>**LEDGER（核心事实底座）**：检视带 `🔒 IMMUTABLE` 封条的 `ev_NNN` 证据与 `H-NNN` 假设栈；点击 `+ 假设/实验` 或 `+ 实跑验证` 唤起 **科学逆向实验与验证审查台**（支持新增/编辑假设与实验、宿主实跑签发 `ev_NNN`、`verify_artifact` 重放与有据审查签章） |
-| **⑤ 中部实时转录流** | `TRANSCRIPT` | 左侧紫罗兰细线深底区 | 按时间轴（`t+Xs`）流式呈现 wire 帧、工具参数/耗时、思考摘要与 Markdown 回复 |
-| **⑥ 底部指令台与安全审批门** | `PromptInput` + `ApprovalDialog` | 左侧电光青高亮指令槽 / 琥珀红审批弹窗 | 支持多行输入、`/` 斜杠命令自动补全、运行中自动排队与 `■ stop` 中断；写盘/执行/外联操作触发分级审批弹窗（默认聚焦 `deny`） |
-
-### GUI 实操界面与流程截图
-
-| 操作视图 | 核心演示内容 |
-| :--- | :--- |
-| <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI 重点功能分区色系与只读证据账本"> | **重点区域色系分层与只读证据账本**：电光青 `FLOW`、执行态 `TOOLS`、琥珀金 `PLAN`、战术紫 `THINK` / `RE WORKFLOW [9/9]` 与翡翠绿焦点框 `LEDGER 🔒`（`ev_NNN` / `H-NNN`）。 |
-| <img src="docs/shots/gui-governance-graph.png" width="440" alt="三模型协同架构图与思考过程回放"> | **多角色机制协同架构图与思考回放**：`codex sol / gemini 4 carbon`（强推理规划）+ `ds / gemini 4 neon / glm-5.3-flash`（高速执行）+ `codex sol / gemini 4 carbon / glm-5.3`（独立审计）四泳道拓扑、无级缩放/全屏与 8 帧认知回放。 |
-| <img src="docs/shots/gui-provenance-dag.png" width="440" alt="实时因果证据图谱 DAG"> | **实时因果证据图谱（DAG）**：动态渲染 `ev_NNN ↔ H-NNN` 支撑/反证连线、反证置信度折半淘汰（`H-002 [REJECTED]`）与审计交付门禁。 |
-| <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="科学逆向假设实验与验证审查台"> | **科学逆向假设实验与验证台**：支持新增/修订可证伪假设（`H-005`）并挂载实跑实验（`exp_01 [PASSED]`）——严格执行「假设可演进，证据仅由宿主实跑盖章入账（`ev_013`）」。 |
-| <img src="docs/shots/gui-writeup-studio.png" width="440" alt="六大核心环节对齐与结构化结论 Writeup 工坊"> | **文章六大环节认知对齐与 Writeup 工坊**：1:1 对应破除 *Commits to a story* 的六大环节、**四维结构化逆向结论矩阵**与一键导出全溯源 Markdown 报告。 |
-| <img src="docs/shots/gui-role-config.png" width="440" alt="四席位 AI Agent 角色路由配置"> | **四席位 AI Agent 可视化配置（`amber` 琥珀主题）**：在 `⚙ CONFIG` 面板分别为 `planner`（`codex-sol`）、`executor`（`ds`）、`researcher`（`gemini-4-carbon`）与 `auditor`（`glm-5.3`）绑定模型路由并持久化。 |
-
-无头冒烟与端到端测试（不需要桌面窗口）：
-
-```bash
-go test ./gui/ -run TestE2E -v
-cd gui/frontend && npm run test:e2e && npm run test:e2e-demo
-```
-
-注意：在 GUI 中发送裸 `/workflow reverse` 会打开原生的样本类型 + 起始 prompt
-选择对话框（终端版选择器需要 stdin）；参数形式 `/workflow reverse <sample-type>`
-在两端都无需选择器直接启动。需要 stdin 交互的其他斜杠命令在 GUI 中仍会被礼貌拒绝。
-
-## Workflow 模式
-
-workflow 需要显式打开。默认 `off` 会原样发送 prompt。
-
-| 模式 | 适合什么时候 | 行为 |
+| 模式 | 适用场景 | 行为 |
 | --- | --- | --- |
 | `off` | 默认 | 不加 workflow wrapper |
-| `auto` | 混合机器 | 检测到 GPT Cyber / CC CVP 类 route 就走 specialist，否则走 caveman |
-| `specialist` | 授权 cyber/CVP 类 provider | 先计划，再用 skills 和本地工具推进，保留证据 |
-| `caveman` | 普通 provider | planner 写本地证据包；executor 开新会话，只拿收窄后的只读证据工具 |
-| `research` | 调研类任务 | 调研公开资源（web / GitHub / arXiv）并产出带出处的报告 |
-| `writeup` | 写总结报告 | 只基于会话内已有证据，整理成结构化的总结报告 |
-| `ctf` | 处理单个具体目标 | 先粗筛再计划，解出并验证精确 flag |
-| `reverse` | 目标导向逆向 | **交互式**：样本类型选择器 → 结构化阶段（triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup），hacker 风格 HUD，`/phase` 控制；假设/证据追踪持久化在 `evidence-ledger.jsonl` |
-| `engineering` | 接口工程化还原 | 还原目标协议/结构，产出数据模型、客户端 stub 和测试 |
+| `auto` | 混合环境 | 检测到安全研究/CVP 类 route 自动走 `specialist`，否则走 `caveman` |
+| `specialist` | 授权安全研究专用 Provider | 直接规划、调用内置 Skills 与本地工具并沉淀证据 |
+| `caveman` | 通用谨慎 Provider | Planner 产出有边界的 `EXECUTOR_PACKET`，Executor 在隔离新上下文中仅以只读本地工具收集文件事实 |
+| `research` | 技术调研 | 结合公开资料产出带出处的调研报告 |
+| `writeup` | 报告整理 | 仅基于会话已有证据生成结构化报告 |
+| `ctf` | 单目标解题 | 粗筛 → 规划 → 求解并实跑验证精确 flag |
+| `reverse` | 目标导向深度逆向 | **交互式 9 阶段硬闸门工作流**（`triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup`） |
+| `engineering` | 协议/接口还原 | 还原目标数据结构、算法流程、客户端 stub 与回归测试 |
 
 ```text
 /workflow auto
 /workflow caveman
-/workflow research
 /workflow reverse
 /workflow engineering
 0xaf --workflow specialist -p "triage ./app.apk"
 0xaf --workflow research -p "调研 arXiv 上的混淆论文"
 ```
 
-### 交互式逆向 Workflow
+### 交互式逆向 Workflow（`/workflow reverse`）
 
-`/workflow reverse` 启动一个交互式会话：
-
-1. **样本类型选择器** —— APK、SO/ELF 共享库、dylib/Mach-O、ELF、PE/DLL、固件 blob 或 PCAP，每种都带预设起始 prompt。
-2. **结构化阶段** —— triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup。提示符标签显示当前阶段：`0xAF[apk|triage] ▸`。
-3. **hacker 风格 HUD** —— live dashboard 里的专用 RE 覆盖层，显示阶段进度、假设数（H:N）和证据数（E:N）。
-4. **阶段控制** —— `/phase` 看状态，`/phase next` 前进，`/phase <name>` 跳到指定阶段（会自动检查中间所有阶段的证据闸门）。
-5. **模型驱动状态** —— 模型调用 `hypothesis_create`/`hypothesis_update` 管理假设、调用 `evidence_review` 核查证据、调用 `verify_artifact` 执行构建/回放/差分验证，并通过 `update_re_state` 推进阶段。阶段推进对照统一证据账本与假设栈做硬闸门检查：进 `static` 要有工具观测，进 `dynamic` 要有记录在案的假设，进 `verify` 要有运行时 trace 或至少 3 条静态观测，进 `audit` 要有 `verify_artifact` 结果，进 `writeup` 要有 `audit_finding`（以及生效的 `/goal` 验收标准）。
-6. **证据账本** —— 每个完成的工具结果都追加到 session JSONL 旁的 `evidence-ledger.jsonl`，`ev_NNN` 证据溯源与 `H-NNN` 假设状态在上下文压缩和 `--resume` 后完整保留。`verify_artifact` 构建 artifact、用固定参数/stdin 回放并对比期望输出（记为 `verification_result`）；`hypothesis_update` 对矛盾证据做确定性置信度减半并级联到依赖假设。
-
-“跑隔离本地证据模式”指的就是 `caveman` workflow。它不是单纯改写 prompt，
-而是宿主把一次请求拆成两个模型调用：
-
-1. **planner 阶段:** planner 看到完整授权 RE/CTF 任务，输出短计划和 `EXECUTOR_PACKET`。
-2. **executor 阶段:** executor 开新的隔离上下文，只看到这个 packet、专用 executor system prompt，以及收窄后的只读工具。
-3. **证据收集:** executor 只能围绕工作区本地文件收集事实，例如 list/read/search、文件类型、hash、strings、hex 范围、熵、导入/符号、保护信息、carve 线索和 APK 结构。
-4. **结果合并:** 0xAF-Re 把两段记录写进同一个 session transcript，并返回 `planner->executor` 的合并结果。
-
-`auto` 是 resolver：检测到 GPT Cyber / CC CVP 类 provider 标记时走
-`specialist`，否则选择 `caveman`。真正的 delegated caveman 只在 role 是
-`auto`、且没有固定 provider 时触发；如果显式 `/role planner`、`/role executor`
-或强制某个 provider，0xAF-Re 会尊重这个选择，只做 prompt wrapper。
-
-caveman 不是翻译、暗语、编码或 prompt laundering。它让普通 executor 专注本地文件事实；
-遇到 live target、凭据、持久化、部署或网络动作会拒绝，不会隐藏成其它说法。
+1. **样本类型选择器**：覆盖 APK、SO/ELF 共享库、dylib/Mach-O、ELF、PE/DLL、固件 blob 与 PCAP，内置对应起手式。
+2. **9 阶段硬闸门**：`triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup`，提示符实时标示状态（如 `0xAF[apk|triage] ▸`）。
+3. **阶段推进门禁**：`/phase` 查看状态，`/phase next` 或 `/phase <name>` 推进阶段；宿主强制核查账本条件——进 `static` 需有工具观测、进 `dynamic` 需有在案假设、进 `verify` 需有运行时 trace 或 ≥3 条静态观测、进 `audit` 需有 `verify_artifact` 验证记录、进 `writeup` 需有 `audit_finding` 及生效的 `/goal` 验收达标。
+4. **关于 `caveman` 隔离本地证据模式**：宿主将单次请求拆分为 Planner（看到完整授权目标并写 `EXECUTOR_PACKET`）与 Executor（隔离上下文、仅持只读本地证据工具）两段调用，并将两段完整记入同一份 JSONL 转录。它不绕过任何 Provider 策略、不做暗语伪装，遇到 live target、凭据或未授权外联直接拒绝。
 
 ## 上下文压缩（Context Compaction）
 
-长会话保持在 provider 预算内靠两条路：
+长会话通过两层机制控制在模型上下文预算内，且**证据账本摘要与假设栈活在转录之外、每轮重新注入，不会被压缩吞掉**：
 
-- **机械裁剪**（每次请求）：旧工具结果正文被 elide，最旧的整段对话替换成压缩标记。
-- **`/compact [provider]`**：把会话折成一份密集简报。
+- **机械裁剪**（每次请求自动执行）：折叠过旧的工具正文，并将最旧对话段替换为压缩标记。
+- **`/compact [provider]`**：将当前会话折叠为密集简报。
+- **`snapcompact` 视觉归档**：在 `agent.config.json` 中设置 `"compactionStrategy": "snapcompact"` 后，被丢弃的历史会在本地确定性渲染为 PNG 快照帧（无需 API Key 或联网）。支持视觉的 Provider（Anthropic、OpenAI Responses、OpenAI 兼容 Chat）可直接读回画面细节；CLI Provider 与 `mock` 自动回退至文本标记/摘要。
 
-在 `agent.config.json` 里设 `"compactionStrategy": "snapcompact"`，被丢弃的历史会
-渲染成 PNG 快照帧而不是文本标记——思路与 oh-my-pi 的 snapcompact 相同。支持视觉的
-provider（Anthropic、OpenAI Responses、OpenAI 兼容 chat）会直接读图恢复细节，而不是
-被总结掉。CLI provider 和 `mock` 不能附带图片，会自动回退到文本标记 / LLM 摘要。
-归档过程完全本地、确定性：不需要模型调用、API key 或网络。
+## 远程 SSH 模式
 
-关于模型风控和标记：0xAF-Re 不绕过 provider 的策略检查，也不保证某一轮不会被 provider
-分类。它做的是降低授权本地 RE 被误伤的概率，让每个角色只看到自己确实需要的内容：
-
-- planner 看到完整授权目标，并产出有边界的 packet
-- executor 只看到工作区路径和证据收集步骤
-- executor 的工具面是只读、本地的
-- session transcript 保留两段完整记录，方便审计
-- 不安全请求会被拒绝，而不是藏进其它说法
-
-## 远程模式
-
-在当前窗口规划，在另一台机器上执行。`--remote <name>`（或 `/remote use <name>`）把会话切到
-远程模式：`run_command` 和 `!shell` 通过**后台 SSH 连接**执行，模型也能用 `remote_exec`
-在任意已保存主机上执行。输出与本地工作进同一份转录，且每条远程命令仍走 exec 级审批，
-提示里会写明 `ssh <host> <command>`。
+在本地窗口规划，在已保存的远端实验机上执行。启用 `--remote <name>` 或 `/remote use <name>` 后，`run_command` 与 `!shell` 自动通过**后台保活 SSH 连接**转发，模型也可直接调用 `remote_exec` 定向任意已保存主机。所有远程命令一律走 `exec` 级审批（弹窗明确展示 `ssh <host> <command>`），输出统一写入本地会话转录。
 
 <p align="center">
-  <img src="docs/shots/remote.png" alt="/remote 主机列表" width="420">
+  <img src="docs/shots/remote.png" alt="/remote 已保存主机列表" width="420">
 </p>
 
-### 快速上手
-
 ```text
-# 1) 保存一台机器（密码提示不回显）
+# 1) 添加主机（无 --key 时以无回显方式输入密码）
 /remote add lab dev@10.0.0.5
-/remote add srv root@srv.local --key ~/.ssh/id_ed25519   # 或用私钥
-/remote add box root@10.0.0.9 --insecure                 # 实验室机器，跳过 known_hosts 校验
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519
+/remote add box root@10.0.0.9 --insecure                 # 仅实验室机器显式跳过 known_hosts
 
-# 2) 查看并选择目标
+# 2) 切换并立即建连
 /remote list
 /remote use lab
 
-# 3) 之后所有执行都在这台机器上（同一窗口）
-!uname -a                       # shell escape -> ssh lab
-0xaf --remote lab -p "inventory /opt"                    # 或启动即进入远程模式
-
-# 4) 让模型自己驱动
-# （REPL 里直接提问即可：run_command 会自动转发，或让它用 remote_exec）
-```
-
-模型也可以无视当前主机、指定任意已保存主机：
-
-```text
+# 3) 同窗口远端执行
+!uname -a
+0xaf --remote lab -p "inventory /opt"
 remote_exec(host="srv", command="systemctl status myapp")
-remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
 ```
 
-### 工作原理
+**关键实现细节**：
+- **后台保活连接**：每主机复用单条 `ssh.Client`（30s keepalive），仪表盘状态栏显示 `ssh lab ●` / `ssh lab ○` 及额外连接数 `+N`。
+- **本机绑定加密存储**：主机凭据存于 `~/.0xaf-re-agent/remote.json`（权限 `0600`），采用 AES-256-GCM 加密，密钥由机器标识（macOS `IOPlatformUUID` / `/etc/machine-id` + Home + 随机盐）派生；便携迁移可通过 `OXAF_REMOTE_KEY`（32 字节 base64）覆盖。
+- **`ssh -tt` 语义与认证顺序**：默认分配远端 PTY（工具参数设 `pty: false` 可取干净非交互输出）；按 `ssh-agent → 私钥 → 密码` 依次认证，默认严格校验 `~/.ssh/known_hosts`。
+- **协议级集成测试**：`internal/remote/ssh_integration_test.go` 在进程内启动真实 `x/crypto/ssh` 服务端，实测密码认证、命令回读与错误凭据拒绝。
 
-- **后台保活连接。** 每台已保存主机一条持久 `ssh.Client`。`--remote` 或 `/remote use` 会立即建连，
-  `/remote connect <name>` 按需建连，首次执行命令也会懒连接。每条连接每 30s 发一次 keepalive，
-  全部命令复用同一条连接，退出时统一关闭。仪表盘状态行会显示已建连会话：
-  `ssh lab ●`（已连接）或 `ssh lab ○`（已选择未连接），多台连接时显示 `+N`。
-- **本地加密存储。** 主机配置（含密码）放在 `~/.0xaf-re-agent/remote.json`，
-  AES-256-GCM 加密，密钥绑定机器（macOS IOPlatformUUID / `/etc/machine-id` + 用户目录 + 随机盐，
-  权限 0600）。把文件拷到别的机器也解不开；`OXAF_REMOTE_KEY`（32 字节 base64）可覆盖密钥用于便携场景。
-- **`ssh -tt` 语义。** 远程命令（`remote_exec`、远程 `run_command`、`!shell`）默认分配远端 PTY，
-  交互式工具、`sudo` 提示等需要终端的场景都能用；工具调用里设 `pty: false` 可拿干净的非交互输出。
-- **认证顺序：** ssh-agent → 配置的私钥路径 → 密码。
-- **信任：** 默认严格校验 `~/.ssh/known_hosts`；`/remote add --insecure` 仅对实验室机器显式开启。
-- **审批：** 远程命令一律 exec 级，y/a/d/n 提示显示 `ssh <host> <command>`。
+## 四席位模型路由与 Provider 配置
 
-### 命令
+`planner`、`executor`、`researcher`、`auditor` 为四个职责解耦的席位，可自由混搭 CLI 通道与 HTTP API：
 
-| 命令 | 作用 |
-| --- | --- |
-| `/remote` / `/remote list` | 列出已保存主机，标记当前主机 |
-| `/remote add <name> <user>@<host>[:port] [--key <path>] [--insecure]` | 保存主机（无 key 时提示输密码） |
-| `/remote rm <name>` | 删除主机 |
-| `/remote use <name>` / `/remote off` | 切换执行目标（use 会立即建连） |
-| `/remote connect <name>` | 现在就建立后台会话 |
-| `0xaf --remote <name> …` | 启动即进入远程模式 |
-| `remote_exec(host?, command)` | 模型可用的工具，指定任意已保存主机 |
-
-### 排错
-
-- **`strict host-key verification needs ~/.ssh/known_hosts`** —— 用
-  `ssh-keyscan <host> >> ~/.ssh/known_hosts` 加入主机公钥，或实验室机器用 `--insecure` 保存。
-- **`no auth method`** —— 启动 ssh-agent（`ssh-add ~/.ssh/id_ed25519`）、传 `--key`，
-  或重新添加主机并输入密码。
-- **换机器解不开** —— `remote.json` 绑定本机；换机器后重新添加主机，或设置相同的 `OXAF_REMOTE_KEY`。
-- **有真实协议测试** —— 测试内用 x/crypto/ssh 起一个进程内 SSH server，实测密码认证、命令执行、
-  输出回读与错误密码拒绝（`internal/remote/ssh_integration_test.go`）。
-
-下一步：远程文件工具（`list_files` / `read_file` 走 SSH）、SCP 拉取、一个计划多主机分发。
-
-## Provider 与模型
-
-`planner`、`executor`、`researcher`、`auditor` 是四个职责解耦的 AI 角色席位；`provider` 是可自由替换的模型后端（CLI 通道或 HTTP API）。
-
-### 四角色分工说明
-
-| 角色席位 | 配置字段 | 斜杠命令 | 核心职责 | 推荐候选模型池 |
+| 席位 | 配置字段 | 斜杠命令 | 核心职责 | 推荐候选组合 |
 | :--- | :--- | :--- | :--- | :--- |
-| **Planner（强推理规划席）** | `plannerProvider` | `/planner <name>` | 起草 `/goal` 任务契约、拆解 `update_plan` 路线、创建与修订 `H-NNN` 可证伪假设栈 | `codex sol` (`codex-sol`) · `gemini 4 carbon` (`gemini-4-carbon`) |
-| **Executor（高速执行席）** | `executorProvider` | `/executor <name>` | 高吞吐低延迟驱动 34 个本地逆向工具、采集静态/动态证据并执行 `verify_artifact` 重放测试 | `ds` (`deepseek`) · `gemini 4 neon` (`gemini-4-neon`) · `glm-5.3-flash` |
-| **Researcher（调研席）** | `researcherProvider` | `/researcher <name>` | 在 `research` 模式或知识库检索中整合公开论文、符号背景与协议资料 | `gemini 4 carbon` · `ds` · `glm-5.3` |
-| **Auditor（独立对抗审计席）** | `auditProvider` | `/auditor <name\|auto>` | 执行 `/audit`：**零对话历史、零工具权限**独立审阅「假设栈 + 证据账本」，挑刺单视角臆断并签发 `audit_finding`（自动回避当前 Planner/Executor） | `codex sol` · `gemini 4 carbon` · `glm-5.3` |
+| **Planner（强推理规划）** | `plannerProvider` | `/planner <name>` | 起草 `/goal` 契约、维护 `update_plan`、构建与修订可证伪假设栈 | `codex-sol` · `gemini-4-carbon` |
+| **Executor（高速执行）** | `executorProvider` | `/executor <name>` | 高吞吐驱动 34 个内置工具采集静态/动态证据、执行 `verify_artifact` | `ds`（DeepSeek） · `gemini-4-neon` · `glm-5.3-flash` |
+| **Researcher（背景调研）** | `researcherProvider` | `/researcher <name>` | 混淆模式分析、论文与知识库背景检索 | `gemini-4-carbon` · `ds` · `glm-5.3` |
+| **Auditor（独立对抗审计）** | `auditProvider` | `/auditor <name\|auto>` | **零历史、零工具**执行 `/audit` 5 项核查并签发三态裁决（`auto` 自动回避当前 Planner/Executor） | `codex-sol` · `gemini-4-carbon` · `glm-5.3` |
 
 ### 三种配置方式
 
-1. **桌面 GUI 可视化配置（实时生效并持久化）**：点击左侧 `SESSIONS` 栏顶部的 **`⚙`** 按钮打开 `CONFIG` 面板，在四色角色卡片中分别为 `planner`、`executor`、`researcher`、`auditor` 下拉选择已配置的 Provider 并点击 `save`（自动写入 `~/.0xaf-re-agent/ui.json`）。
-2. **会话内斜杠命令热切换（CLI 与 GUI 通用）**：
+1. **GUI 可视化配置**：点击左侧栏顶部 **`⚙`** 打开 `CONFIG`，为四席位选择 Provider 并保存至 `~/.0xaf-re-agent/ui.json`。
+2. **会话内斜杠命令热切换（CLI / GUI 通用）**：
 
 ```text
 /planner codex-sol
 /executor ds
 /researcher gemini-4-carbon
 /auditor glm-5.3
-/agent auto
 /model executor glm-5.3-flash
-/model planner gemini-4-carbon
+/agent auto
 ```
 
-3. **项目级或全局配置文件（`agent.config.json` / `~/.0xaf-re-agent/config.json`）**：
+3. **配置文件（工作区 `agent.config.json` 或全局 `~/.0xaf-re-agent/config.json`，完整模板见 `config.example.json`）**：
 
 ```json
 {
@@ -655,18 +544,6 @@ remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
       "baseUrl": "https://api.deepseek.com/v1",
       "apiKeyEnv": ["DEEPSEEK_API_KEY"]
     },
-    "gemini-4-neon": {
-      "type": "openai-chat",
-      "model": "gemini-4-neon",
-      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-      "apiKeyEnv": ["GEMINI_API_KEY"]
-    },
-    "glm-5.3-flash": {
-      "type": "openai-chat",
-      "model": "glm-5.3-flash",
-      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
-      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
-    },
     "glm-5.3": {
       "type": "openai-chat",
       "model": "glm-5.3",
@@ -677,166 +554,124 @@ remote_exec(command="ls /opt")       # 不写 host -> 使用当前远程主机
 }
 ```
 
-HTTP provider 会在请求体里覆盖 model。内置 CLI provider 会注入 `--model`；
-自定义 CLI provider 可以在 `cliArgs` 里使用 `{model}` 占位符。
+角色提示词支持运行中热编辑（`/prompt list` · `/prompt show <role>` · `/prompt edit <role>` · `/prompt reset system` · `/prompt reload`，可编辑 `system`/`planner`/`executor`/`researcher`）。
 
-不同角色的 prompt 可以运行中编辑：
+## 内置工具（34 个）与 Skills（30 项）
 
-```text
-/prompt list
-/prompt show planner
-/prompt path executor
-/prompt edit researcher
-/prompt set executor <text>
-/prompt reset system
-/prompt reload
-```
-
-可编辑目标是 `system`、`planner`、`executor`、`researcher`。`/prompt edit`
-会从内置 prompt 初始化文件，打开 `$VISUAL` 或 `$EDITOR`，保存后立即 reload。
-如果检测到项目根目录，会写到 `prompts/`；否则写到 `~/.0xaf-re-agent/prompts/`。
-
-完整配置模板可以复制 `config.example.json` 到工作区 `agent.config.json` 后修改。
-
-## 内置工具（34 个）
-
-CLI 与桌面 GUI 暴露完全一致的 **34 个内置工具**（另可叠加任意 MCP server 提供的工具）：
+### 34 个内置工具（CLI 与 GUI 完全对齐，另可叠加 MCP Server）
 
 | 分类 | 工具列表 |
 | --- | --- |
-| **文件与搜索**（4） | `list_files` · `read_file` · `write_file` · `grep` |
-| **本地与远程执行**（2） | `run_command` · `remote_exec` |
-| **纯 Go 跨平台二进制分析**（9） | `file_info` · `strings` · `hexdump` · `hash_file` · `extract_symbols` · `binary_inspect`（ELF/PE/Mach-O 头部、构造函数、区段熵、导入导出表） · `anti_analysis`（壳特征、反调试、反 Frida、内联系统调用检测） · `binary_diff`（字节差分 + x86/ARM64 指令 patch 归类） · `binary_mitigations` |
-| **CTF 与固件提取**（5） | `ctf_triage`（头尾采样 + UTF-16LE） · `ctf_decode`（`base64`/`base32`/`hex`/`url`/`rot13`/`xor`/`zlib`/`gzip`/`rc4`） · `entropy_scan` · `find_bytes` · `carve_artifacts`（校验型 ELF/PE/Mach-O/DEX/ZIP/SquashFS/GZIP/XZ/U-Boot/PDF/SQLite 识别） |
-| **外部逆向工具封装**（1） | `reverse_toolkit`（radare2/rizin、Ghidra headless、JADX、apktool、binwalk、YARA、gdb/lldb、objdump/readelf/nm、angr、Unicorn、unidbg、Frida、Burp、mitmproxy） |
-| **移动端逆向**（2） | `apk_inspect`（纯 Go 二进制 `AndroidManifest.xml` AXML 解析 + DEX/SO + 加壳/框架指纹） · `frida_hook_template` |
-| **Skills 与知识库**（4） | `list_skills` · `read_skill`（支持读取附属脚本与参考文件） · `knowledge_search` · `knowledge_read` |
-| **证据、验证与阶段闸门**（6） | `verify_artifact`（编译 + 回放 + 输出差分） · `evidence_review` · `hypothesis_create` · `hypothesis_update` · `hypothesis_list` · `update_re_state` |
-| **任务规划**（1） | `update_plan` |
+| **文件与搜索（4）** | `list_files` · `read_file` · `write_file` · `grep` |
+| **本地与远程执行（2）** | `run_command` · `remote_exec` |
+| **纯 Go 跨平台二进制分析（9）** | `file_info` · `strings` · `hexdump` · `hash_file` · `extract_symbols` · `binary_inspect`（ELF/PE/Mach-O 头部、构造函数、区段熵、导入导出表） · `anti_analysis`（壳、反调试、反 Frida、内联系统调用） · `binary_diff`（字节差分 + x86/ARM64 指令 patch 归类） · `binary_mitigations` |
+| **CTF 与固件提取（5）** | `ctf_triage`（头尾采样 + UTF-16LE） · `ctf_decode`（`base64`/`base32`/`hex`/`url`/`rot13`/`xor`/`zlib`/`gzip`/`rc4`） · `entropy_scan` · `find_bytes` · `carve_artifacts`（校验型 ELF/PE/Mach-O/DEX/ZIP/SquashFS/GZIP/XZ/U-Boot/PDF/SQLite） |
+| **外部工具封装（1）** | `reverse_toolkit`（radare2/rizin、Ghidra headless、JADX、apktool、binwalk、YARA、gdb/lldb、objdump/readelf/nm、angr、Unicorn、unidbg、Frida、Burp、mitmproxy） |
+| **移动端逆向（2）** | `apk_inspect`（纯 Go 二进制 `AndroidManifest.xml` AXML 解析 + DEX/SO + 加壳/框架指纹） · `frida_hook_template` |
+| **Skills 与知识库（4）** | `list_skills` · `read_skill`（支持读取附属脚本与参考文档） · `knowledge_search` · `knowledge_read` |
+| **证据、验证与阶段闸门（6）** | `verify_artifact`（构建 + 回放 + 边界/差分） · `evidence_review` · `hypothesis_create` · `hypothesis_update` · `hypothesis_list` · `update_re_state` |
+| **任务规划（1）** | `update_plan` |
 
-## Skills 与知识库
+### 30 项内嵌逆向 Skills 与本地知识库
 
-二进制单源内嵌 **30 个正交逆向 Skills**（`embed.go`），覆盖完整分析链路：
-- **二进制粗筛与原生逆向：** `ctf-first-pass`、`native-pwn-re`、`binary-patching`、`capstone-disassembler`、`keystone-assembler`、`radare2-reverse`、`ghidra`、`gdb`、`re-writeup`
-- **反混淆与密码学分析：** `ollvm-deobfuscation`、`vmp-restore`、`deobfuscate`、`so-string-deobfuscation`、`crypto-identification`、`whitebox-dfa`、`drm-protocol-analysis`
-- **Android / SO 与指令仿真：** `android-apk-frida`、`analyze-so`、`analyze-sign`、`frida-hook-workflow`、`jadx`、`unicorn-emulator`（含 ARM/ARM64/x86/JNI 可执行 Python 仿真模板）、`unidbg`、`qiling-emulator`、`qemu-emulator`
-- **Web / WASM 与协议抓包：** `wasm-reverser`、`web-crypto-analyzer`、`jsvmp-analysis`、`browser-hook`、`proxy-capture`
+二进制单源内嵌 **30 个正交逆向 Skills**（`embed.go`）：
+- **二进制粗筛与原生逆向**：`ctf-first-pass`、`native-pwn-re`、`binary-patching`、`capstone-disassembler`、`keystone-assembler`、`radare2-reverse`、`ghidra`、`gdb`、`re-writeup`
+- **反混淆与密码学**：`ollvm-deobfuscation`、`vmp-restore`、`deobfuscate`、`so-string-deobfuscation`、`crypto-identification`、`whitebox-dfa`、`drm-protocol-analysis`
+- **Android / SO 与指令仿真**：`android-apk-frida`、`analyze-so`、`analyze-sign`、`frida-hook-workflow`、`jadx`、`unicorn-emulator`（含 ARM/ARM64/x86/JNI 可执行模板）、`unidbg`、`qiling-emulator`、`qemu-emulator`
+- **Web / WASM 与协议抓包**：`wasm-reverser`、`web-crypto-analyzer`、`jsvmp-analysis`、`browser-hook`、`proxy-capture`
 
 ```text
 /skills
 /skill android-apk-frida inspect this APK
 /skill whitebox-dfa recover the AES round key from ./wb_encrypt
-/skill proxy-capture capture api.example.test traffic
+/know frida ssl pinning
 ```
 
-添加自己的 skill：
+导入本地笔记与扩展自定义 Skill：
 
 ```bash
+go run ./cmd/import-knowledge ~/notes/re ~/notes/ctf
+
 export OXAF_RE_HOME=/path/to/re-agent
 mkdir -p "$OXAF_RE_HOME/skills/my-unpacker"
 $EDITOR "$OXAF_RE_HOME/skills/my-unpacker/SKILL.md"
 ```
 
-索引本地笔记：
+## 安全策略与工程质量验证
+
+### 默认安全策略
+
+- 仅允许读取当前工作区内文件；默认禁止写盘与网络命令。
+- 阻止读取凭据类敏感路径，拦截破坏性 shell 模式；任务级能力沙箱（`/cap`）与分级审批策略双重兜底。
 
 ```bash
-go run ./cmd/import-knowledge ~/notes/re ~/notes/ctf
+0xaf --approval always-ask     # 高风险操作逐次确认
+0xaf --write                   # 允许工作区内写入
+0xaf --allow-network           # 放开网络命令
+0xaf --yolo                    # 仅限隔离靶机/容器使用
+# REPL 内查看：/policy  /approval  /cap
 ```
 
-查询：
+### 工程测试与验证基线
 
-```text
-/know frida ssl pinning
-/know raw frida ssl
-/know read <entry-id>
-```
-
-## 安全策略
-
-默认策略：
-
-- 只能读工作区内文件
-- 不允许写盘
-- 不允许网络命令
-- 阻止像凭据的路径
-- 阻止破坏性 shell 模式
-
-常用开关：
+核心链路与前端工作台均配有自动化回归覆盖：**34 个内置纯 Go 工具**、**19 个 Go 测试包** + **14 个前端 Vitest 测试套件（129 项单测）** + **Playwright E2E（桌面端 + 演示沙盒）**：
 
 ```bash
-0xaf --approval always-ask
-0xaf --write
-0xaf --allow-network
-0xaf --yolo
+# Go 核心与 GUI 后端测试（含 SSH 集成测试与无头 E2E）
+go test ./...
+go test ./gui/ -run TestE2E -v
+
+# 前端 TypeScript 检查、生产构建与 14 套 Vitest 单元测试（129 项）
+cd gui/frontend && npm run build && npm run test:unit
+
+# 无头 Playwright E2E（真实工作台 + 零配置演示沙盒）
+cd gui/frontend && npm run test:e2e && npm run test:e2e-demo
 ```
 
-REPL 内：
+## 常用命令速查与排错
 
-```text
-/policy
-/approval
-```
-
-## 排错
-
-- **滚动回去看到很多仪表盘帧。** live pane 每 90ms 重绘一次（spinner + 耗时），终端/tmux 会把每一帧
-  留在滚动缓冲里。这是任何动画 TUI 的正常现象，屏幕上并没有卡住的东西。想安静一点：
-  `/refresh calm`（500ms）、`/refresh off`（只在状态变化时重绘）、或 `/flow off`（完全不要仪表盘）。
-- **`CLI provider 'codex' failed with exit 1` / `claude`** —— CLI 本身没登录。在 0xAF-Re 外执行
-  `codex login` / `claude auth status`，或用 API provider 路由：`/agent deepseek` / `--planner deepseek`。
-- **macOS 上 `dyld: missing LC_UUID`** —— Go 工具链太旧；用 GitHub Releases 的预编译包或升级 Go ≥ 1.22。
-- **`--resume` / `/resume` 找不到会话** —— 用 `/sessions` 显示的短 hash（支持前缀）或完整时间戳 id。
-
-## 常用命令
+### 常用斜杠命令
 
 | 命令 | 用途 |
 | --- | --- |
-| `/help` | 命令面板 |
-| `/scan <path>` | 本地 CTF/file 粗筛 |
-| `/inspect <binary>` | 纯 Go 深度解析 ELF/PE/Mach-O 头部、构造函数、区段熵与导入导出表 |
-| `/anti <binary>` | 检测壳特征、反调试、反 Frida、Root/越狱检测与内联系统调用 |
-| `/diff <fileA> <fileB>` | 二进制字节差分与 x86/ARM64 patch 识别 |
-| `/hex <file> [offset] [len]` | 十六进制查看指定窗口，支持 `0x` 偏移 |
-| `/r2 <file> [-w]` | 把终端交给交互式 radare2 会话 |
-| `/decode auto <text>` | 尝试常见编码（base64/base32/hex/url/rot13/xor/zlib/gzip/rc4） |
-| `/mitigations <path>` | 查看二进制保护（ELF/PE/Mach-O） |
-| `/retool inventory` | 检查 radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg 可用性 |
-| `/retool angr template ./chall` | 生成 angr 符号执行 harness |
-| `/retool frida template android_ssl_pinning` | 生成常见 Frida SSL/crypto/root/debug/native 模板 |
-| `/retool mitmproxy template api.example.test` | 生成带 host 过滤的 mitmproxy 抓包 addon |
-| `/retool burp template mobile` | 生成 Burp 移动/API 抓包检查清单 |
-| `/phase` / `/phase next` | 查看或推进逆向 workflow 阶段、假设与证据 |
-| `/goal <目标>` / `/goal accept` | 起草并启用带验收闸门的任务声明 |
-| `/cap` | 查看或调整任务级网络/设备能力沙箱 |
-| `/audit` | 让第二个模型在隔离会话中对抗审计假设栈 |
-| `/queue list` | 查看待执行任务 |
-| `/queue edit <id> <text>` | 修改尚未执行的任务 |
-| `/queue cancel <id>` | 取消尚未执行的任务 |
-| `/tasks collapse` / `/tasks expand` | 折叠或展开 live 任务列表 |
-| `/refresh calm\|off\|ms` | 降低/关闭仪表盘动画（滚动缓冲更干净） |
-| `/think expand` / `/think collapse` | 折叠或展开流式推理，运行中可用 |
-| `/prompt edit <role>` | 编辑 system、planner、executor、researcher prompt |
-| `/new` | 清掉当前会话，开新会话做任务（旧 transcript 仍留在磁盘上） |
-| `/sessions` / `/resume [id]` | 列出或续接最近/指定历史会话（CLI 启动可用 `-c` / `--continue`） |
-| `!<command>` | 在工作区内按当前策略跑 shell 命令 |
+| `/help` | 查看命令面板 |
+| `/scan <path>` · `/inspect <bin>` · `/anti <bin>` · `/diff <A> <B>` | 纯 Go 本地粗筛、深度头部/构造函数解析、反分析检测与指令 patch 差分 |
+| `/hex <file> [offset] [len]` · `/mitigations <path>` · `/r2 <file> [-w]` | 十六进制查看、缓解措施检查、切入交互式 radare2 |
+| `/decode auto <text>` · `/apk <app.apk>` · `/carve <blob>` | 自动解码、APK 结构解析、固件载荷提取 |
+| `/retool inventory` · `/retool angr\|frida\|mitmproxy\|burp template …` | 盘点外部逆向工具并生成脚本模板 |
+| `/goal <目标>` · `/goal accept` · `/goal show` | 起草、锁定并对照账本检查任务契约 |
+| `/cap` · `/cap network on\|off` · `/cap device on <id>\|off` | 查看与调整任务级能力沙箱及动作审计日志 |
+| `/phase` · `/phase next` · `/audit` | 推进 9 阶段逆向工作流、启动零历史对抗审计 |
+| `/queue list\|edit\|cancel` · `/tasks expand\|collapse` · `/think expand\|collapse` | 运行中任务排队、计划与推理视图控制 |
+| `/refresh calm\|off\|ms` · `/flow off` | 调整终端仪表盘动画频率 |
+| `/remote list\|add\|use\|connect\|off` | 管理后台保活 SSH 远端主机 |
+| `/sessions` · `/resume [id]` · `/new` · `!<command>` | 会话列表、续接、开新会话与工作区 shell 执行 |
 
-## 未来设想
+### 常见排错
 
-- **远程模式（已发布）**——后台 SSH 连接已保存的机器；下一步：远程文件工具、SCP 拉取、多主机分发。
-- **snapcompact 加固**——内置 CJK 字体、帧数上限 UI、按 provider 的图片计费（对齐 oh-my-pi 的 snapcompact 评测）。
-- **自动续接提示**——启动时检测到未正常结束的会话，先问你是否继续，再进入提示符。
-- **多主机编排**——一个计划跑多台机器，输出统一收进同一份转录。
-- **知识库共享**——本地索引导入/导出，可团队共享的打包格式。
-- **基准评测**——回放真实会话衡量 provider/workflow 质量，让路由选择有据可依。
-- **插件/技能市场**——从目录一键安装社区 RE 技能。
+- **终端回滚区出现多帧仪表盘**：live pane 默认每 90ms 重绘，tmux/终端会保留历史帧。使用 `/refresh calm`（500ms）、`/refresh off` 或 `/flow off` 即可保持滚屏干净。
+- **`CLI provider 'codex' / 'claude' failed with exit 1`**：本地 CLI 尚未登录。先在终端执行 `codex login` / `claude auth status`，或切换 API Provider（`/agent deepseek` / `--planner deepseek`）。
+- **macOS 提示 `dyld: missing LC_UUID`**：旧版 Go 工具链产物问题，请升级 Go 或下载 GitHub Releases 预编译包。
+- **`--resume` 找不到会话**：使用 `/sessions` 显示的短 hash 前缀或完整会话 ID。
+- **远程 SSH 提示 `strict host-key verification` 或 `no auth method`**：先执行 `ssh-keyscan <host> >> ~/.ssh/known_hosts`（实验室机器可用 `--insecure`），并确认已加载 `ssh-agent`、传 `--key` 或录入密码。
 
-## 更多文档
+## 未来路线与更多文档
 
-- [架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html)：可导出 PNG/PDF 的 Cocoon AI 风格设计概览。
-- [设计分析（博客）](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)：催生元认知层的完整分析，含 REA 对比和基于挑战题的回归评测计划。
-- [架构深挖](docs/ARCHITECTURE.zh-CN.md)：包结构、一轮对话、上下文预算、审批闸门、数据格式、不变量和扩展点。
-- [架构图索引](docs/diagrams/index.zh-CN.html)：核心运行机制的图形化入口。
-- [项目主页和宣传图](https://overkazaf.github.io/re-agent/index.zh-CN.html)
+### 后续规划
 
-本工具面向**已获授权**的 CTF、实验环境与本地逆向工作：二进制粗筛、静态分析、
-本地动态实验、solve 计划，以及可复现的分析记录。
+- **远程模式增强**：跨 SSH 的文件读写工具（`list_files` / `read_file`）、SCP 产物拉取与单计划多主机分发。
+- **`snapcompact` 增强**：内嵌 CJK 字体、帧数上限配置与按 Provider 精确计费统计。
+- **可复现逆向基准集**：基于真实授权题库回放评估不同模型席位组合的五维可信度与成本指标。
+- **团队知识库与技能分发**：可打包共享的本地知识索引格式与社区 Skill 目录。
+
+### 延伸文档
+
+- [工作流架构规范（WORKFLOW_STANDARD.md）](docs/WORKFLOW_STANDARD.md)：五道防线、7 类 Investigation State、4 角色轮换、5 维可信指标、7 项完成门禁与代码精确映射。
+- [架构深挖（ARCHITECTURE.zh-CN.md）](docs/ARCHITECTURE.zh-CN.md)：Go 包结构、Agent Loop、上下文预算、审批闸门、持久化格式与扩展点。
+- [可导出架构总图](docs/diagrams/0xaf-re-agent-architecture.zh-CN.html) 与 [架构图索引](docs/diagrams/index.zh-CN.html)。
+- [在线 3D 交互演示](https://overkazaf.github.io/re-agent/gui-demo/) 与 [中文项目主页](https://overkazaf.github.io/re-agent/index.zh-CN.html)。
+- [设计分析（博客）](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)：元认知层、REA 对比与逆向 Agent 防线演化。
+
+---
+
+本工具仅面向**已获授权**的逆向分析、安全研究、实验环境与 CTF 竞赛：本地粗筛、静态/动态取证、可验证重建与可复现交付。
