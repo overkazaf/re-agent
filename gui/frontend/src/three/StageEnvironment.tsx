@@ -11,6 +11,8 @@ import { makeRadarFloorMaterial, type TheaterMaterials } from './ThemeMaterials'
 export interface StageEnvironmentProps {
   materials: TheaterMaterials
   showGrid?: boolean
+  /** ECO quality tier: hides ambient particles and throttles radar sweep updates. */
+  ecoMode?: boolean
 }
 
 const COMPASS_RADIUS = 88
@@ -284,9 +286,14 @@ function buildParticleGeometry(): THREE.BufferGeometry {
   return geo
 }
 
-export function StageEnvironment({ materials, showGrid = true }: StageEnvironmentProps) {
+export function StageEnvironment({
+  materials,
+  showGrid = true,
+  ecoMode = false,
+}: StageEnvironmentProps) {
   const outerArcARef = useRef<THREE.LineSegments>(null)
   const outerArcBRef = useRef<THREE.LineSegments>(null)
+  const ecoAccumRef = useRef(0)
 
   const geometries = useMemo(() => {
     const floorGeo = new THREE.PlaneGeometry(240, 240, 1, 1)
@@ -329,7 +336,7 @@ export function StageEnvironment({ materials, showGrid = true }: StageEnvironmen
       opacity: materials.isLight ? 0.38 : 0.34,
       depthWrite: false,
     })
-    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1
+    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1
     const particleMat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
@@ -375,13 +382,26 @@ export function StageEnvironment({ materials, showGrid = true }: StageEnvironmen
   )
 
   useFrame(({ clock }, delta) => {
+    if (ecoMode) {
+      ecoAccumRef.current += delta
+      if (ecoAccumRef.current < 1 / 12) return
+      const step = ecoAccumRef.current
+      ecoAccumRef.current = 0
+      if (showGrid) {
+        mats.radarMat.uniforms.uTime.value = clock.elapsedTime
+        if (outerArcARef.current) outerArcARef.current.rotation.y += step * 0.036
+        if (outerArcBRef.current) outerArcBRef.current.rotation.y -= step * 0.024
+      }
+      return
+    }
+    ecoAccumRef.current = 0
     const t = clock.elapsedTime
-    mats.radarMat.uniforms.uTime.value = t
-    mats.particleMat.uniforms.uTime.value = t
     if (showGrid) {
+      mats.radarMat.uniforms.uTime.value = t
       if (outerArcARef.current) outerArcARef.current.rotation.y += delta * 0.036
       if (outerArcBRef.current) outerArcBRef.current.rotation.y -= delta * 0.024
     }
+    mats.particleMat.uniforms.uTime.value = t
   })
 
   return (
@@ -401,8 +421,13 @@ export function StageEnvironment({ materials, showGrid = true }: StageEnvironmen
         <lineSegments ref={outerArcBRef} geometry={geometries.arcBGeo} material={mats.arcBMat} />
       </group>
 
-      {/* Ambient GPU-animated telemetry mote field */}
-      <points geometry={geometries.particleGeo} material={mats.particleMat} frustumCulled={false} />
+      {/* Ambient GPU-animated telemetry mote field (hidden in ECO mode to save GPU fill) */}
+      <points
+        visible={!ecoMode}
+        geometry={geometries.particleGeo}
+        material={mats.particleMat}
+        frustumCulled={false}
+      />
     </group>
   )
 }

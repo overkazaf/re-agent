@@ -38,6 +38,7 @@ import {
   resolveTheaterShortcut,
 } from './CameraRig'
 import { StageEnvironment } from './StageEnvironment'
+import { useTheaterPerfGuard } from './useTheaterFallback'
 import { ZoneMarker } from './ZoneMarker'
 import { PhaseRailMesh } from './PhaseRailMesh'
 import { DagLayer } from './DagLayer'
@@ -78,11 +79,14 @@ const ZONE_DESCRIPTIONS: Record<ZoneKey, string> = {
 const lastPointerDown = { x: Number.NaN, y: Number.NaN }
 
 const INITIAL_TELEMETRY_TEXT = formatCameraTelemetry(computeCameraTelemetry(HOME_POS, HOME_TARGET))
+const CANVAS_GL = { antialias: true, powerPreference: 'high-performance' as const }
+const CANVAS_DPR_HD: [number, number] = [1, 1.5]
 
 export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheaterProps) {
   const materials = useTheaterMaterials()
   const scene = useThrottledScene(250)
   const fs = useStageFullscreen()
+  const perf = useTheaterPerfGuard()
   const { focus, wizard, cameraPreset, autoOrbit, showGrid, showHoloPanels, showLabels } =
     useSceneStore()
   const telemetryRef = useRef<HTMLSpanElement | null>(null)
@@ -146,8 +150,9 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
       >
         <Canvas
           style={{ position: 'absolute', inset: 0 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true, powerPreference: 'high-performance' }}
+          dpr={perf.eco ? 1 : CANVAS_DPR_HD}
+          frameloop={perf.tabHidden ? 'never' : 'always'}
+          gl={CANVAS_GL}
           camera={{ position: [...HOME_POS], fov: 48, near: 0.5, far: 650 }}
           onPointerMissed={(e) => {
             const dx = e.clientX - lastPointerDown.x
@@ -163,6 +168,7 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
             showGrid={showGrid}
             showHoloPanels={showHoloPanels}
             showLabels={showLabels}
+            ecoMode={perf.eco}
             telemetryRef={telemetryRef}
             onExitToClassic={onExitToClassic}
           />
@@ -302,6 +308,22 @@ export function ForensicTheater({ hud = null, onExitToClassic }: ForensicTheater
               data-hint-side="bottom"
             >
               标签
+            </button>
+          </div>
+
+          <div className="thud-glass thud-group" role="group" aria-label="Render quality">
+            <button
+              type="button"
+              onClick={perf.toggleQuality}
+              className={`thud-btn${perf.eco ? ' thud-btn--orbit-on' : ' thud-btn--active'}`}
+              aria-pressed={perf.eco}
+              aria-label={perf.eco ? '3D 节能模式（点击切换高清）' : '3D 高清模式（点击切换节能）'}
+              data-quality-tier={perf.tier}
+              data-quality-pref={perf.preference}
+              data-hint="切换 3D 渲染画质（高清 1.5x / 节能 1x 降粒子），低帧率时自动切换节能而不再强退 3D"
+              data-hint-side="bottom"
+            >
+              {perf.eco ? '⚡ 节能' : '◈ 高清'}
             </button>
           </div>
 
@@ -690,6 +712,7 @@ function SceneRoot({
   showGrid,
   showHoloPanels,
   showLabels,
+  ecoMode,
   telemetryRef,
   onExitToClassic,
 }: {
@@ -699,6 +722,7 @@ function SceneRoot({
   showGrid: boolean
   showHoloPanels: boolean
   showLabels: boolean
+  ecoMode: boolean
   telemetryRef: React.RefObject<HTMLSpanElement | null>
   onExitToClassic?: () => void
 }) {
@@ -719,7 +743,7 @@ function SceneRoot({
       {/* Accent wash over EXP/HYP + violet rim over AUD */}
       <pointLight position={[0, 36, 12]} color={materials.accent} intensity={1.05} decay={0} />
       <pointLight position={[0, 36, -62]} color={materials.violet} intensity={0.85} decay={0} />
-      <StageEnvironment materials={materials} showGrid={showGrid} />
+      <StageEnvironment materials={materials} showGrid={showGrid} ecoMode={ecoMode} />
       <CameraRig telemetryRef={telemetryRef} />
       <PointerDownProbe />
       <TheaterDebugBridge />
