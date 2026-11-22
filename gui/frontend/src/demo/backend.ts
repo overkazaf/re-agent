@@ -142,7 +142,8 @@ const SAMPLE_TYPES: RESampleType[] = [
 ]
 
 const COMMAND_COMPLETIONS: string[] = [
-  '/help ',
+  '/help',
+  '/status',
   '/scan ',
   '/inspect ',
   '/anti ',
@@ -150,6 +151,7 @@ const COMMAND_COMPLETIONS: string[] = [
   '/decode ',
   '/entropy ',
   '/mitigations ',
+  '/hex ',
   '/workflow ',
   '/phase ',
   '/goal ',
@@ -160,11 +162,16 @@ const COMMAND_COMPLETIONS: string[] = [
   '/tools',
   '/skills',
   '/providers',
-  '/status',
+  '/planner ',
+  '/executor ',
+  '/auditor ',
   '/sessions',
   '/compact',
+  '/clear',
   '/think ',
-  '/tasks ',
+  '/tasks',
+  '/queue',
+  '/version',
   '/new',
 ]
 
@@ -1409,6 +1416,11 @@ export class DemoBackend implements AppAPI {
     if (!s) throw new Error(`unknown session: ${id}`)
     const trimmed = text.trim()
     if (!trimmed) throw new Error('empty prompt')
+    if (trimmed.startsWith('!')) {
+      emitDemoSignal({ type: 'prompt_sent', sessionId: id, text: trimmed, queued: false })
+      await this.runShellEscape(s, trimmed)
+      return
+    }
     if (s.busy) {
       s.queue.push(trimmed)
       this.emitNotice(id, 'info', `queued #${s.queue.length} for the next turn`)
@@ -1418,6 +1430,214 @@ export class DemoBackend implements AppAPI {
     }
     emitDemoSignal({ type: 'prompt_sent', sessionId: id, text: trimmed, queued: false })
     void this.drainTurns(s, trimmed)
+  }
+
+  private simulateShellCommand(s: DemoSession, shellCmd: string): { exitCode: number; stdout: string; stderr: string } {
+    const clean = shellCmd.trim()
+    const parts = clean.split(/\s+/)
+    const bin = (parts[0] || '').toLowerCase()
+    const rest = clean.slice(parts[0]?.length ?? 0).trim()
+    const ws = s.info.workspace
+
+    if (!clean) {
+      return {
+        exitCode: 0,
+        stdout: '用法: !<shell 命令>（例如 !ls -la、!pwd、!file carrier.bin、!node chall.js \'0xaf{warmup_deck}\'）',
+        stderr: '',
+      }
+    }
+    if (bin === 'pwd') {
+      return { exitCode: 0, stdout: ws, stderr: '' }
+    }
+    if (bin === 'whoami') {
+      return { exitCode: 0, stdout: 'analyst', stderr: '' }
+    }
+    if (bin === 'id') {
+      return { exitCode: 0, stdout: 'uid=501(analyst) gid=20(staff) groups=20(staff),80(0xaf-sandbox)', stderr: '' }
+    }
+    if (bin === 'uname') {
+      return { exitCode: 0, stdout: 'Darwin 0xaf-sandbox 24.3.0 arm64', stderr: '' }
+    }
+    if (bin === 'date') {
+      return { exitCode: 0, stdout: new Date().toISOString(), stderr: '' }
+    }
+    if (bin === 'echo') {
+      return { exitCode: 0, stdout: rest.replace(/^['"]|['"]$/g, ''), stderr: '' }
+    }
+    if (bin === 'ls' || bin === 'll') {
+      if (ws.includes('welcome')) {
+        return {
+          exitCode: 0,
+          stdout: [
+            'total 24',
+            '-rw-r--r--  1 analyst  staff   436 Nov 19 18:10 chall.js',
+            '-rw-r--r--  1 analyst  staff   612 Nov 19 18:10 README.md',
+            'drwxr-xr-x  4 analyst  staff   128 Nov 19 18:12 artifacts/',
+            'drwxr-xr-x  3 analyst  staff    96 Nov 19 18:12 notes/',
+          ].join('\n'),
+          stderr: '',
+        }
+      }
+      if (ws.includes('reverse-lab')) {
+        return {
+          exitCode: 0,
+          stdout: [
+            'total 32',
+            '-rw-r--r--  1 analyst  staff   121 Nov 19 18:20 carrier.bin',
+            '-rw-r--r--  1 analyst  staff   224 Nov 19 18:20 artifact.txt',
+            '-rwxr-xr-x  1 analyst  staff 16480 Nov 19 18:21 crackme_x64',
+            'drwxr-xr-x  3 analyst  staff    96 Nov 19 18:21 notes/',
+          ].join('\n'),
+          stderr: '',
+        }
+      }
+      return {
+        exitCode: 0,
+        stdout: [
+          'total 48',
+          '-rwxr-xr-x  1 analyst  staff 16480 Nov 19 18:21 crackme_x64',
+          '-rw-r--r--  1 analyst  staff   121 Nov 19 18:20 carrier.bin',
+          '-rw-r--r--  1 analyst  staff   224 Nov 19 18:20 artifact.txt',
+          '-rw-r--r--  1 analyst  staff   436 Nov 19 18:10 chall.js',
+        ].join('\n'),
+        stderr: '',
+      }
+    }
+    if (bin === 'cat' || bin === 'head') {
+      if (rest.includes('chall.js')) {
+        return {
+          exitCode: 0,
+          stdout: [
+            'const key = 0x2a;',
+            'const encoded = [26, 82, 75, 76, 81, 93, 75, 88, 71, 95, 90, 117, 78, 79, 73, 65, 87];',
+            'const expected = encoded.map((b) => String.fromCharCode(b ^ key)).join("");',
+            'console.log(process.argv[2] === expected ? "accepted" : "rejected");',
+          ].join('\n'),
+          stderr: '',
+        }
+      }
+      if (rest.includes('artifact.txt')) {
+        return {
+          exitCode: 0,
+          stdout: [
+            '# companion artifact for reverse-lab',
+            'payload_b64=ZmxhZ3tkZW1vX3JldmVyc2VfbGFiX2ZsYWd9',
+          ].join('\n'),
+          stderr: '',
+        }
+      }
+      return {
+        exitCode: 0,
+        stdout: `# ${rest || 'README.md'} (${ws})\n0xAF-Re forensic sandbox workspace — use /scan, /inspect, or + sh for full shell.`,
+        stderr: '',
+      }
+    }
+    if (bin === 'node' && rest.includes('chall.js')) {
+      const ok = rest.includes('0xaf{warmup_deck}')
+      return {
+        exitCode: ok ? 0 : 1,
+        stdout: ok ? 'accepted' : 'rejected',
+        stderr: '',
+      }
+    }
+    if (bin === 'file') {
+      const target = rest || 'carrier.bin'
+      if (target.includes('crackme')) {
+        return { exitCode: 0, stdout: `${target}: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), stripped, UPX packed`, stderr: '' }
+      }
+      if (target.includes('chall')) {
+        return { exitCode: 0, stdout: `${target}: JavaScript source, ASCII text`, stderr: '' }
+      }
+      return { exitCode: 0, stdout: `${target}: data (121 bytes; embedded %PDF-1.7 @ 0x21, PK\\x03\\x04 @ 0x5f)`, stderr: '' }
+    }
+    if (bin === 'strings') {
+      const target = rest || 'carrier.bin'
+      return {
+        exitCode: 0,
+        stdout: target.includes('crackme')
+          ? 'UPX!\n/proc/self/status\nTracerPid:\nptrace\nstrcmp'
+          : 'carrier-prefix\n%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF',
+        stderr: '',
+      }
+    }
+    if (bin === 'sha256sum' || bin === 'shasum') {
+      const target = parts[parts.length - 1] || 'carrier.bin'
+      return {
+        exitCode: 0,
+        stdout: `9e4a7c2b1f08d6e35c14a8b7d201f93e41c7b8a2f6e5d4c3b2a10987654321ab  ${target}`,
+        stderr: '',
+      }
+    }
+    if (bin === 'unzip' && rest.includes('carrier')) {
+      return {
+        exitCode: 9,
+        stdout: 'Archive:  carrier.bin',
+        stderr: 'End-of-central-directory signature not found. Either this file is not a zipfile, or it constitutes one disk of a multi-part archive.',
+      }
+    }
+    if (bin === 'checksec') {
+      return {
+        exitCode: 0,
+        stdout: 'RELRO: Full RELRO | STACK CANARY: Canary found | NX: NX enabled | PIE: PIE enabled',
+        stderr: '',
+      }
+    }
+    return {
+      exitCode: 0,
+      stdout: `[demo-shell ${ws}] $ ${clean}\n(simulated exit 0 · 如需完整交互式终端请点击左侧 + sh)`,
+      stderr: '',
+    }
+  }
+
+  private async runShellEscape(s: DemoSession, rawPrompt: string): Promise<void> {
+    const shellCmd = rawPrompt.slice(1).trim()
+    const startedAt = Date.now()
+    s.messages += 2
+    this.emitLoop(s.info.id, [
+      makeLoopEvent({ type: 'user', text: rawPrompt, textChars: rawPrompt.length }),
+      makeLoopEvent({
+        type: 'tool_start',
+        name: 'shell',
+        args: { command: shellCmd || '(empty)', cwd: s.info.workspace },
+        preview: `$ ${shellCmd || '(empty)'}`,
+      }),
+    ])
+    await this.delay(45)
+    const res = this.simulateShellCommand(s, shellCmd)
+    const ms = Math.max(12, Date.now() - startedAt)
+    const ok = res.exitCode === 0
+    if (ok) s.toolsOk += 1
+    else s.toolsFailed += 1
+
+    const combined = [res.stdout, res.stderr ? `[stderr] ${res.stderr}` : ''].filter(Boolean).join('\n')
+    const reply = [
+      '```sh',
+      `$ ${shellCmd || '(empty)'}`,
+      combined || '(no output)',
+      `# exit=${res.exitCode} · ${ms}ms · cwd=${s.info.workspace}`,
+      '```',
+    ].join('\n')
+
+    this.emitLoop(s.info.id, [
+      makeLoopEvent({
+        type: 'tool_end',
+        name: 'shell',
+        ok,
+        ms,
+        preview: ok ? combined.slice(0, 140) : '',
+        error: ok ? '' : res.stderr || `exit status ${res.exitCode}`,
+      }),
+      makeLoopEvent({
+        type: 'reply',
+        provider: 'shell',
+        model: 'demo-shell',
+        ok,
+        text: reply,
+        textChars: reply.length,
+        error: ok ? '' : res.stderr || `exit status ${res.exitCode}`,
+      }),
+    ])
+    this.emitTick(s)
   }
 
   async Interrupt(id: string): Promise<boolean> {
@@ -1995,10 +2215,11 @@ export class DemoBackend implements AppAPI {
         info('0xAF-Re 命令速查（演示环境）:')
         info('  /workflow reverse [apk|so|elf|firmware…]   进入 9 阶段逆向工作流')
         info('  /phase [next|writeup]                      查看或推进 RE 阶段')
-        info('  /scan <file> · /inspect <bin> · /anti <bin> · /entropy <file>   直调纯 Go 分析工具')
-        info('  /decode <base64|hex|rot13|url> <payload>   本地直调解码器')
-        info('  /goal <desc> · /cap <grant> · /audit       任务契约 · 能力沙箱 · 对抗审计')
-        info('  /theme <deck|amber|matrix|mono>            切换 CRT 荧光主题')
+        info('  /scan <file> · /inspect <bin> · /anti <bin> · /entropy <file> · /hex <file>   直调纯 Go 分析工具')
+        info('  /decode <base64|hex|rot13|url|xor> <payload>   本地直调解码器')
+        info('  /goal <desc> · /cap <grant> · /audit · /writeup   任务契约 · 能力沙箱 · 对抗审计 · 报告')
+        info('  /theme <deck|amber|matrix|mono|obsidian|nord|dracula|solarized|crimson|paper>   切换 10 套主题')
+        info('  /status · /tools · /skills · /providers · /clear · !cmd   会话状态 / 工具 / 清屏 / 模拟命令')
         break
 
       case '/tools':
@@ -2388,6 +2609,80 @@ export class DemoBackend implements AppAPI {
         break
       }
 
+      case '/clear':
+        s.messages = 0
+        s.error = ''
+        info('transcript cleared · 已清空当前会话转录缓冲（会话状态与证据账本保留）')
+        this.emitTick(s)
+        break
+
+      case '/diff': {
+        const a = parts[1] || 'crackme_x64'
+        const b = parts[2] || `${a}.patched`
+        info(`[binary_diff] ${a} vs ${b}: 1 patch region`)
+        info('  @ 0x00001184 (4 bytes): 75 0a 85 c0 → 90 90 85 c0 (JNZ → NOP license bypass)')
+        break
+      }
+
+      case '/mitigations': {
+        const target = parts[1] || 'crackme_x64'
+        info(`[binary_mitigations] ${target}: RELRO=Full · Canary=Yes · NX=Enabled · PIE=Enabled · FORTIFY=Yes`)
+        break
+      }
+
+      case '/sessions': {
+        const activeList = Array.from(this.sessions.values()).map(
+          (sess) => `${sess.info.id} (${sess.info.workspace}${sess.info.workflow ? ` · ${sess.info.workflow}` : ''})`,
+        )
+        info(`active sessions (${activeList.length}): ${activeList.join(' | ') || 'none'}`)
+        info(`saved history sessions: ${this.savedSessions.length} (click "resume" in left sidebar)`)
+        break
+      }
+
+      case '/queue': {
+        const sub = parts[1]?.toLowerCase()
+        if (sub === 'clear') {
+          const cleared = s.queue.length
+          s.queue = []
+          this.emitTick(s)
+          info(`queue cleared (${cleared} pending prompts removed)`)
+        } else if (s.queue.length === 0) {
+          info('queue is empty (0 pending prompts)')
+        } else {
+          info(`queued prompts (${s.queue.length}):`)
+          s.queue.forEach((q, idx) => info(`  #${idx + 1} ${q}`))
+        }
+        break
+      }
+
+      case '/tasks': {
+        if (!s.plan || s.plan.steps.length === 0) {
+          info('no active task plan yet — send a prompt to generate a live plan')
+        } else {
+          const done = s.plan.steps.filter((st) => st.status === 'completed').length
+          info(`tasks [${done}/${s.plan.steps.length}] (${s.plan.source}):`)
+          for (const st of s.plan.steps) {
+            const mark = st.status === 'completed' ? '✓' : st.status === 'in_progress' ? '▸' : '○'
+            info(`  ${mark} ${st.text}`)
+          }
+        }
+        break
+      }
+
+      case '/think':
+        info(`think display mode: ${arg || 'auto'} (use auto | collapse | expand)`)
+        break
+
+      case '/model':
+        info(
+          `active models · planner=${s.planner} (${modelForProvider(s.planner)}) · executor=${s.executor} (${modelForProvider(s.executor)}) · auditor=${s.auditor} (${modelForProvider(s.auditor)})`,
+        )
+        break
+
+      case '/new':
+        info('点击左侧栏 "+ new"（或按 Cmd/Ctrl+N）即可创建全新隔离会话')
+        break
+
       case '/compact':
         info('context compacted: 6 messages → summary (-4 msgs, 62% tokens saved)')
         break
@@ -2435,7 +2730,8 @@ export class DemoBackend implements AppAPI {
       }
 
       default:
-        info(`[demo] command ${trimmed} executed`)
+        ok = false
+        err(`未知命令: ${cmd || trimmed} — 输入 /help 查看可用命令`)
         break
     }
 

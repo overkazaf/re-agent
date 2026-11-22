@@ -180,20 +180,12 @@ function applyEvent(rt: SessionRuntime, e: GuiEvent): SessionRuntime | null {
 
       // ring-cap buffer and timestamps jointly so indices stay aligned even
       // when a single batch exceeds LOOP_LIMIT
-      let loopBuffer = rt.loopBuffer.concat(batch)
-      let loopTs = rt.loopTs.concat(batch.map(() => e.ts))
-      if (loopBuffer.length > LOOP_LIMIT) {
-        const drop = loopBuffer.length - LOOP_LIMIT
-        loopBuffer = loopBuffer.slice(drop)
-        loopTs = loopTs.slice(drop)
-      }
+      const nextLoop = appendLoopBatch(rt, batch, e.ts)
 
       return {
         ...rt,
-        loopBuffer,
-        loopTs,
+        ...nextLoop,
         thinkLines,
-        firstLoopTs: rt.firstLoopTs ?? e.ts,
       }
     }
 
@@ -205,6 +197,73 @@ function applyEvent(rt: SessionRuntime, e: GuiEvent): SessionRuntime | null {
 function appendCapped<T>(arr: readonly T[], add: readonly T[], cap: number): T[] {
   const merged = arr.concat(add)
   return merged.length > cap ? merged.slice(merged.length - cap) : merged
+}
+
+function appendLoopBatch(
+  rt: Pick<SessionRuntime, 'loopBuffer' | 'loopTs' | 'firstLoopTs'>,
+  batch: readonly LoopEvent[],
+  ts: number,
+): Pick<SessionRuntime, 'loopBuffer' | 'loopTs' | 'firstLoopTs'> {
+  let loopBuffer = rt.loopBuffer.concat(batch)
+  let loopTs = rt.loopTs.concat(batch.map(() => ts))
+  if (loopBuffer.length > LOOP_LIMIT) {
+    const drop = loopBuffer.length - LOOP_LIMIT
+    loopBuffer = loopBuffer.slice(drop)
+    loopTs = loopTs.slice(drop)
+  }
+  return {
+    loopBuffer,
+    loopTs,
+    firstLoopTs: rt.firstLoopTs ?? ts,
+  }
+}
+
+function makeCommandLoopEvent(partial: Partial<LoopEvent> & { type: LoopEvent['type'] }): LoopEvent {
+  return {
+    turn: 0,
+    provider: 'command',
+    phase: 'command',
+    model: '',
+    endpoint: '',
+    messages: 0,
+    tokens: 0,
+    tools: 0,
+    ms: 0,
+    ok: true,
+    toolCalls: 0,
+    textChars: 0,
+    error: '',
+    tokensBefore: 0,
+    tokensAfter: 0,
+    droppedMessages: 0,
+    elidedToolResults: 0,
+    progress: null,
+    snapshot: null,
+    text: '',
+    usage: null,
+    reason: '',
+    name: '',
+    args: null,
+    preview: '',
+    ...partial,
+  }
+}
+
+function summarizeCommandToast(line: string, ok: boolean, notices: readonly NoticeDTO[]): string {
+  const primary =
+    (!ok ? notices.find((n) => n.level === 'error')?.text : undefined) ??
+    notices.find((n) => n.text.trim().length > 0)?.text ??
+    ''
+  const clean = primary.replace(/\s+/g, ' ').trim()
+  let text: string
+  if (!clean) {
+    text = ok ? `${line} 已执行` : `${line} 执行失败`
+  } else if (!ok || clean.toLowerCase().includes(line.toLowerCase())) {
+    text = clean
+  } else {
+    text = `${line} → ${clean}`
+  }
+  return text.length > 140 ? `${text.slice(0, 140)}…` : text
 }
 
 // ---------- helpers ----------
@@ -373,18 +432,126 @@ export const actions = {
     }
   },
 
-  /** Slash command; collected notices land in the session notice buffer. */
+  /** Slash command; mirrors command & output into notices, transcript loopBuffer, and toast. */
   async sendCommand(id: string, line: string): Promise<Result<CommandResultDTO>> {
-    try {
-      const res = await api.sendCommand(id, line)
-      const rt = sessions.get(id)
-      if (rt && res.notices.length > 0) {
-        sessions.set(id, { ...rt, notices: appendCapped(rt.notices, res.notices, NOTICE_LIMIT) })
+    const trimmed = line.trim()
+    const cmdName = (trimmed.split(/\s+/)[0] || '').toLowerCase()
+    const isClear = cmdName === '/clear'
+    const startTs = Date.now()
+
+    if (!isClear) {
+      const preRt = sessions.get(id)
+      if (preRt && trimmed) {
+        const userEv = makeCommandLoopEvent({
+          type: 'user',
+          phase: 'command',
+          text: trimmed,
+          textChars: trimmed.length,
+        })
+        sessions.set(id, {
+          ...preRt,
+          ...appendLoopBatch(preRt, [userEv], startTs),
+        })
         commit()
       }
-      return { ok: true, value: res }
+    }
+
+    try {
+      const res = await api.sendCommand(id, trimmed)
+      const notices = Array.isArray(res.notices) ? res.notices : []
+      const now = Date.now()
+      const outputText =
+        notices.length > 0
+          ? notices.map((n) => n.text).join('\n')
+          : res.ok
+            ? `${trimmed} 已执行`
+            : `${trimmed} 执行失败`
+      const firstErr =
+        notices.find((n) => n.level === 'error')?.text ||
+        notices[0]?.text ||
+        `${trimmed} 执行失败`
+
+      const rt = sessions.get(id)
+      if (rt) {
+        const nextNotices =
+          notices.length > 0 ? appendCapped(rt.notices, notices, NOTICE_LIMIT) : rt.notices
+        const baseRt: SessionRuntime =
+          isClear && res.ok
+            ? { ...rt, loopBuffer: [], loopTs: [], thinkLines: [], firstLoopTs: null }
+            : rt
+        const outEvents: LoopEvent[] = []
+        if (isClear && trimmed) {
+          outEvents.push(
+            makeCommandLoopEvent({
+              type: 'user',
+              phase: 'command',
+              text: trimmed,
+              textChars: trimmed.length,
+              ok: res.ok,
+            }),
+          )
+        }
+        outEvents.push(
+          makeCommandLoopEvent({
+            type: 'reply',
+            phase: 'command',
+            name: trimmed,
+            ok: res.ok,
+            text: outputText,
+            textChars: outputText.length,
+            error: res.ok ? '' : firstErr,
+          }),
+        )
+        sessions.set(id, {
+          ...baseRt,
+          ...appendLoopBatch(baseRt, outEvents, now),
+          notices: nextNotices,
+        })
+        commit()
+      }
+
+      pushToast(res.ok ? 'ok' : 'err', summarizeCommandToast(trimmed, res.ok, notices))
+
+      if (!res.ok) {
+        return { ok: false, error: firstErr }
+      }
+      return { ok: true, value: { ok: res.ok, notices } }
     } catch (err) {
       const error = errText(err)
+      const rt = sessions.get(id)
+      if (rt) {
+        const now = Date.now()
+        const errNotice: NoticeDTO = { level: 'error', text: `${trimmed}: ${error}` }
+        const outEvents: LoopEvent[] = []
+        if (isClear && trimmed) {
+          outEvents.push(
+            makeCommandLoopEvent({
+              type: 'user',
+              phase: 'command',
+              text: trimmed,
+              textChars: trimmed.length,
+              ok: false,
+            }),
+          )
+        }
+        outEvents.push(
+          makeCommandLoopEvent({
+            type: 'reply',
+            phase: 'command',
+            name: trimmed,
+            ok: false,
+            text: error,
+            textChars: error.length,
+            error,
+          }),
+        )
+        sessions.set(id, {
+          ...rt,
+          ...appendLoopBatch(rt, outEvents, now),
+          notices: appendCapped(rt.notices, [errNotice], NOTICE_LIMIT),
+        })
+        commit()
+      }
       pushToast('err', error)
       return { ok: false, error }
     }

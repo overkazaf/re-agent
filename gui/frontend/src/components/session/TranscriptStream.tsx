@@ -221,6 +221,47 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
     case 'user': {
       const ck = `msg-${rowKey}`
       const copied = copiedKey === ck
+      if (ev.phase === 'command') {
+        return (
+          <div className="usa-trace-row" style={{ alignItems: 'flex-start', paddingTop: 3 }}>
+            {time}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  fontSize: 9.5,
+                  letterSpacing: '0.08em',
+                  padding: '0 4px',
+                  border: '1px solid var(--border-accent, var(--accent-dim))',
+                  borderRadius: 'var(--radius-xs, 2px)',
+                  background: 'var(--accent-soft, color-mix(in srgb, var(--accent) 10%, transparent))',
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                CMD
+              </span>
+              <span style={{ color: 'var(--accent)', fontWeight: 600, flexShrink: 0 }}>$</span>
+              <span style={{ color: 'var(--text)', fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {ev.text}
+              </span>
+            </div>
+            {ev.text && (
+              <span className="usa-row-actions" data-visible={copied ? 'true' : undefined}>
+                <button
+                  type="button"
+                  className="usa-copy-btn"
+                  data-copied={copied ? 'true' : undefined}
+                  onClick={() => onCopy(ck, ev.text)}
+                  data-hint="复制该条命令"
+                >
+                  {copied ? '✓' : '⎘'}
+                </button>
+              </span>
+            )}
+          </div>
+        )
+      }
       return (
         <div className="usa-trace-row" style={{ alignItems: 'flex-start' }}>
           {time}
@@ -427,6 +468,79 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
     case 'reply': {
       const ck = `reply-${rowKey}`
       const copied = copiedKey === ck
+      if (ev.phase === 'command') {
+        const isErr = !ev.ok
+        const tone = isErr ? 'var(--err)' : 'var(--ok)'
+        const borderColor = isErr
+          ? 'color-mix(in srgb, var(--err) 55%, var(--border-subtle, var(--rule)))'
+          : 'color-mix(in srgb, var(--accent) 40%, var(--border-subtle, var(--rule)))'
+        const bgColor = isErr
+          ? 'var(--err-soft, color-mix(in srgb, var(--err) 8%, var(--bg)))'
+          : 'var(--surface-2, color-mix(in srgb, var(--bg) 72%, var(--bg-panel) 28%))'
+        return (
+          <div className="usa-trace-row" style={{ alignItems: 'flex-start', paddingTop: 2, paddingBottom: 5 }}>
+            {time}
+            <div
+              data-command-result={isErr ? 'error' : 'ok'}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                border: `1px solid ${borderColor}`,
+                borderLeft: `2px solid ${tone}`,
+                borderRadius: 'var(--radius-xs, 2px)',
+                background: bgColor,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '3px 8px',
+                  borderBottom: '1px solid var(--border-subtle, var(--rule))',
+                  background: 'var(--surface-1, color-mix(in srgb, var(--bg-panel) 85%, transparent))',
+                  fontSize: 10.5,
+                }}
+              >
+                <span style={{ color: tone, fontWeight: 700 }}>{isErr ? '✗' : '✓'}</span>
+                <span style={{ color: isErr ? 'var(--err)' : 'var(--muted)', fontWeight: 600 }}>
+                  {ev.name || 'command'}
+                </span>
+                <span style={{ color: 'var(--faint)', fontSize: 10 }}>
+                  {isErr ? 'error' : 'output'}
+                </span>
+                <span className="usa-row-actions" data-visible={copied ? 'true' : undefined} style={{ marginLeft: 'auto' }}>
+                  <button
+                    type="button"
+                    className="usa-copy-btn"
+                    data-copied={copied ? 'true' : undefined}
+                    onClick={() => onCopy(ck, ev.text)}
+                    data-hint="复制命令输出"
+                  >
+                    {copied ? '✓ 已复制' : '⎘ 复制'}
+                  </button>
+                </span>
+              </div>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '6px 9px',
+                  fontFamily: 'inherit',
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  color: isErr ? 'var(--err)' : 'var(--text)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  overflowX: 'auto',
+                }}
+              >
+                {ev.text}
+              </pre>
+            </div>
+          </div>
+        )
+      }
       const mdComponents = buildMdComponents(rowKey, copiedKey, onCopy)
       return (
         <div className="usa-trace-row" style={{ alignItems: 'flex-start', paddingTop: 4, paddingBottom: 4 }}>

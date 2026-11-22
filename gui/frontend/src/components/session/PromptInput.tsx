@@ -11,9 +11,9 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { api } from '../../lib/api'
+import { api, isDemoAppActive } from '../../lib/api'
 import { pushEsc } from '../../lib/escStack'
-import { actions, hasBackend } from '../../store/sessions'
+import { actions, hasBackend, pushSessionToast } from '../../store/sessions'
 import { emitDemoSignal, onPromptFill } from '../../demo/signals'
 import { Spinner } from '../crt'
 import { REPickerDialog } from '../re'
@@ -37,38 +37,100 @@ interface PaletteItem {
   matchIndices?: number[]
 }
 
-const BUILTIN_DEFS: ReadonlyArray<{ cmd: string; desc: string }> = [
+const NO_ARG_COMMANDS = new Set([
+  '/help',
+  '/status',
+  '/tools',
+  '/skills',
+  '/providers',
+  '/audit',
+  '/phase',
+  '/clear',
+  '/tasks',
+  '/queue',
+  '/writeup',
+  '/compact',
+  '/sessions',
+  '/new',
+  '/version',
+  '/workflow reverse',
+  '/workflow off',
+])
+
+const ARG_REQUIRED_COMMANDS = new Set([
+  '/theme',
+  '/decode',
+  '/scan',
+  '/inspect',
+  '/anti',
+  '/diff',
+  '/entropy',
+  '/mitigations',
+  '/hex',
+  '/goal',
+  '/cap',
+  '/workflow',
+  '/model',
+  '/planner',
+  '/executor',
+  '/auditor',
+  '/think',
+])
+
+export function shouldExecuteCommandOnEnter(
+  rawValue: string,
+  item: { replacement: string } | undefined,
+): boolean {
+  if (!item) return true
+  const typed = rawValue.trim().toLowerCase()
+  const target = item.replacement.trim().toLowerCase()
+  if (!typed || typed !== target) return false
+  if (NO_ARG_COMMANDS.has(typed)) return true
+  if (ARG_REQUIRED_COMMANDS.has(typed)) return false
+  return !item.replacement.endsWith(' ')
+}
+
+const BUILTIN_DEFS: ReadonlyArray<{ cmd: string; desc: string; takesArg?: boolean }> = [
   { cmd: '/help', desc: 'Show the command deck' },
-  { cmd: '/theme', desc: 'Switch palette (deck/amber/matrix/mono)' },
-  { cmd: '/workflow', desc: 'Pick RE workflow mode (/workflow reverse)' },
+  { cmd: '/status', desc: 'Show active session, workflow & tool status' },
+  { cmd: '/theme', desc: 'Switch theme (deck/amber/matrix/nord/dracula/paper…)', takesArg: true },
+  { cmd: '/workflow', desc: 'Pick RE workflow mode (/workflow reverse)', takesArg: true },
   { cmd: '/phase', desc: 'Show or advance the RE workflow phase' },
   { cmd: '/audit', desc: 'Run isolated adversarial evidence audit' },
-  { cmd: '/decode', desc: 'Direct decode/deobfuscate helper' },
-  { cmd: '/scan', desc: 'Scan binary artifacts, strings & signatures' },
-  { cmd: '/inspect', desc: 'Inspect section headers & binary metadata' },
-  { cmd: '/entropy', desc: 'Compute section entropy & packed regions' },
-  { cmd: '/anti', desc: 'Detect anti-debug / anti-analysis hotspots' },
-  { cmd: '/diff', desc: 'Inspect binary patch diff & byte deltas' },
-  { cmd: '/goal', desc: 'Inspect or configure RE goal criteria' },
-  { cmd: '/cap', desc: 'Inspect sandbox capability policy' },
+  { cmd: '/writeup', desc: 'Generate evidence-cited reverse-engineering writeup' },
+  { cmd: '/decode', desc: 'Direct decode/deobfuscate helper', takesArg: true },
+  { cmd: '/scan', desc: 'Scan binary artifacts, strings & signatures', takesArg: true },
+  { cmd: '/inspect', desc: 'Inspect section headers & binary metadata', takesArg: true },
+  { cmd: '/entropy', desc: 'Compute section entropy & packed regions', takesArg: true },
+  { cmd: '/anti', desc: 'Detect anti-debug / anti-analysis hotspots', takesArg: true },
+  { cmd: '/diff', desc: 'Inspect binary patch diff & byte deltas', takesArg: true },
+  { cmd: '/hex', desc: 'Dump hex bytes at target offset', takesArg: true },
+  { cmd: '/mitigations', desc: 'Check binary hardening & mitigations', takesArg: true },
+  { cmd: '/goal', desc: 'Inspect or configure RE goal criteria', takesArg: true },
+  { cmd: '/cap', desc: 'Inspect sandbox capability policy', takesArg: true },
   { cmd: '/tools', desc: 'List available reverse-engineering tools' },
-  { cmd: '/model', desc: 'Override a provider model' },
-  { cmd: '/planner', desc: 'Set the planner provider' },
-  { cmd: '/executor', desc: 'Set the executor provider' },
-  { cmd: '/think', desc: 'Fold or expand the streamed reasoning' },
-  { cmd: '/tasks', desc: 'Fold or expand the live task list' },
+  { cmd: '/skills', desc: 'List loaded reverse-engineering skills' },
+  { cmd: '/providers', desc: 'Show planner / executor / auditor routing' },
+  { cmd: '/model', desc: 'Override a provider model', takesArg: true },
+  { cmd: '/planner', desc: 'Set the planner provider', takesArg: true },
+  { cmd: '/executor', desc: 'Set the executor provider', takesArg: true },
+  { cmd: '/auditor', desc: 'Set the auditor provider', takesArg: true },
+  { cmd: '/think', desc: 'Fold or expand the streamed reasoning', takesArg: true },
+  { cmd: '/tasks', desc: 'Show or toggle the live task list' },
   { cmd: '/queue', desc: 'Manage queued prompts' },
   { cmd: '/compact', desc: 'Fold the session into a summary' },
+  { cmd: '/clear', desc: 'Clear the current transcript stream' },
   { cmd: '/sessions', desc: 'List recent sessions' },
+  { cmd: '/version', desc: 'Show 0xAF-Re build & tool version' },
   { cmd: '/new', desc: 'Clear the current session and start a fresh one' },
 ]
 
 const CMD_DESC_MAP = new Map<string, string>(BUILTIN_DEFS.map((d) => [d.cmd, d.desc]))
 
-const BUILTIN: PaletteItem[] = BUILTIN_DEFS.map(({ cmd, desc }) => ({
+const BUILTIN: PaletteItem[] = BUILTIN_DEFS.map(({ cmd, desc, takesArg }) => ({
   label: cmd,
   desc,
-  replacement: `${cmd} `,
+  replacement: takesArg ? `${cmd} ` : cmd,
 }))
 
 function builtinCompletions(line: string): PaletteItem[] {
@@ -163,7 +225,7 @@ export function PromptInput({
   const paletteOpen = value.startsWith('/') && !dismissed && items.length > 0
   const shellEscape = value.startsWith('!')
   const isSlashMode = value.startsWith('/')
-  const canSend = Boolean(value.trim()) && Boolean(sessionId) && !busy
+  const canSend = Boolean(value.trim()) && !busy
 
   // auto-grow 1..6 lines
   useEffect(() => {
@@ -265,11 +327,18 @@ export function PromptInput({
     setDismissed(true)
     setHistCursor(-1)
     taRef.current?.focus()
+    placeCaretAtEnd()
   }
 
   async function sendText(raw: string) {
     const text = raw.trim()
-    if (!text || !sessionId || busy) return
+    if (!text || busy) return
+    if (!sessionId) {
+      setDismissed(true)
+      setSendError('请先新建或选择一个会话')
+      pushSessionToast('err', '请先新建或选择一个会话（左侧 + new）')
+      return
+    }
     recordHistory(text)
     // the terminal RE picker has no GUI stdin — bare /workflow reverse opens
     // the native dialog (exact, case-insensitive match only)
@@ -280,6 +349,7 @@ export function PromptInput({
       emitDemoSignal({ type: 're_picker_opened' })
       return
     }
+    setDismissed(true)
     setBusy(true)
     setSendError(null)
     const res = text.startsWith('/')
@@ -348,9 +418,19 @@ export function PromptInput({
         setActive((a) => (a - 1 + items.length) % items.length)
         return
       }
-      if (e.key === 'Enter' || e.key === 'Tab') {
+      if (e.key === 'Tab') {
         e.preventDefault()
         applyCompletion(items[active])
+        return
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        if (shouldExecuteCommandOnEnter(value, items[active])) {
+          setDismissed(true)
+          void send()
+        } else {
+          applyCompletion(items[active])
+        }
         return
       }
     }
@@ -488,7 +568,7 @@ export function PromptInput({
         </div>
       )}
 
-      {/* shell escape warning — non-blocking */}
+      {/* shell escape hint — non-blocking */}
       {shellEscape && (
         <div
           style={{
@@ -499,7 +579,9 @@ export function PromptInput({
             background: 'var(--warn-soft)',
           }}
         >
-          ⚠ GUI 不支持 ! 逃逸，请使用左侧 + sh 内置终端
+          {isDemoAppActive()
+            ? '⚡ 演示沙盒支持 !cmd 快速模拟执行（完整交互终端请点左侧 + sh）'
+            : '⚠ GUI 不支持 ! 逃逸，请使用左侧 + sh 内置终端'}
         </div>
       )}
 
@@ -533,7 +615,7 @@ export function PromptInput({
               }}
             >
               <span>COMMANDS · {items.length}</span>
-              <span>↑↓ 选择 · Tab/⏎ 插入 · Esc 关闭</span>
+              <span>↑↓ 选择 · Tab 补全 · ⏎ 执行/插入 · Esc 关闭</span>
             </div>
             {items.map((it, i) => {
               const segs = splitHighlightSegments(it.label, it.matchIndices ?? [])
@@ -672,12 +754,26 @@ export function PromptInput({
             type="button"
             className="ix-prompt-send-btn"
             disabled={!canSend}
-            onClick={() => void send()}
-            data-hint={running ? '将当前指令加入执行队列' : '发送给当前会话（Shift+Enter 换行）'}
+            onMouseDown={(e) => {
+              e.preventDefault()
+            }}
+            onClick={() => {
+              setDismissed(true)
+              void send()
+            }}
+            data-hint={
+              !sessionId
+                ? '请先在左侧新建或选择一个会话（+ new）'
+                : running
+                  ? '将当前指令加入执行队列'
+                  : isSlashMode
+                    ? '执行当前斜杠命令（Enter）'
+                    : '发送给当前会话（Shift+Enter 换行）'
+            }
             data-hint-kbd="Enter"
             data-hint-side="top"
           >
-            {running ? '排队' : '发送'}
+            {isSlashMode && !running ? '执行' : running ? '排队' : '发送'}
           </button>
         </span>
       </div>
