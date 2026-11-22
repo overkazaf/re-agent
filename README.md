@@ -1,106 +1,274 @@
 <div align="center">
 
-![Stars](https://img.shields.io/github/stars/overkazaf/re-agent?style=flat-square&color=58a6ff)
-![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)
-![Last Commit](https://img.shields.io/github/last-commit/overkazaf/re-agent?style=flat-square&color=58a6ff)
-![License](https://img.shields.io/github/license/overkazaf/re-agent?style=flat-square&color=58a6ff)
-
-</div>
-
 # 0xAF-Re
 
-An authorized reverse-engineering & CTF terminal agent. One static Go binary that
-combines a **planner** and an **executor** model seat, local RE tools, workflow
-modes, queued prompts, session resume, and a live view of every turn.
+**Verifiable Reverse-Engineering Agent & 3D Forensic Workbench**
+
+> *Models guess fast. Reverse engineering only trusts proof.*
+
+[![Stars](https://img.shields.io/github/stars/overkazaf/re-agent?style=flat-square&color=58a6ff)](https://github.com/overkazaf/re-agent/stargazers)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Live 3D Demo](https://img.shields.io/badge/Live_Demo-3D_Web_Workbench-22d3ee?style=flat-square)](https://overkazaf.github.io/re-agent/gui-demo/)
+[![Built-in Tools](https://img.shields.io/badge/Built--in_Tools-34-10b981?style=flat-square)](#built-in-tools-34)
+[![RE Skills](https://img.shields.io/badge/RE_Skills-30-a78bfa?style=flat-square)](#skills-and-knowledge-30-embedded)
+[![Last Commit](https://img.shields.io/github/last-commit/overkazaf/re-agent?style=flat-square&color=58a6ff)](https://github.com/overkazaf/re-agent/commits/main)
+[![License](https://img.shields.io/github/license/overkazaf/re-agent?style=flat-square&color=58a6ff)](https://github.com/overkazaf/re-agent)
 
 **Language:** English | [中文](README.zh-CN.md)
 
-**Links:** [Project page](https://overkazaf.github.io/re-agent/) · [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html) · [Architecture](docs/ARCHITECTURE.md) · [Architecture diagrams](docs/diagrams/) · [Comparison diagram](docs/diagrams/07-vs-oh-my-pi.svg) · [Design analysis (blog)](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)
+**[▶ Launch Zero-Install 3D Web Workbench](https://overkazaf.github.io/re-agent/gui-demo/)** · [Project Page](https://overkazaf.github.io/re-agent/) · [Workflow Standard](docs/WORKFLOW_STANDARD.md) · [Architecture](docs/ARCHITECTURE.md) · [Architecture Map](docs/diagrams/0xaf-re-agent-architecture.html) · [Diagrams](docs/diagrams/) · [Design Analysis](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)
+
+</div>
+
+---
+
+One static Go binary powering both a **Terminal Command Deck** and a **Native Desktop (Wails v2) + Zero-Install Web 3D Forensic Workbench**. 0xAF-Re turns authorized reverse engineering and CTF work from fragile chat sessions into a **verifiable, auditable, resumable action system** — combining multi-model seats (`planner`, `executor`, `researcher`, isolated `auditor`), 34 built-in RE tools, 30 embedded RE skills, a task-scoped capability sandbox, an append-only evidence ledger, deterministic hypothesis governance, execution verification, and isolated adversarial auditing.
 
 <p align="center">
-  <img src="docs/shots/dashboard.png" alt="0xAF-Re live dashboard: FLOW / TOOLS / PLAN / THINK / TELE" width="900">
+  <img src="docs/shots/gui-3d-overview.png" alt="0xAF-Re 3D Forensic Theater: 7-station phase rail and live causal evidence DAG" width="440">
+  <img src="docs/shots/dashboard.png" alt="0xAF-Re Terminal Command Deck: FLOW / TOOLS / PLAN / THINK / TELE" width="440">
   <br/>
-  <img src="docs/casts/dashboard.gif" alt="0xAF-Re live dashboard, animated" width="600">
+  <img src="docs/casts/dashboard.gif" alt="0xAF-Re live terminal dashboard, animated" width="560">
 </p>
+
+---
 
 ## Table of Contents
 
-- [Motivation](#motivation)
-- [Features](#features)
-- [Demos](#demos)
-- [Architecture](#architecture)
+- [Why 0xAF-Re](#why-0xaf-re)
+- [Capabilities at a Glance](#capabilities-at-a-glance)
+- [Standardized `re-agent` Architecture](#standardized-re-agent-architecture)
+  - [Five Defenses](#five-defenses)
+  - [7-State `Investigation State` Dossier](#7-state-investigation-state-dossier)
+  - [4 Rotating Runtime Roles & Control Loop](#4-rotating-runtime-roles--control-loop)
+  - [5 Trust & Cost Metrics](#5-trust--cost-metrics)
+  - [7 Completion Gates & 3 Handover Questions](#7-completion-gates--3-handover-questions)
+  - [How 0xAF-Re Differs from REA](#how-0xaf-re-differs-from-rea)
+- [3D Forensic Theater & Pro Workbench](#3d-forensic-theater--pro-workbench)
+  - [3D Forensic Theater (Geek Cyber-Forensic Command Deck)](#3d-forensic-theater-geek-cyber-forensic-command-deck)
+  - [Pro Workbench UX & Visual Craft](#pro-workbench-ux--visual-craft)
+  - [GUI Functional Zones & Operation Walkthrough](#gui-functional-zones--operation-walkthrough)
+- [Terminal Demos](#terminal-demos)
 - [Install](#install)
 - [Quick Start](#quick-start)
 - [Basic Demos](#basic-demos)
-- [Worked Case: solve a challenge end to end](#worked-case-solve-a-challenge-end-to-end)
-- [Desktop GUI](#desktop-gui)
+- [Worked Case: Solve a Challenge End to End](#worked-case-solve-a-challenge-end-to-end)
 - [Workflow Modes](#workflow-modes)
 - [Context Compaction](#context-compaction)
-- [Remote mode](#remote-mode)
+- [Remote Mode](#remote-mode)
 - [Providers and Models](#providers-and-models)
 - [Built-in Tools (34)](#built-in-tools-34)
-- [Skills and Knowledge](#skills-and-knowledge)
+- [Skills and Knowledge (30 Embedded)](#skills-and-knowledge-30-embedded)
+- [Engineering Quality & Verification](#engineering-quality--verification)
 - [Safety](#safety)
 - [Troubleshooting](#troubleshooting)
 - [Common Commands](#common-commands)
 - [Roadmap](#roadmap)
 - [More Docs](#more-docs)
 
-## Motivation
+---
 
-Reverse engineering is already a pipeline: `file`, `strings`, `entropy`, r2,
-JADX, Frida, a scratch script, and a note somewhere. The slow part is rarely any
-single tool — it is **holding the thread across all of them** and re-deriving
-what you already knew two hours ago. 0xAF-Re exists to keep that thread: a
-planner model writes the route, an executor model drives the tools, and every
-fact lands in a transcript you can resume, diff, and hand to someone else.
+## Why 0xAF-Re
 
-Three principles shape it:
+Reverse engineering is already a multi-tool pipeline: `file`, `strings`, entropy scans, radare2, Ghidra, JADX, Frida, emulators, scratch harnesses, and notes. The bottleneck is rarely any single tool — it is **holding verifiable state across tools, rounds, and models** without letting fluent model guesses masquerade as proven facts.
 
-1. **Local and evidence-first.** Reads stay inside the workspace; writes,
-   network, and sensitive paths are off until you say otherwise. Facts come from
-   real tools (`/scan`, radare2, JADX, Frida, …) before they come from a model.
-2. **Two seats, not one.** A strong reasoner plans; a cheap executor collects
-   evidence. `/planner`, `/executor`, and `/model` re-route at runtime.
-3. **You watch it work and can steer mid-turn.** Plan rows, tool calls,
-   reasoning, tokens, and timings render live; `/think expand`, `/tasks
-   collapse`, `/queue edit`, `/model` take effect while the turn is running.
+Once an LLM agent drives shells, decompilers, instrumentation, and rebuild scripts, it is no longer a passive "code explainer" — it is a high-privilege **action system**. 0xAF-Re enforces four engineering principles in Go host code (never prompt etiquette):
 
-## Features
+1. **Bounded capabilities.** Reads stay workspace-scoped; writes, network, device access, and sensitive paths are deny-by-default until explicitly granted and expire with the task.
+2. **Facts separated from inference.** Raw tool observations land in an append-only `evidence-ledger.jsonl` (`ev_NNN`), untrusted sample strings are isolated as `UNTRUSTED DATA`, and target file hashes are computed host-side.
+3. **Falsifiable, rollback-ready hypotheses.** Every claim (`H-NNN`) declares `scope`, `falsifiers`, and `next_test`. Contradictions deterministically halve confidence and cascade rollback across dependent claims.
+4. **Independent execution & adversarial sign-off.** The exploring agent never grades its own work. Reconstructed artifacts must pass build, fixed replay, boundary/failure, and differential checks (`verify_artifact`), then clear an isolated, zero-history, tool-free `/audit`.
 
-| Area | What you get |
+---
+
+## Capabilities at a Glance
+
+| Pillar | Shipped on `main` |
 | --- | --- |
-| **Live dashboard** | One boxed view: FLOW (animated dataflow strip), TOOLS (tool cards), PLAN (task list + progress), THINK (reasoning tail), TELE (throughput/tokens/clock). Tight terminals shrink panel by panel down to the current step. |
-| **Dual-model routing** | planner / executor / researcher seats, pinned or per-role, switchable mid-run. |
-| **Workflow modes** | `off` / `auto` / `specialist` / `caveman` plus purpose-built `research` / `writeup` / `ctf` / `reverse` / `engineering`. The `reverse` mode is **interactive**: sample type picker, 9 structured phases with evidence gates, hacker-mode HUD, and ledger-backed hypothesis/evidence tracking. |
-| **Evidence loop** | Every completed tool result lands in an append-only `evidence-ledger.jsonl`; `verify_artifact` turns build/replay/diff runs into `verification_result` records; every hypothesis status change keeps a versioned record; reverse phases gate on evidence, verification, and audit before writeup. |
-| **Task declarations** | `/goal <objective>` turns a raw ask into a scoped contract — target hash and format pinned host-side, acceptance criteria (build_pass, replay_pass, differential_cases…) checked against the evidence ledger before writeup. |
-| **Capability sandbox** | An accepted declaration also arms a task-scoped sandbox: network and device access are deny-by-default, derived from the contract's constraints, and expire with the task. `/cap` grants or withdraws one mid-run and reads the action log — every gated command with its decision and origin. The base approval policy still runs underneath. |
-| **Metacognition layer** | Evidence ledger (`ev_NNN`) + hypothesis stack (`H-NNN`): every tool result is stamped and cited; contradictions halve a claim's confidence and cascade to derived claims — enforced by host code. (See [How 0xAF-Re differs from REA](#how-0xaf-re-differs-from-rea).) |
-| **Session resume** | Append-only JSONL transcripts; `--resume <hash|id>` / `--continue` / `/sessions`; crash-safe repair of dangling tool calls; `/new` starts a fresh session. |
-| **Context compaction** | Mechanical elision every request + `/compact`; optional `snapcompact` archives dropped history as PNG frames a vision model reads back. |
-| **Reference context** | `--context "know:…"` seeds the system prompt from the knowledge base, `--context "file:…"` from a workspace file, raw notes pass through. |
-| **Knowledge & skills** | `/know` search + synthesis from the local knowledge index; built-in RE skills; MCP servers join the same tool registry. |
-| **Approvals, live** | Tiered policy (read/write/exec) with safety-concern prompts; one-shot runs ask **y/a/d/n** interactively on a TTY instead of restarting with new flags. |
-| **Remote mode** | Background SSH connections to saved machines; plan locally, execute remotely from the same window. (See [Remote mode](#remote-mode).) |
-| **Publishing** | `go install @vX.Y.Z` plus GitHub Releases with prebuilt darwin/linux binaries on every tag. |
+| **Dual Surfaces, One Core** | Static Go binary serving both the **Terminal Command Deck** (90ms live HUD) and the **Wails v2 Native Desktop + Zero-Install Web 3D Workbench** (`https://overkazaf.github.io/re-agent/gui-demo/`). |
+| **Standardized `re-agent` Governance** | Five Defenses, 7-State `Investigation State` dossier (`Target ≠ Objective`), 4 rotating runtime roles, 5 trust & cost metrics, 7 completion gates, and 3 handover readiness questions ([`docs/WORKFLOW_STANDARD.md`](docs/WORKFLOW_STANDARD.md)). |
+| **3D Forensic Theater** | Custom GLSL anti-aliased radar sweep floor, Fresnel holo-sculptures across 7 stations, dual-rail optical phase bus, curved 3D Bezier causal proof arcs + directional signal photons, clickable 3D pills + Forensic Node Inspector + Collapsible Node Explorer (`I`), camera presets (`1–4`), and visibility-aware Adaptive HD (`1.5x`) / ECO (`1x`) rendering. |
+| **Pro Workbench UX** | 10 curated WCAG AA+ themes (including daylight lab `paper`), portal `ProSelect` & `HintOverlay`, keyboard-first Command Palette (`⌘K`), Shortcuts Cheat Sheet (`?`), Binary Forensic Radar, Deductive Proof Narrative & Writeup Studio (`0xaf-re/forensic-bundle/v1`), local state cache, and proactive LLM startup greeting. |
+| **Multi-Role AI Routing** | Decoupled `planner`, `executor`, `researcher`, and isolated `auditor` seats across OpenAI Responses/Chat, Anthropic, Gemini, DeepSeek, GLM, and local CLIs (`codex`, `claude`) — re-routable mid-turn. |
+| **RE Toolchain & Skills** | **34 built-in Go RE tools** (CLI & GUI parity), **30 embedded RE skills**, local knowledge indexing (`/know`), and MCP server tool federation. |
+| **Remote & Long-Run Resilience** | Persistent AES-256-GCM encrypted background SSH execution (`remote_exec`), crash-safe JSONL `--resume`, mechanical compaction + `/compact`, and `snapcompact` PNG frame archiving. |
+| **Engineering Verification** | **21 Go test packages** (core + GUI) · **14 frontend Vitest suites (129 unit tests)** · **Go headless GUI E2E + Playwright E2E** (runtime & web demo). |
 
-## Demos
+---
 
-Real terminal output, captured from the actual binary:
+## Standardized `re-agent` Architecture
+
+0xAF-Re implements the complete **`re-agent` Reference Standard** defined in [`docs/WORKFLOW_STANDARD.md`](docs/WORKFLOW_STANDARD.md) across the Go runtime, Wire DTOs, and GUI views.
+
+### Five Defenses
+
+| # | Agent Failure Mode | Defense Layer | Host-Enforced Invariant |
+| :-: | --- | --- | --- |
+| ① | Monolithic permissions leak host secrets (e.g., reading out-of-scope `SOLUTION.txt` or credentials) | **Capability Sandbox** | Task-scoped minimal permissions (`network` / `device` deny-by-default), expiring on task completion or rollback; every gated command logs tool, capability, SHA-256, decision, origin, and bound `hypothesisId` into `Action State`. |
+| ② | Raw observations, untrusted sample strings, and model summaries blur together; symbol/string prompt poisoning | **Evidence Ledger** | Append-only immutable `evidence-ledger.jsonl` (`ev_NNN`) recording source tool, view (`static`/`dynamic`), artifact path, and SHA-256; raw sample outputs carry `untrustedInput: true` (`UNTRUSTED DATA` isolation — data only, never instructions). |
+| ③ | Hypotheses live as prose in chat history; narrative lock-in burns dozens of turns on a wrong guess | **Hypothesis Manager** | Structured `H-NNN` records with `claim`, `scope`, `confidence`, `supporting`, `contradicting`, `falsifiers`, `next_test`, and `dependsOn`; contradictions halve confidence and cascade `weakened` / `frozen` / `reevaluate` across derived claims. |
+| ④ | Unverified scripts, hardcoded outputs, or single-sample hits claimed as "algorithm recovered" | **Execution Verifier** | Separates `candidate` from `verified`; requires build, fixed-input replay, boundary/failure cases, and differential checks (`verify_artifact`). Single-sample hits (`total < 2`) remain locked as `candidate`. |
+| ⑤ | No explicit stop condition; fluent writeups mask missing proof or scope violations | **Adversarial Auditor** | Isolated, zero-history, tool-free context (`Isolated=true`, `FreshSession=true`, `Tools=[]`) evaluating a mandatory **5-item checklist** (`direct_evidence`, `failure_edge_coverage`, `simpler_alternative`, `scope_overreach`, `artifact_lineage`) to issue a 3-state verdict: `accepted` \| `rejected` \| `needs_more_evidence`. |
+
+### 7-State `Investigation State` Dossier
+
+`Investigation State` is the resumable cross-turn, cross-model, cross-tool dossier. The model reads compact digests; the Go host owns full records and gate decisions:
+
+| # | State Domain | Question Answered | Key Fields & Host Ownership |
+| :-: | --- | --- | --- |
+| **1** | **Target State** | *Which exact sample & version?* | `file`, host-computed `sha256`, `arch`, `format`, `version`, `scope` — **strictly separated from Objective State** so one target can serve multiple scoped objectives without goal drift. |
+| **2** | **Objective State** | *What must be proven & when to stop?* | `primary`, `intent`, `deliverables`, `constraints`, `stopConditions`, `acceptance` — drafted via `/goal`, armed by operator `/goal accept`. |
+| **3** | **Evidence State** | *What did real tools observe?* | Append-only `ev_NNN`, `source`, `kind`, `view`, `artifact`, `sha256`, `untrustedInput`, `excerpt`, `verification` — model may only cite IDs, never forge or edit. |
+| **4** | **Hypothesis State** | *What competing explanations exist?* | `H-NNN`, `claim`, `scope`, `confidence`, `supporting`, `contradicting`, `falsifiers`, `nextTest`, `dependsOn`, `derived`, `status`, `experiments`. |
+| **5** | **Action State** | *Which privileged actions ran & why?* | `at`, `tool`, `capability`, `subject`, `sha256`, `decision` (`granted`/`denied`/`unmanaged`), `origin`, and bound `hypothesisId` (answering which `nextTest` motivated the action). |
+| **6** | **Verification State** | *Is the rebuilt artifact behaviorally equivalent?* | `build`, `passed`, `total`, `status` (`candidate` \| `verified`), `boundaryPassed`, `differentialCases`, `uncoveredPaths`. |
+| **7** | **Audit State** | *Did an independent reader find gaps or overreach?* | `verdict` (`accepted` \| `rejected` \| `needs_more_evidence`), `checks[5]`, `auditorProvider`, `findings`. |
+
+### 4 Rotating Runtime Roles & Control Loop
+
+Rather than a rigid linear script, the control plane dynamically rotates across four runtime roles per action cycle:
+
+**`Tool Router`** ⇄ **`Evidence Ledger`** ⇄ **`Execution Verifier`** ⇄ **`Adversarial Auditor`**
+
+```mermaid
+flowchart LR
+    G["① /goal Contract\nTarget ≠ Objective"] --> S["② Static Forensics\nTRI · STA · EVI"]
+    S --> H["③ Hypothesis Modeling\nIFC · HYP\n(scope / falsifiers / next_test)"]
+    H --> D["④ Hypothesis-Bound Dynamic Run\nDYN + Capability Sandbox"]
+    D -->|Contradiction / Falsified| RB["Confidence Halving\n+ Cascade Rollback"]
+    RB --> H
+    D --> V["⑤ Execution Verifier\nVER: candidate → verified"]
+    V -->|Single-Sample / Edge Missing| H
+    V --> A["⑥ Isolated Adversarial Audit\nAUD: 5-Item Checklist"]
+    A -->|needs_more_evidence| H
+    A -->|rejected| RB
+    A -->|accepted| W["⑦ Evidence-Anchored Delivery\nWRI: Writeup + Known Unknowns"]
+```
+
+[Open the exportable architecture map](docs/diagrams/0xaf-re-agent-architecture.html), browse the [diagram index](docs/diagrams/), or read the [Go Core → DTO → GUI mapping in `WORKFLOW_STANDARD.md`](docs/WORKFLOW_STANDARD.md).
+
+### 5 Trust & Cost Metrics
+
+Report fluency is decoupled from engineering trustworthiness through five live metrics surfaced in the Telemetry bar and Investigation Dossier:
+
+| Metric | Key | Definition |
+| --- | --- | --- |
+| **Evidence Coverage** | `evidence_coverage` | Fraction of active conclusions directly backed by valid, non-error `ev_NNN` observations in the ledger. |
+| **Replay Pass Rate** | `replay_pass_rate` | Reconstructed artifact pass rate (`passed / total`) across fixed, boundary, failure, and differential test vectors. |
+| **Wrong-Hypothesis Lifetime** | `wrong_hypothesis_lifetime` | Turns, evidence steps, and tokens spent before a false hypothesis is weakened, rejected, or cascade-rolled back. |
+| **Overreach Count** | `overreach_count` | Out-of-scope file, network, device, or credential attempts (distinguishing sandbox-blocked attempts vs. unblocked overreach). |
+| **Cost per Accepted Finding** | `cost_per_accepted_finding` | Total model token, tool, and runtime cost (USD) amortized per audit-accepted finding. |
+
+### 7 Completion Gates & 3 Handover Questions
+
+A reverse-engineering run reaches `WRI [9/9]` delivery only when all **7 Completion Gates** pass:
+
+1. **Reproducible Target & Scope** — `Target State` (host SHA-256, arch, format, scope) and `Objective State` are separated and locked.
+2. **All Key Claims Ledger-Backed** — Every active conclusion traces directly to append-only `ev_NNN` records.
+3. **Hypotheses Tested & Resolved** — Core hypotheses are verified, falsified, or cleanly cascaded with no dangling `reevaluate` rows.
+4. **Multi-Dimensional Artifact Verification** — Build, fixed replay, boundary/failure, and differential checks achieve `verified` status.
+5. **High-Risk Actions Audited** — Every dynamic or external action passed `Capability Sandbox` and logged an `ActionRecord`.
+6. **Clean Adversarial Audit** — Isolated `Adversarial Auditor` passes all 5 checks and returns `accepted`.
+7. **Explicit Bounds & Unknowns** — Final report states Known Unknowns, `uncoveredPaths`, and `nextTest`.
+
+Every delivered dossier and exported bundle directly answers the **3 Handover Questions**:
+1. **Which run produced this conclusion?** (Session ID, `evidence-ledger.jsonl` path, `ev_NNN` IDs, and artifact SHA-256)
+2. **Can another model or tool reproduce it?** (Standalone replay & differential verification commands with fixed input vectors)
+3. **Which layer caused any failure or drift?** (Explicit attribution across **`model` / `tool` / `environment` / `data`**)
+
+### How 0xAF-Re Differs from REA
+
+[REA](https://github.com/morluto/rea) pioneered several ideas this project adopts — an evidence ledger for tool observations, provider isolation with no silent fallback, and pairing static and runtime views. 0xAF-Re pairs honest tools with **first-class host-side belief governance** (full rationale in the [design analysis blog](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/)):
+
+| Dimension | REA (MCP Tool Server) | 0xAF-Re (Verifiable RE Agent & Workbench) |
+| --- | --- | --- |
+| **Shape** | Exposes Ghidra/IDA/LLDB-style tools to an external MCP host. | One static Go binary owns the loop, 4 model seats, capability sandbox, 34 built-in tools, TUI, and Desktop/Web 3D Workbench. |
+| **Evidence** | Evidence ledger with integrity policy. | Auto-stamps every tool result `ev_NNN`, marks `UNTRUSTED DATA`, persists to `evidence-ledger.jsonl`, and survives compaction & `--resume`. |
+| **Hypotheses** | Implicit narrative inside the client model's context. | Explicit `H-NNN` stack (`scope` / `falsifiers` / `next_test`); contradictions halve confidence and cascade rollback deterministically in Go. |
+| **Context Pressure** | Client agent holds the reasoning narrative. | Ledger digests and hypothesis state are injected fresh per turn while old history elides or archives via `snapcompact`. |
+| **Verification & Audit** | External to the server. | Built-in `verify_artifact` (`candidate` vs `verified`), real-time static-vs-dynamic arbitrator, and isolated zero-history `/audit` 5-item gate before writeup. |
+
+---
+
+## 3D Forensic Theater & Pro Workbench
+
+Built with **Wails v2** (Go backend + native system WebView) plus a **zero-install browser build** hosted on GitHub Pages. It shares the exact same Go core, sessions directory, 34 built-in tools, capability sandbox, and evidence ledger as the terminal CLI — a visual command deck over the same engine, not a fork.
+
+> **Try it in your browser right now (zero install, zero API key):**
+> **[https://overkazaf.github.io/re-agent/gui-demo/](https://overkazaf.github.io/re-agent/gui-demo/)**
+
+```bash
+make gui            # build native desktop app -> gui/build/bin/0xAF-Re GUI.app
+make gui-dev        # live-reload desktop dev mode
+make gui-demo       # run browser-only interactive sandbox locally
+make gui-demo-build # build static web bundle -> docs/gui-demo/
+```
+
+### 3D Forensic Theater (Geek Cyber-Forensic Command Deck)
+
+The workbench boots into a live **3D Forensic Theater** (Three.js + React Three Fiber), with the classic multi-pane workbench one click away (`▣ Classic` / `◈ 3D Theater`):
+
+- **Cyber-Forensic Tactical Stage**: Custom GLSL anti-aliased radar sweep floor, graduated 360° telemetry compass ring, counter-rotating calibration arcs, GPU-driven ambient telemetry particles, **Fresnel + wireframe holo-sculptures** for all 7 workflow stations (`TRI` → `SCR` → `HYP` → `EXP` → `VER` → `AUD` → `DEL`), procedural disassembly glass plates on `SCR`, and a **dual-rail optical phase bus** streaming luminous data packets along completed segments.
+- **3D Causal-Optics Evidence DAG**: Curved quadratic-Bezier causal proof arcs, pooled directional signal photons, distinct evidence polyhedron archetypes (`static`, `dynamic`, `verify`, `audit`), confidence-scaled `H-NNN` prisms with orbiting gauge rings, and click/hover **causal proof-chain spotlighting** (green support arcs, red jittering contradiction arcs).
+- **3D Forensic Node Inspector & Collapsible Node Explorer (`I`)**: Click any 3D pill (`H-NNN`, `ev_NNN`, `TRI..DEL`) directly in space or pick it from the `I` Node Explorer drawer to inspect full `claim` / `scope` / `falsifiers` / `nextTest` / experiments, copy raw evidence `excerpt` and `SHA256` with one click, and fly the camera seamlessly across linked nodes.
+- **Camera Pilot & Visibility-Aware Adaptive Performance**:
+  - 4 calibrated camera presets (`1` Overview · `2` Tactical · `3` Hypothesis Tower · `4` Top-Down Radar), `Space` cinematic turntable (pauses automatically on drag), `R` reset, live zero-rerender `AZ / EL / D` camera telemetry, and `Grid / Holo / Labels` layer toggles.
+  - **Adaptive HD (`1.5x` DPR) / ECO (`1x` DPR) Rendering**: tracks foreground frames while ignoring blurred windows and GC pauses; automatically steps down to ECO after sustained `<22fps` instead of force-kicking users out of 3D, sets `frameloop="never"` for **0% background-tab GPU usage**, and supports true **OS Fullscreen** with LIFO `Esc` stack dismissal. (Hard prerequisites `no-webgl` or `prefers-reduced-motion` fall back gracefully to Classic view.)
+- **Guided Hypothesis Flow**: A context-aware advice bar walks operators from falsifiable claim → sandbox-scoped experiment config → `verify_artifact` replay → adversarial audit sign-off, routing failures back to prefilled revision steps.
+
+| <img src="docs/shots/gui-3d-overview.png" width="440" alt="3D Forensic Theater overview"> | <img src="docs/shots/gui-3d-wizard.png" width="440" alt="Guided experiment wizard with sandbox scope"> |
+| :---: | :---: |
+| **3D Forensic Theater** — GLSL radar floor, 7 holo stations, dual-rail phase bus & live causal DAG | **Guided Experiment Wizard** — hypothesis-bound experiments with live sandbox-scope warnings |
+| <img src="docs/shots/gui-3d-amber.png" width="440" alt="3D theater in the Amber P3 theme"> | **Theme-Synced 3D Materials** — all 10 palettes (including daylight `paper`) dynamically drive 3D shaders, wireframes, and HUD surfaces |
+
+### Pro Workbench UX & Visual Craft
+
+- **10 Curated WCAG AA+ Themes** across 3 families — *CRT Phosphor* (`deck`, `amber`, `matrix`, `mono`), *Forensic IDE* (`obsidian`, `nord`, `dracula`, `solarized`, `crimson`), and *Daylight Lab* (**`paper`** zero-glare light theme) — plus 3 CRT atmosphere modes (`refined`, `calm`, `vivid`). Powered by zero-dependency portal **`ProSelect`** dropdowns (color swatches, option groups, quick search, keyboard nav) and a unified portal **`HintOverlay`** contextual tooltip system.
+- **Keyboard-First Workflow**: Global fuzzy **Command Palette (`⌘K` / `Ctrl+K`)**, **Shortcuts Cheat Sheet (`?`)**, drag-resizable & collapsible panes with 1-click `↺` layout reset, and immediate slash-command feedback echoed cleanly across **Transcript + Toast + NoticeLog**.
+- **Binary Forensic Radar (`BinaryTerrainPanel`)**: Pure-Go ELF/PE/Mach-O section map with RWX/constructor flags, **Mitigation Posture Bar** (`PIE` / `NX` / `RELRO` / `CANARY` / `RWX` / Shannon peak entropy), exact **VA / File Offset / RVA copy chips**, carved payload & anti-analysis hotspots, patch diff hunks, and a **Static-vs-Dynamic alignment matrix** flagging single-view blind spots.
+- **Deductive Proof Narrative & Writeup Studio**:
+  - **Proof Narrative Panel**: Complete 6-chapter chronological reasoning story + per-hypothesis **5-beat proof arcs** (`Trigger → Claim → Observation → Deduction → Next`) with inline expandable `ev_NNN` excerpts and *"Expected vs. Observed"* contrast callouts.
+  - **Writeup Studio**: 3 exportable Markdown templates (*0xAF Evidence-Loop Standard*, *CTF Writeup*, *Algorithm & Interface Reconstruction*) with live GFM preview, 1-click `.md` download, and structured **`0xaf-re/forensic-bundle/v1`** JSON export.
+- **Persistent Local Cache & Proactive LLM Startup Greeting**: Versioned, desktop/demo scope-isolated local cache restores workspace, pane layout, active view, and recent investigation snapshots (up to 8 sessions) immediately on open, while asynchronously calling your configured LLM (15-minute TTL cache) to greet you and propose 1-click next tasks (`resume_session`, `run_command`, `send_prompt`, `open_re_picker`).
+
+### GUI Functional Zones & Operation Walkthrough
+
+| Zone | Modules | Responsibilities & Key Actions |
+| :--- | :--- | :--- |
+| **① Top Control Bar** | `TopBar` + Pane Toggles + `ProSelect` | Switch `◈ 3D Theater` ↔ `▣ Classic` ↔ `Shell`, launch `▷ Demo Sandbox`, toggle panes, open `⌘K` palette & `?` shortcuts, pick any of the 10 WCAG AA+ themes |
+| **② Left Navigation Rail** | `SESSIONS` · `SHELLS` | Multi-session concurrency (idle / running / awaiting approval) with mid-turn `Interrupt`, saved session hydration (`resume`), 4-role routing config (`⚙`), embedded PTY terminals (`+ sh`) |
+| **③ Center Focal Stage** | 5-Panel Dashboard · Governance Graph · Binary Forensic Radar · Writeup Studio | Live 90ms `FLOW / TOOLS / PLAN / THINK / TELE`, zoomable multi-role governance graph + cognitive replay, Binary Terrain + Static/Dynamic alignment, 7-State Investigation Dossier & Writeup Studio |
+| **④ Right Forensic & Gate Rail** | `RE WORKFLOW` · `LEDGER 🔒` | Tracks `TRI → … → WRI [9/9]` hard gates; inspects immutable `ev_NNN` (with `UNTRUSTED DATA` tags) & `H-NNN` hypotheses; launches the Scientific RE Hypothesis & Experiment Workbench |
+| **⑤ Middle Transcript Stream** | `TRANSCRIPT` + `WelcomeGreetingCard` | Proactive startup greeting & 1-click next actions, time-stamped (`t+Xs`) wire frames, tool runs, immediate slash-command outputs, and Markdown replies |
+| **⑥ Bottom Command Deck & Gate** | `PromptInput` + `ApprovalDialog` | Slash completions, mid-turn prompt queueing & `■ stop` interrupt, and risk-coded tiered approval dialogs (`deny` focused by default) |
+
+| Operation View | What It Demonstrates |
+| :--- | :--- |
+| <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI Semantic Color Zones & Forensic Ledger"> | **Semantic Color Zones & Immutable Ledger**: Cyan `FLOW`, Emerald/Crimson `TOOLS`, Amber `PLAN`, Violet `THINK` & `RE WORKFLOW [9/9]`, and Emerald Spotlight `LEDGER 🔒` (`ev_NNN` / `H-NNN`). |
+| <img src="docs/shots/gui-governance-graph.png" width="440" alt="Multi-Role Governance Graph & Replay"> | **Multi-Role Governance Graph & Cognitive Replay**: Planner / Executor / Auditor swimlanes, Gate 1/2 security checks, zoom/fullscreen, and step-by-step cognitive replay. |
+| <img src="docs/shots/gui-provenance-dag.png" width="440" alt="Live Provenance Citation DAG"> | **Live Causal Provenance DAG**: Dynamic `ev_NNN ↔ H-NNN` support/contradiction edges, confidence halving (`H-002 [REJECTED]`), and `AUDIT & DELIVERY VERDICT` gate. |
+| <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="Scientific RE Hypothesis & Experiment Workbench"> | **Scientific RE Workbench**: Create/edit falsifiable hypotheses (`H-005`) and execute live host probes (`exp_01 [PASSED]`) — only real host execution mints immutable `ev_NNN`. |
+| <img src="docs/shots/gui-writeup-studio.png" width="440" alt="6-Stage Alignment & Structured Conclusion Studio"> | **6-Stage Cognitive Alignment & Writeup Studio**: 7-State Investigation Dossier, 4-Pillar Structured Conclusion Matrix, Proof Narrative, and citation-anchored Markdown / JSON export. |
+| <img src="docs/shots/gui-role-config.png" width="440" alt="4-Role AI Agent Configuration"> | **4-Role AI Agent Routing (`amber` theme)**: Visual routing for `planner`, `executor`, `researcher`, and isolated `auditor` persisted to `~/.0xaf-re-agent/ui.json`. |
+
+> **GUI notes:** Sending bare `/workflow reverse` in the GUI opens a native sample-type + starter-prompt picker dialog (whereas the terminal picker reads stdin); `/workflow reverse <sample-type>` works directly in both surfaces.
+
+---
+
+## Terminal Demos
+
+Real terminal output captured from the compiled binary:
 
 | Demo | Description |
 | --- | --- |
-| <img src="docs/shots/dashboard.png" width="420"> | Live dashboard mid-turn (FLOW / TOOLS / PLAN / THINK / TELE). |
-| <img src="docs/casts/dashboard.gif" width="280"> | Same view, animated. |
-| <img src="docs/shots/sessions.png" width="420"> | `/sessions` — hash aliases for `--resume`. |
-| <img src="docs/shots/help.png" width="420"> | The command deck. |
+| <img src="docs/shots/dashboard.png" width="420" alt="Live terminal dashboard"> | Live dashboard mid-turn (`FLOW` / `TOOLS` / `PLAN` / `THINK` / `TELE`). |
+| <img src="docs/casts/dashboard.gif" width="280" alt="Animated terminal dashboard"> | Same view, animated. |
+| <img src="docs/shots/sessions.png" width="420" alt="/sessions output"> | `/sessions` — hash aliases for `--resume`. |
+| <img src="docs/shots/help.png" width="420" alt="/help command deck"> | The terminal command deck. |
 
-Animated cast walkthroughs (SVG, render inline): [quickstart](docs/casts/quickstart.svg) · [deck](docs/casts/deck.svg) · [scan](docs/casts/scan.svg).
+Animated SVG walkthroughs: [quickstart](docs/casts/quickstart.svg) · [deck](docs/casts/deck.svg) · [scan](docs/casts/scan.svg).
 
 More static captures: [boot](docs/shots/boot.svg) · [reply](docs/shots/reply.svg) · [approval](docs/shots/approval.svg) · [auth](docs/shots/auth.svg) · [tools](docs/shots/tools.svg) · [providers](docs/shots/providers.svg) · [palette](docs/shots/palette.svg) · [shell](docs/shots/shell.svg) · [verify](docs/shots/verify.svg).
-
-Quick taste:
 
 ```bash
 0xaf --smoke                                  # offline wiring check
@@ -109,91 +277,11 @@ Quick taste:
 0xaf --context "know:android packer" -p "identify the packer"
 ```
 
-## Architecture
-
-The core is a small loop:
-terminal input enters a Go host, the host routes each turn by role/provider/model,
-workflow mode shapes the context, and local evidence tools feed facts back into
-the next turn.
-
-[Open the exportable architecture map](docs/diagrams/0xaf-re-agent-architecture.html)
-or browse the [full diagram index](docs/diagrams/).
-
-| Layer | Design Intent |
-| --- | --- |
-| Terminal surface | Keep queueing, slash commands, shell escapes, and live HUD in one workspace. |
-| Agent loop | Route planner/executor/researcher seats, compact context, stream events, and persist JSONL sessions. |
-| Evidence line | Every completed tool result appends to `evidence-ledger.jsonl` beside the session (`ev_NNN`); `verify_artifact` writes build/replay/diff outcomes as `verification_result`; `hypothesis_create`/`hypothesis_update`/`hypothesis_list` maintain the single host-side hypothesis stack (`H-NNN`). Reverse phase gates read this ledger and stack, making verification and audit hard preconditions for writeup instead of adjectives in the report. |
-| Metacognition layer | Keep evidence (`ev_NNN`) and assumptions (`H-NNN`) as host state outside the transcript: stamp every tool result, inject the ledger digest and hypothesis stack into the system prompt, and downgrade/cascade deterministically. A rule-based arbitrator cross-checks the ledger against the stack after every tool result; `/audit` re-judges the stack from a second model in a context-isolated run. |
-| Workflow modes | Use specialist routes when available; otherwise split RE tasks into bounded local-evidence executor packets. |
-| Policy gate | Keep reads workspace-scoped and require explicit approval for writes, network, sensitive paths, and risky commands. |
-| Evidence layer | Prefer direct local facts from `/scan`, radare2, JADX, Frida, angr, Burp/mitmproxy, skills, and knowledge before model claims. |
-
-## Developer Highlights
-
-If you build agents, 0xAF-Re is a compact RE-focused reference implementation:
-one Go binary with provider routing, tool governance, live telemetry,
-prompt/skill overrides, queueing, and audit logs. It is small enough to read,
-but opinionated enough to show the parts most agent demos skip. The full
-design lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-- **Single-file install feel:** one static binary with embedded prompts & skills,
-  no Node or Python runtime required in the core loop.
-- **Composable model seats:** planner, executor, and researcher can use
-  different providers, models, and editable prompts.
-- **Evidence-first workflows:** specialist routes use GPT Cyber / CC CVP / Grok
-  style subscriptions directly; caveman mode isolates ordinary executors to
-  read-only local evidence packets.
-- **Metacognition as host state:** the evidence ledger and hypothesis stack live
-  outside the transcript, so contradictions survive compaction and `--resume`
-  replays them; downgrade and cascade rules are deterministic Go, not prompt
-  etiquette.
-- **Visible agent loop:** HUD, trace lines, token/timing telemetry, task state,
-  and JSONL sessions make each turn debuggable.
-- **Hackable surface area:** built-in RE tools, MCP tools, skills, knowledge
-  import, project-local overrides, and runtime queue editing.
-
-### How 0xAF-Re differs from REA
-
-[REA](https://github.com/morluto/rea) pioneered several ideas this project
-adopts — an evidence ledger for tool observations, provider isolation with no
-silent fallback, and pairing static and runtime views. 0xAF-Re started as a
-different shape (a self-contained agent rather than an MCP tool server) and now
-closes the loop by making evidence and assumptions *first-class host state*.
-The full design rationale lives in the [blog
-analysis](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/).
-
-| Dimension | REA (MCP tool server) | 0xAF-Re (terminal agent) |
-| --- | --- | --- |
-| Shape | Exposes Ghidra/IDA/LLDB-style tools to any MCP-capable agent host. | One Go binary owns the loop, the seats, the policy gate, and the tools. |
-| Evidence | Evidence ledger with integrity policy; results recorded and kept available. | Same idea, wired into the loop: every tool result is auto-stamped `ev_NNN`, capped to a 400-char excerpt, injected back with its id, and persisted as a session event — so citations survive compaction and `--resume`. |
-| Hypotheses | Implicit; the reasoning narrative lives in the model's context. | Explicit `hypothesis_create/update/list` tools back a host-side stack: `challenge` halves confidence, below 0.25 the row needs re-examination, and reject/revise cascades to derived rows. |
-| Context pressure | Evidence accumulates in the host; the client agent still holds the narrative. | Ledger digests and the hypothesis stack are injected per turn, while raw history keeps eliding — state is not a casualty of compaction. |
-| Audit / verification | Not built in. | Built in: `/audit` re-judges the stack from a second model in a context-isolated, tool-free run; a deterministic arbitrator cross-checks static vs dynamic claims after every tool result; reverse phase gates require a `verification_result` and an `audit_finding` before writeup. |
-
-In short: REA gives an external agent *honest tools*; 0xAF-Re keeps honest
-tools *and* makes the agent's own beliefs inspectable, downgradable, and
-recoverable — the parts of the analysis that usually live (and die) in a
-vanished context window.
-
-## Project Motivation
-
-0xAF-Re grew out of daily authorized RE/CTF work where coding-agent risk
-controls tightened and general models became more cautious around
-reverse-engineering language. The goal is not to hide intent. The agent keeps
-work local, authorized, and auditable, then improves the experience by splitting
-roles and composing models.
-
-- **Model composition:** use one model for planning, another for tool execution,
-  and a researcher role for background context.
-- **Specialist routes:** GPT Cyber, Claude Code CVP, Grok, or similar
-  security-research-friendly routes make `workflow auto` smoother.
-- **Ordinary-provider path:** caveman mode narrows the task into local evidence
-  packets so cautious executors can still collect file facts safely.
-- **Roadmap:** local models and reproducible benchmark cases will be added so
-  provider/workflow quality can be measured and improved over time.
+---
 
 ## Install
+
+### Recommended (`go install`)
 
 ```bash
 go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
@@ -201,7 +289,18 @@ go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
 0xaf --welcome
 ```
 
-From source:
+### Prebuilt Binaries (No Go Toolchain Needed)
+
+Every release tag ships prebuilt `darwin`/`linux` (`amd64`/`arm64`) static binaries via GitHub Releases:
+
+```bash
+# Example: download and run the darwin-arm64 build of v0.1.20
+curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.20/0xaf-darwin-arm64 -o 0xaf
+chmod +x 0xaf
+./0xaf --version
+```
+
+### From Source (`main`)
 
 ```bash
 git clone https://github.com/overkazaf/re-agent
@@ -210,30 +309,14 @@ make build
 ./bin/0xaf --version
 ```
 
-`go install ...@v0.1.20` is the recommended install path. `@main` can lag behind
-through the Go module proxy cache, and `@latest` resolves to the newest tag.
+> **Go version requirements:** Installing `@v0.1.20` requires **Go 1.21+**; building `main` from source requires **Go 1.26+** (`go.mod` declares `go 1.26.0`). On macOS, an older toolchain can produce binaries rejected by `dyld` (`dyld: missing LC_UUID`) — upgrade Go or use the prebuilt GitHub Release binaries.
 
-**Installing `@v0.1.20` needs Go 1.21 or newer** (that tag declares `go 1.21`);
-**building `main` needs Go 1.26 or newer** (`go.mod` on main now declares
-`go 1.26.0`). On macOS, an older toolchain can produce binaries the system dyld
-refuses (`dyld: missing LC_UUID`) — upgrade Go or take the prebuilt binaries
-from GitHub Releases.
-
-Prebuilt binaries are attached to every release tag by
-`.github/workflows/release.yml` (darwin/linux, amd64/arm64) — no Go toolchain
-needed:
-
-```bash
-# example: download and run the darwin-arm64 build of v0.1.20
-curl -sL https://github.com/overkazaf/re-agent/releases/download/v0.1.20/0xaf-darwin-arm64 -o 0xaf
-chmod +x 0xaf
-./0xaf --version
-```
+---
 
 ## Quick Start
 
 ```bash
-0xaf --smoke                    # offline wiring check, no API key required
+0xaf --smoke                         # offline wiring check, no API key required
 0xaf --workspace ./demos/reverse-lab
 ```
 
@@ -246,17 +329,16 @@ Inside the REPL:
 /help
 ```
 
-The live dashboard redraws every 90ms, which fills the terminal scrollback with
-frames. When that gets noisy:
+Quieter scrollback options (the default live HUD redraws every 90ms):
 
 ```bash
-0xaf --refresh calm            # 500ms animation, quieter scrollback
-0xaf --refresh off             # redraw only on changes
-0xaf --flow off                # no dashboard at all (trace stays)
-# or, inside the REPL: /refresh calm | /refresh off | /flow off
+0xaf --refresh calm                  # 500ms animation, quieter scrollback
+0xaf --refresh off                   # redraw only on changes
+0xaf --flow off                      # disable dashboard (trace stays)
+# Or inside the REPL: /refresh calm | /refresh off | /flow off
 ```
 
-The default route uses local CLIs when available. Check what 0xAF-Re can see:
+Verify available local CLI and API routes:
 
 ```bash
 0xaf auth status
@@ -264,14 +346,15 @@ codex login status
 claude auth status --text
 ```
 
-Inside the REPL, use `/auth` for the same check. Prefix raw CLI commands with
-`!`, for example `!codex login status`.
+Inside the REPL, run `/auth` (or prefix raw commands with `!`, e.g., `!codex login status`).
+
+---
 
 ## Basic Demos
 
-Use the built-in demo workspace first, then replace paths with your own files.
+Start with the bundled demo workspaces (`demos/reverse-lab`, `demos/welcome`), then swap in your own targets:
 
-| Goal | Start With |
+| Goal | Command |
 | --- | --- |
 | Open the guided tour | `0xaf --welcome` |
 | Verify offline wiring | `0xaf --smoke` |
@@ -285,24 +368,20 @@ Use the built-in demo workspace first, then replace paths with your own files.
 | Carve embedded payloads | `/carve ./blob` |
 | Decode a token or flag-like string | `/decode auto ZmxhZ3s...` |
 | Inspect an APK (manifest + native libs + packers) | `/apk ./app.apk` |
-| Check local RE tools | `/retool inventory` |
+| Check local RE tool availability | `/retool inventory` |
 | Prepare mobile/API traffic capture | `/retool mitmproxy template api.example.test` |
 | Ask for a solve plan | `0xaf --role planner -p "triage ./chall and propose next checks"` |
 | Run delegated local evidence mode | `0xaf --workflow caveman -p "triage ./app.apk"` |
 
-The fast path does not need a model: `/scan`, `/inspect`, `/anti`, `/diff`,
-`/decode`, `/entropy`, `/mitigations`, `/carve`, and `/apk` are direct local tools.
+> `/scan`, `/inspect`, `/anti`, `/diff`, `/decode`, `/entropy`, `/mitigations`, `/carve`, and `/apk` run locally in pure Go at **zero token cost**.
 
-## Worked Case: solve a challenge end to end
+---
 
-Everything below is a real run against `demos/welcome`, which ships with the
-repo. The plan text, the commands, the timings and the answer are copied from
-the session transcript — you can reproduce it with the same two lines.
+## Worked Case: Solve a Challenge End to End
 
-### Case A — no model at all
+Everything below is reproduced from a real session against `demos/welcome`, which ships with this repository.
 
-`demos/welcome/chall.js` compares your input against a token it builds at
-startup. Before asking anyone to think, look at the file:
+### Case A — Zero-Token Local Fast Path
 
 ```bash
 0xaf --workspace ./demos/welcome
@@ -320,26 +399,16 @@ startup. Before asking anyone to think, look at the file:
 # accepted
 ```
 
-That is the whole solve, at zero token cost. The same shape works on real
-samples: `/scan` to classify, `/hex <file> 0x20` to read the header you care
-about, `/carve` to pull embedded payloads, `/r2 <file>` when you want a
-disassembler instead of an answer.
+### Case B — Agent-Driven Plan, Execution & Verification
 
-### Case B — let the agent run the case
-
-Same workspace, one sentence, and now you can watch it plan:
-
-```bash
-0xaf --workspace ./demos/welcome
-```
+Same workspace, one natural-language prompt:
 
 ```text
 Recover the expected token from chall.js, verify it by actually running the
 checker, and explain how the check works.
 ```
 
-**The planner opens a route.** `codex` writes four steps before any tool runs,
-and the HUD tracks them as they land:
+**1. Planner writes the route:**
 
 ```text
 PLAN 0/4 · via codex
@@ -349,8 +418,7 @@ PLAN 0/4 · via codex
   4  Explain the check in concise solve notes
 ```
 
-**The executor works the steps.** Every command is a real tool call against the
-workspace, gated by the policy and logged in order:
+**2. Executor runs gated local commands — verifying both a positive and a negative case:**
 
 ```text
 rg --files                              inventory the workspace
@@ -362,11 +430,7 @@ node chall.js '0xaf{warmup_deck}'       accepted · exit=0
 node chall.js 'wrong'                   rejected · exit=1
 ```
 
-Note the last two lines. It did not stop at "the token decodes to X" — it ran
-the checker for a **positive and a negative case**, so the claim rests on
-observed behaviour rather than on reading the source correctly.
-
-**The answer arrives with its evidence:**
+**3. Evidence-backed answer lands in the resumable JSONL transcript (`/session`):**
 
 ```text
 Recovered token:   0xaf{warmup_deck}
@@ -380,328 +444,98 @@ accepted and exits 0, otherwise rejected and exit 1.
 ╰─ via codex · role auto · turns 1 · took 1m34s · in 162k out 2.2k think 895 cache 122k
 ```
 
-### What to watch while it runs
+**Mid-turn steering controls** (all apply live without aborting the turn):
 
-The turn is not a black box you wait on. During the run:
-
-| You want | Type this, mid-turn |
+| Need | Mid-Turn Command |
 | --- | --- |
-| See the model's reasoning, not just a 3-line tail | `/think expand` |
-| Get the reasoning out of the way again | `/think collapse` |
-| See every plan step, including the pending tail | `/tasks expand` |
-| Line up the next question without interrupting | `/queue add <text>` |
-| Fix a queued prompt before it runs | `/queue edit <id> <text>` |
-| Swap the model for the rest of the session | `/model executor <name>` |
+| Expand or fold streamed reasoning | `/think expand` · `/think collapse` |
+| Show or fold pending plan steps | `/tasks expand` · `/tasks collapse` |
+| Queue or edit follow-up prompts | `/queue add <text>` · `/queue edit <id> <text>` |
+| Re-route a model seat on the fly | `/model executor <name>` |
 
-Afterwards, `/session` prints the JSONL path. Plan snapshots, tool calls,
-results and token counts are all in there, in order — which is what makes a run
-auditable rather than merely impressive.
+> Reproducing Case B requires a configured planner/executor provider (`--smoke` and `mock` verify wiring offline without calling tools).
 
-> **Reproducing this:** a real planner and executor are needed for Case B.
-> `--smoke` and the `mock` provider verify wiring offline, but mock does not
-> plan and does not call tools, so it cannot produce the run above.
-
-## Desktop GUI
-
-A CRT-styled desktop front end built with Wails v2 (Go backend + system
-WebView). Same core, same sessions directory, same policy engine — the GUI is
-a second face for the agent, not a fork.
-
-```bash
-make gui            # build -> gui/build/bin/0xAF-Re GUI.app
-make gui-dev        # live-reload dev mode
-make gui-demo       # browser-only interactive demo sandbox (no Wails / API key)
-make gui-demo-build # build static demo bundle -> docs/gui-demo/ (GitHub Pages ready)
-```
-
-What ships:
-
-| Surface | What you get |
-| --- | --- |
-| Interactive demo sandbox | Click `▷ 演示环境` in the desktop TopBar (or launch `make gui-demo` in any browser) to walk through 5 guided RE cases — approval-gate branching, 9-phase RE HUD, multi-session queueing & interrupt, direct slash tools + themes + resume, and an interactive xterm shell — with zero API keys or disk writes |
-| Multi-session | Run several agent sessions at once; the sidebar tracks each one's lifecycle (idle / running / awaiting approval) and supports mid-turn `Interrupt` |
-| Live dashboard + 9-phase RE HUD | The TUI's 90ms flow / tools / plan / think / telemetry panels plus the 9-phase RE HUD (`TRI → … → WRI` with live `H:N` / `E:N` counts) |
-| Full 34-tool & sandbox parity | Identical 34 built-in tools (`binary_inspect`, `anti_analysis`, `binary_diff`, `verify_artifact`, `remote_exec`, …), `evidence-ledger.jsonl`, `/goal` contracts, `/cap` sandbox, and `/audit` |
-| Approval gate | Write/exec/network tool calls push a risk-coded dialog with matched safety concerns; allow / allow-always / deny / deny-always round-trips into the session policy |
-| Prompt queue | Prompts sent mid-turn queue automatically and drain in order |
-| Themes | deck / amber / matrix / mono — scanlines and glow throughout, `prefers-reduced-motion` honored |
-| Resume | The session picker lists and hydrates full saved transcripts, task plans, hypotheses, evidence, and active `/goal` sandbox scopes |
-
-### 3D Forensic Theater (default view)
-
-The GUI now boots into a full-3D **forensic ops room** (three.js + react-three-fiber)
-and keeps the classic 2D layout one click away (`▣ 经典视图` / `◈ 3D 剧场` in the
-TopBar, persisted in `localStorage`).
-
-- **9-phase backbone in space**: seven zones — `TRI 三角洲 → SCR 勘查屏 → HYP 假设塔
-  → EXP 实验平台 → VER 验证台 → AUD 审计拱门 → DEL 交付坞` — wired by a glowing
-  phase rail. Completed segments are solid, the active phase pulses, future
-  segments dim; `writeup` finish locks the rail gold.
-- **Evidence DAG grows live**: `H-NNN` prisms scale with confidence (rejected ones
-  sink and fade), `ev_NNN` polyhedra spiral around the hypothesis tower; support
-  edges are green beams, contradictions jitter red. Top-right holo panels carry
-  the transcript tail / token telemetry / queue depth. Click a zone or node to fly
-  the camera; click empty space (or drag-guard miss) to reset.
-- **Guided hypothesis flow** (the fix for "features are scattered"): the advice
-  bar under the TopBar always suggests the next move (`H-001 没有执行过的实验 →
-  去配置实验`). The wizard walks ① falsifiable claim + linked evidence → ②
-  experiment config with **sandbox-scope guidance** (writable paths, network
-  state, out-of-scope warnings) → ③ `verify_artifact` replay → ④ audit sign-off,
-  with failure routing back to a prefilled *revise* step. Every step is
-  skippable; approval gates and interrupts still take priority.
-- **Automatic fallback**: no WebGL, `prefers-reduced-motion`, or sustained <30fps
-  switches back to the classic view with a toast (30s cooldown; `?noFallback=1`
-  disables the sentinel for headless/e2e runs).
-
-| <img src="docs/shots/gui-3d-overview.png" width="440" alt="3D Forensic Theater overview"> | <img src="docs/shots/gui-3d-wizard.png" width="440" alt="Guided experiment wizard with sandbox scope"> |
-| :---: | :---: |
-| **Ops-room overview** — phase rail, zone glyphs, live evidence DAG around the hypothesis tower | **Guided experiment config** — type cards, sandbox scope chips, prefilled command |
-| <img src="docs/shots/gui-3d-amber.png" width="440" alt="3D theater in the amber theme"> | **Theming** — the four CRT palettes drive the 3D wireframe/emissive materials directly |
-
-### GUI Functional Zones & Visual Color Hierarchy
-
-The Desktop GUI and Web Demo Sandbox use **semantic color hierarchy** so focal forensic zones stand apart from secondary telemetry, with every pane supporting **drag-to-resize, per-panel fold toggles, and 1-click `↺` layout reset**:
-
-| Zone | Panels / Modules | Visual Accent (`deck` theme) | Responsibilities & Key Actions |
-| :--- | :--- | :--- | :--- |
-| **① Top Control Bar** | `TopBar` + Pane Toggles | Electric Cyan / Violet Badges | Switch `▣ 五维仪表` ↔ `◈ 机制图谱`, enter `▷ 演示环境` (`◈ 场景库`), collapse/expand `◧ 侧栏 / ⬒ 仪表 / ⬓ 转录 / ◨ 右栏`, switch CRT palette (`deck` / `amber` / `matrix` / `mono`) |
-| **② Left Navigation Rail** | `SESSIONS` · `SHELLS` | Recessed Slate Frame | Create sessions (`+ new`), hydrate saved sessions (`resume`), open 4-role routing config (`⚙`), spawn embedded PTY shells (`+ sh`) |
-| **③ Center Focal Stage (Dual-Mode)** | **Mode A**: 5-Panel Dashboard<br>**Mode B**: `◈ Governance Graph & Writeup Studio` | **Spotlight Layer**:<br>FLOW Cyan · TOOLS Emerald · PLAN Amber · THINK Violet (TELE Recessed) | **Dashboard**: 90ms live wires, tool cards, plan steps, and reasoning tail;<br>**Governance Graph**: zoom/pan + `⛶ 全屏放大`, `▶ 回放思考过程` (frame-by-frame cognitive & ledger replay), **4-Pillar Structured Conclusion Matrix**, and citation-anchored `✎ Writeup Studio` |
-| **④ Right Forensic & Gate Rail** | `RE WORKFLOW` (9-Phase Gate)<br>`LEDGER` (Evidence & Hypotheses) | **Violet** `RE WORKFLOW` +<br>**Emerald Spotlight** `LEDGER 🔒` | **RE WORKFLOW**: tracks `TRI → … → WRI [9/9]` hard gates;<br>**LEDGER (Ground Truth)**: inspects `🔒 IMMUTABLE` `ev_NNN` records & `H-NNN` hypotheses; `+ 假设/实验` / `+ 实跑验证` launches the **Scientific RE Workbench** (create/edit hypotheses & experiments, host-executed `ev_NNN` minting, `verify_artifact` replay, and evidence-cited review sign-offs) |
-| **⑤ Middle Transcript Stream** | `TRANSCRIPT` | Violet-Edged Dark Stream | Time-stamped (`t+Xs`) wire frames, tool runs, reasoning summaries, and Markdown replies |
-| **⑥ Bottom Command Deck & Gate** | `PromptInput` + `ApprovalDialog` | Electric Cyan Command Bar / Amber-Red Approval Overlay | Auto-growing input, `/` slash completions, mid-turn queueing & `■ stop` interrupt; write/exec/network actions trigger tiered approval dialogs (`deny` focused by default) |
-
-### GUI Operation Walkthrough
-
-| Operation View | What It Demonstrates |
-| :--- | :--- |
-| <img src="docs/shots/gui-zones-dashboard.png" width="440" alt="GUI Semantic Color Zones & Forensic Ledger"> | **Semantic Color Zones & Immutable Ledger**: Cyan `FLOW`, Crimson/Emerald `TOOLS`, Amber `PLAN`, Violet `THINK` & `RE WORKFLOW [9/9]`, and Emerald Spotlight `LEDGER 🔒` (`ev_NNN` / `H-NNN`). |
-| <img src="docs/shots/gui-governance-graph.png" width="440" alt="Multi-Role Governance Graph & Replay"> | **Multi-Role Architecture Graph & Cognitive Replay**: `codex sol / gemini 4 carbon` (Planner) + `ds / gemini 4 neon / glm-5.3-flash` (Executor) + `codex sol / gemini 4 carbon / glm-5.3` (Auditor) swimlanes, Gate 1/2 security checks, zoom/fullscreen (`125%`), and 8-frame thought replay. |
-| <img src="docs/shots/gui-provenance-dag.png" width="440" alt="Live Provenance Citation DAG"> | **Live Causal Provenance DAG**: Dynamic `ev_NNN ↔ H-NNN` support/contradiction edges, confidence halving (`H-002 [REJECTED]`), and `AUDIT & DELIVERY VERDICT` gate. |
-| <img src="docs/shots/gui-hypothesis-workbench.png" width="440" alt="Scientific RE Hypothesis & Experiment Workbench"> | **Scientific RE Workbench**: Create/edit falsifiable hypotheses (`H-005`) and run live experiments (`exp_01 [PASSED]`) — only real host execution mints immutable `ev_013`. |
-| <img src="docs/shots/gui-writeup-studio.png" width="440" alt="6-Stage Alignment & Structured Conclusion Studio"> | **6-Stage Cognitive Alignment & Writeup Studio**: 1:1 alignment with the 6 anti-*Commits-to-a-story* stages, **4-Pillar Structured Conclusion Matrix**, and citation-anchored Markdown Writeup export. |
-| <img src="docs/shots/gui-role-config.png" width="440" alt="4-Role AI Agent Configuration"> | **4-Role AI Agent Routing (`amber` CRT theme)**: Live visual configuration for `planner` (`codex-sol`), `executor` (`ds`), `researcher` (`gemini-4-carbon`), and isolated `auditor` (`glm-5.3`). |
-
-Headless smoke & E2E verification (no window needed):
-
-```bash
-go test ./gui/ -run TestE2E -v
-cd gui/frontend && npm run test:e2e && npm run test:e2e-demo
-```
-
-Notes: sending bare `/workflow reverse` in the GUI opens a native sample-type +
-starter-prompt picker dialog (the terminal picker reads stdin); the argument
-form `/workflow reverse <sample-type>` works in both surfaces without any
-picker. Slash commands that read stdin are still refused politely in the GUI.
+---
 
 ## Workflow Modes
 
-Workflow mode is explicit. Default `off` sends prompts unchanged.
+Workflow mode is explicit; default `off` sends prompts unchanged.
 
 | Mode | Use When | Behavior |
 | --- | --- | --- |
-| `off` | default | no workflow wrapper |
-| `auto` | mixed machines | use specialist if a GPT Cyber / CC CVP-style route is configured, otherwise caveman |
-| `specialist` | authorized cyber/CVP-style provider | plan, use skills and local tools, preserve evidence |
-| `caveman` | ordinary providers | planner writes a bounded packet; executor starts fresh with a narrow read-only evidence toolset |
-| `research` | survey work | survey public resources (web, GitHub, arXiv) and produce a sourced report |
-| `writeup` | reporting | turn existing session evidence into a clean structured summary report |
-| `ctf` | one concrete challenge | triage, plan, solve, and verify the exact flag on a single target |
-| `reverse` | goal-driven RE | **interactive**: sample type picker → structured phases (triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup), hacker-mode HUD, `/phase` control, hypothesis/evidence tracking persisted in `evidence-ledger.jsonl` |
-| `engineering` | interface reconstruction | recover a target's protocol/schema into models, client stubs, and tests |
+| `off` | Default | No workflow wrapper |
+| `auto` | Mixed setups | Selects `specialist` if a GPT Cyber / CC CVP-style route is configured; otherwise `caveman` |
+| `specialist` | Authorized security-research routes | Full planning, skills, local tools, and evidence preservation |
+| `caveman` | General-purpose providers | Splits into Planner (`EXECUTOR_PACKET`) → fresh isolated read-only Executor for local file facts → merged transcript |
+| `research` | Literature & background surveys | Surveys public resources (web, GitHub, arXiv) into a sourced report |
+| `writeup` | Reporting | Synthesizes existing ledger evidence into a structured writeup |
+| `ctf` | Single challenge | Triage, plan, solve, and verify the exact flag |
+| `reverse` | Goal-driven RE | **Interactive 9-phase workflow** (`triage → static → dynamic → evidence → interface → hypothesis → verify → audit → writeup`) with sample-type picker (APK, SO/ELF, Mach-O, PE/DLL, firmware, PCAP), hacker-mode HUD, `/phase` control, and hard ledger/verification/audit gates |
+| `engineering` | Interface reconstruction | Recovers protocols/schemas into models, client stubs, and tests |
 
 ```text
+/workflow reverse          # interactive sample picker + 9-phase evidence-gated loop
 /workflow auto
 /workflow caveman
-/workflow research
-/workflow reverse          # interactive: pick sample type, choose a starter prompt
 /workflow engineering
 0xaf --workflow specialist -p "triage ./app.apk"
-0xaf --workflow research -p "survey obfuscation papers on arXiv"
 ```
 
-### Interactive Reverse Workflow
+> **Note on `caveman` mode:** Caveman is not obfuscation or prompt laundering. It narrows an ordinary executor's context to workspace-local, read-only file-fact collection while keeping both phases auditable and refusing unauthorized live-target, credential, persistence, or network work.
 
-`/workflow reverse` launches an interactive session:
-
-1. **Sample type picker** — choose from APK, SO/ELF shared lib, dylib/Mach-O, ELF binary, PE/DLL, firmware blob, or PCAP, each with canned starter prompts.
-2. **Structured phases** — triage → static analysis → dynamic analysis → evidence production → interface recovery → hypothesis revision → verification → audit → writeup. The prompt label shows the active phase: `0xAF[apk|triage] ▸`.
-3. **Hacker-mode HUD** — a distinct RE overlay in the live dashboard shows phase progress, hypothesis count (H:N), and evidence count (E:N).
-4. **Phase control** — `/phase` shows status, `/phase next` advances, `/phase <name>` jumps to a named phase (enforcing all intermediate phase gates).
-5. **LLM-driven state** — the model calls `hypothesis_create`/`hypothesis_update` to manage claims, `evidence_review` to inspect recorded evidence, `verify_artifact` to run build/replay/diff checks, and `update_re_state` to advance phases as analysis progresses. Phase transitions are gate-checked against the unified evidence ledger and hypothesis tracker: entering `static` needs a tool observation, `dynamic` a recorded hypothesis, `verify` a runtime trace or ≥3 static observations, `audit` a `verify_artifact` result, and `writeup` an `audit_finding` (plus any `/goal` acceptance criteria).
-6. **Evidence ledger** — every completed tool result is appended to `evidence-ledger.jsonl` next to the session JSONL, so `ev_NNN` provenance and `H-NNN` hypothesis tracking survive compaction and `--resume`. `verify_artifact` builds an artifact, replays it with fixed args/stdin, and diffs stdout against expected outputs (`verification_result`), while `hypothesis_update` applies deterministic confidence downgrades and cascades across dependent claims.
-
-The "delegated local evidence mode" demo is the `caveman` workflow. It means the
-host splits one operator request into two model calls:
-
-1. **Planner phase:** the planner sees the full authorized RE/CTF task and
-   writes a short plan plus an `EXECUTOR_PACKET`.
-2. **Executor phase:** the executor starts in a fresh isolated context. It sees
-   only that packet, a dedicated executor system prompt, and a narrowed read-only
-   toolset for local evidence.
-3. **Evidence collection:** the executor can list/read/search files, identify
-   file type, hash, strings, byte ranges, entropy, symbols/imports, mitigations,
-   carved signatures, and APK structure.
-4. **Merge:** 0xAF-Re appends both phases to the same session transcript and
-   returns a combined `planner->executor` result.
-
-`auto` is a resolver: it uses `specialist` when a GPT Cyber / CC CVP-style
-provider marker is configured; otherwise it selects `caveman`. True delegated
-caveman runs when role is `auto` and no provider is pinned. If you explicitly
-set `/role planner`, `/role executor`, or force one provider, 0xAF-Re respects
-that choice and only wraps the prompt.
-
-Caveman mode is not translation, ciphering, or prompt laundering. It keeps the
-ordinary executor focused on workspace-local file facts and refuses unsafe live
-target, credential, persistence, deployment, or network work.
+---
 
 ## Context Compaction
 
-Long sessions stay inside the provider budget two ways:
+Long reverse-engineering sessions stay inside provider token budgets without losing ground truth:
 
-- **Mechanical pass** (every request): old tool-result bodies are elided and
-  whole oldest exchanges are replaced by a compaction marker.
-- **`/compact [provider]`**: folds the session into a dense briefing.
+- **Host-side state immunity:** The evidence ledger (`ev_NNN`) and hypothesis stack (`H-NNN`) live outside the chat transcript, so contradictions and provenance survive compaction and `--resume`.
+- **Mechanical pass (every request):** Old tool-result bodies are elided and oldest exchanges fold into compaction markers.
+- **On-demand `/compact [provider]`:** Compresses session history into a dense briefing.
+- **Visual archiving (`snapcompact`):** Set `"compactionStrategy": "snapcompact"` in `agent.config.json` to render dropped history deterministically as local PNG frames (no API key/network needed) that vision-capable providers (Anthropic, OpenAI Responses, OpenAI-compatible chat) read back directly; CLI providers and `mock` automatically fall back to text compaction.
 
-Set `"compactionStrategy": "snapcompact"` in `agent.config.json` to archive the
-dropped history as PNG snapshot frames instead of a text marker — the same idea
-as oh-my-pi's snapcompact. A vision-capable provider (Anthropic, OpenAI
-Responses, OpenAI-compatible chat) reads the frames back, so the detail is
-preserved rather than summarized. CLI providers and `mock` cannot attach
-images and fall back to the text marker / LLM summary automatically. Archiving
-is local and deterministic: no model call, no API key, no network.
+---
 
-About provider safety systems: 0xAF-Re does not bypass model policy checks or
-guarantee that a provider will not classify a turn. It reduces false positives
-for authorized local RE by changing what each role legitimately needs to see:
+## Remote Mode
 
-- the planner sees the full authorized objective and produces a bounded packet
-- the executor sees only workspace paths and evidence-collection steps
-- the executor tool list is read-only and local
-- the session transcript keeps both phases auditable
-- unsafe requests are refused instead of being hidden in alternate wording
-
-## Remote mode
-
-Plan in the current window, execute on another box. `--remote <name>` (or
-`/remote use <name>`) puts the session into remote mode: `run_command` and
-`!shell` execute over a **background SSH connection**, and the model can call
-`remote_exec` on any saved host. Output lands in the same transcript as local
-work, and every remote command still passes the exec-tier approval gate with the
-host named in the prompt.
+Plan locally, execute on another machine over persistent background SSH (`--remote <name>` or `/remote use <name>`). `run_command`, `!shell`, and the model's `remote_exec` tool stream output into the same local transcript while remaining subject to exec-tier approvals (`ssh <host> <command>`).
 
 <p align="center">
   <img src="docs/shots/remote.png" alt="/remote host list" width="420">
 </p>
 
-### Quick start
-
 ```text
-# 1) save a machine (password prompt is never echoed)
 /remote add lab dev@10.0.0.5
-/remote add srv root@srv.local --key ~/.ssh/id_ed25519   # or key auth
-/remote add box root@10.0.0.9 --insecure                 # lab box, skip known_hosts check
-
-# 2) see what you have and pick the target
+/remote add srv root@srv.local --key ~/.ssh/id_ed25519
+/remote add box root@10.0.0.9 --insecure                 # opt-in for lab boxes
 /remote list
 /remote use lab
-
-# 3) everything now runs on lab from the same window
-!uname -a                       # shell escape -> ssh lab
-0xaf --remote lab -p "inventory /opt"                    # or start straight into remote mode
-
-# 4) let the model drive it
-# (in the REPL, just prompt; run_command auto-redirects, or ask for remote_exec)
+!uname -a                                                # executes on lab over persistent SSH
 ```
 
-The model can also target a specific host regardless of the current one:
+- **Persistent sessions:** One `ssh.Client` per host with 30s keepalive, reused across commands and closed cleanly on exit (`ssh lab ●` / `ssh lab ○` in HUD).
+- **Encrypted at rest:** Credentials are stored in `~/.0xaf-re-agent/remote.json` (`0600`), AES-256-GCM encrypted with a machine-bound key (`OXAF_REMOTE_KEY` overrides for portable setups).
+- **`ssh -tt` PTY semantics:** Allocates a remote PTY by default for interactive tools and `sudo` prompts (`pty: false` for raw stdout).
+- **Auth & host trust:** `ssh-agent` → private key → password; strict `~/.ssh/known_hosts` by default. Verified end-to-end by an in-process `x/crypto/ssh` integration suite (`internal/remote/ssh_integration_test.go`).
 
-```text
-remote_exec(host="srv", command="systemctl status myapp")
-remote_exec(command="ls /opt")       # host omitted -> current remote host
-```
-
-### How it works
-
-- **Background connections that stay alive.** Each saved host gets one persistent
-  `ssh.Client`. `--remote` or `/remote use` connects immediately, `/remote
-  connect <name>` connects on demand, and a first command dials lazily. Every
-  connection is kept alive with a 30s keepalive and reused for all commands;
-  all connections close when 0xAF-Re exits. The dashboard status row shows the
-  established sessions: `ssh lab ●` (connected) or `ssh lab ○` (selected, not
-  yet connected), plus `+N` when more hosts are connected.
-- **Encrypted at rest.** Hosts (including passwords) live in
-  `~/.0xaf-re-agent/remote.json`, AES-256-GCM encrypted with a machine-bound key
-  (macOS IOPlatformUUID / `/etc/machine-id` + home + random salt, `0600` perms).
-  Copying the file to another machine does not reveal credentials;
-  `OXAF_REMOTE_KEY` (base64 of 32 bytes) overrides the key for portable setups.
-- **`ssh -tt` semantics.** Remote commands (`remote_exec`, remote `run_command`,
-  `!shell`) allocate a remote PTY by default, so interactive tools, `sudo`
-  prompts, and anything that needs a terminal work. Set `pty: false` on a tool
-  call for clean non-interactive output.
-- **Auth order:** ssh-agent → configured private key path → password.
-- **Trust:** strict `~/.ssh/known_hosts` by default; `/remote add --insecure` is
-  an explicit opt-in for lab boxes.
-- **Approvals:** every remote command is exec-tier; the y/a/d/n prompt shows
-  `ssh <host> <command>`.
-
-### Commands
-
-| Command | What it does |
-| --- | --- |
-| `/remote` / `/remote list` | list saved hosts, mark the current one |
-| `/remote add <name> <user>@<host>[:port] [--key <path>] [--insecure]` | save a host (password prompt if no key) |
-| `/remote rm <name>` | forget a host |
-| `/remote use <name>` / `/remote off` | switch the execution target (use connects immediately) |
-| `/remote connect <name>` | establish the background session now |
-| `0xaf --remote <name> …` | start the session already in remote mode |
-| `remote_exec(host?, command)` | model-facing tool for any saved host |
-
-### Troubleshooting
-
-- **`strict host-key verification needs ~/.ssh/known_hosts`** — add the host key
-  with `ssh-keyscan <host> >> ~/.ssh/known_hosts`, or save the host with
-  `--insecure` for lab boxes.
-- **`no auth method`** — start `ssh-agent` (`ssh-add ~/.ssh/id_ed25519`), pass
-  `--key`, or re-add the host and enter a password.
-- **Wrong-machine ciphertext** — `remote.json` is machine-bound; on a new
-  machine re-add hosts or set `OXAF_REMOTE_KEY` to the same key.
-- **Verified by tests** — an in-process SSH server (x/crypto/ssh) exercises the
-  real wire protocol: password auth, command execution, output, and rejection of
-  bad credentials (`internal/remote/ssh_integration_test.go`).
-
-Coming next: per-host file tools (`list_files` / `read_file` over SSH), SCP
-pulls, and multi-host fan-out of one plan.
+---
 
 ## Providers and Models
 
-`planner`, `executor`, `researcher`, and `auditor` are decoupled AI role seats; providers are replaceable model backends (CLI channels or HTTP APIs).
+`planner`, `executor`, `researcher`, and `auditor` are decoupled AI role seats backed by replaceable CLI channels or HTTP APIs.
 
-### Four-Role Seat Matrix
-
-| Role Seat | Config Key | Slash Command | Responsibility | Recommended Candidate Pool |
+| Role Seat | Config Key | Slash Command | Responsibility | Typical Candidates |
 | :--- | :--- | :--- | :--- | :--- |
-| **Planner** | `plannerProvider` | `/planner <name>` | High-depth reasoning: drafts `/goal` contracts, maintains `update_plan` routes, creates & revises `H-NNN` hypotheses | `codex sol` (`codex-sol`) · `gemini 4 carbon` (`gemini-4-carbon`) |
-| **Executor** | `executorProvider` | `/executor <name>` | High-throughput tool driver: runs all 34 built-in RE tools, collects static/dynamic evidence, executes `verify_artifact` replays | `ds` (`deepseek`) · `gemini 4 neon` (`gemini-4-neon`) · `glm-5.3-flash` |
-| **Researcher** | `researcherProvider` | `/researcher <name>` | Synthesizes papers, symbol context, and local knowledge base entries | `gemini 4 carbon` · `ds` · `glm-5.3` |
-| **Auditor** | `auditProvider` | `/auditor <name\|auto>` | Runs `/audit` in a **zero-history, tool-free** sandbox over the hypothesis stack + ledger digest (automatically avoids active Planner & Executor) | `codex sol` · `gemini 4 carbon` · `glm-5.3` |
+| **Planner** | `plannerProvider` | `/planner <name>` | Goal contracts, plan routes, cross-function reasoning, `H-NNN` hypothesis & falsifier design | `codex-sol` · `gemini-4-carbon` |
+| **Executor** | `executorProvider` | `/executor <name>` | Drives all 34 RE tools, collects static/dynamic evidence, runs `verify_artifact` harnesses | `ds` (`deepseek`) · `gemini-4-neon` · `glm-5.3-flash` |
+| **Researcher** | `researcherProvider` | `/researcher <name>` | Obfuscation patterns, symbol/paper synthesis, and local `/know` retrieval | `gemini-4-carbon` · `ds` · `glm-5.3` |
+| **Auditor** | `auditProvider` | `/auditor <name\|auto>` | Zero-history, tool-free `/audit` over ledger + hypotheses (auto-prefers a distinct third seat) | `codex-sol` · `gemini-4-carbon` · `glm-5.3` |
 
-### Three Ways to Configure Roles
+### Configure Roles in Three Ways
 
-1. **Desktop GUI Visual Config (`⚙`)**: Click **`⚙`** in the `SESSIONS` sidebar header to open `CONFIG`, select any configured provider for `planner`, `executor`, `researcher`, and `auditor`, and click `save` (persisted to `~/.0xaf-re-agent/ui.json`).
-2. **Runtime Slash Commands (CLI & GUI)**:
-
-```text
-/planner codex-sol
-/executor ds
-/researcher gemini-4-carbon
-/auditor glm-5.3
-/agent auto
-/model executor glm-5.3-flash
-/model planner gemini-4-carbon
-```
-
-3. **Workspace or Global Config (`agent.config.json` / `~/.0xaf-re-agent/config.json`)**:
+1. **Desktop GUI (`⚙`):** Click `⚙` in the `SESSIONS` header to bind all 4 seats visually (saved to `~/.0xaf-re-agent/ui.json`).
+2. **Runtime Slash Commands:** `/planner codex-sol`, `/executor ds`, `/researcher gemini-4-carbon`, `/auditor glm-5.3`, `/model executor glm-5.3-flash`, `/agent auto`.
+3. **Config File (`agent.config.json` / `~/.0xaf-re-agent/config.json`):** Copy [`config.example.json`](config.example.json) to customize providers and role bindings:
 
 ```json
 {
@@ -716,29 +550,17 @@ pulls, and multi-host fan-out of one plan.
       "baseUrl": "https://api.openai.com/v1",
       "apiKeyEnv": ["OPENAI_API_KEY"]
     },
-    "gemini-4-carbon": {
-      "type": "openai-chat",
-      "model": "gemini-4-carbon",
-      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-      "apiKeyEnv": ["GEMINI_API_KEY"]
-    },
     "ds": {
       "type": "openai-chat",
       "model": "deepseek-chat",
       "baseUrl": "https://api.deepseek.com/v1",
       "apiKeyEnv": ["DEEPSEEK_API_KEY"]
     },
-    "gemini-4-neon": {
+    "gemini-4-carbon": {
       "type": "openai-chat",
-      "model": "gemini-4-neon",
+      "model": "gemini-4-carbon",
       "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
       "apiKeyEnv": ["GEMINI_API_KEY"]
-    },
-    "glm-5.3-flash": {
-      "type": "openai-chat",
-      "model": "glm-5.3-flash",
-      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
-      "apiKeyEnv": ["ZAI_API_KEY", "GLM_API_KEY"]
     },
     "glm-5.3": {
       "type": "openai-chat",
@@ -750,92 +572,75 @@ pulls, and multi-host fan-out of one plan.
 }
 ```
 
-HTTP providers use model overrides in the request body. Built-in CLI providers
-inject `--model`; custom CLI configs can use the `{model}` placeholder.
+Role prompts (`system`, `planner`, `executor`, `researcher`) are live-editable via `/prompt list|show|edit|set|reset|reload`.
 
-Role prompts are editable at runtime:
-
-```text
-/prompt list
-/prompt show planner
-/prompt path executor
-/prompt edit researcher
-/prompt set executor <text>
-/prompt reset system
-/prompt reload
-```
-
-Editable targets are `system`, `planner`, `executor`, and `researcher`.
-`/prompt edit` seeds the file from the embedded prompt, opens `$VISUAL` or
-`$EDITOR`, and reloads immediately. With a detected project root it writes under
-`prompts/`; otherwise it writes under `~/.0xaf-re-agent/prompts/`.
-
-Copy `config.example.json` to `agent.config.json` for a full local config.
+---
 
 ## Built-in Tools (34)
 
 Both the CLI and Desktop GUI expose the exact same **34 built-in tools** (plus any tools contributed by configured MCP servers):
 
-| Category | Tools |
-| --- | --- |
-| **Files** (4) | `list_files` · `read_file` · `write_file` · `grep` |
-| **Shell & Remote** (2) | `run_command` · `remote_exec` |
-| **Pure-Go Binary Analysis** (9) | `file_info` · `strings` · `hexdump` · `hash_file` · `extract_symbols` · `binary_inspect` (ELF/PE/Mach-O headers, constructors, sections, imports/exports) · `anti_analysis` (packer, anti-debug, anti-Frida, inline syscall detection) · `binary_diff` (byte regions + x86/ARM64 patch classification) · `binary_mitigations` |
-| **CTF & Carving** (5) | `ctf_triage` (head+tail + UTF-16LE) · `ctf_decode` (`base64`/`base32`/`hex`/`url`/`rot13`/`xor`/`zlib`/`gzip`/`rc4`) · `entropy_scan` · `find_bytes` · `carve_artifacts` (validated ELF/PE/Mach-O/DEX/ZIP/SquashFS/GZIP/XZ/U-Boot/PDF/SQLite) |
-| **External RE Wrappers** (1) | `reverse_toolkit` (radare2/rizin, Ghidra headless, JADX, apktool, binwalk, YARA, gdb/lldb, objdump/readelf/nm, angr, Unicorn, unidbg, Frida, Burp, mitmproxy) |
-| **Mobile RE** (2) | `apk_inspect` (pure-Go binary `AndroidManifest.xml` AXML parser + DEX/SO + packer/framework signatures) · `frida_hook_template` |
-| **Skills & Knowledge** (4) | `list_skills` · `read_skill` (including auxiliary scripts/files) · `knowledge_search` · `knowledge_read` |
-| **Evidence, Verification & Gates** (6) | `verify_artifact` (build + replay + stdout diff) · `evidence_review` · `hypothesis_create` · `hypothesis_update` · `hypothesis_list` · `update_re_state` |
-| **Plan** (1) | `update_plan` |
+| Category | Count | Tools |
+| --- | :-: | --- |
+| **Files** | 4 | `list_files` · `read_file` · `write_file` · `grep` |
+| **Shell & Remote** | 2 | `run_command` · `remote_exec` |
+| **Pure-Go Binary Analysis** | 9 | `file_info` · `strings` · `hexdump` · `hash_file` · `extract_symbols` · `binary_inspect` (ELF/PE/Mach-O headers, constructors, sections, imports/exports) · `anti_analysis` (packer, anti-debug, anti-Frida, inline syscalls) · `binary_diff` (byte regions + x86/ARM64 patch classification) · `binary_mitigations` |
+| **CTF & Carving** | 5 | `ctf_triage` (head+tail + UTF-16LE) · `ctf_decode` (`base64`/`base32`/`hex`/`url`/`rot13`/`xor`/`zlib`/`gzip`/`rc4`) · `entropy_scan` · `find_bytes` · `carve_artifacts` (validated ELF/PE/Mach-O/DEX/ZIP/SquashFS/GZIP/XZ/U-Boot/PDF/SQLite) |
+| **External RE Wrappers** | 1 | `reverse_toolkit` (radare2/rizin, Ghidra headless, JADX, apktool, binwalk, YARA, gdb/lldb, objdump/readelf/nm, angr, Unicorn, unidbg, Frida, Burp, mitmproxy) |
+| **Mobile RE** | 2 | `apk_inspect` (pure-Go binary `AndroidManifest.xml` AXML parser + DEX/SO + packer/framework signatures) · `frida_hook_template` |
+| **Skills & Knowledge** | 4 | `list_skills` · `read_skill` (including helper scripts) · `knowledge_search` · `knowledge_read` |
+| **Evidence, Verification & Gates** | 6 | `verify_artifact` (build + replay + diff) · `evidence_review` · `hypothesis_create` · `hypothesis_update` · `hypothesis_list` · `update_re_state` |
+| **Planning** | 1 | `update_plan` |
 
-## Skills and Knowledge
+---
 
-**30 built-in RE skills** ship embedded in the binary (`embed.go`), covering:
-- **Triage & Binary RE:** `ctf-first-pass`, `native-pwn-re`, `binary-patching`, `capstone-disassembler`, `keystone-assembler`, `radare2-reverse`, `ghidra`, `gdb`, `re-writeup`
-- **Deobfuscation & Crypto:** `ollvm-deobfuscation`, `vmp-restore`, `deobfuscate`, `so-string-deobfuscation`, `crypto-identification`, `whitebox-dfa`, `drm-protocol-analysis`
-- **Android, SO & Emulation:** `android-apk-frida`, `analyze-so`, `analyze-sign`, `frida-hook-workflow`, `jadx`, `unicorn-emulator` (with ready-to-run ARM/ARM64/x86/JNI Python harnesses), `unidbg`, `qiling-emulator`, `qemu-emulator`
-- **Web, WASM & Traffic:** `wasm-reverser`, `web-crypto-analyzer`, `jsvmp-analysis`, `browser-hook`, `proxy-capture`
+## Skills and Knowledge (30 Embedded)
+
+**30 built-in RE skills** ship embedded directly inside the binary:
+
+- **Triage & Binary RE (9):** `ctf-first-pass` · `native-pwn-re` · `binary-patching` · `capstone-disassembler` · `keystone-assembler` · `radare2-reverse` · `ghidra` · `gdb` · `re-writeup`
+- **Deobfuscation & Crypto (7):** `ollvm-deobfuscation` · `vmp-restore` · `deobfuscate` · `so-string-deobfuscation` · `crypto-identification` · `whitebox-dfa` · `drm-protocol-analysis`
+- **Android, SO & Emulation (9):** `android-apk-frida` · `analyze-so` · `analyze-sign` · `frida-hook-workflow` · `jadx` · `unicorn-emulator` (with ARM/ARM64/x86/JNI harnesses) · `unidbg` · `qiling-emulator` · `qemu-emulator`
+- **Web, WASM & Traffic (5):** `wasm-reverser` · `web-crypto-analyzer` · `jsvmp-analysis` · `browser-hook` · `proxy-capture`
 
 ```text
 /skills
 /skill android-apk-frida inspect this APK
 /skill whitebox-dfa recover the AES round key from ./wb_encrypt
-/skill proxy-capture capture api.example.test traffic
 ```
 
-Add your own skill:
+Add custom skills or index local notes:
 
 ```bash
 export OXAF_RE_HOME=/path/to/re-agent
-mkdir -p "$OXAF_RE_HOME/skills/my-unpacker"
-$EDITOR "$OXAF_RE_HOME/skills/my-unpacker/SKILL.md"
-```
-
-Index local notes:
-
-```bash
+mkdir -p "$OXAF_RE_HOME/skills/my-unpacker" && $EDITOR "$OXAF_RE_HOME/skills/my-unpacker/SKILL.md"
 go run ./cmd/import-knowledge ~/notes/re ~/notes/ctf
 ```
 
-Query them:
+Query your indexed knowledge inside the REPL with `/know <query>`, `/know raw <query>`, or `/know read <entry-id>`, or seed a run via `--context "know:android packer"`.
 
-```text
-/know frida ssl pinning
-/know raw frida ssl
-/know read <entry-id>
-```
+---
+
+## Engineering Quality & Verification
+
+Every layer of the runtime and workbench is covered by automated tests:
+
+| Layer | Suite | Command |
+| --- | --- | --- |
+| **Go Core & GUI Backend** | **21 Go test packages** (`internal/*` + `gui/`, including in-process SSH, capability sandbox, evidence ledger, hypothesis cascade, arbitrator, and `TestE2E`) | `go test ./...` / `go test ./gui/ -run TestE2E -v` |
+| **Frontend Unit Suites** | **14 Vitest suites (129 unit tests)** covering `InvestigationState`, `forensics`, `cognitiveSynthesis`, `localCache`, `proactiveGreeting`, `ProSelect`, `HintOverlay`, `shortcuts`, `CameraRig`, `dagGeometry`, `useTheaterFallback`, and session stores | `cd gui/frontend && npm run test:unit` |
+| **Playwright End-to-End** | Headless browser E2E for both the Wails runtime contract and the static web demo sandbox | `cd gui/frontend && npm run test:e2e && npm run test:e2e-demo` |
+
+---
 
 ## Safety
 
-Default policy:
+Default policy is conservative and explicit:
 
-- reads stay inside the workspace
-- writes are off
-- network commands are off
-- credential-shaped paths are blocked
-- destructive shell patterns are blocked
-
-Useful flags:
+- File reads stay strictly inside the workspace; credential-shaped paths are blocked.
+- File writes, network access, device access, and destructive shell patterns are off by default.
+- Task-scoped `/goal` contracts arm the **Capability Sandbox** (`network` / `device` deny-by-default), expiring with the task; `/cap` grants or revokes capabilities mid-run and prints the audited action log.
+- Interactive TTY runs prompt **y / a / d / n** live on approval gates (and the GUI Approval Dialog focuses `deny` by default).
 
 ```bash
 0xaf --approval always-ask
@@ -844,92 +649,61 @@ Useful flags:
 0xaf --yolo
 ```
 
-Inside the REPL:
+Inspect runtime posture anytime with `/policy`, `/approval`, and `/cap`.
 
-```text
-/policy
-/approval
-```
+---
 
 ## Troubleshooting
 
-- **Scrolling back shows many dashboard frames.** The live pane redraws every
-  90ms (spinner + elapsed), and terminals/tmux keep every frame in the
-  scrollback. This is normal for any animated TUI — nothing is stuck on screen.
-  For a quieter scrollback: `/refresh calm` (500ms), `/refresh off` (redraw
-  only on changes), or `/flow off` (no dashboard at all).
-- **`CLI provider 'codex' failed with exit 1` / `claude`** — the CLI itself is
-  not authenticated. Run `codex login` / `claude auth status` outside 0xAF-Re,
-  or route to an API provider with `/agent deepseek` / `--planner deepseek`.
-- **`dyld: missing LC_UUID` on macOS** — your Go toolchain is older than the OS
-  needs; use the prebuilt binaries from GitHub Releases or upgrade Go ≥ 1.22.
-- **`--resume` / `/resume` can't find the session** — use the short hash shown
-  in `/sessions` (prefix works) or the full timestamp id.
+- **Terminal scrollback has many dashboard frames:** The live TUI redraws every 90ms; use `/refresh calm` (500ms), `/refresh off` (on-change only), or `/flow off` (trace only).
+- **`CLI provider 'codex' / 'claude' failed with exit 1`:** Authenticate the underlying CLI (`codex login` / `claude auth status`) or route to an HTTP provider (`/agent ds`, `--planner codex-sol`).
+- **`dyld: missing LC_UUID` on macOS:** Upgrade your Go toolchain (Go 1.26+ for `main`) or download a prebuilt binary from GitHub Releases.
+- **`--resume` / `/resume` cannot find a session:** Pass the short hash prefix shown in `/sessions` or the full timestamp ID.
+- **Remote SSH `strict host-key verification` or `no auth method`:** Add the host key via `ssh-keyscan <host> >> ~/.ssh/known_hosts` (or `--insecure` for lab boxes); ensure `ssh-agent`, `--key`, or a saved password is configured.
+
+---
 
 ## Common Commands
 
 | Command | Purpose |
 | --- | --- |
-| `/help` | command deck |
-| `/scan <path>` | local CTF/file triage |
-| `/inspect <binary>` | deep pure-Go ELF/PE/Mach-O headers, constructors, sections, imports/exports |
-| `/anti <binary>` | detect packers, anti-debug, anti-Frida, root/jailbreak checks, inline syscalls |
-| `/diff <fileA> <fileB>` | byte-region diff + x86/ARM64 patch classification |
-| `/hex <file> [offset] [len]` | hex view of a window; `0x` offsets accepted |
-| `/decode auto <text>` | try common encodings (base64/base32/hex/url/rot13/xor/zlib/gzip/rc4) |
-| `/mitigations <path>` | native binary protections (ELF/PE/Mach-O) |
-| `/r2 <file> [-w]` | hand the terminal to an interactive radare2 session |
-| `/retool inventory` | check radare2/JADX/Ghidra/Burp/mitmproxy/angr/Unicorn/unidbg availability |
-| `/retool angr template ./chall` | emit an angr symbolic execution harness |
-| `/retool frida template android_ssl_pinning` | emit common Frida SSL/crypto/root/debug/native templates |
-| `/retool mitmproxy template api.example.test` | emit a scoped mitmproxy capture addon |
-| `/retool burp template mobile` | emit a Burp mobile/API capture checklist |
-| `/phase` | show RE workflow phase, hypotheses, and evidence |
-| `/phase next` | advance to the next RE phase |
-| `/goal <objective>` | draft a task declaration: target, deliverables, acceptance gates |
-| `/goal accept` | arm the declaration — it rides every prompt and gates writeup |
-| `/goal show` / `/goal clear` | review acceptance status against the ledger / drop the declaration |
-| `/cap` | show the task capability scope and the action log tail |
-| `/cap network on\|off` | grant or withdraw network access for this task (operator action) |
-| `/cap device on <id>\|off` | grant or withdraw device access for this task |
-| `/audit` | adversarial audit: a second model re-judges the hypothesis stack in a context-isolated, tool-free run |
-| `/queue list` | show queued prompts |
-| `/queue edit <id> <text>` | edit queued work before it runs |
-| `/queue cancel <id>` | cancel queued work |
-| `/tasks collapse` / `/tasks expand` | fold or expand the live task list |
-| `/refresh calm\|off\|ms` | slower / no dashboard animation (quieter scrollback) |
-| `/think expand` / `/think collapse` | fold or expand streamed reasoning, mid-turn |
-| `/prompt edit <role>` | edit system, planner, executor, or researcher prompts |
-| `/new` | clear the live session and start a fresh one (old transcript stays on disk) |
-| `/sessions` / `/resume [id]` | list sessions or resume most recent / specific id (`-c` / `--continue` on CLI) |
-| `!<command>` | run a workspace shell command under policy |
+| `/help` | Command deck |
+| `/scan <path>` · `/inspect <bin>` · `/anti <bin>` | Fast local triage, pure-Go ELF/PE/Mach-O inspection, packer/anti-debug/anti-Frida detection |
+| `/diff <A> <B>` · `/hex <file> [off] [len]` · `/mitigations <path>` | Binary patch diffing, hex windowing, and protection posture check |
+| `/decode auto <text>` · `/entropy <path>` · `/carve <path>` · `/apk <apk>` | Local decoders, Shannon entropy scan, payload carving, and AXML/APK inspection |
+| `/r2 <file> [-w]` · `/retool inventory\|angr\|frida\|mitmproxy\|burp` | Interactive radare2 handoff and external RE toolkit templates |
+| `/goal <objective>` · `/goal accept\|show\|clear` | Draft, arm, evaluate, or clear a `Target ≠ Objective` task contract |
+| `/cap` · `/cap network on\|off` · `/cap device on <id>\|off` | Inspect action log and grant/revoke task-scoped capabilities |
+| `/phase` · `/phase next` · `/phase <name>` | Inspect or advance the 9-phase RE workflow (enforces ledger & audit gates) |
+| `/audit` | Run isolated zero-history, tool-free adversarial audit (5-item checklist) |
+| `/planner` · `/executor` · `/researcher` · `/auditor` · `/model` | Inspect or switch AI role seats and models mid-session |
+| `/queue list\|add\|edit\|cancel` | Manage mid-turn queued prompts |
+| `/tasks collapse\|expand` · `/think collapse\|expand` · `/refresh calm\|off` | Live dashboard density and scrollback controls |
+| `/prompt list\|show\|edit\|set\|reset\|reload` | Customize `system`, `planner`, `executor`, or `researcher` prompts |
+| `/sessions` · `/resume [id]` · `/new` · `/compact` | Session history, crash-safe resume (`-c` / `--continue`), and context compaction |
+| `/remote list\|add\|use\|connect\|off\|rm` | Persistent encrypted SSH remote execution |
+| `!<command>` | Run a policy-gated workspace (or remote) shell command |
+
+---
 
 ## Roadmap
 
-Where 0xAF-Re is heading:
+- **Remote mode expansion** — per-host file tools (`list_files` / `read_file` over SSH), SCP pulls, and multi-host plan fan-out.
+- **`snapcompact` hardening** — bundled CJK-capable font, frame-cap UI, and per-provider image cost accounting.
+- **Benchmark harness** — replayable real RE challenges to score provider/workflow pairs on the 5 trust & cost metrics (`evidence_coverage`, `replay_pass_rate`, `wrong_hypothesis_lifetime`, `overreach_count`, `cost_per_accepted_finding`).
+- **Team knowledge & skill bundles** — import/export local knowledge indexes and shareable community RE skill packs.
 
-- **Remote mode (shipped)** — background SSH to saved machines; next: remote file
-  tools, SCP pulls, multi-host fan-out.
-- **snapcompact hardening** — bundle a CJK-capable font, frame-cap UI, and
-  per-provider image billing like oh-my-pi's snapcompact evals.
-- **Auto-resume prompt** — detect an interrupted session at startup and offer to
-  continue it before you type anything.
-- **Multi-host orchestration** — run one plan across several boxes; collect
-  outputs into the same transcript.
-- **Knowledge sharing** — import/export the local index, team-shareable bundles.
-- **Benchmark harness** — replay real sessions to measure provider/workflow
-  quality, so routing choices improve from evidence.
-- **Plugin/skill marketplace** — install community RE skills from a catalog.
+---
 
 ## More Docs
 
-- [Architecture map](docs/diagrams/0xaf-re-agent-architecture.html): exportable Cocoon AI-style overview of the design.
-- [Design analysis (blog)](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/): the write-up that motivated the metacognition layer, including the REA comparison and the challenge-based regression plan.
-- [Architecture deep dive](docs/ARCHITECTURE.md): package map, turn sequence,
-  context budget, approval gate, data formats, invariants, and extension points.
-- [Architecture diagrams](docs/diagrams/): visual index for the core runtime.
-- [Project page and marketing assets](https://overkazaf.github.io/re-agent/)
+- [Standardized `re-agent` Workflow Spec](docs/WORKFLOW_STANDARD.md) — Five Defenses, 7-State Investigation Dossier, 5 Trust Metrics, 7 Completion Gates, and exact Go → DTO → GUI mapping.
+- [Architecture Deep Dive](docs/ARCHITECTURE.md) — Package map, turn sequence, context budget, approval gate, data formats, invariants, and extension points.
+- [Exportable Architecture Map](docs/diagrams/0xaf-re-agent-architecture.html) & [Architecture Diagram Index](docs/diagrams/) — Visual schematics of the core runtime.
+- [Interactive Reverse Workflow Walkthrough](docs/re-workflow-demo.md) — End-to-end 9-phase reverse-engineering session trace.
+- [Design Analysis (Blog)](https://overkazaf.github.io/blogs/posts/llm-deobfuscation-quarkslab-framework/) — Motivation behind the metacognition layer and REA comparison.
+- [Project Page](https://overkazaf.github.io/re-agent/) & [Live 3D Web Workbench](https://overkazaf.github.io/re-agent/gui-demo/).
 
-Scoped for authorized CTF, lab, and local reverse-engineering work: binary
-triage, static inspection, local dynamic experiments, solve planning, and
-reproducible notes.
+---
+
+<sub>Scoped strictly for authorized CTF, security-research lab, and local reverse-engineering work: binary triage, static inspection, local dynamic experiments, verified artifact reconstruction, and reproducible audit dossiers.</sub>
