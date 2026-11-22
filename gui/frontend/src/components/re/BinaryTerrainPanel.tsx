@@ -27,7 +27,7 @@ import type {
 } from '../../lib/types'
 import { actions } from '../../store/sessions'
 import { sceneActions } from '../../store/scene'
-import { PanelBox } from '../crt'
+import { PanelBox, ProSelect, type ProSelectOption } from '../crt'
 import type { LedgerTab } from './LedgerPanel'
 import {
   buildProvenanceChain,
@@ -279,6 +279,33 @@ export function BinaryTerrainPanel({
   const findingCount = ledger?.findings?.length ?? 0
   const fs = useStageFullscreen()
 
+  const targetOptions = useMemo<ProSelectOption[]>(() => {
+    if (files.length === 0) {
+      return [{ value: '', label: '（无工作区文件）' }]
+    }
+    return files.map((f) => ({
+      value: f.path,
+      label: f.path,
+      badge: `${f.format} · ${fmtBytes(f.size)}`,
+      keywords: `${f.path} ${f.format}`,
+    }))
+  }, [files])
+
+  const compareOptions = useMemo<ProSelectOption[]>(
+    () => [
+      { value: '', label: '（无对比）', description: '单文件二进制地形分析' },
+      ...files
+        .filter((f) => f.path !== targetPath)
+        .map((f) => ({
+          value: f.path,
+          label: `vs ${f.path}`,
+          badge: `${f.format} · ${fmtBytes(f.size)}`,
+          keywords: `${f.path} ${f.format}`,
+        })),
+    ],
+    [files, targetPath],
+  )
+
   const panelContent = (
     <div
       data-fullscreen-stage={fs.open ? 'terrain' : undefined}
@@ -329,37 +356,28 @@ export function BinaryTerrainPanel({
             <>
               <label style={selectLabel}>
                 目标
-                <select
-                  aria-label="binary target"
+                <ProSelect
+                  ariaLabel="binary target"
+                  size="sm"
                   value={targetPath}
-                  onChange={(e) => setTargetPath(e.target.value)}
-                  style={selectStyle}
-                >
-                  {files.length === 0 && <option value="">（无工作区文件）</option>}
-                  {files.map((f) => (
-                    <option key={f.path} value={f.path}>
-                      {f.path} [{f.format} · {fmtBytes(f.size)}]
-                    </option>
-                  ))}
-                </select>
+                  options={targetOptions}
+                  onChange={setTargetPath}
+                  popoverMinWidth={260}
+                  style={{ maxWidth: 230 }}
+                />
               </label>
               <label style={selectLabel}>
                 Diff 对比
-                <select
-                  aria-label="diff compare target"
+                <ProSelect
+                  ariaLabel="diff compare target"
+                  size="sm"
                   value={comparePath}
-                  onChange={(e) => setComparePath(e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="">（无对比）</option>
-                  {files
-                    .filter((f) => f.path !== targetPath)
-                    .map((f) => (
-                      <option key={f.path} value={f.path}>
-                        vs {f.path}
-                      </option>
-                    ))}
-                </select>
+                  options={compareOptions}
+                  onChange={setComparePath}
+                  popoverMinWidth={240}
+                  align="right"
+                  style={{ maxWidth: 210 }}
+                />
               </label>
               {zoomRange && (
                 <button type="button" onClick={() => setZoomRange(null)} style={chipBtn}>
@@ -1618,16 +1636,6 @@ const selectLabel: CSSProperties = {
   gap: 5,
   color: 'var(--faint)',
   fontSize: 10.5,
-}
-
-const selectStyle: CSSProperties = {
-  background: 'var(--bg)',
-  color: 'var(--text)',
-  border: '1px solid var(--rule)',
-  fontSize: 11,
-  padding: '3px 6px',
-  fontFamily: 'inherit',
-  maxWidth: 210,
 }
 
 const chipBtn: CSSProperties = {

@@ -3,7 +3,7 @@
 // real Wails Go sessions (fed by TickDTO.ledger) and the Demo Sandbox.
 import { useMemo, useState, type CSSProperties } from 'react'
 import type { HypothesisStatus, LedgerDTO } from '../../lib/types'
-import { PanelBox } from '../crt'
+import { PanelBox, ProSelect, type ProSelectOption } from '../crt'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
 import type { WorkbenchTab } from './HypothesisWorkbenchDialog'
 import {
@@ -496,6 +496,18 @@ export function LedgerDetailDialog({
     [evidence, hypotheses, findings, ledger?.auditorProvider],
   )
 
+  const kindOptions = useMemo<ProSelectOption[]>(
+    () => [
+      { value: 'all', label: `全部类型 (${evidence.length})`, badge: String(evidence.length) },
+      { value: 'tool_observation', label: 'tool_observation', badge: 'OBS', description: '静态/工具原始观测' },
+      { value: 'verification_result', label: 'verification_result', badge: 'VER', description: 'verify_artifact 确定性重放' },
+      { value: 'audit_finding', label: 'audit_finding', badge: 'AUD', description: '独立模型或人工审查签章' },
+      { value: 'artifact', label: 'artifact', badge: 'ART', description: '逆向产物与解包文件' },
+      { value: 'runtime_trace', label: 'runtime_trace', badge: 'TRC', description: '动态执行与实验轨迹' },
+    ],
+    [evidence.length],
+  )
+
   function jumpToEvidence(evId: string) {
     setTab('evidence')
     setKindFilter('all')
@@ -571,19 +583,16 @@ export function LedgerDetailDialog({
         />
         {tab === 'evidence' ? (
           <>
-            <select
-              aria-label="evidence kind filter"
-              style={{ ...fieldStyle, width: 165 }}
+            <ProSelect
+              ariaLabel="evidence kind filter"
+              size="sm"
+              searchable={false}
+              popoverMinWidth={240}
+              style={{ width: 175 }}
               value={kindFilter}
-              onChange={(e) => setKindFilter(e.target.value)}
-            >
-              <option value="all">全部类型 ({evidence.length})</option>
-              <option value="tool_observation">tool_observation</option>
-              <option value="verification_result">verification_result</option>
-              <option value="audit_finding">audit_finding</option>
-              <option value="artifact">artifact</option>
-              <option value="runtime_trace">runtime_trace</option>
-            </select>
+              options={kindOptions}
+              onChange={setKindFilter}
+            />
             <div className="re-filter-strip re-mono-num">
               {(
                 [

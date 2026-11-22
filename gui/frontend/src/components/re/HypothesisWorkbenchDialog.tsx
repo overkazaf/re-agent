@@ -14,12 +14,20 @@ import type {
   LedgerDTO,
   VerificationCaseDTO,
 } from '../../lib/types'
+import { ProSelect, type ProSelectOption } from '../crt'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
 import { buildProvenanceChain, formatHypothesisCitation } from './forensics'
 import { buildHypothesisArcs } from './cognitiveSynthesis'
 import './re-pro.css'
 
 export type WorkbenchTab = 'hypothesis' | 'verify' | 'review'
+
+const REVIEW_VERDICT_OPTIONS: readonly ProSelectOption<'support' | 'challenge' | 'reject' | ''>[] = [
+  { value: 'support', label: 'SUPPORT (核准支撑)', badge: 'OK', description: '以勾选实测证据核准支撑目标假设' },
+  { value: 'challenge', label: 'CHALLENGE (反证降权 ×0.5)', badge: '×0.5', description: '记录反证并将假设置信度折半' },
+  { value: 'reject', label: 'REJECT (直接否决淘汰)', badge: 'REJECT', description: '标记目标假设已证伪并触发下游级联重审' },
+  { value: '', label: '仅登记审计备注', badge: 'NOTE', description: '追加 audit_finding 而不变更假设状态' },
+]
 
 export function HypothesisWorkbenchDialog({
   sessionId,
@@ -132,6 +140,34 @@ export function HypothesisWorkbenchDialog({
   const [revSummary, setRevSummary] = useState('')
   const [revCited, setRevCited] = useState<string[]>(
     evidence.length > 0 ? [evidence[evidence.length - 1].id] : [],
+  )
+
+  const verifyHypOptions = useMemo<ProSelectOption[]>(
+    () => [
+      { value: '', label: '（不自动关联假设）', description: '仅入账为独立验证证据' },
+      ...hypotheses.map((h) => ({
+        value: h.id,
+        label: `${h.id}: ${h.claim.slice(0, 22)}${h.claim.length > 22 ? '…' : ''}`,
+        badge: `${Math.round(h.confidence * 100)}%`,
+        description: h.claim,
+        keywords: `${h.id} ${h.status} ${h.claim}`,
+      })),
+    ],
+    [hypotheses],
+  )
+
+  const reviewHypOptions = useMemo<ProSelectOption[]>(
+    () => [
+      { value: '', label: '（全局账本审查，不单独变更某条假设）', description: '记录全局审计发现，不改写单条假设状态' },
+      ...hypotheses.map((h) => ({
+        value: h.id,
+        label: `${h.id} [${h.status}] — ${h.claim.slice(0, 36)}`,
+        badge: `${Math.round(h.confidence * 100)}%`,
+        description: h.claim,
+        keywords: `${h.id} ${h.status} ${h.claim}`,
+      })),
+    ],
+    [hypotheses],
   )
 
   function toggleIn(list: string[], id: string): string[] {
@@ -808,14 +844,16 @@ export function HypothesisWorkbenchDialog({
             </label>
             <label style={lblStyle}>
               验证结果自动关联假设
-              <select style={fieldStyle} value={verHypId} onChange={(e) => setVerHypId(e.target.value)}>
-                <option value="">（不自动关联假设）</option>
-                {hypotheses.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.id}: {h.claim.slice(0, 22)}…
-                  </option>
-                ))}
-              </select>
+              <ProSelect
+                ariaLabel="verify linked hypothesis"
+                size="md"
+                fullWidth
+                align="right"
+                popoverMinWidth={260}
+                value={verHypId}
+                options={verifyHypOptions}
+                onChange={setVerHypId}
+              />
             </label>
           </div>
 
@@ -928,27 +966,29 @@ export function HypothesisWorkbenchDialog({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 8 }}>
               <label style={lblStyle}>
                 2. 针对目标假设（可选）
-                <select style={fieldStyle} value={revHypId} onChange={(e) => setRevHypId(e.target.value)}>
-                  <option value="">（全局账本审查，不单独变更某条假设）</option>
-                  {hypotheses.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.id} [{h.status}] — {h.claim.slice(0, 36)}
-                    </option>
-                  ))}
-                </select>
+                <ProSelect
+                  ariaLabel="review target hypothesis"
+                  size="md"
+                  fullWidth
+                  popoverMinWidth={300}
+                  value={revHypId}
+                  options={reviewHypOptions}
+                  onChange={setRevHypId}
+                />
               </label>
               <label style={lblStyle}>
                 3. 审查裁定动作
-                <select
-                  style={fieldStyle}
+                <ProSelect<'support' | 'challenge' | 'reject' | ''>
+                  ariaLabel="review verdict action"
+                  size="md"
+                  fullWidth
+                  align="right"
+                  searchable={false}
+                  popoverMinWidth={250}
                   value={revVerdict}
-                  onChange={(e) => setRevVerdict(e.target.value as 'support' | 'challenge' | 'reject' | '')}
-                >
-                  <option value="support">SUPPORT (核准支撑)</option>
-                  <option value="challenge">CHALLENGE (反证降权 ×0.5)</option>
-                  <option value="reject">REJECT (直接否决淘汰)</option>
-                  <option value="">仅登记审计备注</option>
-                </select>
+                  options={REVIEW_VERDICT_OPTIONS}
+                  onChange={setRevVerdict}
+                />
               </label>
             </div>
 

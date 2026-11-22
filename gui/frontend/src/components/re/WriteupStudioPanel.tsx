@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { TickDTO } from '../../lib/types'
+import { ProSelect, type ProSelectOption } from '../crt'
 import {
   generateWriteupMarkdown,
   synthesizeProcessSummary,
@@ -16,6 +17,27 @@ import {
 import { buildForensicJsonBundle } from './forensics'
 import { ProofNarrativePanel } from './ProofNarrativePanel'
 import './re-pro.css'
+
+const WRITEUP_TEMPLATE_OPTIONS: readonly ProSelectOption<WriteupTemplateId>[] = [
+  {
+    value: 'article-standard',
+    label: '模板：0xAF 证据闭环标准报告',
+    badge: '0xAF',
+    description: '六阶段认知对齐 + 完整推演叙事 + 证据账本闭环',
+  },
+  {
+    value: 'ctf-writeup',
+    label: '模板：CTF 解题标准 Writeup',
+    badge: 'CTF',
+    description: '题目速览 + 核心机制剖析 + 求解脚本与 Flag 复现',
+  },
+  {
+    value: 'algo-report',
+    label: '模板：算法与接口工程还原报告',
+    badge: 'ALGO',
+    description: '数据结构、加密算法流程与工程级接口复原文档',
+  },
+]
 
 const mdPreviewComponents = {
   p: ({ children }: { children?: ReactNode }) => <p style={{ margin: '0.35em 0', lineHeight: 1.55 }}>{children}</p>,
@@ -286,19 +308,19 @@ export function WriteupStudioPanel({
 
           <span style={{ flex: 1 }} />
 
-          <select
-            aria-label="writeup template"
+          <ProSelect<WriteupTemplateId>
+            ariaLabel="writeup template"
+            size="sm"
+            searchable={false}
+            align="right"
+            popoverMinWidth={290}
             value={template}
-            onChange={(e) => {
-              setTemplate(e.target.value as WriteupTemplateId)
+            options={WRITEUP_TEMPLATE_OPTIONS}
+            onChange={(next) => {
+              setTemplate(next)
               setDirty(false)
             }}
-            style={selectStyle}
-          >
-            <option value="article-standard">模板：0xAF 证据闭环标准报告</option>
-            <option value="ctf-writeup">模板：CTF 解题标准 Writeup</option>
-            <option value="algo-report">模板：算法与接口工程还原报告</option>
-          </select>
+          />
 
           <button
             type="button"
@@ -451,16 +473,6 @@ const cardBoxStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
-}
-
-const selectStyle: CSSProperties = {
-  background: 'var(--bg-panel)',
-  color: 'var(--accent)',
-  border: '1px solid var(--rule)',
-  font: 'inherit',
-  fontSize: 10.5,
-  padding: '2px 6px',
-  cursor: 'pointer',
 }
 
 const smallBtnStyle: CSSProperties = {
