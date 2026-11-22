@@ -4,6 +4,11 @@
 // The freeze served the parallel workstream build; that build is complete and
 // amendments now go through normal review: keep this file mirroring gui/app.go.
 
+import {
+  synthesizeFallbackGreeting,
+  type GreetingRequest,
+  type GreetingResponse,
+} from './localCache'
 import type {
   ApprovalDecision,
   BinaryTerrainDTO,
@@ -54,6 +59,7 @@ export interface AppAPI {
   ShellResize(id: string, cols: number, rows: number): Promise<void>
   ShellStop(id: string): Promise<void>
   ShellList(): Promise<ShellInfo[]>
+  GreetWithModel?(req: GreetingRequest): Promise<GreetingResponse>
 }
 
 let demoAppOverride: AppAPI | null = null
@@ -112,4 +118,18 @@ export const api = {
   shellResize: (id: string, cols: number, rows: number) => app().ShellResize(id, cols, rows),
   shellStop: (id: string) => app().ShellStop(id),
   shellList: () => app().ShellList(),
+  greetWithModel: async (req: GreetingRequest): Promise<GreetingResponse> => {
+    if (!isDemoAppActive() && hasRealWailsBackend()) {
+      const fn = (app() as Partial<AppAPI> | undefined)?.GreetWithModel
+      if (typeof fn === 'function') {
+        try {
+          return await fn(req)
+        } catch {
+          return synthesizeFallbackGreeting(req, 'local-cache')
+        }
+      }
+      return synthesizeFallbackGreeting(req, 'local-cache')
+    }
+    return synthesizeFallbackGreeting(req, 'local-model')
+  },
 }

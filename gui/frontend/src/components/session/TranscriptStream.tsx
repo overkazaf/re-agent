@@ -476,9 +476,19 @@ function traceRow(ev: LoopEvent, ctx: RowCtx): ReactNode {
 export function TranscriptStream({
   runtime,
   style,
+  greetingNode,
+  hasGreeting = false,
+  greetingDismissed = false,
+  onRevealGreeting,
 }: {
   runtime: SessionRuntime
   style?: CSSProperties
+  /** Optional non-blocking startup greeting card rendered on fresh transcripts
+   *  (and toggleable via a subtle ✦ toolbar pill once messages arrive). */
+  greetingNode?: ReactNode
+  hasGreeting?: boolean
+  greetingDismissed?: boolean
+  onRevealGreeting?: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -491,6 +501,7 @@ export function TranscriptStream({
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<number>>(() => new Set())
+  const [peekGreeting, setPeekGreeting] = useState(false)
 
   const { copiedKey, copy } = useCopyFeedback()
 
@@ -504,6 +515,7 @@ export function TranscriptStream({
     setSearchOpen(false)
     setExpandedKeys(new Set())
     setUnseenCount(0)
+    setPeekGreeting(false)
     pinnedRef.current = true
     setPinned(true)
     prevTailRef.current = undefined
@@ -643,6 +655,28 @@ export function TranscriptStream({
               {visibleIndices.length}/{count}
             </span>
           )}
+
+          {hasGreeting && greetingNode && (
+            <button
+              type="button"
+              className="wgc-toolbar-pill"
+              data-active={peekGreeting && !greetingDismissed ? 'true' : undefined}
+              onClick={() => {
+                if (peekGreeting && !greetingDismissed) {
+                  setPeekGreeting(false)
+                } else {
+                  onRevealGreeting?.()
+                  setPeekGreeting(true)
+                }
+              }}
+              aria-pressed={peekGreeting && !greetingDismissed}
+              aria-label="切换智能问候与下一步建议"
+              data-hint={peekGreeting && !greetingDismissed ? '收起智能问候与建议' : '查看智能问候与下一步任务建议'}
+              data-hint-side="bottom"
+            >
+              ✦
+            </button>
+          )}
         </div>
       )}
 
@@ -660,6 +694,8 @@ export function TranscriptStream({
           if (nowPinned) setUnseenCount(0)
         }}
       >
+        {greetingNode && (count === 0 || (peekGreeting && !greetingDismissed)) && greetingNode}
+
         {count === 0 && (
           <div className="usa-empty-state">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

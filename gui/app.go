@@ -183,6 +183,13 @@ func (a *App) HomeDir() string {
 	return guiHomeDir()
 }
 
+// GreetWithModel synthesizes a concise startup greeting and actionable next-step
+// suggestions using the user's configured LLM provider, with a strict short
+// timeout and deterministic local fallback when offline or unconfigured.
+func (a *App) GreetWithModel(req GreetingRequest) GreetingResponse {
+	return a.greetWithModel(req)
+}
+
 // PickDirectory opens the OS directory picker and returns the chosen path
 // ("" when cancelled).
 func (a *App) PickDirectory() (string, error) {

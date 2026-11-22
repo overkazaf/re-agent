@@ -35,6 +35,7 @@ import {
   type WorkbenchTab,
 } from './components/re'
 import { ApprovalDialog, PromptInput, SessionSidebar, TranscriptStream } from './components/session'
+import { WelcomeGreetingCard } from './components/session/WelcomeGreetingCard'
 import {
   ExperimentWizard,
   HypothesisWizard,
@@ -57,9 +58,20 @@ import {
 import { sceneActions, useSceneStore } from './store/scene'
 import { shellActions, useShellStore } from './store/shells'
 import { demoActions, useDemoStore } from './demo/store'
-import { requestPromptFill, requestSidebarDialog } from './demo/signals'
+import { onDemoSignal, requestPromptFill, requestSidebarDialog } from './demo/signals'
 import { api } from './lib/api'
 import { hasEscHandler } from './lib/escStack'
+import {
+  buildSessionMemorySnapshot,
+  loadWorkbenchCache,
+  recordRecentWorkspace,
+  recordSessionMemory,
+  updateWorkbenchPrefs,
+  type CacheScope,
+  type GreetingResponse,
+  type GreetingSuggestion,
+} from './lib/localCache'
+import { loadProactiveGreeting } from './lib/proactiveGreeting'
 import type { NoticeDTO } from './lib/types'
 import type { StoreToast } from './store/sessions'
 
@@ -172,17 +184,40 @@ function CommandCenter() {
   const active = useSessionRuntime(activeId)
   const { themes, theme, setTheme } = useTheme()
   const activeShell = activeShellId ? shells.get(activeShellId) : null
+  const [initialCache] = useState(() => loadWorkbenchCache())
   const [ledgerModal, setLedgerModal] = useState<{ tab: LedgerTab; highlightId?: string } | null>(null)
   const [workbenchModal, setWorkbenchModal] = useState<{ tab: WorkbenchTab; hypId?: string } | null>(null)
-  const [centerView, setCenterView] = useState<'dashboard' | 'graph' | 'terrain'>('dashboard')
-  const [graphMode, setGraphMode] = useState<GraphViewMode>('pipeline')
+  const [centerView, setCenterView] = useState<'dashboard' | 'graph' | 'terrain'>(
+    () => initialCache.prefs.centerView,
+  )
+  const [graphMode, setGraphMode] = useState<GraphViewMode>(() => initialCache.prefs.graphMode)
   const [expandDashKey, setExpandDashKey] = useState(0)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const layoutCtrlRef = useRef<ShellLayoutController | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    typeof localStorage !== 'undefined' && localStorage.getItem(VIEW_MODE_KEY) === 'classic' ? 'classic' : 'theater',
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const legacy = typeof localStorage !== 'undefined' ? localStorage.getItem(VIEW_MODE_KEY) : null
+      if (legacy === 'classic') return 'classic'
+      if (legacy === 'theater') return 'theater'
+    } catch {
+      // ignore storage errors
+    }
+    return initialCache.prefs.activeView === 'classic' ? 'classic' : 'theater'
+  })
+  const [configuredModel, setConfiguredModel] = useState<string>(
+    () => initialCache.prefs.configuredModel || '',
   )
+  const [configuredProvider, setConfiguredProvider] = useState<string>(
+    () => initialCache.prefs.configuredProvider || '',
+  )
+  const [greeting, setGreeting] = useState<GreetingResponse | null>(null)
+  const [greetingRefreshing, setGreetingRefreshing] = useState(false)
+  const [greetingDismissed, setGreetingDismissed] = useState(false)
+  const [greetingRefreshSeq, setGreetingRefreshSeq] = useState(0)
+  const greetingForceRef = useRef(false)
+  const lastLiveModelRef = useRef('')
+  const cacheScope: CacheScope = demo.active ? 'demo' : 'desktop'
   // e2e / 无头环境确定性：?noFallback=1 关闭自动降级哨兵（WebGL 软件渲染帧率必挂 30fps）
   const noFallback = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noFallback')
   const mod = modGlyph()
@@ -193,7 +228,185 @@ function CommandCenter() {
     } catch {
       /* private mode 等 — 记不住就每次默认 theater */
     }
-  }, [viewMode])
+    const layoutSnap = layoutCtrlRef.current?.getState()
+    updateWorkbenchPrefs({
+      activeView: activeShellId ? 'shell' : viewMode === 'classic' ? 'classic' : '3d',
+      centerView,
+      graphMode,
+      ...(layoutSnap
+        ? {
+            paneLayout: {
+              sidebarWidth: layoutSnap.sidebarWidth,
+              sideWidth: layoutSnap.sideWidth,
+              transcriptHeight: layoutSnap.transcriptHeight,
+              sidebarCollapsed: layoutSnap.sidebarCollapsed,
+              sideCollapsed: layoutSnap.sideCollapsed,
+              dashboardCollapsed: layoutSnap.dashboardCollapsed,
+              transcriptCollapsed: layoutSnap.transcriptCollapsed,
+            },
+          }
+        : {}),
+    })
+  }, [viewMode, centerView, graphMode, activeShellId])
+
+  // Persist compact investigation memory snapshots & recent workspaces cleanly
+  // (strictly scope-isolated between real desktop sessions and Demo Sandbox).
+  useEffect(() => {
+    if (!booted) return
+    const now = Date.now()
+    for (const rt of sessions.values()) {
+      recordSessionMemory(buildSessionMemorySnapshot(rt, cacheScope, now))
+    }
+    if (active && cacheScope === 'desktop') {
+      recordRecentWorkspace(active.info.workspace)
+      updateWorkbenchPrefs({ lastActiveSessionId: active.info.id })
+    }
+    const liveModel = active?.latestTick?.flow.model || active?.info.planner || ''
+    const liveProvider = active?.latestTick?.flow.provider || active?.info.planner || ''
+    if (liveModel && liveModel !== lastLiveModelRef.current) {
+      lastLiveModelRef.current = liveModel
+      setConfiguredModel(liveModel)
+      setConfiguredProvider(liveProvider)
+      if (cacheScope === 'desktop') {
+        updateWorkbenchPrefs({ configuredModel: liveModel, configuredProvider: liveProvider })
+      }
+    }
+  }, [booted, sessions, active, cacheScope])
+
+  // Sync configured planner model from active session settings & react to settings_saved.
+  const refreshConfiguredModel = useCallback(
+    (sid: string | null) => {
+      if (!sid || !hasBackend()) return
+      api
+        .getSettings(sid)
+        .then((settings) => {
+          const plannerName = settings.plannerProvider || settings.provider || settings.providerNames[0] || ''
+          const info = settings.providers.find((p) => p.name === plannerName)
+          const modelLabel = info?.model || plannerName
+          if (modelLabel) {
+            setConfiguredModel(modelLabel)
+            setConfiguredProvider(plannerName)
+            if (cacheScope === 'desktop') {
+              updateWorkbenchPrefs({ configuredModel: modelLabel, configuredProvider: plannerName })
+            }
+          }
+        })
+        .catch(() => {})
+    },
+    [cacheScope],
+  )
+
+  useEffect(() => {
+    if (!booted || !activeId) return
+    refreshConfiguredModel(activeId)
+  }, [booted, activeId, refreshConfiguredModel])
+
+  useEffect(() => {
+    return onDemoSignal((sig) => {
+      if (sig.type === 'settings_saved') {
+        refreshConfiguredModel(sig.sessionId)
+        greetingForceRef.current = true
+        setGreetingRefreshSeq((n) => n + 1)
+      }
+    })
+  }, [refreshConfiguredModel])
+
+  // Proactive startup greeting: instant cached / optimistic render + background LLM refresh.
+  useEffect(() => {
+    if (!booted) return
+    let cancelled = false
+    const force = greetingForceRef.current
+    greetingForceRef.current = false
+    setGreetingRefreshing(true)
+
+    void loadProactiveGreeting({
+      scope: cacheScope,
+      configuredModel,
+      configuredProvider,
+      activeSessionId: activeId,
+      activeWorkspace: active?.info.workspace ?? null,
+      forceRefresh: force,
+      onInstant: (instant) => {
+        if (!cancelled) setGreeting(instant)
+      },
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setGreeting(res.response)
+          setGreetingRefreshing(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGreetingRefreshing(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [booted, cacheScope, configuredModel, configuredProvider, activeId, active?.info.workspace, greetingRefreshSeq])
+
+  const triggerGreetingRefresh = useCallback(() => {
+    greetingForceRef.current = true
+    setGreetingDismissed(false)
+    setGreetingRefreshSeq((n) => n + 1)
+  }, [])
+
+  const handleGreetingSuggestion = useCallback(
+    (suggestion: GreetingSuggestion) => {
+      shellActions.setActive(null)
+      switch (suggestion.actionKind) {
+        case 'resume_session': {
+          const targetId = suggestion.payload.trim()
+          if (targetId && sessions.has(targetId)) {
+            actions.setActive(targetId)
+            return
+          }
+          if (targetId && hasBackend()) {
+            void actions.resumeSession(targetId).then((res) => {
+              if (!res.ok) requestSidebarDialog('resume')
+            })
+            return
+          }
+          requestSidebarDialog('resume')
+          return
+        }
+        case 'run_command':
+        case 'send_prompt': {
+          if (!activeId) {
+            requestSidebarDialog('new')
+            return
+          }
+          if (suggestion.payload.trim()) {
+            requestPromptFill({ text: suggestion.payload.trim(), autoSend: true })
+          }
+          return
+        }
+        case 'fill_prompt': {
+          if (!activeId) {
+            requestSidebarDialog('new')
+            return
+          }
+          if (suggestion.payload.trim()) {
+            requestPromptFill({ text: suggestion.payload.trim(), autoSend: false })
+          }
+          return
+        }
+        case 'open_re_picker': {
+          if (!activeId) {
+            requestSidebarDialog('new')
+            return
+          }
+          requestAnimationFrame(() => dispatchIxEvent(IX_EVENT_OPEN_RE_PICKER))
+          return
+        }
+        case 'new_session':
+        default: {
+          requestSidebarDialog('new')
+        }
+      }
+    },
+    [activeId, sessions],
+  )
 
   // reconcile 桥：3D 剧场的唯一数据喂入口。sessions 快照每个事件批都会换
   // 引用，这里随之重算派生场景；重活（场景树渲染）由 useThrottledScene 250ms 节流兜住。
@@ -1060,7 +1273,40 @@ function CommandCenter() {
         }
         transcript={
           active ? (
-            <TranscriptStream runtime={active} />
+            <TranscriptStream
+              runtime={active}
+              hasGreeting={Boolean(greeting)}
+              greetingDismissed={greetingDismissed}
+              onRevealGreeting={() => setGreetingDismissed(false)}
+              greetingNode={
+                <WelcomeGreetingCard
+                  greeting={greeting}
+                  refreshing={greetingRefreshing}
+                  dismissed={greetingDismissed}
+                  compact={active.loopBuffer.length > 0}
+                  showRestorePill={active.loopBuffer.length === 0}
+                  onDismiss={() => setGreetingDismissed(true)}
+                  onRestore={() => setGreetingDismissed(false)}
+                  onRefresh={triggerGreetingRefresh}
+                  onSelectSuggestion={handleGreetingSuggestion}
+                />
+              }
+            />
+          ) : greeting ? (
+            <div className="wgc-nosession-pane">
+              <WelcomeGreetingCard
+                greeting={greeting}
+                refreshing={greetingRefreshing}
+                dismissed={greetingDismissed}
+                onDismiss={() => setGreetingDismissed(true)}
+                onRestore={() => setGreetingDismissed(false)}
+                onRefresh={triggerGreetingRefresh}
+                onSelectSuggestion={handleGreetingSuggestion}
+              />
+              <div className="wgc-nosession-foot">
+                <span>○ 等待 session —— transcript 空载</span>
+              </div>
+            </div>
           ) : (
             <EmptySlot hint="等待 session —— transcript 空载" />
           )
