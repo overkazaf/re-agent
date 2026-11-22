@@ -1,14 +1,12 @@
-// Command center header: phosphor-blooming logo, live-session indicator,
-// active workspace/mode breadcrumb, and clickable awaiting-approval alert pill.
-// All new props are optional so existing call sites stay 100% compatible.
+// Minimal command center header: crisp brand mark, subtle live status dot,
+// and clickable awaiting-approval alert pill when a gate needs operator action.
+// Optional activeLabel / activeModeBadge props are retained for API compatibility.
 import './interaction.css'
 
 export function TopBar({
   live = 0,
   awaitingApprovalCount = 0,
   onJumpToApproval,
-  activeLabel,
-  activeModeBadge,
 }: {
   live?: number
   awaitingApprovalCount?: number
@@ -18,43 +16,46 @@ export function TopBar({
 }) {
   return (
     <span className="topbar-logo">
-      <span className="glow-accent" style={{ fontWeight: 700 }}>
-        ▓▒░ 0xAF·RE
+      <span className="topbar-brand">
+        <span className="topbar-brand-glyph glow-accent" aria-hidden>
+          ◈
+        </span>
+        <span>0xAF-Re</span>
       </span>
-      <span style={{ color: 'var(--faint)' }}>::</span>
-      <span style={{ color: 'var(--muted)' }}>COMMAND CENTER</span>
+
       {live > 0 ? (
-        <span className="topbar-live" title={`${live} 个会话正在执行中`}>
+        <span
+          className="topbar-status-dot topbar-status-dot--live"
+          data-hint={`${live} 个会话正在执行中`}
+          data-hint-side="bottom"
+        >
           <span className="topbar-live-dot" aria-hidden>
             ●
-          </span>{' '}
-          {live} live
+          </span>
+          <span>{live}</span>
         </span>
       ) : (
-        <span style={{ color: 'var(--faint)', fontSize: 12 }}>○ standby</span>
+        <span
+          className="topbar-status-dot"
+          data-hint="所有会话待命中"
+          data-hint-side="bottom"
+          aria-label="Standby"
+        >
+          <span aria-hidden>●</span>
+        </span>
       )}
+
       {awaitingApprovalCount > 0 && (
         <button
           type="button"
           className="ix-approval-pill"
           onClick={onJumpToApproval}
-          title="点击立即跳转至等待审批的会话"
+          data-hint="点击立即跳转至等待审批的会话"
+          data-hint-side="bottom"
         >
           <span aria-hidden>◐</span>
-          <span>{awaitingApprovalCount} approval</span>
+          <span>{awaitingApprovalCount} 审批</span>
         </button>
-      )}
-      {activeLabel && (
-        <span className="ix-top-crumb" title={`当前上下文: ${activeLabel}`}>
-          {activeModeBadge && (
-            <span style={{ color: 'var(--violet)', fontSize: 10, letterSpacing: '0.06em' }}>
-              {activeModeBadge}
-            </span>
-          )}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {`▸ ${activeLabel}`}
-          </span>
-        </span>
       )}
     </span>
   )

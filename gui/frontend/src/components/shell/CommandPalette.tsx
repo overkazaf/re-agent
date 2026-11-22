@@ -176,7 +176,7 @@ export function CommandPalette({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="输入命令、视图、主题、会话或操作… (fuzzy search)"
+            placeholder="搜索命令、视图、主题或会话…"
             aria-label="Search commands"
             spellCheck={false}
             autoComplete="off"
@@ -190,7 +190,7 @@ export function CommandPalette({
         <div ref={listRef} className="ix-palette-list" role="listbox" aria-label="Command results">
           {ranked.length === 0 ? (
             <div className="ix-palette-empty">
-              未匹配到「{query}」— 试试 <code>graph</code> / <code>radar</code> / <code>theme</code> / <code>sidebar</code>
+              未匹配「{query}」— 试试 <code>graph</code> · <code>radar</code> · <code>theme</code>
             </div>
           ) : (
             ranked.map((entry, idx) => {
@@ -257,8 +257,8 @@ export function CommandPalette({
         </div>
 
         <div className="ix-palette-footer">
-          <span>↑↓ 选择 · ⏎ 执行 · esc 关闭</span>
-          <span>0xAF·RE COMMAND DECK</span>
+          <span>↑↓ 选择 · ⏎ 执行 · Esc 关闭</span>
+          <span>0xAF-Re</span>
         </div>
       </div>
     </div>

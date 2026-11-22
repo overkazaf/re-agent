@@ -453,9 +453,9 @@ export function PromptInput({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       style={{
-        border: `1px solid ${flashGlow || dragOver ? 'var(--accent)' : running ? 'var(--accent-dim)' : 'var(--rule)'}`,
-        boxShadow: flashGlow || dragOver ? '0 0 14px var(--accent-dim)' : 'none',
-        background: 'var(--bg-panel)',
+        border: `1px solid ${flashGlow || dragOver ? 'var(--accent)' : running ? 'color-mix(in srgb, var(--accent) 45%, var(--border-default))' : 'transparent'}`,
+        boxShadow: flashGlow || dragOver ? '0 0 12px var(--accent-soft)' : 'none',
+        background: 'transparent',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -465,7 +465,7 @@ export function PromptInput({
       {dragOver && (
         <div className="ix-drop-overlay" aria-live="polite">
           <span>◫</span>
-          <span>释放以将样本 / 二进制文件路径插入 Prompt</span>
+          <span>释放以插入文件路径</span>
         </div>
       )}
 
@@ -475,15 +475,31 @@ export function PromptInput({
 
       {/* queue hint — driven by hud.queueCount via the queueCount prop */}
       {running && queueCount > 0 && (
-        <div style={{ color: 'var(--accent)', fontSize: 11, padding: '4px 10px', borderBottom: '1px solid var(--rule)' }}>
-          ⠿ queued ({queueCount}) · 运行中提交的 prompt 自动排队
+        <div
+          style={{
+            color: 'var(--accent)',
+            fontSize: 11,
+            padding: '5px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--accent-soft)',
+          }}
+        >
+          ⠿ queued ({queueCount}) · 运行中提交的指令将自动排队
         </div>
       )}
 
       {/* shell escape warning — non-blocking */}
       {shellEscape && (
-        <div style={{ color: 'var(--warn)', fontSize: 11, padding: '4px 10px', borderBottom: '1px solid var(--rule)' }}>
-          ⚠ shell 逃逸在 GUI v1 不支持，请用左侧 [+ sh] 内置终端或 TUI
+        <div
+          style={{
+            color: 'var(--warn)',
+            fontSize: 11,
+            padding: '5px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--warn-soft)',
+          }}
+        >
+          ⚠ GUI 不支持 ! 逃逸，请使用左侧 + sh 内置终端
         </div>
       )}
 
@@ -495,35 +511,29 @@ export function PromptInput({
             ref={paletteRef}
             role="listbox"
             aria-label="Slash command completions"
+            className="ix-slash-popover"
             style={{
-              position: 'fixed',
               bottom: anchor.bottom,
               left: anchor.left,
               width: anchor.width,
-              border: '1px solid var(--accent-dim)',
-              background: 'color-mix(in srgb, var(--bg) 82%, var(--bg-panel))',
-              boxShadow: '0 0 20px rgba(0, 0, 0, 0.7)',
-              maxHeight: 248,
-              overflow: 'auto',
-              zIndex: 35,
             }}
           >
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                padding: '3px 10px',
+                padding: '5px 10px',
                 fontSize: 10,
                 letterSpacing: '0.08em',
                 color: 'var(--faint)',
-                borderBottom: '1px solid var(--rule)',
-                background: 'color-mix(in srgb, var(--bg) 72%, transparent)',
+                borderBottom: '1px solid var(--border-subtle)',
+                background: 'var(--surface-2)',
                 position: 'sticky',
                 top: 0,
               }}
             >
               <span>COMMANDS · {items.length}</span>
-              <span>↑↓ 选择 · tab/⏎ 插入 · esc 关闭</span>
+              <span>↑↓ 选择 · Tab/⏎ 插入 · Esc 关闭</span>
             </div>
             {items.map((it, i) => {
               const segs = splitHighlightSegments(it.label, it.matchIndices ?? [])
@@ -542,14 +552,14 @@ export function PromptInput({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    padding: '5px 10px',
+                    padding: '6px 10px',
                     fontSize: 12,
                     cursor: 'pointer',
-                    background: i === active ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                    background: i === active ? 'var(--accent-soft)' : 'transparent',
                     borderLeft: `2px solid ${i === active ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <span style={{ color: 'var(--accent)', minWidth: 104, fontWeight: i === active ? 600 : 400 }}>
+                  <span style={{ color: 'var(--accent)', minWidth: 104, fontWeight: i === active ? 600 : 500 }}>
                     {segs.map((seg, si) =>
                       seg.hit ? (
                         <span key={si} className="ix-palette-match">
@@ -591,11 +601,7 @@ export function PromptInput({
           setSendError(null)
         }}
         onKeyDown={onKeyDown}
-        placeholder={
-          running
-            ? '⠿ turn running — prompt will queue · ↑ history'
-            : 'message 0xAF · / commands · ↑ history · drop binary path'
-        }
+        placeholder={running ? '当前回合运行中，输入内容将自动排队…' : '输入指令、/ 命令或拖入文件…'}
         spellCheck={false}
         style={{
           background: 'transparent',
@@ -606,9 +612,9 @@ export function PromptInput({
           font: 'inherit',
           fontSize: 13,
           lineHeight: `${LINE_H}px`,
-          padding: '8px 10px',
+          padding: '10px 12px',
           overflow: 'auto',
-          minHeight: LINE_H + 16,
+          minHeight: LINE_H + 20,
         }}
       />
 
@@ -617,42 +623,41 @@ export function PromptInput({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: 8,
-          fontSize: 10,
+          gap: 10,
+          fontSize: 10.5,
           color: 'var(--faint)',
-          padding: '3px 10px',
-          borderTop: '1px solid var(--rule)',
+          padding: '4px 12px 6px',
+          borderTop: '1px solid var(--border-subtle)',
         }}
       >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           {running ? (
             <>
-              <Spinner ms={90} /> running
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--accent)' }}>
+                <Spinner ms={90} /> running
+              </span>
               <button
                 type="button"
-                className="ix-btn"
+                className="ix-prompt-stop-btn"
                 onClick={() => void stop()}
                 title="abort the current turn (queue survives)"
-                style={{
-                  background: 'none',
-                  border: '1px solid var(--err)',
-                  color: 'var(--err)',
-                  font: 'inherit',
-                  fontSize: 10,
-                  padding: '0 6px',
-                  cursor: 'pointer',
-                }}
+                data-hint="中止当前回合（队列中指令保留）"
+                data-hint-side="top"
               >
                 ■ stop
               </button>
             </>
           ) : (
-            '○ idle'
+            <span>○ idle</span>
           )}
-          {modeBadge && <span className={modeBadge.cls}>{modeBadge.label}</span>}
+          {modeBadge && !running && <span className={modeBadge.cls}>{modeBadge.label}</span>}
           {histCursor >= 0 && (
-            <span className="ix-prompt-mode" title="正在浏览历史输入，按 ↓ 返回草稿">
-              HIST {history.length - histCursor}/{history.length}
+            <span
+              className="ix-prompt-mode"
+              data-hint="正在浏览历史输入，按 ↓ 返回草稿"
+              data-hint-side="top"
+            >
+              {history.length - histCursor}/{history.length}
             </span>
           )}
           {sendError && (
@@ -661,16 +666,18 @@ export function PromptInput({
             </span>
           )}
         </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span>enter 发送 · shift+enter 换行 · ↑↓ 历史 · / 命令</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span className="ix-prompt-hint">/ 命令 · ↑↓ 历史 · Enter 发送</span>
           <button
             type="button"
-            className="ix-prompt-send-btn ix-btn"
+            className="ix-prompt-send-btn"
             disabled={!canSend}
             onClick={() => void send()}
-            title={running ? '加入执行队列 (Enter)' : '发送给当前会话 (Enter)'}
+            data-hint={running ? '将当前指令加入执行队列' : '发送给当前会话（Shift+Enter 换行）'}
+            data-hint-kbd="Enter"
+            data-hint-side="top"
           >
-            {running ? '⠿ queue' : '⏎ send'}
+            {running ? '排队' : '发送'}
           </button>
         </span>
       </div>

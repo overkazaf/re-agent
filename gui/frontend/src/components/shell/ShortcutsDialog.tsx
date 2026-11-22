@@ -35,14 +35,14 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: 10,
+          fontSize: 10.5,
           color: 'var(--faint)',
-          borderTop: '1px solid var(--rule)',
-          paddingTop: 6,
+          borderTop: '1px solid var(--border-subtle)',
+          paddingTop: 8,
         }}
       >
-        <span>提示：双击任意分屏分割线可重置尺寸；聚焦分割线后可用方向键微调</span>
-        <span>ESC 关闭</span>
+        <span>双击分割线重置尺寸 · 聚焦后方向键微调</span>
+        <span>Esc 关闭</span>
       </div>
     </Dialog>
   )

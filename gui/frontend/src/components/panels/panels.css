@@ -23,7 +23,7 @@
 
 .panel-empty {
   font-size: 11px;
-  padding: 6px 2px;
+  padding: 8px 4px;
   color: var(--faint);
 }
 
@@ -39,20 +39,20 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin-bottom: 10px;
-  padding-bottom: 7px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .stage-badge {
-  border: 1px solid var(--border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--surface-0) 45%, transparent);
+  background: transparent;
   color: var(--faint);
   font-size: 9.5px;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   padding: 1px 6px;
   white-space: nowrap;
@@ -63,9 +63,10 @@
 }
 
 .stage-on {
-  background: color-mix(in srgb, currentColor 13%, var(--surface-2));
+  border-color: color-mix(in srgb, currentColor 34%, var(--border-subtle));
+  background: color-mix(in srgb, currentColor 11%, var(--surface-2));
   font-weight: 600;
-  box-shadow: 0 0 calc(8px * var(--glow-strength)) color-mix(in srgb, currentColor 22%, transparent);
+  box-shadow: 0 0 calc(6px * var(--glow-strength)) color-mix(in srgb, currentColor 18%, transparent);
 }
 
 .flow-spacer { flex: 1 1 0; }
@@ -245,11 +246,11 @@
 
 .tool-card {
   font-size: 11px;
-  padding: 5px 8px;
+  padding: 6px 9px;
   border: 1px solid var(--border-subtle);
-  border-left: 2px solid color-mix(in srgb, var(--ok) 55%, var(--rule));
-  border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--surface-2) 52%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--ok) 48%, var(--rule));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-2) 42%, transparent);
   transition:
     border-color var(--dur-fast) var(--ease-out),
     background-color var(--dur-fast) var(--ease-out);
@@ -529,12 +530,12 @@
 .tele-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--surface-2) 62%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 48%, transparent);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -550,7 +551,7 @@
 
 .dash-grid {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto auto auto;
   grid-template-areas:

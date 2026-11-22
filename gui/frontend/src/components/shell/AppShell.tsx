@@ -352,44 +352,54 @@ export function AppShell({
             activeModeBadge={activeModeBadge}
           />
           <div style={topRightWrapStyle}>
-            <div style={layoutBarStyle} aria-label="pane visibility">
+            {topRight}
+            <span className="ix-top-sep" aria-hidden />
+            <div className="ix-seg-group" aria-label="pane visibility">
               <button
                 type="button"
                 onClick={() => toggle('sidebarCollapsed')}
-                title={layout.sidebarCollapsed ? '展开左侧会话栏' : `折叠左侧会话栏 (${mod}B)`}
+                aria-label="◧ 侧栏"
                 aria-pressed={!layout.sidebarCollapsed}
-                className={`layout-toggle-btn${layout.sidebarCollapsed ? ' layout-toggle-btn--off' : ''}`}
+                data-hint={layout.sidebarCollapsed ? '展开左侧会话栏' : '折叠左侧会话栏'}
+                data-hint-kbd={`${mod}B`}
+                className={`ix-icon-btn${layout.sidebarCollapsed ? ' ix-icon-btn--off' : ''}`}
               >
-                ◧ 侧栏
+                ◧
               </button>
               {!shellMode && (
                 <>
                   <button
                     type="button"
                     onClick={() => toggle('dashboardCollapsed')}
-                    title={layout.dashboardCollapsed ? '展开仪表盘' : `折叠仪表盘（放大转录区 · ${mod}⇧D）`}
+                    aria-label="⬒ 仪表"
                     aria-pressed={!layout.dashboardCollapsed}
-                    className={`layout-toggle-btn${layout.dashboardCollapsed ? ' layout-toggle-btn--off' : ''}`}
+                    data-hint={layout.dashboardCollapsed ? '展开上方工作区' : '折叠上方工作区（放大转录区）'}
+                    data-hint-kbd={`${mod}⇧D`}
+                    className={`ix-icon-btn${layout.dashboardCollapsed ? ' ix-icon-btn--off' : ''}`}
                   >
-                    ⬒ 仪表
+                    ⬒
                   </button>
                   <button
                     type="button"
                     onClick={() => toggle('transcriptCollapsed')}
-                    title={layout.transcriptCollapsed ? '展开转录日志' : `折叠转录日志 (${mod}J)`}
+                    aria-label="⬓ 转录"
                     aria-pressed={!layout.transcriptCollapsed}
-                    className={`layout-toggle-btn${layout.transcriptCollapsed ? ' layout-toggle-btn--off' : ''}`}
+                    data-hint={layout.transcriptCollapsed ? '展开转录日志区' : '折叠转录日志区'}
+                    data-hint-kbd={`${mod}J`}
+                    className={`ix-icon-btn${layout.transcriptCollapsed ? ' ix-icon-btn--off' : ''}`}
                   >
-                    ⬓ 转录
+                    ⬓
                   </button>
                   <button
                     type="button"
                     onClick={() => toggle('sideCollapsed')}
-                    title={layout.sideCollapsed ? '展开右侧 RE/通知栏' : `折叠右侧 RE/通知栏 (${mod}\\)`}
+                    aria-label="◨ 右栏"
                     aria-pressed={!layout.sideCollapsed}
-                    className={`layout-toggle-btn${layout.sideCollapsed ? ' layout-toggle-btn--off' : ''}`}
+                    data-hint={layout.sideCollapsed ? '展开右侧 RE / 通知栏' : '折叠右侧 RE / 通知栏'}
+                    data-hint-kbd={`${mod}\\`}
+                    className={`ix-icon-btn${layout.sideCollapsed ? ' ix-icon-btn--off' : ''}`}
                   >
-                    ◨ 右栏
+                    ◨
                   </button>
                 </>
               )}
@@ -398,7 +408,10 @@ export function AppShell({
                   type="button"
                   onClick={resetLayout}
                   title="重置所有窗口尺寸并全部展开"
-                  className="layout-toggle-btn"
+                  aria-label="重置分屏布局"
+                  data-hint="重置所有分屏尺寸并全部展开"
+                  data-hint-kbd={`${mod}⇧0`}
+                  className="ix-icon-btn"
                 >
                   ↺
                 </button>
@@ -406,18 +419,14 @@ export function AppShell({
               <button
                 type="button"
                 onClick={nativeFs.toggle}
-                title={nativeFs.active ? `退出系统全屏 (Esc / ${mod}⇧F)` : `整个工作台进入系统真全屏 (${mod}⇧F)`}
-                className="layout-toggle-btn"
-                style={
-                  nativeFs.active
-                    ? { borderColor: 'var(--warn)', color: 'var(--warn)' }
-                    : { borderColor: 'var(--accent-dim)', color: 'var(--accent)' }
-                }
+                aria-label={nativeFs.active ? '退出全屏' : '全屏'}
+                data-hint={nativeFs.active ? '退出系统真全屏' : '进入系统真全屏'}
+                data-hint-kbd={`${mod}⇧F`}
+                className={`ix-icon-btn${nativeFs.active ? ' ix-icon-btn--warn' : ''}`}
               >
-                {nativeFs.active ? '✕ 退全屏' : '⛶ 全屏'}
+                {nativeFs.active ? '✕' : '⛶'}
               </button>
             </div>
-            {topRight}
           </div>
         </div>
 
@@ -433,6 +442,9 @@ export function AppShell({
               className="collapsed-rail-btn"
               onClick={() => toggle('sidebarCollapsed')}
               title="展开左侧会话栏"
+              data-hint="展开左侧会话栏"
+              data-hint-kbd={`${mod}B`}
+              data-hint-side="right"
             >
               <span>▸</span>
               <span className="collapsed-rail-label">SESSIONS</span>
@@ -456,7 +468,8 @@ export function AppShell({
               aria-valuemin={180}
               aria-valuemax={460}
               aria-valuenow={Math.round(layout.sidebarWidth)}
-              title="拖动调整左侧栏宽度（双击或按 0 重置，方向键微调）"
+              data-hint="拖动调整宽度 · 双击或按 0 重置"
+              data-hint-side="right"
               className={`split-handle split-handle--col${dragging === 'sidebar' ? ' split-handle--active' : ''}`}
               onPointerDown={(e) => startDrag('sidebar', e)}
               onKeyDown={(e) => onSplitterKeyDown('sidebar', e)}
@@ -484,9 +497,11 @@ export function AppShell({
                   className="collapsed-bar-btn"
                   onClick={() => toggle('dashboardCollapsed')}
                   title="展开五面板仪表盘与右侧 RE/通知栏"
+                  data-hint="展开仪表盘与右侧取证栏"
+                  data-hint-kbd={`${mod}⇧D`}
                 >
-                  <span>▸ DASHBOARD · FLOW / TOOLS / PLAN / THINK / TELE</span>
-                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>点击展开 ({mod}⇧D)</span>
+                  <span>▸ DASHBOARD</span>
+                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>{mod}⇧D</span>
                 </button>
               ) : (
                 <div style={{ ...rowFlexStyle, flex: '1 1 0', minHeight: 110 }}>
@@ -509,7 +524,8 @@ export function AppShell({
                       aria-valuemin={180}
                       aria-valuemax={460}
                       aria-valuenow={Math.round(layout.sideWidth)}
-                      title="拖动调整右侧栏宽度（双击或按 0 重置，方向键微调）"
+                      data-hint="拖动调整宽度 · 双击或按 0 重置"
+                      data-hint-side="left"
                       className={`split-handle split-handle--col${dragging === 'side' ? ' split-handle--active' : ''}`}
                       onPointerDown={(e) => startDrag('side', e)}
                       onKeyDown={(e) => onSplitterKeyDown('side', e)}
@@ -525,6 +541,9 @@ export function AppShell({
                       className="collapsed-rail-btn"
                       onClick={() => toggle('sideCollapsed')}
                       title="展开右侧 RE / 队列 / 通知栏"
+                      data-hint="展开右侧 RE / 队列 / 通知栏"
+                      data-hint-kbd={`${mod}\\`}
+                      data-hint-side="left"
                     >
                       <span>◂</span>
                       <span className="collapsed-rail-label">RE · NOTICES</span>
@@ -551,7 +570,8 @@ export function AppShell({
                   aria-valuemin={96}
                   aria-valuemax={560}
                   aria-valuenow={Math.round(layout.transcriptHeight)}
-                  title="拖动调整转录区高度（双击或按 0 重置，方向键微调）"
+                  data-hint="拖动调整转录区高度 · 双击或按 0 重置"
+                  data-hint-side="top"
                   className={`split-handle split-handle--row${dragging === 'transcript' ? ' split-handle--active' : ''}`}
                   onPointerDown={(e) => startDrag('transcript', e)}
                   onKeyDown={(e) => onSplitterKeyDown('transcript', e)}
@@ -570,9 +590,12 @@ export function AppShell({
                   className="collapsed-bar-btn"
                   onClick={() => toggle('transcriptCollapsed')}
                   title="展开转录流"
+                  data-hint="展开实时转录流"
+                  data-hint-kbd={`${mod}J`}
+                  data-hint-side="top"
                 >
                   <span>▸ TRANSCRIPT</span>
-                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>点击展开 ({mod}J)</span>
+                  <span style={{ color: 'var(--faint)', fontSize: 10 }}>{mod}J</span>
                 </button>
               ) : (
                 <div
@@ -638,9 +661,9 @@ const outerStyle: CSSProperties = {
 }
 
 const topBarStyle: CSSProperties = {
-  flex: '0 0 34px',
-  padding: '0 4px',
-  gap: 8,
+  flex: '0 0 38px',
+  padding: '0 8px',
+  gap: 10,
 }
 
 const topRightWrapStyle: CSSProperties = {
@@ -648,12 +671,6 @@ const topRightWrapStyle: CSSProperties = {
   alignItems: 'center',
   gap: 8,
   minWidth: 0,
-}
-
-const layoutBarStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
 }
 
 const rowFlexStyle: CSSProperties = {

@@ -26,13 +26,10 @@ function basename(p: string): string {
 }
 
 const headerBtnStyle: CSSProperties = {
-  background: 'none',
-  border: '1px solid var(--rule)',
-  color: 'var(--muted)',
-  cursor: 'pointer',
-  font: 'inherit',
+  minWidth: 22,
+  height: 20,
+  padding: '0 5px',
   fontSize: 11,
-  padding: '1px 5px',
 }
 
 export function SessionSidebar({
@@ -159,39 +156,50 @@ export function SessionSidebar({
           flexWrap: 'nowrap',
           whiteSpace: 'nowrap',
           color: 'var(--muted)',
-          fontSize: 11,
-          letterSpacing: '0.12em',
-          padding: '5px 10px',
-          borderBottom: '1px solid var(--rule)',
+          fontSize: 10.5,
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          padding: '6px 10px',
+          borderBottom: '1px solid var(--border-subtle)',
         }}
       >
         <span style={{ flexShrink: 0 }}>SESSIONS · {list.length}</span>
-        <span style={{ display: 'flex', gap: 4 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
           <button
             type="button"
-            className="ix-btn"
+            className="ix-icon-btn"
             onClick={() => setShowNew(true)}
             title="new session"
-            style={{ ...headerBtnStyle, color: 'var(--accent)' }}
+            aria-label="new session"
+            data-hint="新建分析会话"
+            data-hint-kbd={`${mod}⇧N`}
+            data-hint-side="bottom"
+            style={{ ...headerBtnStyle, color: 'var(--accent)', fontWeight: 600 }}
           >
-            + new
+            +
           </button>
           <button
             type="button"
-            className="ix-btn"
+            className="ix-icon-btn"
             onClick={() => setShowResume(true)}
             title="resume saved session"
+            aria-label="resume saved session"
+            data-hint="恢复历史会话"
+            data-hint-side="bottom"
             style={headerBtnStyle}
           >
-            resume
+            ↻
           </button>
           <button
             type="button"
-            className="ix-btn"
+            className="ix-icon-btn"
             onClick={() => setShowConfig(true)}
             disabled={!active}
             title={active ? 'session config' : '无 active session'}
-            style={{ ...headerBtnStyle, opacity: active ? 1 : 0.4, cursor: active ? 'pointer' : 'default' }}
+            aria-label="session config"
+            data-hint={active ? '当前会话设置（模型路由 / 轮次 / 压缩）' : '暂无活跃会话'}
+            data-hint-side="bottom"
+            style={headerBtnStyle}
           >
             ⚙
           </button>
@@ -236,7 +244,7 @@ export function SessionSidebar({
                 setFilterText('')
                 searchRef.current?.focus()
               }}
-              title="清除筛选"
+              data-hint="清除筛选"
               aria-label="Clear session filter"
             >
               ✕
@@ -247,13 +255,11 @@ export function SessionSidebar({
 
       <div
         ref={listRef}
-        style={{ overflow: 'auto', minHeight: 0, flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 6 }}
+        style={{ overflow: 'auto', minHeight: 0, flex: 1, padding: 6, display: 'flex', flexDirection: 'column', gap: 3 }}
       >
         {list.length === 0 && (
-          <div style={{ color: 'var(--faint)', fontSize: 12, padding: 8 }}>
-            ○ no sessions —
-            <br />
-            [+ new] 开始一个
+          <div style={{ color: 'var(--faint)', fontSize: 11.5, padding: '10px 8px', lineHeight: 1.6 }}>
+            暂无会话 · 点击右上角 + 新建
           </div>
         )}
 
@@ -269,6 +275,8 @@ export function SessionSidebar({
           const needsApproval = rt.lifecycle === 'awaiting_approval' || rt.pendingApproval != null
           const isRunning = rt.lifecycle === 'running'
           const wsName = basename(rt.info.workspace)
+          const routeLine = `${rt.info.planner || '—'} → ${rt.info.executor || '—'}${rt.info.workflow ? ` · ${rt.info.workflow}` : ''}`
+          const rowHint = `${rt.info.workspace}\n${routeLine}${queue > 0 ? `\n队列中：${queue} 条指令` : ''}`
 
           const cardClass = [
             'ix-sidebar-item',
@@ -283,93 +291,87 @@ export function SessionSidebar({
             <div
               key={rt.info.id}
               data-session-card="true"
+              data-hint={rowHint}
+              data-hint-side="right"
               tabIndex={0}
               aria-current={activeRt ? 'true' : undefined}
               className={cardClass}
               onClick={() => activateSession(rt.info.id)}
               onKeyDown={(e) => onCardKeyDown(e, idx, rt.info.id, rt.lifecycle, wsName)}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                <span style={needsApproval ? { animation: 'ws4pulse 1.2s ease-in-out infinite' } : undefined}>
-                  <StatusBadge state={badgeState(needsApproval ? 'awaiting_approval' : rt.lifecycle)} />
-                </span>
-                <span
-                  style={{
-                    color: activeRt ? 'var(--accent)' : needsApproval ? 'var(--warn)' : 'var(--text)',
-                    fontWeight: activeRt || needsApproval ? 700 : 400,
-                    fontSize: 12,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    flex: 1,
-                  }}
-                >
-                  {wsName}
-                </span>
-                {needsApproval ? (
-                  <span className="ix-state-pill ix-state-pill--approval" title="等待安全审批确认">
-                    APPROVAL
-                  </span>
-                ) : isRunning ? (
-                  <span className="ix-state-pill ix-state-pill--running" title="正在执行分析回合">
-                    LIVE
-                  </span>
-                ) : null}
-                {queue > 0 && (
-                  <span style={{ color: 'var(--accent)', fontSize: 11 }} title={`${queue} prompts queued`}>
-                    ⠿ {queue}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  className="ix-close-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    requestClose(rt.info.id, rt.lifecycle, wsName)
-                  }}
-                  title="close session"
-                >
-                  ✕
-                </button>
+              <span style={needsApproval ? { animation: 'ws4pulse 1.2s ease-in-out infinite' } : undefined}>
+                <StatusBadge state={badgeState(needsApproval ? 'awaiting_approval' : rt.lifecycle)} />
               </span>
-              <span style={{ color: 'var(--faint)', fontSize: 10, display: 'flex', gap: 6, minWidth: 0 }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {rt.info.planner || '—'} → {rt.info.executor || '—'}
-                </span>
-                {rt.info.workflow && <span style={{ color: 'var(--violet)' }}>[{rt.info.workflow}]</span>}
+              <span
+                style={{
+                  color: activeRt ? 'var(--accent)' : needsApproval ? 'var(--warn)' : 'var(--text)',
+                  fontWeight: activeRt || needsApproval ? 600 : 400,
+                  fontSize: 12,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                {wsName}
               </span>
+              {needsApproval ? (
+                <span className="ix-state-pill ix-state-pill--approval">审批</span>
+              ) : isRunning ? (
+                <span className="ix-state-pill ix-state-pill--running">运行</span>
+              ) : null}
+              {queue > 0 && (
+                <span style={{ color: 'var(--accent)', fontSize: 10.5, flexShrink: 0 }}>⠿{queue}</span>
+              )}
+              <button
+                type="button"
+                className="ix-close-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  requestClose(rt.info.id, rt.lifecycle, wsName)
+                }}
+                title="close session"
+                data-hint="关闭此会话"
+                data-hint-side="right"
+              >
+                ✕
+              </button>
             </div>
           )
         })}
 
         {/* --- SHELLS --- */}
-        <div style={{ marginTop: 4, paddingTop: 6, borderTop: '1px solid var(--rule)' }}>
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               color: 'var(--muted)',
-              fontSize: 11,
-              letterSpacing: '0.12em',
-              padding: '0 2px 4px',
+              fontSize: 10.5,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              padding: '0 4px 5px',
             }}
           >
             <span>SHELLS · {shellList.length}</span>
             <button
               type="button"
-              className="ix-btn"
+              className="ix-icon-btn"
               onClick={() => void shellActions.open(active?.info.workspace ?? null)}
               disabled={!hasBackend()}
               title={active ? `在 ${basename(active.info.workspace)} 开 shell` : '开一个 shell（$HOME）'}
-              style={{ ...headerBtnStyle, color: 'var(--violet)' }}
+              data-hint={active ? `在 ${basename(active.info.workspace)} 打开内置终端` : '打开内置 PTY 终端（$HOME）'}
+              data-hint-side="right"
+              style={{ ...headerBtnStyle, color: 'var(--violet)', fontSize: 10.5 }}
             >
               + sh
             </button>
           </div>
           {shellList.length === 0 ? (
-            <div style={{ color: 'var(--faint)', fontSize: 11, padding: '0 2px' }}>
-              ○ [+ sh] 开终端做其它操作
+            <div style={{ color: 'var(--faint)', fontSize: 11, padding: '2px 4px' }}>
+              点击 + sh 打开内置终端
             </div>
           ) : (
             shellList.map((sh) => {
@@ -378,6 +380,8 @@ export function SessionSidebar({
                 <div
                   key={sh.id}
                   tabIndex={0}
+                  data-hint={`内置终端 · ${sh.cwd}`}
+                  data-hint-side="right"
                   onClick={() => shellActions.setActive(sh.id)}
                   onKeyDown={(e) => {
                     if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
@@ -385,25 +389,21 @@ export function SessionSidebar({
                       shellActions.setActive(sh.id)
                     }
                   }}
-                  className="ix-sidebar-item"
+                  className={`ix-sidebar-item${activeSh ? ' ix-sidebar-item--active' : ''}`}
                   style={{
-                    borderColor: activeSh ? 'var(--violet)' : 'var(--rule)',
-                    borderLeftWidth: activeSh ? 3 : 2,
-                    borderLeftColor: activeSh ? 'var(--violet)' : 'var(--rule)',
-                    padding: '5px 8px',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginBottom: 4,
+                    borderColor: activeSh ? 'color-mix(in srgb, var(--violet) 42%, var(--border-subtle))' : undefined,
+                    borderLeftColor: activeSh ? 'var(--violet)' : undefined,
+                    marginBottom: 2,
                   }}
                 >
-                  <span style={{ color: 'var(--violet)', fontSize: 12 }}>⌘</span>
+                  <span style={{ color: 'var(--violet)', fontSize: 11.5 }}>⌘</span>
                   <span
                     style={{
                       color: activeSh ? 'var(--violet)' : 'var(--text)',
-                      fontWeight: activeSh ? 700 : 400,
+                      fontWeight: activeSh ? 600 : 400,
                       fontSize: 12,
                       flex: 1,
+                      minWidth: 0,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -420,6 +420,8 @@ export function SessionSidebar({
                       void shellActions.close(sh.id)
                     }}
                     title="kill shell"
+                    data-hint="关闭终端"
+                    data-hint-side="right"
                   >
                     ✕
                   </button>

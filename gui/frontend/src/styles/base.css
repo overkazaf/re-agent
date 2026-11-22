@@ -225,6 +225,18 @@ input, textarea, button, select {
   box-shadow: var(--shadow-popover);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --- Daylight Lab (paper) contrast guardrails -------------------------------
    Neutralizes dark hardcoded rgba(...) surfaces in shared component stylesheets
    so sidebar cards, dialogs, command palette, code blocks, and SVG stages stay
@@ -262,9 +274,20 @@ input, textarea, button, select {
   box-shadow: var(--shadow-popover) !important;
 }
 
-:root[data-theme='paper'] .ix-top-group {
+:root[data-theme='paper'] .ix-top-group,
+:root[data-theme='paper'] .ix-seg-group {
   background: var(--surface-2);
   border-color: var(--border-default);
+}
+
+:root[data-theme='paper'] .ix-seg-btn--active {
+  background: var(--surface-1);
+  border-color: var(--border-strong);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme='paper'] .ix-icon-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
 }
 
 :root[data-theme='paper'] .ix-top-crumb,
