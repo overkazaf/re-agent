@@ -2,7 +2,7 @@
 // (ev_NNN) and hypothesis assumption stack (H-NNN). Works identically for both
 // real Wails Go sessions (fed by TickDTO.ledger) and the Demo Sandbox.
 import { useMemo, useState, type CSSProperties } from 'react'
-import type { HypothesisStatus, LedgerDTO } from '../../lib/types'
+import type { EvidenceRecord, Hypothesis, HypothesisStatus, LedgerDTO } from '../../lib/types'
 import { PanelBox, ProSelect, type ProSelectOption } from '../crt'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
 import type { WorkbenchTab } from './HypothesisWorkbenchDialog'
@@ -13,8 +13,23 @@ import {
 } from './forensics'
 import { buildHypothesisArcs } from './cognitiveSynthesis'
 import './re-pro.css'
+import './controlLoop.css'
 
 export type LedgerTab = 'evidence' | 'hypotheses'
+
+type StructuredHypothesis = Hypothesis & {
+  scope?: string
+  falsifiers?: string[]
+  nextTest?: string
+}
+
+const UNTRUSTED_HINT = '样本字符串与原始输出先按不可信数据隔离，防止函数名/隐藏字符投毒上下文'
+
+function isUntrustedRecord(ev: EvidenceRecord): boolean {
+  if (ev.untrustedInput === true) return true
+  if (ev.untrustedInput === false) return false
+  return ev.kind !== 'verification_result' && ev.kind !== 'audit_finding'
+}
 
 // ---------- visual mappings ----------
 
@@ -261,6 +276,11 @@ export function LedgerPanel({
                           <span style={chipStyle(meta.tone)} data-hint={KIND_HINT[meta.label]}>
                             {meta.label}
                           </span>
+                          {isUntrustedRecord(ev) && (
+                            <span className="cl-untrusted-chip" data-hint={UNTRUSTED_HINT}>
+                              UNTRUSTED DATA
+                            </span>
+                          )}
                           <span style={{ color: 'var(--muted)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                             {ev.source}
                           </span>
@@ -431,6 +451,7 @@ export function LedgerPanel({
                           </div>
                         </div>
                       )}
+                      {open && renderStructuredHypMeta(h as StructuredHypothesis)}
                       {open && h.note && (
                         <div style={{ color: 'var(--muted)', fontSize: 10, borderLeft: '2px solid var(--rule)', paddingLeft: 6 }}>
                           note: {h.note}
@@ -723,6 +744,22 @@ export function LedgerDetailDialog({
                     <span style={chipStyle(meta.tone)} data-hint={KIND_HINT[meta.label]}>
                       {ev.kind || 'tool_observation'}
                     </span>
+                    {isUntrustedRecord(ev) ? (
+                      <span className="cl-untrusted-chip" data-hint={UNTRUSTED_HINT}>
+                        UNTRUSTED DATA
+                      </span>
+                    ) : (
+                      <span
+                        className="cl-trusted-chip"
+                        data-hint={
+                          ev.kind === 'audit_finding'
+                            ? '隔离对抗审计签章（独立于原始样本上下文）'
+                            : '宿主确定性执行验证凭证（已脱敏核验）'
+                        }
+                      >
+                        {ev.kind === 'audit_finding' ? 'AUDITED' : 'VERIFIED'}
+                      </span>
+                    )}
                     <span style={{ color: 'var(--accent)' }}>{ev.source}</span>
                     {ev.view && <span style={{ color: 'var(--faint)' }}>view:{ev.view}</span>}
                     {ev.bytes > 0 && <span style={{ color: 'var(--faint)' }}>{ev.bytes}B</span>}
@@ -890,6 +927,8 @@ export function LedgerDetailDialog({
                   </div>
                 )}
 
+                {renderStructuredHypMeta(h as StructuredHypothesis)}
+
                 {h.note && (
                   <div style={{ color: 'var(--muted)', fontSize: 11, borderLeft: '2px solid var(--rule)', paddingLeft: 8 }}>
                     {h.note}
@@ -948,6 +987,37 @@ export function LedgerDetailDialog({
         <Btn onClick={onClose}>close</Btn>
       </div>
     </Dialog>
+  )
+}
+
+// ---------- structured hypothesis metadata helper ----------
+
+function renderStructuredHypMeta(h: StructuredHypothesis) {
+  const scope = h.scope?.trim()
+  const falsifiers = (h.falsifiers ?? []).map((x) => x.trim()).filter(Boolean)
+  const nextTest = h.nextTest?.trim()
+  if (!scope && falsifiers.length === 0 && !nextTest) return null
+  return (
+    <div className="cl-struct-meta">
+      {scope && (
+        <div className="cl-struct-row" data-hint="§8.3 scope：限定该假设适用的样本模块、地址范围或运行前提">
+          <span className="cl-struct-k">scope</span>
+          <span style={{ color: 'var(--text)' }}>{scope}</span>
+        </div>
+      )}
+      {falsifiers.length > 0 && (
+        <div className="cl-struct-row" data-hint="§8.3 falsifiers：一旦出现下列反例，该假设必须削弱、冻结或回滚">
+          <span className="cl-struct-k" style={{ color: 'var(--warn)' }}>falsifiers</span>
+          <span style={{ color: 'var(--muted)' }}>{falsifiers.join(' · ')}</span>
+        </div>
+      )}
+      {nextTest && (
+        <div className="cl-struct-row" data-hint="§8.3 next_test：后续动态实验必须显式绑定此检验目标">
+          <span className="cl-struct-k" style={{ color: 'var(--ok)' }}>next_test</span>
+          <span style={{ color: 'var(--ok)' }}>{nextTest}</span>
+        </div>
+      )}
+    </div>
   )
 }
 

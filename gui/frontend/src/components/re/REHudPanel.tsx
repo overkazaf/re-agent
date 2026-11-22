@@ -2,9 +2,15 @@
 // HYP → VER → AUD → WRI (current = ▸ + accent bold, past = muted, future = faint),
 // H:N / E:N counters, phase progress bar. Mirrors internal/ui/rehud.go.
 import type { CSSProperties } from 'react'
-import type { ReDTO } from '../../lib/types'
+import type { LedgerDTO, ReDTO } from '../../lib/types'
+import { useSessionStore } from '../../store/sessions'
 import { GlowText, PanelBox } from '../crt'
 import './re-pro.css'
+import './controlLoop.css'
+
+type ExtendedLedger = LedgerDTO & {
+  auditVerdict?: 'accepted' | 'rejected' | 'needs_more_evidence' | string
+}
 
 // Glyphs match workflow.PhaseCodes / internal/ui/rehud.go exactly.
 const PHASES = ['TRI', 'STA', 'DYN', 'EVI', 'IFC', 'HYP', 'VER', 'AUD', 'WRI']
@@ -23,17 +29,27 @@ const BAR_W = 14
 
 export function REHudPanel({
   re,
+  ledger: ledgerProp,
   onInspect,
   onOpenGraph,
   onOpenWriteup,
   style,
 }: {
   re: ReDTO | null
+  ledger?: LedgerDTO | null
   onInspect?: (tab: 'hypotheses' | 'evidence') => void
   onOpenGraph?: () => void
   onOpenWriteup?: () => void
   style?: CSSProperties
 }) {
+  const storeSnap = useSessionStore()
+  const activeLedger = (ledgerProp ??
+    (storeSnap.activeId ? storeSnap.sessions.get(storeSnap.activeId)?.latestTick?.ledger : null) ??
+    null) as ExtendedLedger | null
+
+  const defenses = computeDefenseStatus(re, activeLedger)
+  const deliveryVerdict = computeDeliveryVerdict(re, activeLedger)
+
   return (
     <div style={style}>
       <PanelBox title="re workflow" accent="violet" tier="primary" badge={re ? `${re.phaseIndex + 1}/${re.phaseCount}` : undefined}>
@@ -182,6 +198,28 @@ export function REHudPanel({
                 )}
               </span>
             </div>
+
+            {/* Compact single-line 5-Defense dots + 3-state delivery verdict chip */}
+            <div className="cl-hud-def-row re-mono-num" data-testid="re-hud-defenses">
+              {defenses.map((d) => (
+                <span
+                  key={d.code}
+                  className="cl-def-dot"
+                  data-state={d.state}
+                  data-hint={d.hint}
+                >
+                  {d.code}
+                </span>
+              ))}
+              <span style={{ flex: 1 }} />
+              <span
+                className="cl-verdict-chip"
+                data-verdict={deliveryVerdict.verdict}
+                data-hint={deliveryVerdict.hint}
+              >
+                {deliveryVerdict.label}
+              </span>
+            </div>
           </div>
         )}
       </PanelBox>
@@ -192,4 +230,123 @@ export function REHudPanel({
 function filled(re: ReDTO): number {
   if (re.phaseCount <= 0) return 0
   return Math.min(BAR_W, Math.max(0, Math.round(((re.phaseIndex + 1) * BAR_W) / re.phaseCount)))
+}
+
+function computeDefenseStatus(
+  re: ReDTO | null,
+  ledger: ExtendedLedger | null,
+): Array<{ code: 'CAP' | 'LED' | 'HYP' | 'VER' | 'AUD'; state: 'ok' | 'active' | 'warn' | 'idle'; hint: string }> {
+  const evs = ledger?.evidence ?? []
+  const hyps = ledger?.hypotheses ?? []
+  const sandbox = ledger?.sandbox
+  const verEvs = evs.filter((e) => !e.isError && e.kind === 'verification_result')
+  const audEvs = evs.filter((e) => e.kind === 'audit_finding')
+  const hasConflict = hyps.some((h) => h.status === 'reevaluate')
+
+  const capState: 'ok' | 'active' | 'warn' | 'idle' = sandbox?.deniedCount
+    ? 'warn'
+    : sandbox?.active
+      ? 'ok'
+      : 'idle'
+  const ledState: 'ok' | 'active' | 'warn' | 'idle' =
+    (evs.length || re?.evidence || 0) > 0 ? 'ok' : 'idle'
+  const hypState: 'ok' | 'active' | 'warn' | 'idle' = hasConflict
+    ? 'warn'
+    : (hyps.length || re?.hypotheses || 0) > 0
+      ? 'active'
+      : 'idle'
+  const verState: 'ok' | 'active' | 'warn' | 'idle' = verEvs.length > 0
+    ? 'ok'
+    : re?.phase === 'verify'
+      ? 'active'
+      : 'idle'
+  const audState: 'ok' | 'active' | 'warn' | 'idle' = audEvs.length > 0
+    ? 'ok'
+    : re?.phase === 'audit'
+      ? 'active'
+      : 'idle'
+
+  return [
+    {
+      code: 'CAP',
+      state: capState,
+      hint: `防线① Capability Sandbox：${sandbox?.active ? `任务级最小权限已启用（放行 ${sandbox.grantedCount} · 拦截越权 ${sandbox.deniedCount}）` : '基础策略守护中（声明 /goal 激活硬沙箱）'}`,
+    },
+    {
+      code: 'LED',
+      state: ledState,
+      hint: `防线② Evidence Ledger：只追加实测账本 E:${evs.length || re?.evidence || 0}（原始样本输出按 UNTRUSTED DATA 隔离）`,
+    },
+    {
+      code: 'HYP',
+      state: hypState,
+      hint: `防线③ Hypothesis Manager：显式可证伪假设栈 H:${hyps.length || re?.hypotheses || 0}${hasConflict ? '（含待重审冲突假设）' : ''}`,
+    },
+    {
+      code: 'VER',
+      state: verState,
+      hint: `防线④ Execution Verifier：${verEvs.length > 0 ? `已签发 ${verEvs.length} 条 verify_artifact 行为重放凭证` : '待运行 verify_artifact 正反例与差分校验（区分 candidate / verified）'}`,
+    },
+    {
+      code: 'AUD',
+      state: audState,
+      hint: `防线⑤ Adversarial Auditor：${audEvs.length > 0 ? `隔离对抗审计已签发 ${audEvs.length} 条核查记录` : '待触发独立隔离上下文 5 项对抗审计 (/audit)'}`,
+    },
+  ]
+}
+
+function computeDeliveryVerdict(
+  re: ReDTO | null,
+  ledger: ExtendedLedger | null,
+): { verdict: 'accepted' | 'pending' | 'needs_more_evidence' | 'rejected'; label: string; hint: string } {
+  const explicit = ledger?.auditVerdict
+  if (explicit === 'accepted') {
+    return {
+      verdict: 'accepted',
+      label: 'ACCEPTED',
+      hint: '交付裁定：accepted — 已通过行为回放、差分验证与隔离对抗审计，可输出可复现报告',
+    }
+  }
+  if (explicit === 'rejected') {
+    return {
+      verdict: 'rejected',
+      label: 'REJECTED',
+      hint: '交付裁定：rejected — 存在未消除反证或越权违规，结论已被审计拒收',
+    }
+  }
+  if (explicit === 'needs_more_evidence') {
+    return {
+      verdict: 'needs_more_evidence',
+      label: 'NEEDS EV',
+      hint: '交付裁定：needs_more_evidence — 覆盖不足、单样本命中或存在冲突，退回补证',
+    }
+  }
+
+  const evs = ledger?.evidence ?? []
+  const hyps = ledger?.hypotheses ?? []
+  const findings = ledger?.findings ?? []
+  const hasVer = evs.some((e) => !e.isError && e.kind === 'verification_result')
+  const hasAud = evs.some((e) => e.kind === 'audit_finding')
+  const goalOk = !ledger?.goal || ledger.goal.criteria.every((c) => c.pass)
+  const hasUnresolved = hyps.some((h) => h.status === 'reevaluate')
+
+  if ((hasAud && hasVer && goalOk && !hasUnresolved) || re?.phase === 'writeup') {
+    return {
+      verdict: 'accepted',
+      label: 'ACCEPTED',
+      hint: '交付裁定：accepted — 重放验证、/goal 指标与隔离审计均达标，可交付可复现报告',
+    }
+  }
+  if (hasUnresolved || findings.some((f) => f.action === 'challenge' || f.rule === 'runtime-contradiction')) {
+    return {
+      verdict: 'needs_more_evidence',
+      label: 'NEEDS EV',
+      hint: '交付裁定：needs_more_evidence — 检出证据冲突或覆盖盲区，需补充实验/反例后重审',
+    }
+  }
+  return {
+    verdict: 'pending',
+    label: 'PENDING',
+    hint: '交付裁定：candidate/pending — 分析进行中，需完成 verify_artifact 与隔离 /audit 验收',
+  }
 }

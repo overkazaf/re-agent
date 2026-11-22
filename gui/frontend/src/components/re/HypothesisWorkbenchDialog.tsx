@@ -11,16 +11,57 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { api } from '../../lib/api'
 import type {
+  EvidenceRecord,
+  FindingDTO,
+  Hypothesis,
+  HypothesisMutationDTO,
   LedgerDTO,
   VerificationCaseDTO,
+  VerificationStats,
 } from '../../lib/types'
 import { ProSelect, type ProSelectOption } from '../crt'
 import { Btn, Dialog, fieldStyle } from '../session/Dialog'
 import { buildProvenanceChain, formatHypothesisCitation } from './forensics'
 import { buildHypothesisArcs } from './cognitiveSynthesis'
 import './re-pro.css'
+import './controlLoop.css'
 
 export type WorkbenchTab = 'hypothesis' | 'verify' | 'review'
+
+type StructuredHypothesis = Hypothesis & {
+  scope?: string
+  falsifiers?: string[]
+  nextTest?: string
+}
+
+type StructuredHypothesisMutation = HypothesisMutationDTO & {
+  scope?: string
+  falsifiers?: string[]
+  nextTest?: string
+}
+
+type ExtendedVerificationStats = VerificationStats & {
+  status?: 'candidate' | 'verified' | string
+  boundaryPassed?: number
+  differentialCases?: number
+  uncoveredPaths?: string[]
+}
+
+type AuditVerdict = 'accepted' | 'rejected' | 'needs_more_evidence'
+
+interface AuditCheckRecord {
+  id?: string
+  key?: string
+  label?: string
+  pass?: boolean
+  passed?: boolean
+  detail?: string
+}
+
+type ExtendedLedger = LedgerDTO & {
+  auditVerdict?: AuditVerdict | string
+  auditChecks?: AuditCheckRecord[]
+}
 
 const REVIEW_VERDICT_OPTIONS: readonly ProSelectOption<'support' | 'challenge' | 'reject' | ''>[] = [
   { value: 'support', label: 'SUPPORT (核准支撑)', badge: 'OK', description: '以勾选实测证据核准支撑目标假设' },
@@ -48,7 +89,8 @@ export function HypothesisWorkbenchDialog({
   const [busy, setBusy] = useState(false)
   const [banner, setBanner] = useState<{ tone: 'ok' | 'err' | 'info'; text: string } | null>(null)
 
-  const hypotheses = ledger?.hypotheses ?? []
+  const extLedger = (ledger ?? null) as ExtendedLedger | null
+  const hypotheses = (ledger?.hypotheses ?? []) as StructuredHypothesis[]
   const evidence = ledger?.evidence ?? []
   const findings = ledger?.findings ?? []
 
@@ -57,6 +99,9 @@ export function HypothesisWorkbenchDialog({
   const [claim, setClaim] = useState('')
   const [confidencePct, setConfidencePct] = useState(75)
   const [note, setNote] = useState('')
+  const [scope, setScope] = useState('')
+  const [falsifiersText, setFalsifiersText] = useState('')
+  const [nextTest, setNextTest] = useState('')
   const [dependsOn, setDependsOn] = useState<string[]>([])
   const [citeEvIds, setCiteEvIds] = useState<string[]>([])
 
@@ -66,6 +111,12 @@ export function HypothesisWorkbenchDialog({
 
   const selectedHyp = hypotheses.find((h) => h.id === selectedHypId) ?? null
   const [copiedCite, setCopiedCite] = useState(false)
+
+  const verificationPosture = useMemo(() => evaluateVerificationPosture(evidence), [evidence])
+  const auditReport = useMemo(
+    () => evaluateAdversarialChecklist(extLedger, evidence, hypotheses, findings),
+    [extLedger, evidence, hypotheses, findings],
+  )
 
   const selectedChain = useMemo(
     () => (selectedHyp ? buildProvenanceChain(selectedHyp, evidence, findings) : null),
@@ -103,12 +154,18 @@ export function HypothesisWorkbenchDialog({
       setClaim('')
       setConfidencePct(75)
       setNote('')
+      setScope('')
+      setFalsifiersText('')
+      setNextTest('')
       setDependsOn([])
       setCiteEvIds([])
     } else if (selectedHyp) {
       setClaim(selectedHyp.claim)
       setConfidencePct(Math.round(selectedHyp.confidence * 100))
       setNote(selectedHyp.note ?? '')
+      setScope(selectedHyp.scope ?? '')
+      setFalsifiersText((selectedHyp.falsifiers ?? []).join('；'))
+      setNextTest(selectedHyp.nextTest ?? '')
       setDependsOn(selectedHyp.dependsOn ?? [])
       setCiteEvIds([])
     }
@@ -174,17 +231,31 @@ export function HypothesisWorkbenchDialog({
     return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
   }
 
+  function parseFalsifiers(raw: string): string[] | undefined {
+    const list = raw
+      .split(/[;；\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    return list.length > 0 ? list : undefined
+  }
+
   function applyHypothesisPreset(kind: 'positive' | 'decoy') {
     if (kind === 'positive') {
       if (isWelcome) {
         setClaim('chall.js 对输入参数执行 0x2a 单字节异或比对，输入错误口令必定输出 rejected')
         setConfidencePct(85)
+        setScope('chall.js 入口校验分支')
+        setFalsifiersText('错误口令返回 accepted 或校验逻辑依赖外部状态')
+        setNextTest('以非法探针输入实跑 chall.js 验证拒绝分支')
         setExpTitle('反例拒绝分支实跑验证')
         setExpCommand("node chall.js 'invalid_probe'")
         setExpExpected('rejected')
       } else {
         setClaim('carrier.bin 偏移 0x00..0x0f 存放明文前缀 carrier-prefix，属于未加密引导头')
         setConfidencePct(82)
+        setScope('carrier.bin 偏移 0x00..0x0f 引导头段')
+        setFalsifiersText('前 16 字节呈高熵密文或不含可打印前缀')
+        setNextTest('实跑 strings 提取头部明文并与偏移对照')
         setExpTitle('提取头部可打印字符串验证明文前缀')
         setExpCommand('strings carrier.bin')
         setExpExpected('carrier-prefix')
@@ -192,6 +263,9 @@ export function HypothesisWorkbenchDialog({
     } else {
       setClaim('carrier.bin 尾部包含完整可解压的 GZIP 归档流')
       setConfidencePct(70)
+      setScope('carrier.bin 尾部疑似 1f 8b 偏移区')
+      setFalsifiersText('gzip -t 报错或仅是伪造魔术头诱饵')
+      setNextTest('实跑 gzip -t 校验归档完整性并观察是否触发反证折半')
       setExpTitle('实跑 gzip 完整性测试（预期被动态反证折半降权）')
       setExpCommand('gzip -t carrier.bin')
       setExpExpected('OK')
@@ -210,17 +284,21 @@ export function HypothesisWorkbenchDialog({
     setBusy(true)
     setBanner(null)
     try {
-      const created = await api.mutateHypothesis(sessionId, {
+      const createReq: StructuredHypothesisMutation = {
         action: 'create',
         claim: claim.trim(),
         confidence: confidencePct / 100,
         dependsOn,
         evidenceIds: citeEvIds,
         note: note.trim(),
+        scope: scope.trim() || undefined,
+        falsifiers: parseFalsifiers(falsifiersText),
+        nextTest: nextTest.trim() || undefined,
         expTitle: !runExpNow && expCommand.trim() ? expTitle.trim() : undefined,
         expCommand: !runExpNow && expCommand.trim() ? expCommand.trim() : undefined,
         expExpected: !runExpNow && expCommand.trim() ? expExpected.trim() : undefined,
-      })
+      }
+      const created = await api.mutateHypothesis(sessionId, createReq)
       if (runExpNow && expCommand.trim()) {
         const ev = await api.runHypothesisExperiment(sessionId, {
           hypothesisId: created.id,
@@ -258,7 +336,7 @@ export function HypothesisWorkbenchDialog({
     setBusy(true)
     setBanner(null)
     try {
-      const updated = await api.mutateHypothesis(sessionId, {
+      const updateReq: StructuredHypothesisMutation = {
         action,
         id: selectedHyp.id,
         claim: claim.trim(),
@@ -266,7 +344,11 @@ export function HypothesisWorkbenchDialog({
         dependsOn,
         evidenceIds: citeEvIds,
         note: note.trim(),
-      })
+        scope: scope.trim() || undefined,
+        falsifiers: parseFalsifiers(falsifiersText),
+        nextTest: nextTest.trim() || undefined,
+      }
+      const updated = await api.mutateHypothesis(sessionId, updateReq)
       setCiteEvIds([])
       setBanner({
         tone: 'ok',
@@ -670,6 +752,40 @@ export function HypothesisWorkbenchDialog({
               </label>
             </div>
 
+            {/* §8.3 Structured Hypothesis Fields: scope / falsifiers / next_test */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 }}>
+              <label style={lblStyle} data-hint="§8.3 scope：限定该假设适用的函数、地址段或运行条件">
+                适用范围 (scope)
+                <input
+                  aria-label="hypothesis scope"
+                  style={fieldStyle}
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  placeholder="可选，如 sub_1048A0 / 0x00..0x0f"
+                />
+              </label>
+              <label style={lblStyle} data-hint="§8.3 falsifiers：出现何种观测即推翻该假设（多条用分号分隔）">
+                可证伪反例 (falsifiers)
+                <input
+                  aria-label="hypothesis falsifiers"
+                  style={fieldStyle}
+                  value={falsifiersText}
+                  onChange={(e) => setFalsifiersText(e.target.value)}
+                  placeholder="可选，如仅做展示格式化不参与签名"
+                />
+              </label>
+              <label style={lblStyle} data-hint="§8.3 next_test：下一步动态动作必须绑定的检验目标">
+                下一步检验 (next_test)
+                <input
+                  aria-label="hypothesis next_test"
+                  style={fieldStyle}
+                  value={nextTest}
+                  onChange={(e) => setNextTest(e.target.value)}
+                  placeholder="可选，如追踪调用者并对比前后 buffer"
+                />
+              </label>
+            </div>
+
             {/* Parent Hypothesis Dependencies */}
             {hypotheses.length > 0 && (
               <div style={lblStyle}>
@@ -747,8 +863,25 @@ export function HypothesisWorkbenchDialog({
 
             {/* Experiments Section */}
             <div style={{ borderTop: '1px dashed var(--rule)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11.5 }}>
-                🧪 假设可证伪实验台 (Experiment Design & Live Execution)
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11.5 }}>
+                  🧪 假设可证伪实验台 (Experiment Design & Live Execution)
+                </span>
+              </div>
+
+              {/* §8.4 Explicit Hypothesis-Bound Dynamic Action Banner */}
+              <div
+                className="cl-binding-banner re-mono-num"
+                data-hint="§8.4 动态阶段铁律：每次动态动作必须绑定具体假设并回答要验证的 next_test；未命中目标则记录为 weakened"
+              >
+                <span style={{ color: 'var(--ok)', fontWeight: 700 }}>
+                  🔗 绑定假设：为验证 {selectedHyp ? selectedHyp.id : 'H-NNN'} 的 next_test
+                </span>
+                {(nextTest.trim() || selectedHyp?.nextTest) && (
+                  <span style={{ color: 'var(--muted)' }}>
+                    — {nextTest.trim() || selectedHyp?.nextTest}
+                  </span>
+                )}
               </div>
 
               {selectedHyp && selectedHyp.experiments && selectedHyp.experiments.length > 0 && (
@@ -859,14 +992,39 @@ export function HypothesisWorkbenchDialog({
       {/* ==================== TAB 2: VERIFY ARTIFACT REPLAY ==================== */}
       {tab === 'verify' && (
         <div style={{ maxHeight: 'min(52vh, 430px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 9 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', fontSize: 11, color: 'var(--muted)' }}>
             <span><code>verify_artifact</code> 确定性产物重放验证</span>
+            <span
+              className="cl-verdict-chip re-mono-num"
+              data-verdict={verificationPosture.status}
+              data-hint={verificationPosture.hint}
+            >
+              {verificationPosture.status === 'verified' ? '✓ VERIFIED' : '○ CANDIDATE'}
+            </span>
             <span
               className="re-hint-dot"
               data-hint="宿主实地计算目标文件 SHA256 并逐条比对实跑 stdout 与预期值，自动签发解锁审计门禁的 verification_result 证据"
             >
               ?
             </span>
+            {verificationPosture.summary && (
+              <span className="re-mono-num" style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--faint)' }}>
+                {verificationPosture.summary}
+              </span>
+            )}
+          </div>
+
+          {/* §8.5 Single-Sample-Hit Guard Banner */}
+          <div
+            className="cl-guard-banner"
+            data-hint="§8.5 产物验收门槛：仅跑通一条示例请求只能标记为 candidate（单样本命中），必须通过正反例、边界输入与差分比对后才能晋升为 verified"
+          >
+            <span style={{ color: 'var(--warn)', fontWeight: 700 }}>⚠ 单样本命中 ≠ 已还原算法，需正反例 + 边界/差分覆盖</span>
+            {verCases.filter((c) => c.command.trim()).length < 2 && (
+              <span className="re-mono-num" style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 10 }}>
+                当前向量: {verCases.filter((c) => c.command.trim()).length} 条（建议 ≥2 条含反例/边界）
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 220px', gap: 8 }}>
@@ -983,6 +1141,44 @@ export function HypothesisWorkbenchDialog({
             <Btn tone="accent" disabled={busy} onClick={() => void handleSubmitReview('model_audit')}>
               🤖 隔离审计 (/audit)
             </Btn>
+          </div>
+
+          {/* §8.6 5-Item Adversarial Auditor Checklist & 3-State Verdict */}
+          <div className="cl-audit-card" data-testid="adversarial-audit-checklist">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', fontSize: 11 }}>
+              <span style={{ color: 'var(--violet)', fontWeight: 700 }}>
+                🛡 对抗审计 5 项核查清单 (Isolated Context)
+              </span>
+              <span
+                className="cl-verdict-chip re-mono-num"
+                data-verdict={auditReport.verdict}
+                data-hint={auditReport.verdictHint}
+              >
+                {auditReport.verdict}
+              </span>
+              <span
+                className="re-mono-num"
+                style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10 }}
+                data-hint="§8.6 对抗审计器不继承主 Agent 对话，仅读范围声明、Evidence Ledger、候选结论与验证结果"
+              >
+                {auditReport.passedCount}/5 达标
+              </span>
+            </div>
+            <div className="cl-audit-grid">
+              {auditReport.items.map((item) => (
+                <div
+                  key={item.key}
+                  className="cl-audit-item"
+                  data-status={item.status}
+                  data-hint={item.detail}
+                >
+                  <span style={{ fontWeight: 700 }}>
+                    {item.status === 'pass' ? '✓' : item.status === 'fail' ? '✗' : '○'}
+                  </span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Evidence-Grounded Operator Audit Review */}
@@ -1156,4 +1352,157 @@ const expCardStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 3,
+}
+
+// ---------- §8.5 Verification Posture & §8.6 5-Check Adversarial Auditor ----------
+
+function evaluateVerificationPosture(evidence: EvidenceRecord[]): {
+  status: 'candidate' | 'verified'
+  summary: string
+  hint: string
+} {
+  const verEvs = evidence.filter((e) => !e.isError && e.kind === 'verification_result' && e.verification)
+  if (verEvs.length === 0) {
+    return {
+      status: 'candidate',
+      summary: '未重放 · candidate',
+      hint: '当前尚无 verify_artifact 重放记录，所有脚本/算法均属于 candidate（未验收候选）',
+    }
+  }
+  const latest = verEvs[verEvs.length - 1]
+  const stats = latest.verification as ExtendedVerificationStats
+  const passed = stats.passed ?? 0
+  const total = stats.total ?? 0
+  const multiVector = total >= 2 || (stats.differentialCases ?? 0) > 0 || (stats.boundaryPassed ?? 0) > 0
+  const isVerified =
+    stats.status === 'verified' || (passed > 0 && passed === total && multiVector)
+
+  if (isVerified) {
+    return {
+      status: 'verified',
+      summary: `已通过 ${passed}/${total} (${latest.id})`,
+      hint: `产物已通过多向量重放校验 (${latest.id}: ${passed}/${total})，从 candidate 晋升为 verified`,
+    }
+  }
+  return {
+    status: 'candidate',
+    summary: `仅 ${passed}/${total} (${latest.id} · 单样本/未全过)`,
+    hint: `§8.5 守卫：${latest.id} 仅覆盖 ${passed}/${total}，单样本命中或存在失败用例时保持 candidate，不可宣称已还原算法`,
+  }
+}
+
+function evaluateAdversarialChecklist(
+  ledger: ExtendedLedger | null,
+  evidence: EvidenceRecord[],
+  hypotheses: StructuredHypothesis[],
+  findings: FindingDTO[],
+): {
+  verdict: AuditVerdict
+  verdictHint: string
+  passedCount: number
+  items: Array<{ key: string; label: string; status: 'pass' | 'warn' | 'fail'; detail: string }>
+} {
+  const validEvIds = new Set(evidence.filter((e) => !e.isError).map((e) => e.id))
+  const liveHyps = hypotheses.filter((h) => h.status === 'active' || h.status === 'revised')
+  const verEvs = evidence.filter((e) => !e.isError && e.kind === 'verification_result' && e.verification)
+  const audEvs = evidence.filter((e) => e.kind === 'audit_finding')
+  const sandbox = ledger?.sandbox
+
+  const totalVerCases = verEvs.reduce((acc, e) => acc + (e.verification?.total ?? 0), 0)
+  const passedVerCases = verEvs.reduce((acc, e) => acc + (e.verification?.passed ?? 0), 0)
+  const hasFailureTrace =
+    totalVerCases >= 2 || evidence.some((e) => e.isError || (e.view === 'dynamic' && e.kind === 'runtime_trace'))
+
+  const checkDirect =
+    liveHyps.length > 0 && liveHyps.every((h) => (h.supporting ?? []).some((id) => validEvIds.has(id)))
+  const checkEdge = verEvs.length > 0 && passedVerCases === totalVerCases && hasFailureTrace
+  const hasUnresolvedConflict =
+    hypotheses.some((h) => h.status === 'reevaluate') ||
+    findings.some((f) => f.rule === 'single-view' && !f.applied)
+  const checkAlt = hypotheses.length > 0 && !hasUnresolvedConflict
+  const checkOverreach = !sandbox || sandbox.active || sandbox.deniedCount === 0
+  const checkLineage = verEvs.some((e) => Boolean(e.sha256 || e.artifact))
+
+  const fallbackItems: Array<{ key: string; label: string; status: 'pass' | 'warn' | 'fail'; detail: string }> = [
+    {
+      key: 'direct_evidence',
+      label: '① 直接证据',
+      status: checkDirect ? 'pass' : 'warn',
+      detail: checkDirect
+        ? `全部 ${liveHyps.length} 条活跃结论均已回溯至实测 ev_NNN`
+        : '存在未绑定非报错实测证据的活跃假设，不可直接交付',
+    },
+    {
+      key: 'failure_coverage',
+      label: '② 异常/失败输入覆盖',
+      status: checkEdge ? 'pass' : 'warn',
+      detail: checkEdge
+        ? `已覆盖多向量重放与异常/动态对照（${passedVerCases}/${totalVerCases}）`
+        : '缺少正反例、边界输入或失败样本覆盖（单样本命中将被退回 needs_more_evidence）',
+    },
+    {
+      key: 'alternative_check',
+      label: '③ 替代解释排查',
+      status: checkAlt ? 'pass' : 'fail',
+      detail: checkAlt
+        ? '竞争假设与冲突反证均已完成收敛或淘汰'
+        : '存在待重审 (reevaluate) 或单视角盲区，需排除更简单的替代解释',
+    },
+    {
+      key: 'zero_overreach',
+      label: '④ 零越权动作',
+      status: checkOverreach ? 'pass' : 'fail',
+      detail: sandbox?.deniedCount
+        ? `Capability Sandbox 已同步拦截 ${sandbox.deniedCount} 次任务外越权动作，零未授权访问`
+        : '未发现任务范围外的文件、网络、设备或凭据越权访问',
+    },
+    {
+      key: 'artifact_lineage',
+      label: '⑤ 产物步骤一致',
+      status: checkLineage ? 'pass' : 'warn',
+      detail: checkLineage
+        ? '验证产物已绑定真实 SHA256 与可复现重放记录'
+        : '尚未记录带 SHA256 指纹的产物重放血缘，无法确认产物来自声明步骤',
+    },
+  ]
+
+  // Merge backend auditChecks if supplied by go-schema
+  const backendChecks = ledger?.auditChecks
+  const items =
+    backendChecks && backendChecks.length >= 5
+      ? fallbackItems.map((fb, idx) => {
+          const bc = backendChecks[idx]
+          if (!bc) return fb
+          const passed = bc.pass ?? bc.passed
+          return {
+            key: bc.key || bc.id || fb.key,
+            label: fb.label,
+            status: passed === true ? ('pass' as const) : passed === false ? ('warn' as const) : fb.status,
+            detail: bc.detail || fb.detail,
+          }
+        })
+      : fallbackItems
+
+  const passedCount = items.filter((i) => i.status === 'pass').length
+  const explicit = ledger?.auditVerdict
+
+  let verdict: AuditVerdict
+  if (explicit === 'accepted' || explicit === 'rejected' || explicit === 'needs_more_evidence') {
+    verdict = explicit
+  } else if (items.some((i) => i.status === 'fail')) {
+    verdict = 'rejected'
+  } else if (passedCount === 5 && audEvs.length > 0) {
+    verdict = 'accepted'
+  } else {
+    verdict = 'needs_more_evidence'
+  }
+
+  const verdictHint =
+    verdict === 'accepted'
+      ? 'accepted — 5 项对抗核查通过并签发 audit_finding，可交付可复现报告'
+      : verdict === 'rejected'
+        ? 'rejected — 存在未消解冲突或越权风险，审计拒绝当前结论'
+        : 'needs_more_evidence — 证据覆盖或边界重放不足，退回补证（模型补文字不能改状态）'
+
+  return { verdict, verdictHint, passedCount, items }
 }

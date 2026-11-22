@@ -1,0 +1,430 @@
+/* controlLoop.css — Calibrated re-agent Control Loop, 5 Defenses, Untrusted-Input
+   Isolation, 4 Rotating Runtime States, Adversarial 5-Check Audit, and §7.5 Trust
+   Scoreboard styles. Strictly uses theme tokens from styles/tokens.css (zero
+   hard-coded colors; crisp across CRT dark themes and Daylight Lab `paper`). */
+
+/* ---- 4 Rotating Runtime States + 3 Delivery Outcomes Bar (§8.7) ---- */
+.cl-runtime-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 5px 9px;
+  border: 1px solid var(--border-subtle, var(--rule));
+  border-radius: var(--radius-sm, 3px);
+  background: color-mix(in srgb, var(--surface-2, var(--bg-panel)) 62%, transparent);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-runtime-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.cl-bar-label {
+  color: var(--faint);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+.cl-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-1, var(--bg)) 82%, transparent);
+  color: var(--muted);
+  font-size: 9.5px;
+  white-space: nowrap;
+  cursor: default;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.cl-role-pill[data-active="1"][data-tone="accent"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.cl-role-pill[data-active="1"][data-tone="ok"] {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: var(--ok-soft);
+  font-weight: 700;
+}
+
+.cl-role-pill[data-active="1"][data-tone="warn"] {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: var(--warn-soft);
+  font-weight: 700;
+}
+
+.cl-role-pill[data-active="1"][data-tone="violet"] {
+  border-color: var(--violet);
+  color: var(--violet);
+  background: var(--violet-soft);
+  font-weight: 700;
+}
+
+.cl-role-arrow {
+  color: var(--faint);
+  font-size: 9px;
+  opacity: 0.72;
+}
+
+.cl-outcome-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  color: var(--faint);
+  font-size: 9.5px;
+  white-space: nowrap;
+  cursor: default;
+  opacity: 0.62;
+}
+
+.cl-outcome-pill[data-active="1"] {
+  opacity: 1;
+  font-weight: 700;
+}
+
+.cl-outcome-pill[data-active="1"][data-verdict="accepted"] {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.cl-outcome-pill[data-active="1"][data-verdict="candidate"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.cl-outcome-pill[data-active="1"][data-verdict="needs_more_evidence"] {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.cl-outcome-pill[data-active="1"][data-verdict="rejected"] {
+  border-color: var(--err);
+  color: var(--err);
+  background: var(--err-soft);
+}
+
+/* ---- Green Intake Isolation & Target ≠ Objective Split Strip ---- */
+.cl-intake-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--ok) 36%, var(--border-subtle, var(--rule)));
+  border-left: 3px solid var(--ok);
+  border-radius: var(--radius-sm, 3px);
+  background: color-mix(in srgb, var(--ok) 5%, var(--surface-1, var(--bg-panel)));
+  font-size: 10px;
+}
+
+.cl-isolation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, var(--rule));
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.cl-split-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-2, var(--bg)) 68%, transparent);
+  color: var(--text);
+  font-size: 9.5px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-split-neq {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 0 2px;
+}
+
+/* ---- Compact 5-Defense Dots + Verdict Chip (REHudPanel) ---- */
+.cl-hud-def-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-subtle, var(--rule));
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+
+.cl-def-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  color: var(--faint);
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.cl-def-dot::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--rule);
+  flex-shrink: 0;
+}
+
+.cl-def-dot[data-state="ok"] {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 48%, var(--rule));
+}
+.cl-def-dot[data-state="ok"]::before {
+  background: var(--ok);
+}
+
+.cl-def-dot[data-state="active"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--rule));
+}
+.cl-def-dot[data-state="active"]::before {
+  background: var(--accent);
+}
+
+.cl-def-dot[data-state="warn"] {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 58%, var(--rule));
+}
+.cl-def-dot[data-state="warn"]::before {
+  background: var(--warn);
+}
+
+.cl-verdict-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.cl-verdict-chip[data-verdict="accepted"],
+.cl-verdict-chip[data-verdict="verified"] {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+.cl-verdict-chip[data-verdict="needs_more_evidence"],
+.cl-verdict-chip[data-verdict="candidate"] {
+  color: var(--warn);
+  border-color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.cl-verdict-chip[data-verdict="rejected"] {
+  color: var(--err);
+  border-color: var(--err);
+  background: var(--err-soft);
+}
+
+.cl-verdict-chip[data-verdict="pending"] {
+  color: var(--muted);
+  border-color: var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-2, var(--bg)) 60%, transparent);
+}
+
+/* ---- Untrusted Input Isolation Chip (LedgerPanel) ---- */
+.cl-untrusted-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px dashed color-mix(in srgb, var(--warn) 58%, var(--rule));
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  color: var(--warn);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.cl-trusted-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid color-mix(in srgb, var(--ok) 48%, var(--rule));
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- Structured Hypothesis Metadata (scope / falsifiers / next_test) ---- */
+.cl-struct-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 7px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-0, var(--bg)) 58%, transparent);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.cl-struct-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cl-struct-k {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  min-width: 58px;
+}
+
+/* ---- Workbench Binding, Candidate/Verified Guard & 5-Check Audit ---- */
+.cl-binding-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid color-mix(in srgb, var(--ok) 42%, var(--border-subtle, var(--rule)));
+  border-left: 2.5px solid var(--ok);
+  background: color-mix(in srgb, var(--ok) 6%, var(--surface-2, var(--bg)));
+  color: var(--text);
+  font-size: 10px;
+}
+
+.cl-guard-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm, 3px);
+  border: 1px solid color-mix(in srgb, var(--warn) 44%, var(--border-subtle, var(--rule)));
+  background: color-mix(in srgb, var(--warn) 6%, var(--surface-2, var(--bg)));
+  font-size: 10.5px;
+}
+
+.cl-audit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 3px);
+  border: 1px solid color-mix(in srgb, var(--violet) 38%, var(--border-subtle, var(--rule)));
+  background: color-mix(in srgb, var(--violet) 4%, var(--surface-2, var(--bg-panel)));
+}
+
+.cl-audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 5px;
+}
+
+.cl-audit-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border-radius: var(--radius-xs, 2px);
+  border: 1px solid var(--border-subtle, var(--rule));
+  background: color-mix(in srgb, var(--surface-1, var(--bg)) 86%, transparent);
+  font-size: 10px;
+  color: var(--muted);
+  cursor: help;
+}
+
+.cl-audit-item[data-status="pass"] {
+  border-color: color-mix(in srgb, var(--ok) 46%, var(--rule));
+  color: var(--ok);
+}
+
+.cl-audit-item[data-status="warn"] {
+  border-color: color-mix(in srgb, var(--warn) 52%, var(--rule));
+  color: var(--warn);
+}
+
+.cl-audit-item[data-status="fail"] {
+  border-color: color-mix(in srgb, var(--err) 58%, var(--rule));
+  color: var(--err);
+}
+
+/* ---- §7.5 Trust Metrics Strip (TelePanel) ---- */
+.cl-trust-strip {
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-subtle, var(--rule));
+}
+
+.cl-trust-label {
+  color: var(--violet);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: help;
+}

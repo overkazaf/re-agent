@@ -11,7 +11,16 @@
 //   2) ☍ 因果证据图谱 (Provenance DAG): dynamic citation & contradiction graph
 //      built live from ev_NNN ↔ H-NNN ↔ Arbitrator/GLM Audit ↔ Delivery Gate.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import type { EvidenceRecord, FindingDTO, Hypothesis, TickDTO } from '../../lib/types'
+import type {
+  EvidenceRecord,
+  FindingDTO,
+  GoalSummaryDTO,
+  Hypothesis,
+  LedgerDTO,
+  SandboxActionDTO,
+  TickDTO,
+  VerificationStats,
+} from '../../lib/types'
 import { PanelBox } from '../crt'
 import {
   buildHypothesisArcs,
@@ -29,8 +38,40 @@ import {
   formatHypothesisCitation,
 } from './forensics'
 import './re-pro.css'
+import './controlLoop.css'
 
 export type GraphViewMode = 'pipeline' | 'dag' | 'writeup'
+
+type StructuredHypothesis = Hypothesis & {
+  scope?: string
+  falsifiers?: string[]
+  nextTest?: string
+}
+
+type BoundSandboxAction = SandboxActionDTO & {
+  hypothesisId?: string
+}
+
+type ExtendedGoalSummary = GoalSummaryDTO & {
+  targetArch?: string
+  targetFormat?: string
+  targetVersion?: string
+  targetScope?: string
+  deliverables?: string[]
+  stopConditions?: string[]
+}
+
+type ExtendedVerificationStats = VerificationStats & {
+  status?: 'candidate' | 'verified' | string
+}
+
+type DeliveryOutcome = 'accepted' | 'candidate' | 'needs_more_evidence' | 'rejected'
+
+type ExtendedLedger = LedgerDTO & {
+  auditVerdict?: DeliveryOutcome | string
+}
+
+type RuntimeRoleId = 'router' | 'ledger' | 'verifier' | 'auditor'
 
 type NodeId =
   | 'planner'
@@ -81,94 +122,93 @@ const NODE_SPECS: Record<NodeId, NodeSpec> = {
   },
   auditor: {
     id: 'auditor',
-    zone: 'ZONE I · 席位路由',
-    title: 'AUDITOR · 独立对抗审计席 (codex sol / gemini 4 carbon / glm-5.3)',
+    zone: 'ZONE I · 防线⑤ 独立对抗审计',
+    title: 'AUDITOR · 独立对抗审计席 (Adversarial Auditor)',
     modulePath: 'internal/core/auditor.go (AgentLoop.Audit)',
     summary:
-      '选用独立强逻辑模型（codex sol / gemini 4 carbon / glm-5.3，自动回避当前 Planner 与 Executor）：在零历史对话、零工具权限沙箱中重审「假设栈 + 证据账本」数据包，专挑单视角臆断与过度外推。',
+      '防线⑤ Adversarial Auditor：选用独立强逻辑模型，在零历史对话、零工具权限的隔离上下文中，仅读范围声明、Evidence Ledger、候选结论与验证结果，逐条执行 5 项对抗核查。',
     rules: [
-      '上下文完全隔离（Isolated: true, FreshSession: true, Tools: []），审计模型无法接触目标文件或顺着前文圆谎。',
-      '输出严格受控判定行：AUDIT H-NNN CHALLENGE|SUPPORT ev_NNN <reason>，由宿主正则解析并直接作用于假设栈。',
-      '审计通过后向账本签发正式 audit_finding 证据记录（基于摘要 FNV 哈希幂等去重），解锁最终 WRI [9/9] 阶段。',
+      '上下文完全隔离（Isolated: true, FreshSession: true, Tools: []），不继承主 Agent 叙事，防止替流畅故事打分。',
+      '5 项强制核查：① 直接证据 ② 异常/失败输入覆盖 ③ 替代解释排查 ④ 零越权动作 ⑤ 产物步骤一致。',
+      '输出三态裁定 accepted | needs_more_evidence | rejected 并签发 audit_finding（单样本命中退回补证）。',
     ],
   },
   sandbox: {
     id: 'sandbox',
-    zone: 'ZONE II · 安全防线',
-    title: 'GATE 1 · Task Capability Sandbox (任务能力沙箱)',
+    zone: 'ZONE II · 防线① 能力沙箱',
+    title: 'GATE 1 · Capability Sandbox (防线① 任务能力沙箱)',
     modulePath: 'internal/security/capability.go (Sandbox.Authorize)',
     summary:
-      '基于 /goal 契约激活的任务级硬边界（默认拒绝 deny-by-default）：管控 network（curl/ssh/remote_exec 等）与 device（adb/frida/hdc/idevice 等）两类高危能力轴。',
+      '防线① Capability Sandbox：基于 /goal 契约的最小权限硬边界（deny-by-default），杜绝环境泄漏（如 SOLUTION.txt、工作区外凭据），并将每次高风险动作绑定目标假设写入 Action State。',
     rules: [
-      '未授权能力直接同步拦截（不弹窗打扰），返回缺失能力名并提示由操作员显式执行 /cap network on 或 /cap device on <id>。',
-      '每次授权判定均生成不可篡改的 ActionRecord（含时间戳、工具名、能力轴、命令 SHA256 前 16 位、granted/denied 决策与授权来源）。',
-      '/goal clear 结束任务时立即吊销全部任务期临时能力，绝不跨任务泄漏权限。',
+      '未授权能力直接同步拦截（network / device / 工作区外路径），绝不因“顺手可见”把环境线索冒充逆向证据。',
+      '每次授权判定均生成不可篡改 ActionRecord（时间、工具、能力轴、命令 SHA256、granted/denied 及绑定 hypothesisId）。',
+      '任务结束或假设回滚时立即吊销临时能力，确保跨任务零权限残留。',
     ],
   },
   approval: {
     id: 'approval',
-    zone: 'ZONE II · 安全防线',
+    zone: 'ZONE II · 策略审批兜底',
     title: 'GATE 2 · Execution Policy & Approval Bridge (策略与人工审批)',
     modulePath: 'internal/security/policy.go · gui/approval.go',
     summary:
-      '会话级安全兜底网：即使通过沙箱边界，仍对破坏性正则（rm -rf / dd / sudo）、敏感凭据路径（.ssh / .aws / .env / keychain）及写盘/执行风险分级拦截确认。',
+      '会话级安全兜底网：在能力沙箱之外对破坏性命令、敏感凭据路径（.ssh / .aws / .env）及写盘/执行动作执行分级确认。',
     rules: [
-      'GUI 将同步 Confirm 阻塞转为异步事件推送（kind=approval），生命周期切换至 awaiting_approval，工具协程挂起等待人工拍板。',
+      'GUI 将同步 Confirm 阻塞转为异步审批事件（awaiting_approval），挂起工具协程等待人工拍板。',
       '弹窗默认聚焦 deny 且 Esc 键映射为 deny，防止误触回车放行高危命令。',
-      '支持 allow / allow-always / deny / deny-always 四态决策，always 策略仅写入当前会话克隆副本，跨会话严格隔离。',
+      '支持 allow / allow-always / deny / deny-always 四态决策，always 策略跨会话严格隔离。',
     ],
   },
   ledger: {
     id: 'ledger',
-    zone: 'ZONE III · 元认知核心',
-    title: 'EVIDENCE LEDGER · 证据账本 (evidence-ledger.jsonl)',
+    zone: 'ZONE III · 防线② 证据账本',
+    title: 'EVIDENCE LEDGER · 防线② 不可篡改观测账本 (evidence-ledger.jsonl)',
     modulePath: 'internal/evidence/ledger.go · internal/core/metacog.go',
     summary:
-      '独立于对话历史的只追加（append-only）事实底座：每条非宿主状态工具输出均落盘为 ev_NNN，记录来源工具、static/dynamic 视角、SHA256、字节数与 400 字关键摘录。',
+      '防线② Evidence Ledger：只追加观测事实底座，严格隔离 UNTRUSTED DATA（样本字符串与原始输出仅作数据，防止函数名/隐形字符投毒上下文），绝不把模型总结混入事实。',
     rules: [
-      '双路持久化：一面写入磁盘 evidence-ledger.jsonl（/new 重置内存也不擦除磁盘归档），一面镜像至会话 JSONL 供 Resume 无损水合。',
-      '区分四大门禁类别：tool_observation（静态观测）、runtime_trace（动态运行）、verification_result（含 passed/total 统计）、audit_finding（审计结论）。',
+      '双路持久化：落盘 evidence-ledger.jsonl 并镜像会话 JSONL；每条 ev_NNN 携带来源工具、视角、SHA256 与字节数。',
+      '样本字符串与原始工具输出标记为 UNTRUSTED DATA，与验证凭证 (VER) 和审计签章 (AUD) 明确分层。',
       '所有假设引用与交付门禁仅认账本中真实存在的 ev_NNN 编号，口头声称一律无效。',
     ],
   },
   hypotheses: {
     id: 'hypotheses',
-    zone: 'ZONE III · 元认知核心',
-    title: 'HYPOTHESIS STACK · 假设依赖栈 (H-001..H-064)',
+    zone: 'ZONE III · 防线③ 假设管理',
+    title: 'HYPOTHESIS MANAGER · 防线③ 结构化可证伪假设栈 (H-001..H-064)',
     modulePath: 'internal/hypothesis/tracker.go',
     summary:
-      '显式可证伪推理栈：每条假设携带置信度（0..1）、supporting 支撑证据集、contradicting 反证集及 dependsOn 父假设依赖链，状态迁移由宿主数学规则强制执行。',
+      '防线③ Hypothesis Manager：拒绝“上下文里一句话”式叙事固着，每条假设显式声明 claim / scope / confidence / supporting / falsifiers / next_test，冲突时自动削弱、冻结或级联回滚。',
     rules: [
-      '反证折半定律（Confidence Halving）：每收到一条新反证 Challenge(H, ev)，置信度强制折半 c ← c × 0.5；低于 0.25 自动降级为 reevaluate。',
-      '依赖级联定律（Dependency Cascade）：当父假设被 Revise 或 Reject 时，所有 dependsOn 指向它的下游子假设自动级联标记为 reevaluate（待重审）。',
-      '幂等保护：同一对 (H-NNN, ev_NNN) 反证最多生效一次，重放或重复审计不会重复扣减置信度。',
+      '反证折半定律（Confidence Halving）：收到新反证 Challenge(H, ev) 时置信度 c ← c × 0.5；低于 0.25 降级为 reevaluate。',
+      '依赖级联定律（Dependency Cascade）：父假设被 Revise/Reject 时，所有下游 dependsOn 子假设自动级联重审。',
+      '动态动作绑定（§8.4）：每次动态实验必须声明验证哪条假设的 next_test，未命中即记为 weakened。',
     ],
   },
   arbitrator: {
     id: 'arbitrator',
-    zone: 'ZONE IV · 仲裁与门禁',
-    title: 'HOST ARBITRATOR · 宿主确定性证据仲裁器',
-    modulePath: 'internal/verify/arbitrator.go (Arbitrator.Review)',
+    zone: 'ZONE IV · 防线④ 执行验证与仲裁',
+    title: 'HOST ARBITRATOR & EXECUTION VERIFIER · 防线④ 行为重放与差分仲裁',
+    modulePath: 'internal/verify/arbitrator.go · verify_artifact',
     summary:
-      '不依赖大模型的纯代码确定性巡检器：在证据账本与假设栈之间执行四条硬规则交叉比对，发现矛盾立即自动注入反证并触发置信度折半与级联重审。',
+      '防线④ Execution Verifier + 确定性仲裁器：以构建、固定输入回放、边界/失败样本与差分比对检验行为等价性（区分 candidate 与 verified），并执行四条硬规则交叉仲裁。',
     rules: [
-      '规则 1 [dangling-citation]：假设引用了账本中不存在的 ev_NNN → 自动合成审计反证并触发 Challenge。',
-      '规则 2 [error-support]：假设将 isError=true 的报错记录列为支撑证据 → 自动转为 Challenge 降权。',
-      '规则 3 [runtime-contradiction]：dynamic 动态运行报错摘录命中静态假设的核心主语标识符（sub_* / 0x* / 符号名）→ 跨视角自动 Challenge。',
-      '规则 4 [single-view]：置信度 ≥ 0.80 却仅靠单一视角（纯 static 或纯 dynamic），且另一视角存在同主语未关联证据 → 发出单视角盲区告警。',
+      '单样本守卫（§8.5）：单样本命中仅标为 candidate，必须通过正反例 + 边界/差分门槛才晋升为 verified。',
+      '规则 1/2 [dangling-citation / error-support]：悬空 ev_NNN 或误把报错记录作支撑 → 自动转 Challenge。',
+      '规则 3/4 [runtime-contradiction / single-view]：动静跨视角矛盾自动折半，高置信单视角触发盲区告警。',
     ],
   },
   gate: {
     id: 'gate',
-    zone: 'ZONE IV · 仲裁与门禁',
-    title: 'PHASE & GOAL GATE · 9阶段与验收硬门禁',
+    zone: 'ZONE IV · 交付裁定门禁',
+    title: 'DELIVERY GATE · 7 项完成条件与三态交付门禁',
     modulePath: 'internal/workflow/phase.go · internal/goal/declaration.go',
     summary:
-      '阻止 Agent「半途编造总结报告」的终极机械闸门：跳阶段（skip_to）必须逐级通过全部前置阶段门禁，且进入 WRI [9/9] 前必须同时满足审计凭证与 /goal 验收指标。',
+      'Target State ≠ Objective State 硬契约闸门：仅当可复现回放、差分验证、5 项对抗审计与 /goal 验收全部达标时输出 accepted，否则保持 candidate 或退回 needs_more_evidence。',
     rules: [
-      'STA 门禁：tool_observation ≥ 1 · DYN 门禁：活跃假设 H ≥ 1 · VER 门禁：runtime_trace ≥ 1 或静态观测 ≥ 3。',
-      'AUD 门禁：verification_result ≥ 1（必须跑过 verify_artifact 重放校验）。',
-      'WRI 终极门禁：audit_finding ≥ 1（完成仲裁/GLM 对抗审计）且 /goal 声明中的所有指标（build_pass / replay_pass / differential_cases / evidence_count）100% 达标。',
+      'Target State（样本路径/SHA256/架构）与 Objective State（任务意图/交付物/停止条件）严格解耦，防任务漂移。',
+      '三态交付面：accepted（可复现报告）/ candidate（未验收候选）/ needs_more_evidence（退回补证）。',
+      'WRI [9/9] 终极门禁：verify_artifact 多向量通过 + audit_finding ≥ 1 + /goal 验收项 100% 达标。',
     ],
   },
 }
@@ -247,12 +287,12 @@ export function GovernanceGraphPanel({
   const effectiveTick = activeFrame ? activeFrame.tick : tick
   const phaseGates = useMemo(() => evaluatePhaseGates(effectiveTick), [effectiveTick])
 
-  const ledger = effectiveTick?.ledger
+  const ledger = (effectiveTick?.ledger ?? null) as ExtendedLedger | null
   const evidence = ledger?.evidence ?? []
-  const hypotheses = ledger?.hypotheses ?? []
+  const hypotheses = (ledger?.hypotheses ?? []) as StructuredHypothesis[]
   const findings = ledger?.findings ?? []
   const sandbox = ledger?.sandbox
-  const goal = ledger?.goal
+  const goal = (ledger?.goal ?? null) as ExtendedGoalSummary | null
   const route = effectiveTick?.hud.route
   const flow = effectiveTick?.flow
   const re = effectiveTick?.re
@@ -268,9 +308,17 @@ export function GovernanceGraphPanel({
   const stats = useMemo(() => {
     const staticCnt = evidence.filter((e) => (e.view || 'static') === 'static' && !e.isError).length
     const dynCnt = evidence.filter((e) => e.view === 'dynamic' && !e.isError).length
-    const verCnt = evidence.filter((e) => e.kind === 'verification_result').length
+    const verEvs = evidence.filter((e) => !e.isError && e.kind === 'verification_result')
+    const verCnt = verEvs.length
     const audCnt = evidence.filter((e) => e.kind === 'audit_finding').length
     const errCnt = evidence.filter((e) => e.isError).length
+    const untrustedCnt = evidence.filter(
+      (e) => e.untrustedInput === true || (e.untrustedInput !== false && e.kind !== 'verification_result' && e.kind !== 'audit_finding'),
+    ).length
+    const verVerified = verEvs.some((e) => {
+      const vs = e.verification as ExtendedVerificationStats | null | undefined
+      return vs?.status === 'verified' || ((vs?.total ?? 0) >= 2 && vs?.passed === vs?.total)
+    })
 
     const activeH = hypotheses.filter((h) => h.status === 'active').length
     const revisedH = hypotheses.filter((h) => h.status === 'revised').length
@@ -284,8 +332,10 @@ export function GovernanceGraphPanel({
       staticCnt,
       dynCnt,
       verCnt,
+      verVerified,
       audCnt,
       errCnt,
+      untrustedCnt,
       activeH,
       revisedH,
       reevalH,
@@ -294,6 +344,43 @@ export function GovernanceGraphPanel({
       goalTotal,
     }
   }, [evidence, hypotheses, goal])
+
+  const activeRuntimeRole: RuntimeRoleId = useMemo(() => {
+    const toolName = (flow?.activeTool || '').toLowerCase()
+    if (toolName.includes('verify')) return 'verifier'
+    if (toolName.includes('audit') || (activeProvider === auditorName && busy)) return 'auditor'
+    if (flow?.stage === 'tool' || flow?.stage === 'calls') return 'router'
+    if (re?.phase === 'audit' || (re?.phase === 'writeup' && stats.audCnt > 0)) return 'auditor'
+    if (re?.phase === 'verify') return 'verifier'
+    if (evidence.length > 0 && (re?.phase === 'evidence' || re?.phase === 'static' || flow?.stage === 'write')) {
+      return 'ledger'
+    }
+    return 'router'
+  }, [flow?.activeTool, flow?.stage, activeProvider, auditorName, busy, re?.phase, stats.audCnt, evidence.length])
+
+  const deliveryOutcome: DeliveryOutcome = useMemo(() => {
+    const explicit = ledger?.auditVerdict
+    if (
+      explicit === 'accepted' ||
+      explicit === 'candidate' ||
+      explicit === 'needs_more_evidence' ||
+      explicit === 'rejected'
+    ) {
+      return explicit
+    }
+    const goalOk = stats.goalTotal === 0 || stats.goalPass === stats.goalTotal
+    if ((stats.audCnt > 0 && stats.verCnt > 0 && goalOk && stats.reevalH === 0) || re?.phase === 'writeup') {
+      return 'accepted'
+    }
+    if (
+      stats.reevalH > 0 ||
+      findings.some((f) => f.action === 'challenge' || f.rule === 'runtime-contradiction') ||
+      (stats.verCnt > 0 && !stats.verVerified)
+    ) {
+      return 'needs_more_evidence'
+    }
+    return 'candidate'
+  }, [ledger?.auditVerdict, stats, findings, re?.phase])
 
   const spec = NODE_SPECS[selectedNode]
 
@@ -462,6 +549,98 @@ export function GovernanceGraphPanel({
                 <span style={{ opacity: 0.78 }}>{g.progress}</span>
               </span>
             ))}
+          </div>
+        )}
+
+        {/* §8.7 4 Rotating Runtime States + 3 Delivery Outcomes Strip */}
+        {mode !== 'writeup' && (
+          <div className="cl-runtime-bar" data-testid="runtime-states-strip">
+            <div className="cl-runtime-group">
+              <span
+                className="cl-bar-label"
+                data-hint="§8.7 运行态状态轮换：每次动作在 Tool Router、Evidence Ledger、Execution Verifier 与 Adversarial Auditor 之间显式交接"
+              >
+                LOOP
+              </span>
+              {(
+                [
+                  ['router', 'Tool Router', 'accent', '按任务能力边界路由工具调用与动态动作'],
+                  ['ledger', 'Evidence Ledger', 'ok', '只追加记录原始观测并按 UNTRUSTED DATA 隔离样本输入'],
+                  ['verifier', 'Execution Verifier', 'warn', '执行构建、正反例回放与差分比较（区分 candidate 与 verified）'],
+                  ['auditor', 'Adversarial Auditor', 'violet', '零历史隔离上下文 5 项核查，裁定 accepted / needs_more_evidence / rejected'],
+                ] as const
+              ).map(([id, label, tone, hint], idx) => (
+                <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {idx > 0 && <span className="cl-role-arrow">⇄</span>}
+                  <span
+                    className="cl-role-pill"
+                    data-active={activeRuntimeRole === id ? '1' : undefined}
+                    data-tone={tone}
+                    data-hint={hint}
+                  >
+                    {activeRuntimeRole === id ? '●' : '○'} {label}
+                  </span>
+                </span>
+              ))}
+            </div>
+
+            <div className="cl-runtime-group">
+              <span
+                className="cl-bar-label"
+                data-hint="右侧交付面三态裁定：只有通过回放、差分与 5 项对抗审计的结论才能进入 accepted"
+              >
+                DELIVERY
+              </span>
+              {(
+                [
+                  ['accepted', 'accepted · 可复现报告', '通过行为回放、差分对比与隔离审计，可交付可复现任务档案'],
+                  ['candidate', 'candidate · 未验收候选', '尚处探索或单样本命中阶段，不可宣称已还原算法'],
+                  ['needs_more_evidence', 'needs_more_evidence · 退回补证', '存在反证冲突、边界盲区或单样本命中，需补充实验后重审'],
+                ] as const
+              ).map(([verdict, label, hint]) => (
+                <span
+                  key={verdict}
+                  className="cl-outcome-pill"
+                  data-verdict={verdict}
+                  data-active={deliveryOutcome === verdict ? '1' : undefined}
+                  data-hint={hint}
+                >
+                  {deliveryOutcome === verdict ? '▸' : '○'} {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Green Intake Isolation & Target State ≠ Objective State Strip (§8.1) */}
+        {mode === 'pipeline' && (
+          <div className="cl-intake-bar re-mono-num" data-testid="intake-isolation-strip">
+            <span
+              className="cl-isolation-badge"
+              data-hint="第四章 & 第六章防投毒防线：样本字符串、函数名与隐藏字符先按 UNTRUSTED DATA 隔离，禁止直接作为指令进入任务上下文"
+            >
+              🛡 样本字符串仅作数据 · 防投毒隔离 ({stats.untrustedCnt})
+            </span>
+            <span
+              className="cl-split-chip"
+              data-hint={`§8.1 Target State（被分析对象本身）：${goal?.targetFile || '待声明样本'}${goal?.targetArch ? ` · ${goal.targetArch}` : ''}${goal?.targetFormat ? ` · ${goal.targetFormat}` : ''}${goal?.targetSha256 ? ` · sha256:${goal.targetSha256.slice(0, 12)}` : ''}`}
+            >
+              <b style={{ color: 'var(--ok)' }}>Target</b>
+              <span>{goal?.targetFile || re?.sampleType || '未绑定目标样本'}</span>
+            </span>
+            <span
+              className="cl-split-neq"
+              data-hint="§8.1 架构铁律：Target State ≠ Objective State —— 同一样本可对应不同分析目标，严格解耦防止任务漂移"
+            >
+              ≠
+            </span>
+            <span
+              className="cl-split-chip"
+              data-hint={`§8.1 Objective State（任务意图与验收标准）：${goal?.primary || '待通过 /goal 声明任务意图与验收门槛'}`}
+            >
+              <b style={{ color: 'var(--accent)' }}>Objective</b>
+              <span>{goal?.primary || '任务意图与验收标准'}</span>
+            </span>
           </div>
         )}
 
@@ -638,12 +817,12 @@ export function GovernanceGraphPanel({
                   .g-node:hover rect.node-box { filter: brightness(1.25); }
                 `}</style>
 
-                {/* Zone Swimlane Headers */}
+                {/* Zone Swimlane Headers — Mapped 1:1 to the 5 Defenses Control Spine (§6 + §8) */}
                 {[
-                  { x: 14, w: 224, label: 'I. 三模型职责席位 (ROLES)' },
-                  { x: 266, w: 236, label: 'II. 双层安全防线 (SECURITY)' },
-                  { x: 530, w: 244, label: 'III. 证据与假设双核 (METACOG)' },
-                  { x: 802, w: 224, label: 'IV. 仲裁审核与门禁 (AUDIT & GATE)' },
+                  { x: 14, w: 224, label: 'I. 席位路由 & ⑤ 对抗审计' },
+                  { x: 266, w: 236, label: 'II. ① 能力沙箱 & 审批门' },
+                  { x: 530, w: 244, label: 'III. ② 证据账本 & ③ 假设管理' },
+                  { x: 802, w: 224, label: 'IV. ④ 执行验证 & 交付裁定' },
                 ].map((z) => (
                   <g key={z.label}>
                     <rect
@@ -829,9 +1008,9 @@ export function GovernanceGraphPanel({
                   selected: selectedNode === 'auditor',
                   hot: stats.audCnt > 0 || (activeProvider === auditorName && Boolean(busy)),
                   title: `AUDITOR · ${auditorName}`,
-                  line1: 'codex sol / gemini 4 carbon / glm-5.3',
+                  line1: '⑤ Adversarial Auditor · 隔离5项核查',
                   line2: '零对话 · 零工具 · 专挑盲区',
-                  badge: stats.audCnt > 0 ? `✓ AUD:${stats.audCnt}` : 'ISOLATED',
+                  badge: stats.audCnt > 0 ? `⑤ AUD:${stats.audCnt}` : '⑤ ISOLATED',
                   onSelect: setSelectedNode,
                 })}
 
@@ -845,10 +1024,10 @@ export function GovernanceGraphPanel({
                   selected: selectedNode === 'sandbox',
                   hot: Boolean(sandbox?.active),
                   title: 'GATE 1 · 能力沙箱',
-                  line1: sandbox?.active ? '● ACTIVE (deny-by-default)' : '○ 未激活 (走基础策略)',
-                  line2: `network / device · SHA256留痕`,
+                  line1: sandbox?.active ? '① ACTIVE (deny-by-default)' : '① 未激活 (走基础策略)',
+                  line2: `防环境泄漏 · 动作绑定 H-NNN`,
                   line3: `放行:${sandbox?.grantedCount ?? 0} · 拦截:${sandbox?.deniedCount ?? 0}`,
-                  badge: '/cap',
+                  badge: '① /cap',
                   onSelect: setSelectedNode,
                 })}
 
@@ -879,10 +1058,10 @@ export function GovernanceGraphPanel({
                   selected: selectedNode === 'ledger',
                   hot: evidence.length > 0,
                   title: 'EVIDENCE LEDGER',
-                  line1: 'evidence-ledger.jsonl (只追加)',
+                  line1: '② 只追加账本 · 原始输入隔离',
                   line2: `static:${stats.staticCnt} · dynamic:${stats.dynCnt}`,
                   line3: `VER:${stats.verCnt} · AUD:${stats.audCnt} · ERR:${stats.errCnt}`,
-                  badge: `E:${evidence.length}`,
+                  badge: `② E:${evidence.length}`,
                   onSelect: setSelectedNode,
                 })}
 
@@ -896,10 +1075,10 @@ export function GovernanceGraphPanel({
                   selected: selectedNode === 'hypotheses',
                   hot: hypotheses.length > 0,
                   title: 'HYPOTHESIS STACK',
-                  line1: '显式可证伪假设与依赖图',
+                  line1: '③ scope · falsifiers · next_test',
                   line2: `active:${stats.activeH} · revised:${stats.revisedH}`,
                   line3: `reeval:${stats.reevalH} · rejected:${stats.rejectedH}`,
-                  badge: `H:${hypotheses.length}`,
+                  badge: `③ H:${hypotheses.length}`,
                   onSelect: setSelectedNode,
                 })}
 
@@ -909,14 +1088,14 @@ export function GovernanceGraphPanel({
                   y: 66,
                   w: 200,
                   h: 108,
-                  tone: findings.length > 0 ? 'warn' : 'muted',
+                  tone: findings.length > 0 ? 'warn' : stats.verVerified ? 'ok' : 'muted',
                   selected: selectedNode === 'arbitrator',
-                  hot: findings.length > 0,
+                  hot: findings.length > 0 || stats.verCnt > 0,
                   title: 'HOST ARBITRATOR',
-                  line1: '宿主 4 规则确定性交叉仲裁',
+                  line1: `④ ${stats.verVerified ? 'verified' : 'candidate'} 差分回放 + 4规则`,
                   line2: '悬空引用 · 报错支撑 · 动静矛盾',
                   line3: `单视角盲区 · 已捕获:${findings.length}`,
-                  badge: 'VERIFY',
+                  badge: '④ VERIFY',
                   onSelect: setSelectedNode,
                 })}
 
@@ -926,17 +1105,14 @@ export function GovernanceGraphPanel({
                   y: 238,
                   w: 200,
                   h: 114,
-                  tone: re?.phase === 'writeup' ? 'ok' : 'accent',
+                  tone: deliveryOutcome === 'accepted' ? 'ok' : deliveryOutcome === 'needs_more_evidence' ? 'warn' : 'accent',
                   selected: selectedNode === 'gate',
-                  hot: re?.phase === 'writeup',
+                  hot: re?.phase === 'writeup' || deliveryOutcome === 'accepted',
                   title: 'DELIVERY GATE',
                   line1: re
                     ? `RE 阶段: ${re.phase.toUpperCase()} [${re.phaseIndex + 1}/${re.phaseCount}]`
                     : 'RE 阶段: 未开启 (/workflow reverse)',
-                  line2:
-                    stats.goalTotal > 0
-                      ? `/goal 验收: ${stats.goalPass}/${stats.goalTotal} 达标`
-                      : '/goal 验收: 未声明契约',
+                  line2: `裁定: ${deliveryOutcome} (${stats.goalPass}/${stats.goalTotal})`,
                   line3: stats.audCnt > 0 ? '✓ WRI 交付门禁已解锁' : '🔒 待 VER + /audit 解锁 WRI',
                   badge: re ? `${re.phaseIndex + 1}/9` : 'GATE',
                   onSelect: setSelectedNode,
@@ -1099,7 +1275,7 @@ function renderLiveNodeTelemetry(
   },
 ) {
   if (nodeId === 'sandbox') {
-    const allActs = ctx.sandbox?.recentActions ?? []
+    const allActs = (ctx.sandbox?.recentActions ?? []) as BoundSandboxAction[]
     const denied = allActs.filter((a) => a.decision === 'denied').slice(-3)
     const granted = allActs.filter((a) => a.decision !== 'denied').slice(-3)
     const acts = [...denied, ...granted]
@@ -1113,7 +1289,8 @@ function renderLiveNodeTelemetry(
         ) : (
           acts.map((a, i) => (
             <div key={i} style={{ color: a.decision === 'denied' ? 'var(--err)' : 'var(--ok)' }}>
-              [{a.decision.toUpperCase()}] {a.tool} {a.capability ? `cap=${a.capability}` : ''} · sha256:{a.sha256.slice(0, 10)} ({a.subject.slice(0, 30)})
+              [{a.decision.toUpperCase()}] {a.tool} {a.capability ? `cap=${a.capability}` : ''}
+              {a.hypothesisId ? ` → ${a.hypothesisId}` : ''} · sha256:{a.sha256.slice(0, 10)} ({a.subject.slice(0, 30)})
             </div>
           ))
         )}
