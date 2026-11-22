@@ -3,468 +3,1505 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>0xAF-Re - 终端里的逆向工程 Agent</title>
-<meta name="description" content="0xAF-Re 是一个面向授权本地逆向与 CTF 的 agent：多模型角色、GPT Cyber/Claude Code CVP/Grok specialist 路由、caveman 证据包、34 个内置工具和实时可视化。">
+<title>0xAF-Re — 可验证的逆向工程 Agent 与 3D 取证工作台</title>
+<meta name="description" content="模型很会猜，但逆向不相信故事。0xAF-Re 是面向授权本地逆向与 CTF 的可验证工程 Agent 与 3D 取证工作台：五道防线、七类任务档案、3D GLSL 指挥台、10 套 WCAG AA+ 专业主题、34 个内置 Go 工具与零配置在线体验。">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
+<style>
+/* Scoped commercial layout tokens & components for docs/index.zh-CN.html.
+ * Harmonizes with both legacy docs/style.css (--ground/--rule/--ink) and
+ * upgraded design tokens (--bg/--bg-2/--line/--text) with safe fallbacks. */
+:root {
+  --zh-bg: var(--bg, var(--ground, #0b0f14));
+  --zh-bg-2: var(--bg-2, var(--panel-lift, #141c26));
+  --zh-panel: var(--panel, #0f151d);
+  --zh-line: var(--line, var(--rule, #22303f));
+  --zh-line-soft: var(--line-soft, var(--rule-soft, #1a232e));
+  --zh-text: var(--text, var(--ink, #e2e8f0));
+  --zh-muted: var(--muted, #8296ad);
+  --zh-faint: var(--faint, #5b6b80);
+  --zh-accent: var(--accent, #22d3ee);
+  --zh-accent-dim: var(--accent-dim, #0e7490);
+  --zh-ok: var(--ok, #4ade80);
+  --zh-warn: var(--warn, #fbbf24);
+  --zh-violet: var(--violet, #a78bfa);
+  --zh-err: var(--err, #f87171);
+}
+
+/* Topbar refinement */
+.zh-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--zh-bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--zh-line-soft);
+}
+.zh-topbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  font-family: var(--mono);
+  font-size: var(--step--1, 0.78rem);
+}
+.zh-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  flex-wrap: wrap;
+}
+.zh-nav a {
+  color: var(--zh-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 140ms ease;
+}
+.zh-nav a:hover,
+.zh-nav a:focus-visible {
+  color: var(--zh-accent);
+}
+.zh-nav__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--zh-accent) 55%, var(--zh-line));
+  background: color-mix(in srgb, var(--zh-accent) 12%, transparent);
+  color: var(--zh-accent) !important;
+  font-weight: 600;
+}
+.zh-nav__cta:hover,
+.zh-nav__cta:focus-visible {
+  background: color-mix(in srgb, var(--zh-accent) 20%, transparent);
+  border-color: var(--zh-accent);
+}
+.zh-nav__lang {
+  padding: 0.22rem 0.55rem;
+  border-radius: 5px;
+  border: 1px solid var(--zh-line);
+  color: var(--zh-text) !important;
+}
+
+/* Hero flagship backdrop & typography */
+.zh-hero-band {
+  position: relative;
+  overflow: clip;
+  background:
+    radial-gradient(62rem 28rem at 18% 0%, rgba(34, 211, 238, 0.11), transparent 62%),
+    radial-gradient(48rem 26rem at 86% 6%, rgba(167, 139, 250, 0.09), transparent 60%);
+}
+.zh-hero {
+  padding: clamp(2.6rem, 6vw, 4.6rem) 0 2.6rem;
+  display: grid;
+  gap: 1.45rem;
+}
+.zh-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  padding: 0.28rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--zh-accent) 32%, var(--zh-line));
+  background: color-mix(in srgb, var(--zh-panel) 92%, transparent);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--zh-muted);
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+.zh-eyebrow__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--zh-ok);
+  box-shadow: 0 0 10px var(--zh-ok);
+  flex: none;
+}
+.zh-hero h1 {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: clamp(2.15rem, 4.6vw, 3.45rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  color: var(--zh-text);
+  text-wrap: balance;
+}
+.zh-hero h1 .zh-hl {
+  color: var(--zh-accent);
+}
+.zh-hero__sub {
+  margin: 0;
+  max-width: 68ch;
+  font-size: clamp(1rem, 1.35vw, 1.12rem);
+  line-height: 1.72;
+  color: #cbd5e1;
+}
+.zh-hero__sub strong {
+  color: var(--zh-text);
+  font-weight: 600;
+}
+
+/* Primary & secondary CTA buttons */
+.zh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+}
+.zh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.62rem 1.25rem;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+.zh-btn--primary {
+  background: linear-gradient(135deg, #22d3ee 0%, #38bdf8 55%, #818cf8 100%);
+  color: #061018;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 28px rgba(34, 211, 238, 0.24);
+}
+.zh-btn--primary:hover,
+.zh-btn--primary:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 34px rgba(34, 211, 238, 0.34);
+  color: #040a10;
+}
+.zh-btn--ghost {
+  background: var(--zh-panel);
+  color: var(--zh-text);
+  border: 1px solid var(--zh-line);
+}
+.zh-btn--ghost:hover,
+.zh-btn--ghost:focus-visible {
+  border-color: var(--zh-accent);
+  color: var(--zh-accent);
+  background: var(--zh-bg-2);
+}
+
+/* Commercial 6-metric KPI strip */
+.zh-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 0.75rem;
+}
+.zh-metric {
+  background: color-mix(in srgb, var(--zh-panel) 94%, transparent);
+  border: 1px solid var(--zh-line-soft);
+  border-radius: 9px;
+  padding: 0.8rem 0.95rem;
+  display: grid;
+  gap: 0.2rem;
+}
+.zh-metric__val {
+  font-family: var(--mono);
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--zh-text);
+}
+.zh-metric__val b {
+  color: var(--zh-accent);
+}
+.zh-metric__desc {
+  font-size: 0.76rem;
+  color: var(--zh-muted);
+  line-height: 1.45;
+}
+
+/* Instrument screenshot frames (clean responsive PNGs without min-width overflow) */
+.zh-shot {
+  margin: 1.25rem 0 0;
+  border: 1px solid var(--zh-line);
+  border-radius: 12px;
+  background: var(--zh-panel);
+  overflow: hidden;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.36);
+}
+.zh-shot__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.52rem 0.9rem;
+  border-bottom: 1px solid var(--zh-line-soft);
+  background: var(--zh-bg-2);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--zh-muted);
+}
+.zh-shot__dots {
+  display: inline-flex;
+  gap: 0.34rem;
+  flex: none;
+}
+.zh-shot__dots i {
+  display: block;
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 50%;
+  background: var(--zh-line);
+}
+.zh-shot__dots i:first-child { background: rgba(248, 113, 113, 0.7); }
+.zh-shot__dots i:nth-child(2) { background: rgba(251, 191, 36, 0.7); }
+.zh-shot__dots i:nth-child(3) { background: rgba(74, 222, 128, 0.7); }
+.zh-shot__tag {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--zh-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.zh-shot__media {
+  background: #070b11;
+  line-height: 0;
+}
+.zh-shot img {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+}
+.zh-shot figcaption {
+  padding: 0.72rem 0.95rem;
+  border-top: 1px solid var(--zh-line-soft);
+  font-size: 0.82rem;
+  color: var(--zh-muted);
+  max-width: none;
+  line-height: 1.55;
+}
+.zh-shot figcaption strong {
+  color: var(--zh-text);
+}
+
+/* Reusable commercial grids & cards */
+.zh-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 1.1rem;
+  margin-top: 1.25rem;
+}
+.zh-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1.05rem;
+  margin-top: 1.25rem;
+}
+.zh-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
+  gap: 0.85rem;
+  margin-top: 1.15rem;
+}
+.zh-card {
+  border: 1px solid var(--zh-line-soft);
+  border-radius: 10px;
+  background: var(--zh-panel);
+  padding: 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.zh-card:hover {
+  border-color: color-mix(in srgb, var(--zh-accent) 45%, var(--zh-line));
+}
+.zh-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.zh-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.52rem;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--zh-line);
+  color: var(--zh-accent);
+  background: color-mix(in srgb, var(--zh-accent) 10%, transparent);
+  white-space: nowrap;
+}
+.zh-badge--ok {
+  color: var(--zh-ok);
+  border-color: color-mix(in srgb, var(--zh-ok) 40%, var(--zh-line));
+  background: color-mix(in srgb, var(--zh-ok) 10%, transparent);
+}
+.zh-badge--warn {
+  color: var(--zh-warn);
+  border-color: color-mix(in srgb, var(--zh-warn) 42%, var(--zh-line));
+  background: color-mix(in srgb, var(--zh-warn) 11%, transparent);
+}
+.zh-badge--violet {
+  color: var(--zh-violet);
+  border-color: color-mix(in srgb, var(--zh-violet) 42%, var(--zh-line));
+  background: color-mix(in srgb, var(--zh-violet) 11%, transparent);
+}
+.zh-badge--err {
+  color: var(--zh-err);
+  border-color: color-mix(in srgb, var(--zh-err) 42%, var(--zh-line));
+  background: color-mix(in srgb, var(--zh-err) 11%, transparent);
+}
+.zh-card h4 {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--zh-text);
+  line-height: 1.35;
+}
+.zh-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--zh-muted);
+  max-width: none;
+  line-height: 1.62;
+}
+.zh-card__foot {
+  margin-top: auto;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--zh-line-soft);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--zh-faint);
+}
+.zh-card__foot strong {
+  color: var(--zh-text);
+}
+
+/* Callout banner */
+.zh-callout {
+  margin: 1.25rem 0;
+  padding: 0.95rem 1.15rem;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--zh-accent) 36%, var(--zh-line));
+  border-left: 3px solid var(--zh-accent);
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.08), rgba(15, 21, 29, 0.94) 55%);
+  font-size: 0.88rem;
+  color: #d5deea;
+  line-height: 1.65;
+}
+.zh-callout strong {
+  color: var(--zh-text);
+}
+
+/* 4-role rotation & 7-zone spatial strips */
+.zh-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1.15rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--zh-line-soft);
+  border-radius: 10px;
+  background: var(--zh-panel);
+  font-family: var(--mono);
+}
+.zh-flow__node {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.48rem 0.78rem;
+  border-radius: 7px;
+  border: 1px solid var(--zh-line);
+  background: var(--zh-bg-2);
+  font-size: 0.8rem;
+  color: var(--zh-text);
+}
+.zh-flow__node small {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--zh-muted);
+}
+.zh-flow__arrow {
+  color: var(--zh-accent);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* Keyboard / telemetry chips */
+.zh-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 1rem 0 0;
+}
+.zh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.3rem 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--zh-line);
+  background: var(--zh-panel);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--zh-muted);
+}
+.zh-chip kbd {
+  padding: 0.06rem 0.38rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--zh-accent) 45%, var(--zh-line));
+  background: var(--zh-bg-2);
+  color: var(--zh-accent);
+  font-weight: 700;
+  font-size: 0.74rem;
+}
+
+/* 10-theme WCAG AA+ swatch strip */
+.zh-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(186px, 1fr));
+  gap: 0.7rem;
+  margin: 1.15rem 0 0;
+}
+.zh-theme {
+  display: flex;
+  align-items: center;
+  gap: 0.68rem;
+  padding: 0.62rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--zh-line-soft);
+  background: var(--zh-panel);
+}
+.zh-theme--light {
+  background: #f6f7f9;
+  border-color: #cbd5e1;
+}
+.zh-theme--light .zh-theme__name {
+  color: #0f172a;
+}
+.zh-theme--light .zh-theme__meta {
+  color: #475569;
+}
+.zh-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  flex: none;
+}
+.zh-swatches i {
+  display: block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.zh-theme--light .zh-swatches i {
+  border-color: rgba(15, 23, 42, 0.18);
+}
+.zh-theme__info {
+  min-width: 0;
+  display: grid;
+  gap: 0.08rem;
+}
+.zh-theme__name {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--zh-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.zh-theme__meta {
+  font-size: 0.7rem;
+  color: var(--zh-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Gate & handover checklist */
+.zh-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.zh-list li {
+  display: grid;
+  grid-template-columns: 1.55rem 1fr;
+  gap: 0.55rem;
+  align-items: start;
+  font-size: 0.85rem;
+  color: var(--zh-muted);
+  line-height: 1.58;
+}
+.zh-list li strong {
+  color: var(--zh-text);
+}
+.zh-list__idx {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 5px;
+  border: 1px solid var(--zh-line);
+  background: var(--zh-bg-2);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--zh-accent);
+  margin-top: 0.08rem;
+}
+.zh-list__idx--ok {
+  color: var(--zh-ok);
+  border-color: color-mix(in srgb, var(--zh-ok) 40%, var(--zh-line));
+}
+
+/* Verification & quality bar */
+.zh-verify-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+.zh-verify-item {
+  border: 1px solid var(--zh-line-soft);
+  border-radius: 9px;
+  background: var(--zh-panel);
+  padding: 0.9rem 1rem;
+}
+.zh-verify-item b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.08rem;
+  color: var(--zh-ok);
+  margin-bottom: 0.22rem;
+}
+.zh-verify-item span {
+  font-size: 0.8rem;
+  color: var(--zh-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 780px) {
+  .zh-topbar__inner {
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+  .zh-nav {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    gap: 0.85rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .zh-hero h1 {
+    font-size: 2rem;
+  }
+  .zh-btn {
+    width: 100%;
+  }
+  .zh-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="wrap topbar__inner">
+<header class="zh-topbar">
+  <div class="wrap zh-topbar__inner">
     <a class="brand" href="#top"><b>0xAF</b> RE</a>
-    <nav aria-label="页面导航">
-      <a href="#why">特点</a>
-      <a href="#use-cases">使用场景</a>
-      <a href="#workflow">工作流</a>
-      <a href="#gui">桌面端</a>
-      <a href="#remote">远程</a>
-      <a href="#routing">角色</a>
-      <a href="#arsenal">工具</a>
-      <a href="#safety">安全</a>
-      <a href="#context">上下文</a>
-      <a href="#skills">Skills</a>
-      <a href="#marketing">海报</a>
-      <a href="#install">安装</a>
-      <a href="index.html">English</a>
-      <a href="https://github.com/overkazaf/re-agent">GitHub</a>
+    <nav class="zh-nav" aria-label="主导航">
+      <a href="#trust-arch">信任架构</a>
+      <a href="#theater-3d">3D 剧场</a>
+      <a href="#workbench">桌面工作台</a>
+      <a href="#arsenal">工具矩阵</a>
+      <a href="#install">安装部署</a>
+      <a class="zh-nav__cta" href="gui-demo/index.html" target="_blank" rel="noreferrer">在线体验 →</a>
+      <a class="zh-nav__lang" href="index.html">English</a>
     </nav>
   </div>
 </header>
 
 <main id="top">
 
-<div class="wrap hero">
-  <p class="hero__eyebrow">reverse ops deck · v0.1.21 · go 1.26+</p>
-  <h1>会展示过程的<br>逆向工程 Agent。</h1>
-  <p class="hero__lede">
-    0xAF-Re 在终端里把 <strong>planner</strong>、<strong>executor</strong>
-    和 <strong>researcher</strong> 分开调度，配 34 个内置逆向/CTF 工具。
-    它能做 APK、ELF/PE/Mach-O 深度检查、反调试与壳识别、二进制 patch 差分、Web/WASM、Frida hook、radare2/JADX/Ghidra/Burp/mitmproxy/Unicorn/unidbg
-    工作流；有 GPT Cyber、Claude Code CVP、Grok 等更适配安全研究的 route 时体验更顺，
-    普通 provider 则可走 caveman 本地证据包。一个静态 Go 二进制，不需要 JS runtime。
-  </p>
+<!-- ===================== HERO ===================== -->
+<div class="zh-hero-band">
+  <div class="wrap zh-hero">
+    <p class="zh-eyebrow">
+      <span class="zh-eyebrow__dot" aria-hidden="true"></span>
+      <span>REVERSE OPS DECK · v0.1.21 · GO 1.26+ · SINGLE BINARY + WAILS 3D WORKBENCH</span>
+    </p>
 
-  <div class="cmd">
-    <span class="cmd__prompt" aria-hidden="true">$</span>
-    <code id="install-cmd">go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20</code>
-    <span class="caret" aria-hidden="true"></span>
-    <button class="copy" type="button" data-copy="#install-cmd">复制</button>
-  </div>
+    <h1>模型很会猜，<br>但逆向<span class="zh-hl">不相信故事</span>。</h1>
 
-  <div class="hero__cta">
-    <span class="pill"><b>36 ms</b> 启动</span>
-    <span class="pill"><b>9 MB</b> 二进制</span>
-    <span class="pill"><b>34</b> 工具</span>
-    <span class="pill"><b>30</b> skills</span>
-    <span class="pill"><b>8</b> provider</span>
-    <span class="pill"><b>9</b> workflow</span>
-    <span class="pill"><b>0</b> JS runtime</span>
-  </div>
+    <p class="zh-hero__sub">
+      <strong>0xAF-Re</strong> 是面向授权本地逆向与 CTF 的<strong>可验证逆向工程 Agent 与 3D 取证工作台</strong>。
+      它把高权限逆向从“看模型讲故事”改造成受契约约束的工程闭环：<strong>任务级能力沙箱</strong>锁死越权路径，
+      <strong>不可变证据账本</strong>隔离样本投毒，<strong>结构化假设栈</strong>遇反证自动折半并级联回滚，
+      <strong>执行验证器</strong>拦截单样本偶然命中，最后交由零历史<strong>隔离对抗审计</strong>签发三态裁决。
+      单一静态 Go 二进制与原生 3D 桌面端共享同一套内核，零 JS Runtime。
+    </p>
 
-  <figure class="capture">
-    <div class="capture__bar"><span class="dot" aria-hidden="true"></span>真实运行画面 · 100×40 pty</div>
-    <div class="capture__scroll">
-      <img src="shots/live.svg" alt="0xAF-Re 运行中的任务列表、数据流图和 trace">
+    <div class="zh-actions">
+      <a class="zh-btn zh-btn--primary" href="gui-demo/index.html" target="_blank" rel="noreferrer">▷ 在线体验 3D 工作台（零配置）</a>
+      <a class="zh-btn zh-btn--ghost" href="#install">快速安装 CLI &amp; GUI</a>
+      <a class="zh-btn zh-btn--ghost" href="https://github.com/overkazaf/re-agent">GitHub 源码</a>
     </div>
-    <figcaption>运行时能看到模型请求、工具调用、任务进度、耗时和 token 信息。</figcaption>
-  </figure>
+
+    <div class="cmd">
+      <span class="cmd__prompt" aria-hidden="true">$</span>
+      <code id="install-cmd">go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20</code>
+      <span class="caret" aria-hidden="true"></span>
+      <button class="copy" type="button" data-copy="#install-cmd">复制</button>
+    </div>
+
+    <div class="zh-metrics" aria-label="核心工程指标">
+      <div class="zh-metric">
+        <span class="zh-metric__val"><b>五道防线</b></span>
+        <span class="zh-metric__desc">沙箱 · 账本 · 假设 · 验证 · 隔离审计</span>
+      </div>
+      <div class="zh-metric">
+        <span class="zh-metric__val"><b>七类任务档案</b></span>
+        <span class="zh-metric__desc">Target ≠ Objective 严格分离防漂移</span>
+      </div>
+      <div class="zh-metric">
+        <span class="zh-metric__val"><b>3D GLSL 指挥台</b></span>
+        <span class="zh-metric__desc">7 大工位 · 因果光弧 · HD 1.5× / 后台 0% GPU</span>
+      </div>
+      <div class="zh-metric">
+        <span class="zh-metric__val"><b>10 套专业主题</b></span>
+        <span class="zh-metric__desc">WCAG AA+ 对比度 · 含浅色实验室 paper</span>
+      </div>
+      <div class="zh-metric">
+        <span class="zh-metric__val"><b>34 个内置 Go 工具</b></span>
+        <span class="zh-metric__desc">纯 Go 二进制剖析 · 30 项内嵌逆向技能</span>
+      </div>
+      <div class="zh-metric">
+        <span class="zh-metric__val"><b>129 前端单测 + 19 Go 测试包</b></span>
+        <span class="zh-metric__desc">契约、3D 场景与核心治理全量回归验证</span>
+      </div>
+    </div>
+
+    <figure class="zh-shot">
+      <div class="zh-shot__bar">
+        <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>0xAF-Re · 3D Forensic Theater · 7 大工位全息雕塑 + 实时因果证明 DAG + 9 阶段相位脊</span>
+        <a class="zh-shot__tag" href="gui-demo/index.html" target="_blank" rel="noreferrer">浏览器零配置试玩 →</a>
+      </div>
+      <div class="zh-shot__media">
+        <img src="shots/gui-3d-overview.png" alt="0xAF-Re 3D Forensic Theater 极客指挥台全景：GLSL 抗锯齿雷达底盘、7 大工位全息雕塑、9 阶段相位脊与因果证明 DAG" decoding="async">
+      </div>
+      <figcaption>
+        <strong>默认即进入 3D 取证作战室：</strong>GLSL 抗锯齿雷达底盘承载 7 大全息工位与实时生长的 <code class="inline">H-NNN</code> / <code class="inline">ev_NNN</code> 贝塞尔因果证明光弧，点击 3D 标签直接打开取证节点检视器，随时一键切换至经典 2D 桌面视图。
+      </figcaption>
+    </figure>
+  </div>
 </div>
 
-<section id="why">
+<!-- ===================== SECTION 1: TRUST ARCHITECTURE ===================== -->
+<section id="trust-arch">
   <div class="wrap">
-    <p class="label">项目特点</p>
-    <h2>为日常授权逆向里“模型太谨慎、过程不可见”的问题做改良。</h2>
+    <p class="label">TRUST ARCHITECTURE · 标准化 re-agent 信任架构</p>
+    <h2>五道防线、七类档案与隔离审计，1:1 对齐工程治理规范。</h2>
     <p>
-      0xAF-Re 源于作者日常 RE/CTF 工作里的痛点：CC 类 CLI 风控升级后，普通模型面对逆向语义也更容易过度谨慎，本地样本分析经常被打断。它不做隐写、暗语或绕策略，而是把任务限定在授权、本地、可审计范围内，再用多模型角色组合提升体验。
+      当逆向 Agent 接入终端、反编译器、Frida、ADB、Unicorn/QEMU 与脚本重建能力，它就不再是代码解释器，而是高权限<strong>行动系统</strong>。
+      0xAF-Re 将 <a href="https://github.com/overkazaf/re-agent/blob/main/docs/WORKFLOW_STANDARD.md"><code class="inline">docs/WORKFLOW_STANDARD.md</code></a> 中的标准化 <code class="inline">re-agent</code> 架构直接写进宿主 Go 代码与前端契约：权限可收束、事实与推断分离、假设可证伪可回滚、交付由执行与隔离审计裁定。
     </p>
 
-    <div class="cols">
-      <article class="card">
-        <h4>多模型组合</h4>
+    <h3>五道防线：逐一封堵逆向 Agent 典型失效路径</h3>
+    <div class="zh-grid-3">
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge">防线 01 · Capability Sandbox</span>
+          <span class="zh-badge zh-badge--err">防环境泄漏</span>
+        </div>
+        <h4>能力沙箱：权限跟着动作走</h4>
         <p>
-          planner 负责路线，executor 负责工具，researcher 负责资料。三个角色可以接不同 provider 或具体模型，并可在运行中用 <code class="inline">/planner</code>、<code class="inline">/executor</code>、<code class="inline">/researcher</code>、<code class="inline">/model</code> 切换。
+          <code class="inline">/goal</code> 生效即拉起任务级最小权限沙箱，<code class="inline">network</code> 与 <code class="inline">device</code> 默认拒绝，严防误读工作区外答案文件、宿主机凭据或未授权外联；任务结束或回滚时授权自动失效。
         </p>
+        <div class="zh-card__foot">不变量：每条动作经 <strong>/cap</strong> 写入 <strong>Action State</strong>（命令 SHA-256、裁决、来源与绑定 <strong>hypothesisId</strong>）</div>
       </article>
-      <article class="card">
-        <h4>专用订阅加成</h4>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge">防线 02 · Evidence Ledger</span>
+          <span class="zh-badge zh-badge--warn">防样本投毒</span>
+        </div>
+        <h4>证据账本 + UNTRUSTED DATA 隔离</h4>
         <p>
-          如果你有 GPT Cyber、Claude Code CVP、Grok 或类似更适配安全研究/逆向的 route，<code class="inline">/workflow auto</code> 可以走 specialist 路径，规划和工具推进会更顺。
+          所有工具原始观察由宿主写入 append-only 的 <code class="inline">evidence-ledger.jsonl</code>（<code class="inline">ev_NNN</code>），记录工具来源、视角（<code class="inline">static</code>/<code class="inline">dynamic</code>）与 SHA-256；样本内字符串与函数名强制打标 <code class="inline">UNTRUSTED DATA</code>，只作数据引用，永不进入指令层。
         </p>
+        <div class="zh-card__foot">不变量：模型只能引用 <strong>ev_NNN</strong>，禁止伪造、覆盖或将自身总结当作输入事实</div>
       </article>
-      <article class="card">
-        <h4>普通模型也能跑</h4>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge">防线 03 · Hypothesis Manager</span>
+          <span class="zh-badge zh-badge--violet">级联回滚</span>
+        </div>
+        <h4>结构化假设管理器</h4>
         <p>
-          没有 specialist route 时，caveman 会把任务拆成 planner 全局视图和 executor 本地证据包。executor 只拿收窄后的只读工具，专注文件类型、字符串、熵、导入、符号和偏移等事实。
+          拒绝把“这个常量就是 key”留在聊天里带着 Agent 空转。每条假设 <code class="inline">H-NNN</code> 在宿主侧维护 <code class="inline">scope</code>、<code class="inline">falsifiers</code>、<code class="inline">next_test</code>、<code class="inline">dependsOn</code> 与正反证据引用；反证命中即折半置信度并沿派生链级联触发 <code class="inline">weakened</code> / <code class="inline">frozen</code> / <code class="inline">reevaluate</code>。
         </p>
+        <div class="zh-card__foot">不变量：状态迁移由宿主 <strong>hypothesis.Tracker</strong> 与确定性仲裁器执行</div>
       </article>
-      <article class="card">
-        <h4>后续可评测</h4>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge">防线 04 · Execution Verifier</span>
+          <span class="zh-badge zh-badge--ok">拦截单样本命中</span>
+        </div>
+        <h4>执行验证器：candidate → verified</h4>
         <p>
-          计划加入本地模型和具体评测样例：同一个 artifact、同一套 workflow、不同 provider，对比完成率、证据质量、耗时和人工修正量，用结果推动迭代。
+          <code class="inline">verify_artifact</code> 强制区分 <code class="inline">candidate</code> 与 <code class="inline">verified</code>，执行构建、固定输入回放、边界/异常/失败样本与差分对比，记录 <code class="inline">boundaryPassed</code>、<code class="inline">differentialCases</code> 与 <code class="inline">uncoveredPaths</code>。
         </p>
+        <div class="zh-card__foot">不变量：单样本偶然命中（<strong>total &lt; 2</strong>）硬锁定为 <strong>candidate</strong>，严禁宣称算法已还原</div>
       </article>
-      <article class="card">
-        <h4>任务先声明，再开工</h4>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge">防线 05 · Adversarial Auditor</span>
+          <span class="zh-badge zh-badge--violet">三态裁决</span>
+        </div>
+        <h4>隔离对抗审计：5 项强制核查</h4>
         <p>
-          <code class="inline">/goal</code> 把一句话目标变成钉死的契约：目标哈希与格式由宿主固定，build 通过、replay 一致、证据数量这些验收标准在 writeup 前对照账本逐条检查，过不了就写不了报告。
+          主 Agent 负责探索，绝不能自当裁判。<code class="inline">/audit</code> 启用独立隔离会话（<code class="inline">Isolated=true</code>、<code class="inline">FreshSession=true</code>、<code class="inline">Tools=[]</code>），只读契约、账本、候选结论与验证记录，逐条执行 5 项核查：直接证据、失败/边界覆盖、简化替代解释、越权核查、产物血缘。
         </p>
+        <div class="zh-card__foot">输出三态裁决：<strong>accepted</strong> · <strong>rejected</strong> · <strong>needs_more_evidence</strong></div>
       </article>
-      <article class="card">
-        <h4>能力跟着任务走</h4>
-        <p>
-          声明生效时同时拉起任务级沙箱：网络与设备访问默认拒绝，<code class="inline">/cap</code> 运行中单项授权/收回，每条被闸门过的命令连同决策和来源进动作日志，任务结束授权一起过期。
-        </p>
+    </div>
+
+    <h3>七类 Investigation State 任务档案</h3>
+    <div class="zh-callout">
+      <strong>核心契约边界：<code class="inline">Target State ≠ Objective State</code> 严格分离。</strong>
+      <code class="inline">Target State</code> 的文件、架构、格式与 SHA-256 由宿主 <code class="inline">goal.Sniff</code> 只读锁定，禁止模型自填哈希；同一份二进制样本可以承载不同 <code class="inline">Objective State</code>（例如先做加壳识别，再做协议还原），从根源杜绝任务漂移与偷换目标。
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>档案域</th><th>回答什么问题</th><th>核心字段</th><th>宿主治理规则</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. Target State</strong></td>
+            <td>针对哪个样本的哪个版本？</td>
+            <td class="mono">file · sha256 · arch · format · version · scope</td>
+            <td>宿主 <code class="inline">goal.Sniff</code> 只读锚定，与 Objective 严格分离</td>
+          </tr>
+          <tr>
+            <td><strong>2. Objective State</strong></td>
+            <td>要证明什么、何时停止？</td>
+            <td class="mono">primary · deliverables · constraints · stopConditions · acceptance</td>
+            <td>模型起草、操作员 <code class="inline">/goal accept</code> 批准，Writeup 前逐条核验</td>
+          </tr>
+          <tr>
+            <td><strong>3. Evidence State</strong></td>
+            <td>工具真实观察到了什么？</td>
+            <td class="mono">ev_NNN · source · kind · view · sha256 · untrustedInput</td>
+            <td>Append-only 不可变账本；不可信样本输出强隔离</td>
+          </tr>
+          <tr>
+            <td><strong>4. Hypothesis State</strong></td>
+            <td>有哪些竞争解释与反例？</td>
+            <td class="mono">H-NNN · claim · scope · falsifiers · nextTest · dependsOn</td>
+            <td>支持多解释并行竞争与冲突折半级联回滚</td>
+          </tr>
+          <tr>
+            <td><strong>5. Action State</strong></td>
+            <td>提议并执行了哪些高权限动作？</td>
+            <td class="mono">tool · capability · sha256 · decision · origin · hypothesisId</td>
+            <td>所有动态动作须绑定目标 <code class="inline">hypothesisId</code> 回答“验证哪条 nextTest”</td>
+          </tr>
+          <tr>
+            <td><strong>6. Verification State</strong></td>
+            <td>重建产物是否与原行为等价？</td>
+            <td class="mono">build · passed/total · candidate|verified · boundaryPassed · uncoveredPaths</td>
+            <td><code class="inline">total &lt; 2</code> 或缺少边界/失败用例时锁定为 <code class="inline">candidate</code></td>
+          </tr>
+          <tr>
+            <td><strong>7. Audit State</strong></td>
+            <td>独立读者是否发现缺口或越权？</td>
+            <td class="mono">verdict · checks[5] · auditorProvider · findings</td>
+            <td>任何回放失败或新矛盾即时退回 <code class="inline">needs_more_evidence</code> / <code class="inline">rejected</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>运行态四角色控制面轮换</h3>
+    <p>
+      在 9 阶段 RE 工作流（<code class="inline">TRI → STA → DYN → EVI → IFC → HYP → VER → AUD → WRI</code>）的每个动作周期内，控制面按需在四个运行态角色之间轮换，而非僵化单向流水线：
+    </p>
+    <div class="zh-flow" role="list" aria-label="四角色运行态轮换">
+      <div class="zh-flow__node" role="listitem">
+        <span>Tool Router</span>
+        <small>按阶段分发工具 · 先过能力沙箱</small>
+      </div>
+      <span class="zh-flow__arrow" aria-hidden="true">⇄</span>
+      <div class="zh-flow__node" role="listitem">
+        <span>Evidence Ledger</span>
+        <small>剥离不可信载荷 · 落盘 ev_NNN 与假设栈</small>
+      </div>
+      <span class="zh-flow__arrow" aria-hidden="true">⇄</span>
+      <div class="zh-flow__node" role="listitem">
+        <span>Execution Verifier</span>
+        <small>构建 · 回放 · 边界差分 · 判定 verified</small>
+      </div>
+      <span class="zh-flow__arrow" aria-hidden="true">⇄</span>
+      <div class="zh-flow__node" role="listitem">
+        <span>Adversarial Auditor</span>
+        <small>零历史零工具 · 5 项核查 · 三态裁决</small>
+      </div>
+    </div>
+
+    <h3>五维可信度与成本指标（§7.5 Scoreboard）</h3>
+    <p>把“报告写得顺滑”与“结论工程可信”彻底拆开量化，在仪表盘遥测与交付档案中持续可见：</p>
+    <div class="zh-grid-5">
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--ok">evidence_coverage</span>
+        <h4>证据覆盖率</h4>
+        <p>最终活跃结论中可回溯至 Evidence Ledger 有效原始观察（<code class="inline">ev_NNN</code>）的比例。</p>
       </article>
-      <article class="card">
-        <h4>结论要经得起复核</h4>
-        <p>
-          证据（<code class="inline">ev_NNN</code>）和假设（<code class="inline">H-NNN</code>）放在 transcript 之外的宿主状态里：矛盾让置信度减半并级联到派生结论，确定性仲裁器在每次工具结果后交叉核对，<code class="inline">/audit</code> 再把假设栈交给第二个模型做隔离会话的对抗复核。
-        </p>
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--ok">replay_pass_rate</span>
+        <h4>回放通过率</h4>
+        <p>固定输入、边界输入与失败样本下重建产物的通过比例（<code class="inline">passed / total</code>）。</p>
+      </article>
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--warn">wrong_hypothesis_lifetime</span>
+        <h4>错假寿命</h4>
+        <p>错误假设从提出到被削弱、淘汰或级联回滚所消耗的轮次、证据步数与 token。</p>
+      </article>
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--err">overreach_count</span>
+        <h4>越权次数</h4>
+        <p>范围外文件、网络、设备与凭据访问次数，明确区分“被沙箱拦截”与“越权成功”。</p>
+      </article>
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--violet">cost_per_accepted_finding</span>
+        <h4>单结论成本</h4>
+        <p>通过隔离审计验收的每条结论所分摊的模型 token、工具与设备总成本。</p>
+      </article>
+    </div>
+
+    <div class="zh-grid-2">
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--ok">WRI [9/9] 硬交付闸门</span>
+        </div>
+        <h4>7 项完成门禁（全部满足方可出报告）</h4>
+        <ol class="zh-list">
+          <li><span class="zh-list__idx zh-list__idx--ok">1</span><span><strong>目标与范围可复现：</strong><code class="inline">Target State</code> 与 <code class="inline">Objective State</code> 严格分离并已锁定。</span></li>
+          <li><span class="zh-list__idx zh-list__idx--ok">2</span><span><strong>关键结论全部入账：</strong>每条结论均可回溯至 append-only 账本的 <code class="inline">ev_NNN</code>。</span></li>
+          <li><span class="zh-list__idx zh-list__idx--ok">3</span><span><strong>主要假设经过检验：</strong>核心假设完成支持、反驳或清理，无悬空 <code class="inline">reevaluate</code>。</span></li>
+          <li><span class="zh-list__idx zh-list__idx--ok">4</span><span><strong>产物通过多维验证：</strong>构建、回放、边界/失败与差分用例达标，状态为 <code class="inline">verified</code>。</span></li>
+          <li><span class="zh-list__idx zh-list__idx--ok">5</span><span><strong>高风险动作全部留痕：</strong>所有动态与外部动作通过能力沙箱并落盘 <code class="inline">ActionRecord</code>。</span></li>
+          <li><span class="zh-list__idx zh-list__idx--ok">6</span><span><strong>对抗审计无未解冲突：</strong>隔离审计 5 项核查全过，裁决为 <code class="inline">accepted</code>。</span></li>
+          <li><span class="zh-list__idx zh-list__idx--ok">7</span><span><strong>明示边界与已知未知：</strong>报告显式列出 <code class="inline">Known Unknowns</code>、<code class="inline">uncoveredPaths</code> 与 <code class="inline">nextTest</code>。</span></li>
+        </ol>
+      </article>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--violet">HANDOVER READINESS</span>
+        </div>
+        <h4>交接三问：跨轮次、跨模型、跨团队直接接手</h4>
+        <p>任务收尾、崩溃续跑或移交同伴时，档案不靠口头回忆，必须直接回答三个工程问题：</p>
+        <ol class="zh-list">
+          <li><span class="zh-list__idx">Q1</span><span><strong>结论来自哪一次运行？</strong><br>精确锚定 Session ID、<code class="inline">evidence-ledger.jsonl</code> 路径、<code class="inline">ev_NNN</code> 与产物 SHA-256。</span></li>
+          <li><span class="zh-list__idx">Q2</span><span><strong>换模型或换工具后能不能复现？</strong><br>交付独立可执行的 replay / differential 测试命令与固定输入向量，不绑定特定对话历史。</span></li>
+          <li><span class="zh-list__idx">Q3</span><span><strong>失败或偏差归因于哪一层？</strong><br>把根因清晰拆成<strong>模型推理 / 工具故障 / 运行环境 / 样本数据与投毒</strong>四层，避免盲目重试。</span></li>
+        </ol>
+        <div class="zh-card__foot">完整规范与 Go / Wire DTO / GUI 视图映射见 <a href="https://github.com/overkazaf/re-agent/blob/main/docs/WORKFLOW_STANDARD.md">WORKFLOW_STANDARD.md</a></div>
       </article>
     </div>
   </div>
 </section>
 
+<!-- ===================== SECTION 2A: 3D FORENSIC THEATER ===================== -->
+<section id="theater-3d">
+  <div class="wrap">
+    <p class="label">3D FORENSIC THEATER · 极客指挥台</p>
+    <h2>把整条逆向证据链摊开在三维作战空间里。</h2>
+    <p>
+      基于 Three.js + React Three Fiber 打造的原生桌面 3D 取证剧场不是装饰背景，而是与 9 阶段 RE 引擎、假设栈和证据账本实时同频的空间交互台：每一次工具调用、假设证伪、回放验证与审计签章，都会即时化为空间光弧与工位脉冲。
+    </p>
+
+    <div class="zh-flow" role="list" aria-label="3D 指挥台 7 大全息工位">
+      <div class="zh-flow__node" role="listitem"><span>TRI · 三角洲</span><small>样本粗筛</small></div>
+      <span class="zh-flow__arrow" aria-hidden="true">→</span>
+      <div class="zh-flow__node" role="listitem"><span>SCR · 勘查屏</span><small>静态与接口</small></div>
+      <span class="zh-flow__arrow" aria-hidden="true">→</span>
+      <div class="zh-flow__node" role="listitem"><span>HYP · 假设塔</span><small>假设与证据 DAG</small></div>
+      <span class="zh-flow__arrow" aria-hidden="true">→</span>
+      <div class="zh-flow__node" role="listitem"><span>EXP · 实验平台</span><small>动态插桩执行</small></div>
+      <span class="zh-flow__arrow" aria-hidden="true">→</span>
+      <div class="zh-flow__node" role="listitem"><span>VER · 验证台</span><small>构建回放差分</small></div>
+      <span class="zh-flow__arrow" aria-hidden="true">→</span>
+      <div class="zh-flow__node" role="listitem"><span>AUD · 审计拱门</span><small>5 项隔离审计</small></div>
+      <span class="zh-flow__arrow" aria-hidden="true">→</span>
+      <div class="zh-flow__node" role="listitem"><span>DEL · 交付坞</span><small>Writeup 定格</small></div>
+    </div>
+
+    <div class="zh-grid-3">
+      <article class="zh-card">
+        <span class="zh-badge">GLSL SHADER + 7 ZONES</span>
+        <h4>GLSL 抗锯齿雷达底盘 &amp; 7 大工位全息雕塑</h4>
+        <p>
+          自定义片元着色器渲染抗锯齿极坐标雷达底盘与扫描波纹，7 座工位全息雕塑与 9 阶段 RE 工作流 1:1 联动，并随 10 套专业主题实时切换线框与自发光材质。
+        </p>
+      </article>
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--violet">CAUSAL PROOF ARCS</span>
+        <h4>3D 贝塞尔因果证明光弧 &amp; 流动光子包</h4>
+        <p>
+          围绕假设塔实时生长的 3D 因果拓扑图：用立体贝塞尔光弧与定向流动光子包清晰区分 <code class="inline">support</code>、<code class="inline">contradict</code>、<code class="inline">derive</code> 与 <code class="inline">audit</code> 关系，反证冲突一眼可见。
+        </p>
+      </article>
+      <article class="zh-card">
+        <span class="zh-badge zh-badge--ok">NODE INSPECTOR &amp; ECO GUARD</span>
+        <h4>3D 标签直点 · 检视器 · 自适应高清/节能</h4>
+        <p>
+          直接点击三维标签或在任意机位按 <code class="inline">I</code> 打开可折叠节点索引抽屉，即刻调出完整<strong>取证节点检视器</strong>。支持<strong>自适应高清（<code class="inline">1.5×</code>）/ 节能（<code class="inline">1×</code>）</strong>档位与<strong>后台 0% GPU 自动暂停</strong>，无 WebGL 时无缝退回经典 2D 视图。
+        </p>
+      </article>
+    </div>
+
+    <div class="zh-chips" aria-label="3D 指挥台快捷键与渲染保护">
+      <span class="zh-chip"><kbd>1</kbd>–<kbd>4</kbd> 预设机位一键运镜</span>
+      <span class="zh-chip"><kbd>Space</kbd> 自由环绕俯瞰</span>
+      <span class="zh-chip"><kbd>I</kbd> 可折叠节点索引抽屉</span>
+      <span class="zh-chip"><kbd>Click</kbd> 3D 标签直点 → 取证节点检视器</span>
+      <span class="zh-chip"><kbd>HD 1.5×</kbd> / <kbd>ECO 1×</kbd> 自适应画质</span>
+      <span class="zh-chip"><kbd>0% GPU</kbd> 切后台自动暂停渲染</span>
+    </div>
+
+    <div class="zh-grid-3">
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Amber P3 主题 · 3D 全息指挥台</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-3d-amber.png" alt="Amber P3 琥珀荧光主题下的 0xAF-Re 3D 取证指挥台" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>2D / 3D 材质同频：</strong>切换主题即时重写 GLSL 雷达着色器、工位全息体与光弧自发光色板。</figcaption>
+      </figure>
+
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>引导式实验配置 + 沙箱 Scope 芯片</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-3d-wizard.png" alt="引导式假设与实验配置向导、沙箱 scope 边界提示与预填命令" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>假设驱动实验流：</strong>顶部建议条串联“假设建模 → 沙箱 scope 边界 → 回放验证 → 审计签章”，失败自动回流预填修正。</figcaption>
+      </figure>
+
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>七区全景仪表盘联动视图</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-zones-dashboard.png" alt="0xAF-Re 七区仪表盘与 3D 指挥台状态联动总览" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>双视角无损切换：</strong>随时在 <code class="inline">◈ 3D 剧场</code> 与 <code class="inline">▣ 经典视图</code> 之间切换，实时同步 9 阶段 RE HUD 与五面板遥测。</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SECTION 2B: COMMERCIAL WORKBENCH ===================== -->
+<section id="workbench">
+  <div class="wrap">
+    <p class="label">DESKTOP WORKBENCH · 商业级专业桌面工作台</p>
+    <h2>Wails v2 原生桌面端，与 CLI 共享同一套 Go 取证内核。</h2>
+    <p>
+      桌面端并非外包壳或分叉实现，而是直接挂载同一个 <code class="inline">core.AgentLoop</code>、同一套 34 个内置工具、同一个 <code class="inline">sessions/</code> 目录与能力沙箱；多会话可并发排队、随时一键 <code class="inline">Interrupt</code> 中断，恢复历史会话时同步还原转录、假设栈、证据账本与沙箱权限。
+    </p>
+
+    <div class="zh-grid-2">
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge">BINARY FORENSIC RADAR</span>
+          <span class="zh-badge zh-badge--ok">静动态坐标对齐</span>
+        </div>
+        <h4>Binary Forensic Radar 二进制取证雷达</h4>
+        <p>
+          顶部安全缓解态势栏直接标亮 <code class="inline">PIE / NX / RELRO / CANARY / RWX</code> 状态，配合区段熵分布与符号地形图快速定位异常载荷；支持 <strong>VA / Offset / RVA 一键复制</strong>，把静态反编译地址与动态调试/Hook 坐标精准对齐。
+        </p>
+      </article>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--violet">PROOF NARRATIVE &amp; STUDIO</span>
+          <span class="zh-badge">.md / .json 取证包</span>
+        </div>
+        <h4>完整因果证明叙事 &amp; Writeup 工坊</h4>
+        <p>
+          告别翻聊天记录拼报告：内置 <strong>6 章连贯时间线叙事</strong>，为每条活跃假设自动生成 <strong>5 拍证明弧线</strong>（提出 → 证据锚定 → 反证检验 → 回放验证 → 审计签章），并可一键导出结构化 <code class="inline">.md</code> 报告与 <code class="inline">.json</code> 取证归档包。
+        </p>
+      </article>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--ok">10 WCAG AA+ THEMES</span>
+          <span class="zh-badge">ProSelect + HintOverlay</span>
+        </div>
+        <h4>10 套专业主题 · 自研仪器控件 · 全局 Portal 提示</h4>
+        <p>
+          覆盖 <strong>CRT Phosphor / Forensic IDE / Daylight Lab</strong> 三大系列（含零眩光浅色实验室 <code class="inline">paper</code> 模式），对比度全部校准至 WCAG AA+；全工作台使用自研 <code class="inline">ProSelect</code> 仪器选择器与全局 Portal <code class="inline">HintOverlay</code> 悬浮提示，彻底消除层叠裁切。
+        </p>
+      </article>
+
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--warn">⌘K COMMAND PALETTE</span>
+          <span class="zh-badge">本地缓存 + 主动建议</span>
+        </div>
+        <h4>⌘K 命令面板 · 斜杠即时反馈 · 启动主动问候</h4>
+        <p>
+          任意界面按 <code class="inline">⌘K</code> 呼出全局命令与面板导航；执行斜杠命令后在转录流、Toast 与输入区给出清晰即时反馈；配合<strong>持久化本地缓存</strong>秒开续接上下文，检测到已配置 LLM 时自动生成工作区<strong>主动问候与首步分析建议</strong>。
+        </p>
+      </article>
+    </div>
+
+    <h3>10 套 WCAG AA+ 专业主题（含浅色实验室 paper 模式）</h3>
+    <div class="zh-themes" role="list" aria-label="10 套内置专业主题色板">
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#070b11"></i><i style="background:#22d3ee"></i><i style="background:#a78bfa"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">deck · Cyberdeck</span><span class="zh-theme__meta">CRT Phosphor · 默认青紫</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#0b0804"></i><i style="background:#ffb000"></i><i style="background:#ffd27f"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">amber · Amber P3</span><span class="zh-theme__meta">CRT Phosphor · 暖琥珀</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#050a07"></i><i style="background:#00ff9c"></i><i style="background:#7cffb2"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">matrix · Matrix P1</span><span class="zh-theme__meta">CRT Phosphor · 翠绿荧光</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#09090b"></i><i style="background:#f8fafc"></i><i style="background:#9ca0aa"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">mono · Noir Mono</span><span class="zh-theme__meta">CRT Phosphor · 高对比银黑</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#0b0a12"></i><i style="background:#b480ff"></i><i style="background:#38bdf8"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">obsidian · Violet</span><span class="zh-theme__meta">Forensic IDE · 深曜电紫</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#1a1f28"></i><i style="background:#88c0d0"></i><i style="background:#b48ead"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">nord · Nordic Frost</span><span class="zh-theme__meta">Forensic IDE · 极地冷青</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#181622"></i><i style="background:#bd93f9"></i><i style="background:#50fa7b"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">dracula · Forensic</span><span class="zh-theme__meta">Forensic IDE · 兰紫薄荷</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#001f27"></i><i style="background:#38bdb2"></i><i style="background:#daa520"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">solarized · Dark</span><span class="zh-theme__meta">Forensic IDE · 精密青金</span></div>
+      </div>
+      <div class="zh-theme" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#0a0709"></i><i style="background:#fb5670"></i><i style="background:#f59e0b"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">crimson · Red Team</span><span class="zh-theme__meta">Forensic IDE · 战术绯红</span></div>
+      </div>
+      <div class="zh-theme zh-theme--light" role="listitem">
+        <span class="zh-swatches" aria-hidden="true"><i style="background:#f6f7f9"></i><i style="background:#1d4ed8"></i><i style="background:#057a55"></i></span>
+        <div class="zh-theme__info"><span class="zh-theme__name">paper · Daylight Lab</span><span class="zh-theme__meta">浅色实验室 · 零眩光日间</span></div>
+      </div>
+    </div>
+
+    <h3>桌面工作台核心视图实景</h3>
+    <div class="zh-grid-2">
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Governance Graph · 治理图谱与能力闸门</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-governance-graph.png" alt="0xAF-Re 治理图谱视图：实时展示任务契约、Capability Sandbox 闸门与四角色控制面" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>控制闭环一览无余：</strong>可视化追踪 <code class="inline">Target ≠ Objective</code> 契约、能力沙箱闸门放行/拦截记录与当前阶段门禁状态。</figcaption>
+      </figure>
+
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Provenance DAG · 因果证据溯源图</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-provenance-dag.png" alt="0xAF-Re 因果证据溯源 DAG：支持、反驳与派生依赖可视化" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>拒绝孤立断言：</strong>每一条假设节点都直接连回原始工具观察 <code class="inline">ev_NNN</code>，反证冲突与派生回滚链条高亮标出。</figcaption>
+      </figure>
+
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Hypothesis Workbench · 假设工作台与 5 项审计</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-hypothesis-workbench.png" alt="0xAF-Re 结构化假设工作台：维护 scope、falsifiers、nextTest 与 5 项对抗审计清单" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>结构化假设治理：</strong>集中编辑 <code class="inline">scope / falsifiers / nextTest</code>、挂载动态验证任务并实时查看隔离审计 5 项核查结果。</figcaption>
+      </figure>
+
+      <figure class="zh-shot" style="margin:0">
+        <div class="zh-shot__bar">
+          <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Writeup Studio · 6 章叙事与 .md/.json 导出</span>
+        </div>
+        <div class="zh-shot__media">
+          <img src="shots/gui-writeup-studio.png" alt="0xAF-Re Writeup 工坊：6 章因果证明叙事、5 拍证明弧线与导出面板" loading="lazy" decoding="async">
+        </div>
+        <figcaption><strong>只基于已验证账本出稿：</strong>自动装配 6 章时间线叙事与逐假设 5 拍证明弧线，明示已知未知并一键导出 <code class="inline">.md</code> / <code class="inline">.json</code> 取证包。</figcaption>
+      </figure>
+    </div>
+
+    <pre class="block">make gui                         <span class="c">构建原生桌面应用 -&gt; gui/build/bin/0xAF-Re GUI.app</span>
+make gui-dev                     <span class="c">热更新开发模式</span>
+make gui-demo                    <span class="c">启动浏览器零配置交互式演示沙盒（5 个典型逆向 Case）</span>
+go test ./gui/ -run TestE2E -v   <span class="c">无头端到端冒烟测试</span></pre>
+    <p>
+      想先免安装体验完整交互？直接打开在线演示沙盒：
+      <a href="gui-demo/index.html" target="_blank" rel="noreferrer"><strong>▷ 在线体验 3D 工作台与 5 个典型逆向 Case（零配置）</strong></a>
+      —— 无需 API Key、不触碰本地文件，亲手试玩 3D 指挥台运镜、审批门 allow/deny 分叉、9 阶段 RE HUD、10 套专业主题切换与 Writeup 导出。
+    </p>
+  </div>
+</section>
+
+<!-- ===================== SECTION 3: 10 USE CASES ===================== -->
 <section id="use-cases">
   <div class="wrap">
-    <p class="label">使用场景</p>
-    <h2>10 个可以直接照着敲的起手式。</h2>
+    <p class="label">QUICK RECIPES · 10 个直接上手的逆向起手式</p>
+    <h2>粗筛不烧 Token，斜杠命令直调本地纯 Go 引擎。</h2>
     <p>
-      把路径换成你自己的目标即可。斜杠命令直接跑本地工具；
-      <code class="inline">-p</code> 会启动一次 agent 任务。
+      把路径换成你的本地目标即可。斜杠命令直接调用本地工具零 token 出结果；带 <code class="inline">-p</code> 则进入多模型可验证 Agent 任务。
     </p>
 
     <div class="tablewrap">
       <table>
-        <thead><tr><th>#</th><th>想做什么</th><th>从这里开始</th></tr></thead>
+        <thead><tr><th>#</th><th>常见逆向需求</th><th>起手命令</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td>不知道文件是什么</td><td><code class="inline">/scan ./chall</code></td></tr>
-          <tr><td>2</td><td>看 ELF/Mach-O/PE 保护</td><td><code class="inline">/mitigations ./chall</code></td></tr>
-          <tr><td>3</td><td>找加壳、压缩或加密区段</td><td><code class="inline">/entropy ./chall</code></td></tr>
-          <tr><td>4</td><td>从 blob 里挖内嵌文件</td><td><code class="inline">/carve ./blob</code></td></tr>
-          <tr><td>5</td><td>解可疑 flag/token</td><td><code class="inline">/decode auto ZmxhZ3s...</code></td></tr>
-          <tr><td>6</td><td>APK 首轮分析</td><td><code class="inline">/apk ./app.apk</code></td></tr>
-          <tr><td>7</td><td>生成 Java/native hook 脚手架</td><td><code class="inline">/hook java com.example.Crypto sign</code></td></tr>
-          <tr><td>8</td><td>检查 radare2/JADX/Ghidra/Burp/mitmproxy/angr 等工具</td><td><code class="inline">/retool inventory</code></td></tr>
-          <tr><td>9</td><td>Web/WASM 加密题</td><td><code class="inline">/skill wasm-reverser inspect ./dist/module.wasm</code></td></tr>
-          <tr><td>10</td><td>调研壳、算法或相似样本</td><td><code class="inline">0xaf --role researcher -p "调研这个壳名，并列出安全的本地检查步骤"</code></td></tr>
+          <tr><td>1</td><td>不知道文件是什么、先做首轮粗筛</td><td><code class="inline">/scan ./chall</code></td></tr>
+          <tr><td>2</td><td>检查 ELF / Mach-O / PE 安全缓解措施</td><td><code class="inline">/mitigations ./chall</code></td></tr>
+          <tr><td>3</td><td>扫描加壳、压缩或高熵加密区段</td><td><code class="inline">/entropy ./chall</code></td></tr>
+          <tr><td>4</td><td>从固件或混合 blob 挖掘内嵌文件</td><td><code class="inline">/carve ./blob</code></td></tr>
+          <tr><td>5</td><td>自动递归解码可疑 flag / token</td><td><code class="inline">/decode auto ZmxhZ3s...</code></td></tr>
+          <tr><td>6</td><td>Android APK 清单、DEX/SO 与壳指纹初检</td><td><code class="inline">/apk ./app.apk</code></td></tr>
+          <tr><td>7</td><td>生成 Java / Native Frida Hook 脚手架</td><td><code class="inline">/hook java com.example.Crypto sign</code></td></tr>
+          <tr><td>8</td><td>盘点本机 radare2 / JADX / Ghidra / Burp / mitmproxy / angr</td><td><code class="inline">/retool inventory</code></td></tr>
+          <tr><td>9</td><td>调用内嵌技能分析 Web / WASM 加密逻辑</td><td><code class="inline">/skill wasm-reverser inspect ./dist/module.wasm</code></td></tr>
+          <tr><td>10</td><td>独立 Researcher 席位调研壳、算法或相似样本</td><td><code class="inline">0xaf --role researcher -p "调研这个壳名，并列出安全的本地检查步骤"</code></td></tr>
         </tbody>
       </table>
     </div>
+
+    <figure class="capture">
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>终端实时仪表盘 · 90ms 刷新 · FLOW / TOOLS / PLAN / THINK / TELE</div>
+      <div class="capture__scroll">
+        <img src="shots/live.svg" alt="0xAF-Re CLI 终端实时仪表盘运行画面：展示数据流、工具调用、任务计划、推理尾与遥测数据" loading="lazy" decoding="async">
+      </div>
+      <figcaption>即使在纯 SSH / 终端环境下，每轮模型请求、工具调用、计划进度、耗时与 token 吞吐也全部实时可见，支持运行中 <code class="inline">/think expand</code>、<code class="inline">/queue edit</code> 与 <code class="inline">/model</code> 热切。</figcaption>
+    </figure>
   </div>
 </section>
 
+<!-- ===================== SECTION 4: WORKFLOW MODES ===================== -->
 <section id="workflow">
   <div class="wrap">
-    <p class="label">Workflow</p>
-    <h2>有专用订阅就直跑；没有就拆成本地证据包。</h2>
+    <p class="label">WORKFLOW MODES · 工作流与隔离取证</p>
+    <h2>有专用安全路由就直跑；普通模型拆成本地证据包。</h2>
+    <p>
+      0xAF-Re 不做暗语、隐写或绕过策略，而是把任务严格收束在授权、本地、可审计范围内：拥有 GPT Cyber、Claude Code CVP、Grok 等安全研究友好路由时直走 <code class="inline">specialist</code>；使用普通 Provider 时，通过 <code class="inline">caveman</code> 将全局规划与只读本地取证隔离拆分，让普通模型也能稳定推进逆向流程。
+    </p>
+
     <div class="tablewrap">
       <table>
-        <thead><tr><th>模式</th><th>适合什么时候</th><th>作用</th></tr></thead>
+        <thead><tr><th>路由模式</th><th>适用场景</th><th>执行方式</th></tr></thead>
         <tbody>
-          <tr><td><code class="inline">off</code></td><td>默认</td><td>不改写你的 prompt</td></tr>
-          <tr><td><code class="inline">auto</code></td><td>机器上可能有 GPT Cyber / CC CVP 路由</td><td>能走 specialist 就走，否则走 caveman</td></tr>
-          <tr><td><code class="inline">specialist</code></td><td>有授权 cyber/CVP 类 provider</td><td>先规划，再调用 skills 和本地工具推进</td></tr>
-          <tr><td><code class="inline">caveman</code></td><td>普通 provider</td><td>planner -&gt; 隔离 executor，只传本地证据包</td></tr>
+          <tr><td><code class="inline">off</code></td><td>默认直通</td><td>保持原始提示词，直接按当前角色路由执行</td></tr>
+          <tr><td><code class="inline">auto</code></td><td>自动探测本机路由</td><td>检测到 cyber/CVP 标记走 <code class="inline">specialist</code>，否则回落 <code class="inline">caveman</code></td></tr>
+          <tr><td><code class="inline">specialist</code></td><td>已配置安全研究友好路由</td><td>先做全局规划，再直接驱动 30 项 Skills 与本地逆向工具链</td></tr>
+          <tr><td><code class="inline">caveman</code></td><td>普通商业 / 自建 Provider</td><td>Planner 生成 <code class="inline">EXECUTOR_PACKET</code> → 隔离 Executor 用收窄只读工具采集本地事实 → 合并落入同一 transcript</td></tr>
         </tbody>
       </table>
     </div>
+
     <div class="tablewrap">
       <table>
-        <thead><tr><th>专用模式</th><th>用途</th></tr></thead>
+        <thead><tr><th>专用工作流</th><th>定位与硬闸门</th></tr></thead>
         <tbody>
-          <tr><td><code class="inline">research</code></td><td>调研公开资料（Web / GitHub / arXiv），输出带出处报告</td></tr>
-          <tr><td><code class="inline">writeup</code></td><td>只基于会话内已入库证据整理结构化分析报告</td></tr>
-          <tr><td><code class="inline">ctf</code></td><td>围绕单一题目完成粗筛、规划、求解与精确 flag 验证</td></tr>
-          <tr><td><code class="inline">reverse</code></td><td><strong>交互式逆向</strong>：样本类型选择器 → 9 阶段推进 → 验证与审计硬闸门 → RE HUD → 证据账本</td></tr>
-          <tr><td><code class="inline">engineering</code></td><td>接口与协议工程化还原：恢复数据结构、客户端 stub 与测试</td></tr>
+          <tr><td><code class="inline">reverse</code></td><td><strong>交互式完整逆向主线</strong>：样本类型选择器 → 9 阶段推进（<code class="inline">TRI → STA → DYN → EVI → IFC → HYP → VER → AUD → WRI</code>）→ 验证与隔离审计硬闸门 → RE HUD 与证据账本</td></tr>
+          <tr><td><code class="inline">ctf</code></td><td>围绕单题快速完成粗筛、规划、脚本求解与精确 flag 回放验证</td></tr>
+          <tr><td><code class="inline">engineering</code></td><td>接口与协议工程化还原：恢复数据结构、客户端 stub 与自动化差分测试</td></tr>
+          <tr><td><code class="inline">research</code></td><td>调研公开资料（Web / GitHub / arXiv），输出带出处与本地安全复检清单的调研报告</td></tr>
+          <tr><td><code class="inline">writeup</code></td><td>严格限定仅基于当前会话已入账且通过验证的证据生成结构化报告</td></tr>
         </tbody>
       </table>
     </div>
+
     <pre class="block">/workflow auto
 /workflow caveman
 /workflow reverse
 0xaf --workflow specialist -p "triage ./app.apk"</pre>
-    <p>
-      caveman 模式不是暗语、编码或绕策略。planner 看到完整授权任务；executor 开全新会话，
-      只拿本地 evidence packet 和收窄后的只读工具，用来收集文件类型、字符串、熵、导入/符号、
-      包结构、哈希、偏移和本地 blocker。
-    </p>
-
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>隔离本地证据流程</th><th>具体做什么</th></tr></thead>
-        <tbody>
-          <tr><td>1 · planner 阶段</td><td>planner 看到完整授权任务，输出短计划和 <code class="inline">EXECUTOR_PACKET</code></td></tr>
-          <tr><td>2 · 隔离 executor</td><td>executor 开新的 provider session，只拿 packet、专用 system prompt 和收窄工具</td></tr>
-          <tr><td>3 · 证据工具</td><td>executor 可 list/read/grep/hash，跑 strings/hexdump/entropy，检查符号、保护、carve 线索和 APK 结构</td></tr>
-          <tr><td>4 · 合并结果</td><td>两段都写入同一个 transcript，最终返回 <code class="inline">planner-&gt;executor</code> 合并结果</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <p>
-      <code class="inline">auto</code> 只是 resolver：检测到 cyber/CVP 标记就走 specialist，
-      否则走 caveman。真正的两段隔离执行只在 role 为 <code class="inline">auto</code>
-      且没有固定 provider 时触发；显式角色或强制 provider 会保持原语义，只套 workflow prompt。
-    </p>
-    <p>
-      它不绕过 provider 风控，也不隐藏会被标记的意图。实际效果是缩小合法上下文：
-      planner 处理完整授权目标，executor 只收到工作区本地证据步骤，可调用工具保持只读，
-      两段过程都留在 transcript 里。
-    </p>
-
-    <p>
-      <code class="inline">/workflow reverse</code> 是最结构化的模式：样本类型选择器之后，按
-      <strong>9 个阶段</strong>推进 —— triage → static → dynamic → evidence → interface →
-      hypothesis → verify → audit → writeup。每次完成的工具结果和假设状态都会写进 append-only 的
-      <code class="inline">evidence-ledger.jsonl</code>；阶段推进有硬闸门 —— 进入 audit 前必须先跑
-      <code class="inline">verify_artifact</code>，进入 writeup 前必须留下 audit 记录，
-      没有被验证过的结论到不了报告。账本之外还有三层宿主管的控制：
-      <code class="inline">/goal</code> 钉死任务契约并对照证据检查验收标准，
-      <code class="inline">/cap</code> 按任务闸网络与设备访问、动作全程留痕，
-      <code class="inline">/audit</code> 在报告出来前把假设栈交给第二个模型做隔离复核。
-    </p>
   </div>
 </section>
 
-<section id="gui">
-  <div class="wrap">
-    <p class="label">桌面 GUI</p>
-    <h2>基于同一套内核的 CRT 桌面工作台。</h2>
-    <p>
-      基于 Wails v2（Go 后端 + 原生系统 WebView）构建，直接复用同一个
-      <code class="inline">core.AgentLoop</code>、同一套 34 个内置工具、同一个
-      <code class="inline">sessions/</code> 目录以及同一个任务能力沙箱，不是分叉实现。
-    </p>
-    <pre class="block">make gui                         <span class="c">构建原生应用 -&gt; gui/build/bin/0xAF-Re GUI.app</span>
-make gui-dev                     <span class="c">热更新开发模式</span>
-make gui-demo                    <span class="c">浏览器零配置交互式演示沙盒（5 个常见逆向 Case）</span>
-go test ./gui/ -run TestE2E -v   <span class="c">无头端到端冒烟测试</span></pre>
-    <p>
-      想先在浏览器里直接感受桌面端操作？打开内置静态演示环境：
-      <a href="gui-demo/index.html" target="_blank" rel="noreferrer"><strong>▷ 在线体验 GUI 交互演示沙盒（5 个典型 Case）</strong></a>
-      ——无需 API Key，不修改本地文件，可亲手体验审批门 allow/deny 分叉、9 阶段 RE HUD、多会话排队/中断、斜杠直调命令与内置终端。
-    </p>
-    <div class="tablewrap">
-      <table>
-        <thead><tr><th>能力面</th><th>具体内容</th></tr></thead>
-        <tbody>
-          <tr><td>3D 取证剧场（默认视图）</td><td>基于 three.js + react-three-fiber 的全 3D 取证作战室：9 阶段发光相位脊、实时生长的 <code class="inline">H-NNN</code> / <code class="inline">ev_NNN</code> 证据 DAG、全息遥测面板，支持一键切回经典 2D 布局，且在无 WebGL / 减动效 / 低帧率下自动降级</td></tr>
-          <tr><td>引导式假设向导</td><td>顶部建议条常驻提示下一步，按「可证伪假设 → 沙箱 scope 引导实验配置 → <code class="inline">verify_artifact</code> 回放验证 → 审计签章」推进，失败自动回流至预填的修正假设步</td></tr>
-          <tr><td>多会话并发</td><td>同时运行多个逆向会话，侧栏实时展示 idle / running / awaiting approval 状态并支持一键 <code class="inline">Interrupt</code> 中断</td></tr>
-          <tr><td>90ms 实时仪表盘 + 9 阶段 RE HUD</td><td>FLOW / TOOLS / PLAN / THINK / TELE 五面板实时重绘，叠加 9 阶段逆向进度条（<code class="inline">TRI → … → WRI</code> 与 <code class="inline">H:N</code> / <code class="inline">E:N</code> 计数）</td></tr>
-          <tr><td>风险审批弹窗</td><td>写盘/执行/网络调用弹出带命中风险项说明的审批对话框，支持 allow / allow-always / deny / deny-always</td></tr>
-          <tr><td>34 工具与契约对齐</td><td>完整支持 <code class="inline">/inspect</code>、<code class="inline">/anti</code>、<code class="inline">/diff</code>、<code class="inline">verify_artifact</code>、<code class="inline">/goal</code>、<code class="inline">/cap</code>、<code class="inline">/audit</code> 与原生 <code class="inline">/workflow reverse</code> 选择器</td></tr>
-          <tr><td>主题与会话恢复</td><td>内置 <code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code> 四套主题联动驱动 2D 与 3D 材质，恢复历史会话时同步还原转录、假设栈、证据账本与沙箱权限</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <h3>3D 取证剧场与引导式假设主线</h3>
-    <figure class="capture">
-      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>3D 取证剧场 · 作战室全景（相位脊 + 实时证据 DAG）</div>
-      <div class="capture__scroll">
-        <img src="shots/gui-3d-overview.png" alt="0xAF-Re 3D 取证剧场全景：9 阶段相位脊、七区字形与假设塔周围实时生长的证据 DAG" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
-      </div>
-      <figcaption>默认进入 3D 取证作战室：点击任意功能区或节点即可自动运镜，随时一键切回经典 2D 视图（<code class="inline">▣ 经典视图</code> / <code class="inline">◈ 3D 剧场</code>）。</figcaption>
-    </figure>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:1rem">
-      <figure class="capture" style="margin:0">
-        <div class="capture__bar"><span class="dot" aria-hidden="true"></span>引导式实验配置 + 沙箱 scope</div>
-        <div class="capture__scroll">
-          <img src="shots/gui-3d-wizard.png" alt="引导式实验配置与沙箱 scope 芯片和预填命令" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
-        </div>
-        <figcaption>实验配置自带沙箱 scope 引导（可写路径、网络状态、越界告警），并预填可执行命令。</figcaption>
-      </figure>
-      <figure class="capture" style="margin:0">
-        <div class="capture__bar"><span class="dot" aria-hidden="true"></span>Amber CRT 主题下的 3D 剧场</div>
-        <div class="capture__scroll">
-          <img src="shots/gui-3d-amber.png" alt="Amber 主题下的 3D 取证剧场" style="width:100%;height:auto;display:block" loading="lazy" decoding="async">
-        </div>
-        <figcaption>四套 CRT 配色（<code class="inline">deck</code> / <code class="inline">amber</code> / <code class="inline">matrix</code> / <code class="inline">mono</code>）直接联动驱动 3D 线框与自发光材质。</figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
+<!-- ===================== SECTION 5: REMOTE SSH & MULTI-MODEL ===================== -->
 <section id="remote">
   <div class="wrap">
-    <p class="label">远程模式</p>
-    <h2>本地窗口规划，SSH 实验机执行。</h2>
+    <p class="label">REMOTE SSH &amp; MODEL SEATS · 远程实验机与四席位分工</p>
+    <h2>本地指挥规划，SSH 实验机执行；四个模型席位各司其职。</h2>
     <p>
-      通过 <code class="inline">--remote &lt;name&gt;</code> 或 <code class="inline">/remote use &lt;name&gt;</code>
-      将 <code class="inline">run_command</code> 与 <code class="inline">!shell</code> 自动路由到后台保活的 SSH 连接（30s keepalive +
-      默认 <code class="inline">ssh -tt</code> 远端 PTY）；模型也可显式调用 <code class="inline">remote_exec</code> 指定任意已保存主机。
-      凭据保存在 <code class="inline">~/.0xaf-re-agent/remote.json</code>，使用绑定机器硬件标识的 AES-256-GCM 密钥本地加密。
+      通过 <code class="inline">--remote &lt;name&gt;</code> 或 <code class="inline">/remote use &lt;name&gt;</code>，可将 <code class="inline">run_command</code> 与 <code class="inline">!shell</code> 自动路由到后台保活的 SSH 通道（30s keepalive + 默认 <code class="inline">ssh -tt</code> 远端 PTY）；模型也可显式调用 <code class="inline">remote_exec</code> 指向指定实验机。凭据存于 <code class="inline">~/.0xaf-re-agent/remote.json</code>，由绑定硬件标识的 AES-256-GCM 密钥本地加密。
     </p>
-    <pre class="block">/remote add lab dev@10.0.0.5
+
+    <div class="zh-grid-2">
+      <div>
+        <pre class="block" style="margin-top:0">/remote add lab dev@10.0.0.5
 /remote add srv root@srv.local --key ~/.ssh/id_ed25519
 /remote use lab
 !uname -a                                 <span class="c">shell escape -&gt; ssh lab</span>
-0xaf --remote lab -p "inventory /opt"     <span class="c">启动即进入远程模式</span></pre>
-    <figure class="capture">
-      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>/remote list</div>
-      <div class="capture__scroll">
-        <img src="shots/remote.png" alt="/remote 已保存主机列表" style="max-width:520px;width:100%;height:auto;display:block">
+0xaf --remote lab -p "inventory /opt"     <span class="c">启动即绑定远程实验机</span></pre>
+        <figure class="zh-shot" style="margin-top:0.9rem">
+          <div class="zh-shot__bar">
+            <span class="zh-shot__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>/remote list · 硬件绑定 AES-256-GCM 加密凭据</span>
+          </div>
+          <div class="zh-shot__media" style="padding:0.65rem">
+            <img src="shots/remote.png" alt="/remote 已保存实验机主机列表" style="max-width:520px" loading="lazy" decoding="async">
+          </div>
+          <figcaption>所有远程命令同样先过能力沙箱、再过 exec 审批闸门，弹窗明确展示 <code class="inline">ssh &lt;host&gt; &lt;command&gt;</code>。</figcaption>
+        </figure>
       </div>
-      <figcaption>所有远程命令同样经过任务能力沙箱与 exec 级审批闸门，审批提示明确展示 <code class="inline">ssh &lt;host&gt; &lt;command&gt;</code>。</figcaption>
-    </figure>
-  </div>
-</section>
 
-<section id="routing">
-  <div class="wrap">
-    <p class="label">角色与模型</p>
-    <h2>Planner 想路线，Executor 跑工具，Researcher 查资料。</h2>
-    <pre class="block">/planner deepseek
+      <div id="routing">
+        <div class="tablewrap" style="margin-top:0">
+          <table>
+            <thead><tr><th>模型席位</th><th>职责边界</th><th>成本策略</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Planner</strong></td><td>目标拆解、跨函数语义推导、假设建模与反例设计</td><td>高推理模型，只读账本摘要</td></tr>
+              <tr><td><strong>Executor</strong></td><td>静态提取、动态插桩脚本、批量日志归并与 harness</td><td>高频低价值动作下沉轻量/低价模型</td></tr>
+              <tr><td><strong>Researcher</strong></td><td>混淆模式识别（CFF/BCF/MBA）、竞争假设与背景溯源</td><td>按需调用，不污染主执行上下文</td></tr>
+              <tr><td><strong>Auditor</strong></td><td>独立零历史、零工具执行 5 项对抗审计（<code class="inline">/audit</code>）</td><td>优先指定与主执行不同的第三模型席位</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre class="block">/planner deepseek
 /executor claude-api
 /researcher codex
 /model planner gpt-5.3-codex-high
-/prompt list
-/prompt path executor
-/prompt edit researcher</pre>
-    <p>
-      provider 和具体模型都能运行中切换；<code class="inline">system</code>、<code class="inline">planner</code>、<code class="inline">executor</code>、
-      <code class="inline">researcher</code> 的 prompt 都能单独编辑。编辑文件会从内置 prompt 初始化，
-      保存到 <code class="inline">prompts/</code> 或 <code class="inline">~/.0xaf-re-agent/prompts/</code>，并立即 reload。
-    </p>
+/prompt list · /prompt edit executor</pre>
+        <p class="muted" style="font-size:0.84rem">
+          Provider、模型与各角色 Prompt 均支持运行中热切换与覆盖（落盘至 <code class="inline">prompts/</code> 或 <code class="inline">~/.0xaf-re-agent/prompts/</code> 并立即 reload）。
+        </p>
+      </div>
+    </div>
   </div>
 </section>
 
+<!-- ===================== SECTION 6: 34 TOOLS MATRIX ===================== -->
 <section id="arsenal">
   <div class="wrap">
-    <p class="label">工具</p>
-    <h2>34 个内置工具，粗筛不必花 token。</h2>
+    <p class="label">TOOL ARSENAL · 34 个内置 Go 工具矩阵</p>
+    <h2>纯 Go 二进制剖析引擎 + 外部工具编排 + MCP 统一治理。</h2>
+    <p>
+      所有内置工具直接编译进静态二进制，粗筛、二进制结构检查、反分析指纹识别、字节/指令差分与 APK 清单解析均可零外部依赖运行；任意 stdio MCP Server（如 <code class="inline">ida-pro-mcp</code>）也会并入同一注册表与能力审批闸门。
+    </p>
+
     <div class="tablewrap">
       <table>
-        <thead><tr><th>分组</th><th>工具列表</th></tr></thead>
+        <thead><tr><th>工具分组</th><th>内置工具（共 34 个）</th></tr></thead>
         <tbody>
-          <tr><td>文件</td><td class="mono">list_files · read_file · write_file · grep</td></tr>
-          <tr><td>Shell</td><td class="mono">run_command</td></tr>
-          <tr><td>纯 Go 二进制</td><td class="mono">file_info · strings · hexdump · hash_file · extract_symbols · binary_inspect · anti_analysis · binary_diff · binary_mitigations</td></tr>
-          <tr><td>CTF 与提取</td><td class="mono">ctf_triage · ctf_decode · entropy_scan · find_bytes · carve_artifacts</td></tr>
-          <tr><td>外部逆向工具</td><td class="mono">reverse_toolkit</td></tr>
-          <tr><td>移动端</td><td class="mono">apk_inspect · frida_hook_template</td></tr>
-          <tr><td>知识与技能</td><td class="mono">list_skills · read_skill · knowledge_search · knowledge_read</td></tr>
-          <tr><td>证据与阶段闸门</td><td class="mono">verify_artifact · evidence_review · hypothesis_create · hypothesis_update · hypothesis_list · update_re_state</td></tr>
-          <tr><td>远程执行</td><td class="mono">remote_exec</td></tr>
-          <tr><td>任务计划</td><td class="mono">update_plan</td></tr>
+          <tr><td>工作区文件（4）</td><td class="mono">list_files · read_file · write_file · grep</td></tr>
+          <tr><td>终端执行（1）</td><td class="mono">run_command</td></tr>
+          <tr><td>纯 Go 二进制剖析（9）</td><td class="mono">file_info · strings · hexdump · hash_file · extract_symbols · binary_inspect · anti_analysis · binary_diff · binary_mitigations</td></tr>
+          <tr><td>CTF 粗筛与提取（5）</td><td class="mono">ctf_triage · ctf_decode · entropy_scan · find_bytes · carve_artifacts</td></tr>
+          <tr><td>外部逆向工具链（1）</td><td class="mono">reverse_toolkit <span class="muted">（radare2 · JADX · Ghidra · Burp · mitmproxy · angr · Unicorn · unidbg）</span></td></tr>
+          <tr><td>移动端与 Hook（2）</td><td class="mono">apk_inspect · frida_hook_template</td></tr>
+          <tr><td>技能与私有知识库（4）</td><td class="mono">list_skills · read_skill · knowledge_search · knowledge_read</td></tr>
+          <tr><td>证据账本与假设闸门（6）</td><td class="mono">verify_artifact · evidence_review · hypothesis_create · hypothesis_update · hypothesis_list · update_re_state</td></tr>
+          <tr><td>远程执行（1）</td><td class="mono">remote_exec</td></tr>
+          <tr><td>任务计划（1）</td><td class="mono">update_plan</td></tr>
         </tbody>
       </table>
     </div>
-    <pre class="block">/tools                         <span class="c">列出 34 个内置工具及接入的 MCP 工具</span>
+
+    <pre class="block">/tools                         <span class="c">列出 34 个内置工具与接入的 MCP 工具</span>
 /inspect ./chall               <span class="c">ELF/PE/Mach-O 头部、构造函数、区段熵与导入导出表</span>
 /anti ./chall                  <span class="c">检测加壳、反调试、反 Frida 与内联系统调用</span>
 /diff ./orig ./patched         <span class="c">字节差分与 x86/ARM64 指令 patch 识别</span>
 /apk ./app.apk                 <span class="c">纯 Go AXML 清单解析 + DEX/SO + 加壳/框架指纹</span>
-/retool inventory              <span class="c">检查 radare2、JADX、Ghidra、Burp、mitmproxy、angr、Unicorn、unidbg</span>
-/goal &lt;目标&gt; · /cap · /audit   <span class="c">任务契约验收、能力沙箱控制与双模型隔离对抗审计</span>
-!file ./chall &amp;&amp; strings -n 8 ./chall | head</pre>
+/goal &lt;目标&gt; · /cap · /audit   <span class="c">任务契约验收、能力沙箱控制与双模型隔离对抗审计</span></pre>
+
     <figure class="capture">
-      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>/scan artifact.txt</div>
+      <div class="capture__bar"><span class="dot" aria-hidden="true"></span>/scan artifact.txt · 大输出自动头尾截断，全文落盘 artifact 按需回读</div>
       <div class="capture__scroll">
-        <img src="shots/scan.svg" alt="/scan 本地粗筛输出">
+        <img src="shots/scan.svg" alt="/scan 本地粗筛输出画面" loading="lazy" decoding="async">
       </div>
-      <figcaption>输出过大时只把头尾放进上下文，全文落到 artifact 文件，模型可以按需再读；任意 stdio MCP server（如 <code class="inline">ida-pro-mcp</code>）也会并入同一注册表和审批闸门。</figcaption>
+      <figcaption>超长输出只保留头尾摘要进入上下文，完整原始内容持久化为只读 artifact 并计入账本，模型可按需精确读取任意偏移片段。</figcaption>
     </figure>
   </div>
 </section>
 
+<!-- ===================== SECTION 7: SAFETY, CONTEXT & SKILLS ===================== -->
 <section id="safety">
   <div class="wrap">
-    <p class="label">安全与沙箱</p>
-    <h2>任务能力沙箱在前，Tier × Mode 审批在后。</h2>
-    <p>
-      生效的 <code class="inline">/goal</code> 任务契约会先拉起任务级能力沙箱（<code class="inline">/cap</code>）：网络与设备访问默认拒绝，动作写入可审计日志。
-      通过沙箱后，再按工具风险等级与会话模式（<code class="inline">safe</code> / <code class="inline">write</code> / <code class="inline">always-ask</code> / <code class="inline">yolo</code>）执行审批；命中高危或网络特征的命令始终拦截询问。
-    </p>
+    <p class="label">SAFETY · CONTEXT · SKILLS</p>
+    <h2>双层审批防线、snapcompact 视觉压缩与 30 项内嵌技能。</h2>
+
+    <div class="zh-grid-3">
+      <article class="zh-card">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--err">安全审批</span>
+          <span class="zh-badge">Tier × Mode</span>
+        </div>
+        <h4>任务能力沙箱在前，分级审批在后</h4>
+        <p>
+          生效的 <code class="inline">/goal</code> 契约先由 <code class="inline">/cap</code> 能力沙箱锁住网络与设备边界并写入动作日志；放行后再按工具风险等级（read / write / exec）与会话模式（<code class="inline">safe</code> / <code class="inline">write</code> / <code class="inline">always-ask</code> / <code class="inline">yolo</code>）执行审批，命中高危或网络特征的命令始终弹窗拦截（allow / allow-always / deny / deny-always）。
+        </p>
+      </article>
+
+      <article class="zh-card" id="context">
+        <div class="zh-card__head">
+          <span class="zh-badge">上下文工程</span>
+          <span class="zh-badge zh-badge--violet">snapcompact</span>
+        </div>
+        <h4>磁盘完整留存，视觉快照无损压缩</h4>
+        <p>
+          每次请求前自动执行两轮机械裁剪，严格保持 <code class="inline">tool_use</code> 与 <code class="inline">toolResult</code> 成对出现；在 <code class="inline">agent.config.json</code> 开启 <code class="inline">"compactionStrategy": "snapcompact"</code> 后，可将裁掉的历史本地确定性渲染为 PNG 快照帧，供视觉模型直接读回十六进制偏移与地址细节。
+        </p>
+      </article>
+
+      <article class="zh-card" id="skills">
+        <div class="zh-card__head">
+          <span class="zh-badge zh-badge--ok">30 内置 SKILLS</span>
+          <span class="zh-badge">/know 检索</span>
+        </div>
+        <h4>30 项正交逆向技能 + 私有笔记库</h4>
+        <p>
+          单源内嵌 <strong>30 个逆向工作流 Skills</strong>：覆盖 CTF 粗筛、原生 Pwn/RE、二进制 Patch、Capstone/Keystone、radare2、Ghidra、GDB、OLLVM/VMProtect 反混淆、SO 字符串解密、密码学识别、<code class="inline">whitebox-dfa</code>、<code class="inline">drm-protocol-analysis</code>、Android APK/SO/Frida/JADX、Unicorn/unidbg/Qiling/QEMU、WASM/JSVMP 与 Burp/mitmproxy 抓包，支持本地覆盖与私有笔记检索。
+        </p>
+      </article>
+    </div>
+
+    <pre class="block">/context · /compact                    <span class="c">查看上下文预算占用 / 折叠当前会话为高密度简报</span>
+/sessions · /resume [id] · --continue  <span class="c">列出历史、崩溃自动修复悬挂工具并续接会话</span>
+0xaf --context "know:android packer"   <span class="c">启动即注入本地知识库或工作区文件参考上下文</span>
+/skill whitebox-dfa recover AES key    <span class="c">直接调用 30 项内置逆向技能</span>
+go run ./cmd/import-knowledge ~/notes  <span class="c">导入本地逆向笔记，随后用 /know 语义检索</span></pre>
   </div>
 </section>
 
-<section id="context">
-  <div class="wrap">
-    <p class="label">上下文、压缩与恢复</p>
-    <h2>磁盘转录完整保留，视觉快照无损压缩。</h2>
-    <p>
-      每次请求自动做两轮机械裁剪（折叠旧工具大输出、丢弃最旧对话轮次），严格保持 <code class="inline">tool_use</code> 与 <code class="inline">toolResult</code> 成对出现。
-      在 <code class="inline">agent.config.json</code> 中开启 <code class="inline">"compactionStrategy": "snapcompact"</code> 可将被裁剪历史本地确定性渲染为 PNG 快照帧，供支持视觉的模型直接读回偏移与地址细节；启动时还可用 <code class="inline">--context "know:…"</code> 或 <code class="inline">--context "file:…"</code> 注入参考资料。
-    </p>
-    <pre class="block">/context                               <span class="c">查看当前上下文预算占用</span>
-/compact                               <span class="c">将当前会话折叠为高密度简报</span>
-/sessions · /resume [id] · /new        <span class="c">列出历史、续接会话或开启新会话</span>
-0xaf --continue                        <span class="c">CLI 直接续接最近一次会话</span>
-0xaf --context "know:android packer"   <span class="c">注入本地知识库或文件上下文</span></pre>
-  </div>
-</section>
-
-<section id="skills">
-  <div class="wrap">
-    <p class="label">Skills 与知识库</p>
-    <h2>内置 30 个逆向工作流，支持本地覆盖与私有笔记检索。</h2>
-    <p>
-      二进制单源内嵌 <strong>30 个正交逆向 Skills</strong>：涵盖 CTF 首轮粗筛、原生 Pwn/RE、二进制打补丁、Capstone/Keystone、radare2、Ghidra、GDB、OLLVM 与 VMProtect 反混淆、SO 字符串解密、密码学识别、白盒 DFA（<code class="inline">whitebox-dfa</code>）、DRM 与私有协议分析（<code class="inline">drm-protocol-analysis</code>）、Android APK/SO/签名 + Frida + JADX、Unicorn/unidbg/Qiling/QEMU 仿真、WASM 与 JSVMP 逆向、浏览器 Hook 以及 Burp/mitmproxy 抓包。
-    </p>
-    <pre class="block">/skills
-/skill android-apk-frida inspect this APK
-/skill whitebox-dfa recover the AES round key from ./wb_cipher
-go run ./cmd/import-knowledge ~/notes/re
-/know frida ssl pinning</pre>
-  </div>
-</section>
-
+<!-- ===================== SECTION 8: PROMO CARDS ===================== -->
 <section id="marketing">
   <div class="wrap">
-    <p class="label">宣传图</p>
-    <h2>可以直接下载发小红书或朋友圈。</h2>
+    <p class="label">COMMUNITY KIT · 传播卡片与交流群</p>
+    <h2>开源分享素材，直接下载即可发小红书或技术群。</h2>
     <p>
-      Banner 已合入群二维码；竖版卡片是 1080×1440，适合小红书笔记。
+      横版 Banner 已合入群二维码；竖版 1080×1440 卡片专为小红书与朋友圈信息流排版，点击任意卡片即可保存原图。
     </p>
 
     <div class="promo-grid">
       <a class="promo-tile promo-tile--wide" href="social-card.png" download>
         <img src="social-card.png" alt="0xAF-Re 带二维码宣传 banner" loading="lazy" decoding="async">
-        <span>下载带二维码 banner PNG</span>
+        <span>下载带二维码 Banner PNG</span>
       </a>
       <a class="promo-tile" href="cards/png/01-cover.png" download>
         <img src="cards/png/01-cover.png" alt="0xAF-Re 封面卡片" loading="lazy" decoding="async">
-        <span>01 封面</span>
+        <span>01 封面卡片</span>
       </a>
       <a class="promo-tile" href="cards/png/09-workflow-modes.png" download>
         <img src="cards/png/09-workflow-modes.png" alt="workflow 模式卡片" loading="lazy" decoding="async">
-        <span>09 workflow 模式</span>
+        <span>09 Workflow 模式</span>
       </a>
       <a class="promo-tile" href="cards/png/10-live-queue.png" download>
         <img src="cards/png/10-live-queue.png" alt="任务队列卡片" loading="lazy" decoding="async">
-        <span>10 任务队列</span>
+        <span>10 实时任务队列</span>
       </a>
       <a class="promo-tile promo-tile--qr" href="xhs-group-qr.png" download>
-        <img src="xhs-group-qr-crop.png" alt="小红书群二维码" loading="lazy" decoding="async">
-        <span>下载群二维码</span>
+        <img src="xhs-group-qr-crop.png" alt="小红书技术交流群二维码" loading="lazy" decoding="async">
+        <span>下载交流群二维码</span>
       </a>
     </div>
   </div>
 </section>
 
+<!-- ===================== SECTION 9: INSTALL & VERIFICATION ===================== -->
 <section id="install">
   <div class="wrap">
-    <p class="label">安装</p>
-    <h2>四条命令跑起来。</h2>
-    <pre class="block"><span class="c"># 1. 安装固定版本</span>
+    <p class="label">INSTALL &amp; VERIFICATION · 安装部署与质量基线</p>
+    <h2>四条命令跑起 CLI，一条命令构建 3D 桌面工作台。</h2>
+
+    <div class="zh-grid-2">
+      <div>
+        <pre class="block" style="margin-top:0"><span class="c"># 1. 安装静态 Go 二进制（零 JS Runtime）</span>
 go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
 
-<span class="c"># 2. 离线自检：不需要 key、网络或 CLI 登录</span>
+<span class="c"># 2. 离线自检：无需 API Key、网络或 CLI 登录</span>
 0xaf --smoke
 
-<span class="c"># 3. 看当前 provider 登录状态</span>
+<span class="c"># 3. 检查当前 Provider 登录与路由状态</span>
 0xaf auth status
 
-<span class="c"># 4. 打开工作区</span>
+<span class="c"># 4. 进入授权逆向工作区</span>
 0xaf --workspace ./ctf</pre>
+      </div>
+      <div>
+        <pre class="block" style="margin-top:0"><span class="c"># 从 main 源码构建最新 3D 原生桌面工作台</span>
+git clone https://github.com/overkazaf/re-agent.git
+cd re-agent
+
+<span class="c"># 构建 Wails v2 原生桌面端，或直接起浏览器演示沙盒</span>
+make gui
+make gui-demo
+
+<span class="c"># 全量回归验证（Go 核心 + 前端 Vitest）</span>
+go test ./...
+npm --prefix gui/frontend test</pre>
+      </div>
+    </div>
+
     <p>
-      默认复用本机 <code class="inline">codex</code> 和 <code class="inline">claude</code>
-      CLI 登录；也可以改成 DeepSeek、GLM、Grok、OpenAI-compatible 或自建模型服务。
+      默认自动复用本机 <code class="inline">codex</code> 与 <code class="inline">claude</code> CLI 登录态，也支持 DeepSeek、GLM、Grok、OpenAI-compatible 与私有化自建模型端点；每个 GitHub Release 标签同时提供 macOS / Linux 预编译二进制。
     </p>
+
+    <div class="zh-verify-strip" aria-label="工程测试与交付验证数据">
+      <div class="zh-verify-item">
+        <b>129 前端单元测试</b>
+        <span>覆盖 7-State 任务档案合成、因果证明叙事、3D 运镜与 DAG 几何、自适应画质保护、ProSelect/HintOverlay 与本地缓存。</span>
+      </div>
+      <div class="zh-verify-item">
+        <b>19 Go 核心测试包</b>
+        <span>覆盖能力沙箱、证据账本不可信隔离、假设级联回滚、执行验证器、隔离对抗审计、34 工具与 SSH 远程路由。</span>
+      </div>
+      <div class="zh-verify-item">
+        <b>36 ms · 9 MB · 0 JS</b>
+        <span>CLI 单二进制冷启动约 36 ms、体积极致克制，无需 Node/Python 运行时即可投入现场取证。</span>
+      </div>
+      <div class="zh-verify-item">
+        <b>零配置在线沙盒</b>
+        <span><a href="gui-demo/index.html" target="_blank" rel="noreferrer">立即打开浏览器 3D 演示 →</a>，5 个典型逆向 Case 免 Key 即刻体验完整闭环。</span>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -473,11 +1510,11 @@ go install github.com/overkazaf/re-agent/cmd/0xaf@v0.1.20
 <footer>
   <div class="wrap">
     <p class="scope">
-      面向已获授权的 CTF、实验环境与本地逆向工作：二进制粗筛、静态分析、本地动态实验、solve 计划和可复现记录。
+      仅面向已获授权的 CTF、安全研究实验环境与本地逆向工程：二进制粗筛、静态剖析、本地动态实验、可验证求解与证据锚定交付。
     </p>
     <p>
       <a href="https://github.com/overkazaf/re-agent">github.com/overkazaf/re-agent</a>
-      <span class="muted"> · <a href="index.html">English page</a> · <a href="diagrams/index.zh-CN.html">架构图</a> · <a href="https://github.com/overkazaf/re-agent/blob/main/docs/ARCHITECTURE.zh-CN.md">中文架构文档</a> · <a href="https://github.com/overkazaf/re-agent/blob/main/README.zh-CN.md">中文 README</a></span>
+      <span class="muted"> · <a href="gui-demo/index.html" target="_blank" rel="noreferrer">3D 在线体验</a> · <a href="index.html">English</a> · <a href="diagrams/index.zh-CN.html">架构图索引</a> · <a href="diagrams/0xaf-re-agent-architecture.zh-CN.html">架构总图</a> · <a href="https://github.com/overkazaf/re-agent/blob/main/docs/WORKFLOW_STANDARD.md">标准工作流规范</a> · <a href="https://github.com/overkazaf/re-agent/blob/main/docs/ARCHITECTURE.zh-CN.md">中文架构文档</a> · <a href="https://github.com/overkazaf/re-agent/blob/main/README.zh-CN.md">中文 README</a></span>
     </p>
   </div>
 </footer>
@@ -487,13 +1524,21 @@ document.querySelectorAll(".copy").forEach(function (button) {
   button.addEventListener("click", function () {
     var target = document.querySelector(button.dataset.copy);
     if (!target) return;
-    navigator.clipboard.writeText(target.textContent.trim()).then(function () {
+    var text = target.textContent.trim();
+    var reset = function (label) {
       var previous = button.textContent;
-      button.textContent = "已复制";
+      button.textContent = label;
       setTimeout(function () { button.textContent = previous; }, 1400);
-    }, function () {
-      button.textContent = "手动复制";
-    });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        reset("已复制");
+      }, function () {
+        reset("手动复制");
+      });
+    } else {
+      reset("手动复制");
+    }
   });
 });
 </script>
