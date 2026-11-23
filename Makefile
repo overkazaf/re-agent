@@ -3,6 +3,25 @@ GOFLAGS ?=
 GIT_COMMIT := $(shell git rev-parse HEAD 2>/dev/null)
 LDFLAGS := -s -w $(if $(GIT_COMMIT),-X github.com/overkazaf/re-agent/internal/buildinfo.Commit=$(GIT_COMMIT))
 
+# Repair a stale GOROOT (e.g. after Homebrew upgrades Go) by resolving the
+# active `go` binary's matching toolchain root before falling back to unset.
+ifneq ($(GOROOT),)
+ifeq ($(wildcard $(GOROOT)),)
+RESOLVED_GOROOT := $(shell go_bin="$$(command -v go 2>/dev/null)"; \
+	if [ -n "$$go_bin" ]; then \
+		real="$$(readlink -f "$$go_bin" 2>/dev/null || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$$go_bin" 2>/dev/null || echo "$$go_bin")"; \
+		base="$$(dirname "$$(dirname "$$real")")"; \
+		if [ -d "$$base/libexec/src" ]; then echo "$$base/libexec"; \
+		elif [ -d "$$base/src" ]; then echo "$$base"; fi; \
+	fi)
+ifneq ($(RESOLVED_GOROOT),)
+export GOROOT := $(RESOLVED_GOROOT)
+else
+unexport GOROOT
+endif
+endif
+endif
+
 .PHONY: all build install test vet fmt clean cross gui gui-dev gui-demo gui-demo-build
 
 WAILS ?= $(shell command -v wails 2>/dev/null || echo $(HOME)/go/bin/wails)
